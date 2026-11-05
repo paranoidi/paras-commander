@@ -47,3 +47,15 @@ func (t Theme) PanelChrome(active, blocked bool) PanelChrome {
 		DiskUsageOverview: t.PanelInactiveDiskUsageOverview,
 	}
 }
+
+// DialogOnPanelChrome returns the theme with the dialog surface, frame, title and text replaced by
+// the active file-list panel's, for a dialog showing content themed for that panel. Dialog widgets
+// that paint their own background (buttons, inputs) keep their dialog styles.
+func (t Theme) DialogOnPanelChrome() Theme {
+	chrome := t.PanelChrome(true, false)
+	t.DialogSurface = chrome.Surface
+	t.DialogFrame = chrome.Frame
+	t.DialogTitle = chrome.Title
+	t.DialogText = t.PanelRowFile
+	return t
+}

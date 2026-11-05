@@ -80,6 +80,17 @@ func TestIconLegendKeysScrollWithCloseFocused(t *testing.T) {
 	}
 }
 
+func sameFG(a, b tcell.Style) bool {
+	af, _, _ := a.Decompose()
+	bf, _, _ := b.Decompose()
+	return af == bf
+}
+
+func sameBG(st tcell.Style, bg tcell.Color) bool {
+	_, got, _ := st.Decompose()
+	return got == bg
+}
+
 func TestIconLegendDrawsIconInOwnColourAndFullLabel(t *testing.T) {
 	long := strings.Repeat("word ", 11) + "end"
 	items := append(iconLegendSample(), primitive.LegendItem{
@@ -104,6 +115,13 @@ func TestIconLegendDrawsIconInOwnColourAndFullLabel(t *testing.T) {
 	}
 	if !strings.Contains(row.String(), "Ω "+long) {
 		t.Fatalf("row = %q, want the full label", row.String())
+	}
+	panelBG := tcell.NewRGBColor(1, 2, 3)
+	if _, st, _ := screen.Get(list.Rect.X+2, y); !sameFG(st, th.PanelRowFile) || !sameBG(st, panelBG) {
+		t.Fatalf("label style = %v", st)
+	}
+	if _, st, _ := screen.Get(p.Rect.X, p.Rect.Y); !sameFG(st, th.PanelActiveFrame) || !sameBG(st, panelBG) {
+		t.Fatalf("frame style = %v", st)
 	}
 	for x := list.Rect.X; x < list.Rect.X+list.Rect.Width; x++ {
 		if str, st, _ := screen.Get(x, y); str == "Ω" {

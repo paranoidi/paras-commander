@@ -499,6 +499,9 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 	cur, found := find(spec, focus)
 	inInput := found && isInput(spec, cur)
 	styles = mnemonicStyles(styles, needsAlt(spec, inInput))
+	if spec.PanelChrome {
+		styles = styles.DialogOnPanelChrome()
+	}
 	borderStyle := draw.DrawDialogFrame(screen, p.Rect, spec.Title, styles)
 	_, surface, _ := styles.DialogSurface.Decompose()
 	bottom := p.ContentBottom         // content stops above the button separator (or the bottom border)

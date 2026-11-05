@@ -352,6 +352,9 @@ type Spec struct {
 	// screen less two rows, and a dialog whose lists cannot keep their MinHeight in that does not
 	// fit (Place and FitSpec report !ok).
 	Margin bool
+	// PanelChrome draws the dialog in the active file-list panel's colors
+	// (theme.DialogOnPanelChrome) instead of the dialog's, for content themed for that panel.
+	PanelChrome bool
 	// ScrollbarStyle is the scrollbar variant for lists with Item.Scrollbar (empty = thumb).
 	ScrollbarStyle uiscrollbar.Style
 	// MarkerWidth is the width in cells of a radio or checkbox marker (" ( ) ", " <icon> ") for
