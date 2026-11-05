@@ -1,6 +1,6 @@
-# Filesystem change events: ops report, one sink applies
+# Filesystem change events: ops report, sinks apply
 
-The local filesystem primitives in `internal/ops` report what they did (`fschange.Renamed`, `Removed`, `Created`, `Dirty`) through an `fschange.Sink` carried on the context. The disk-usage engine is the one sink. It applies the reports on its own goroutine, in order, coalescing bursts into few cache sweeps. No entry point tells the cache about changes on its own.
+The local filesystem primitives in `internal/ops` report what they did (`fschange.Renamed`, `Removed`, `Created`, `Dirty`) through an `fschange.Sink` carried on the context. The disk-usage engine is the default sink: it applies the reports on its own goroutine, in order, coalescing bursts into few cache sweeps. `fschange.Multi` adds the fileindex (`Index.Apply`, which also applies off the caller) for jobs and dialog operations that follow the index (ADR 0026). No entry point tells the cache about changes on its own.
 
 ## Context
 
@@ -22,4 +22,4 @@ The local filesystem primitives in `internal/ops` report what they did (`fschang
 - A new operation stays in step by calling the shared primitives; reporting is not opt-in per entry point.
 - Cache updates are asynchronous everywhere, so a dialog rename's size may be missing for one apply pass.
 - A dirty path shows as pending (in every panel) until its refresh scan lands.
-- Other subscribers (panel reload targeting, git status, preview prefetch, find index) can use the same events later. Today the engine is the only sink.
+- Other subscribers (panel reload targeting, git status, preview prefetch, find index) can use the same events later. The disk-usage engine and, for operations started from a panel that shows the fileindex, `fileindex.Index` are the sinks today.

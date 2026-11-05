@@ -234,3 +234,82 @@ func TestDirDriftDepthLimit(t *testing.T) {
 		}
 	}
 }
+
+func TestStatusOfSymlinksFollowsTheTarget(t *testing.T) {
+	root := tree(t)
+	x := testIndex(t, initIndex(t))
+	writeFile(t, root, "targets/reed.txt", "reed")
+	writeFile(t, root, "targets/moss.txt", "moss")
+	writeFile(t, root, "targets/fern.txt", "fern")
+	writeFile(t, root, "targets/sedge.txt", "sedge")
+	link := func(name, target string) {
+		t.Helper()
+		if err := os.Symlink(filepath.Join(root, target), filepath.Join(root, "links", name)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.MkdirAll(filepath.Join(root, "links"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	link("same.txt", "targets/reed.txt")
+	link("grown.txt", "targets/moss.txt")
+	link("unrecorded.txt", "targets/fern.txt")
+	link("dangling-recorded.txt", "targets/sedge.txt")
+	link("dangling-unrecorded.txt", "targets/nowhere.txt")
+	link("to-dir", "targets")
+	overlayFixture(t, x, root, "links/same.txt", "links/grown.txt", "links/dangling-recorded.txt")
+	writeFile(t, root, "targets/moss.txt", "moss, grown")
+	if err := os.Remove(filepath.Join(root, "targets/sedge.txt")); err != nil {
+		t.Fatal(err)
+	}
+
+	want := map[string]string{
+		"same.txt":              StatusIndexed,
+		"grown.txt":             StatusChanged,
+		"unrecorded.txt":        StatusNew,
+		"dangling-recorded.txt": StatusMissing,
+	}
+	linksDir := filepath.Join(root, "links")
+	dir, _ := pathloc.File(linksDir)
+	out, err := x.Overlay(context.Background(), dir, listLocal(t, linksDir))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, e := range out {
+		got[e.Name] = e.IndexStatus
+	}
+	for name, st := range want {
+		if got[name] != st {
+			t.Errorf("local panel: %s = %q, want %q", name, got[name], st)
+		}
+	}
+	for _, name := range []string{"dangling-unrecorded.txt", "to-dir"} {
+		if got[name] != "" {
+			t.Errorf("local panel: %s = %q, want no status", name, got[name])
+		}
+	}
+
+	// A fileindex:// panel lists the index's own entries as plain files: the row is stat'ed.
+	d, _ := x.DB()
+	var entries []localfs.Entry
+	for name := range want {
+		entries = append(entries, localfs.Entry{Name: name, Type: localfs.EntryFile})
+	}
+	entries = append(entries, localfs.Entry{Name: "dangling-unrecorded.txt", Type: localfs.EntryFile}, localfs.Entry{Name: "to-dir", Type: localfs.EntryDirectory})
+	rules, _, _ := x.scanSettings()
+	byName, err := entryStatuses(context.Background(), d, linksDir, entries, false, rules)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, st := range want {
+		if byName[name] != st {
+			t.Errorf("index panel: %s = %q, want %q", name, byName[name], st)
+		}
+	}
+	for _, name := range []string{"dangling-unrecorded.txt", "to-dir"} {
+		if byName[name] != "" {
+			t.Errorf("index panel: %s = %q, want no status", name, byName[name])
+		}
+	}
+}

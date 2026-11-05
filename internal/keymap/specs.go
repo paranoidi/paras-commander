@@ -1456,6 +1456,16 @@ func DefaultActionSpecs() []ActionSpec {
 			FileIndexMenuKey: "d",
 		},
 		{
+			ID:               ActionFileIndexReportDifferences,
+			Views:            HelpBrowser,
+			Title:            "Report differences",
+			Section:          "File Index",
+			DefaultKeys:      []string{"M-E"},
+			PreferredKey:     "M-E",
+			Keywords:         []string{"fileindex", "index", "differs", "differences", "changed", "new", "missing", "drift", "report"},
+			FileIndexMenuKey: "e",
+		},
+		{
 			ID:               ActionFileIndexFindDuplicates,
 			Views:            HelpBrowser,
 			Title:            "Find duplicates",

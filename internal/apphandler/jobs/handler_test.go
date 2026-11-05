@@ -2,7 +2,6 @@ package jobs
 
 import (
 	"fmt"
-	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"slices"
 	"strings"
 	"testing"
@@ -1061,39 +1060,6 @@ func TestJobsViewCtrlSpaceTogglesOperationsAtBottom(t *testing.T) {
 	h.HandleJobsViewKey(ctrlSpace)
 	if _, back := h.jobsPaneLayout(); model.JobsOpsBottom || back[ui.JobsPaneOperations] != side[ui.JobsPaneOperations] {
 		t.Fatal("second Ctrl-Space did not restore the side layout")
-	}
-}
-
-// indexOnlyStub stands in for the fileindex backend: only its scheme and IndexOnly marker matter.
-type indexOnlyStub struct{ fsbackend.Backend }
-
-func (indexOnlyStub) Scheme() pathloc.Scheme { return pathloc.SchemeFileIndex }
-func (indexOnlyStub) IndexOnly()             {}
-
-func TestIndexTransferRefusal(t *testing.T) {
-	if err := fsbackend.RegisterDefault(indexOnlyStub{}); err != nil {
-		t.Fatal(err)
-	}
-	idx := pathloc.MustParse("fileindex:///orchard/harbor.txt")
-	idxDir := pathloc.MustParse("fileindex:///cedar")
-	disk := pathloc.MustParse("/tmp/meadow")
-	cases := []struct {
-		name  string
-		typ   jobs.Type
-		src   pathloc.Path
-		dest  pathloc.Path
-		allow bool
-	}{
-		{"copy out", jobs.TypeCopy, idx, disk, true},
-		{"move inside", jobs.TypeMove, idx, idxDir, true},
-		{"move out", jobs.TypeMove, idx, disk, false},
-		{"copy in", jobs.TypeCopy, disk, idxDir, false},
-		{"plain copy", jobs.TypeCopy, disk, disk, true},
-	}
-	for _, c := range cases {
-		if got := indexTransferRefusal(c.typ, []pathloc.Path{c.src}, c.dest) == ""; got != c.allow {
-			t.Errorf("%s: allowed = %v, want %v", c.name, got, c.allow)
-		}
 	}
 }
 

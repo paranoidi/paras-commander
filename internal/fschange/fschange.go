@@ -80,3 +80,32 @@ func sinkFrom(ctx context.Context) Sink {
 	s, _ := ctx.Value(sinkKey{}).(Sink)
 	return s
 }
+
+// multi fans a batch out to several sinks.
+type multi []Sink
+
+func (m multi) Apply(batch []Change) {
+	for _, s := range m {
+		s.Apply(batch)
+	}
+}
+
+// Multi returns a sink handing every batch to each non-nil sink in order, or nil when there is
+// none. Sinks share the batch and must not modify it. A typed nil pointer in an interface is not
+// detected here: a sink's Apply must accept its nil receiver (diskusage.Engine and
+// fileindex.Index do).
+func Multi(sinks ...Sink) Sink {
+	var out multi
+	for _, s := range sinks {
+		if s != nil {
+			out = append(out, s)
+		}
+	}
+	switch len(out) {
+	case 0:
+		return nil
+	case 1:
+		return out[0]
+	}
+	return out
+}

@@ -6,6 +6,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // fileindexHost implements apphandler/fileindex.Host for *App.
@@ -37,8 +38,8 @@ func (h fileindexHost) ReloadPanel(panelID int) {
 	}
 }
 
-func (h fileindexHost) OpenFileCopiesPicker(title string, files []string, indexPanel bool) {
-	h.app.dialogCtrl.OpenFileCopiesPicker(title, files, indexPanel)
+func (h fileindexHost) OpenFilePicker(title string, items []dialog.PathPickerItem, indexPanel bool) {
+	h.app.dialogCtrl.OpenFilePicker(title, items, indexPanel)
 }
 
 func (h fileindexHost) OpenDedupOutside(dir string) { h.app.dedupCtrl.OpenOutside(dir) }

@@ -6,7 +6,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
+	"syscall"
 
 	"github.com/paranoidi/fileindex/db"
 	"github.com/paranoidi/fileindex/scan"
@@ -99,12 +101,14 @@ func (x *Index) Overlay(ctx context.Context, dir pathloc.Path, entries []fsbacke
 }
 
 // DirDrift checks each of host's indexed subdirectories (names) against the index and returns
-// IndexStatusDiffers (a file the scan would add under the same rules, a file whose size or
-// mtime differs, or an indexed file gone from disk; unhashed files count as indexed), IndexStatusUnchecked (nothing differs within maxDepth, but
-// a directory lies deeper) or IndexStatusIndexed. maxDepth counts directory levels below the
-// subdirectory; 0 means unlimited (never unchecked). Only recorded files within the depth are
-// compared. It walks each subtree, so it runs on its own goroutine and stops when ctx is
-// cancelled.
+// IndexStatusDiffers (driftWalk found a difference: a file the scan would add under the same rules,
+// a file whose size or mtime differs, or a recorded file that Stat says is gone; unhashed files
+// count as indexed), IndexStatusUnchecked (nothing differs within maxDepth, but a directory lies
+// deeper) or IndexStatusIndexed. maxDepth counts directory levels below the subdirectory; 0 means
+// unlimited (never unchecked). Only recorded files within the depth are compared, and a recorded
+// file the walk does not reach (under an excluded directory, in an unreadable one, or no longer a
+// regular file) differs only when it is really gone. It walks each subtree, so it runs on its own
+// goroutine and stops when ctx is cancelled.
 // ponytail: a full walk per subdir; cache by dir mtime if it proves slow. The depth-limited walk
 // re-implements scan.Rules.Walk's file filters; share them if fileindex exports a depth option.
 func (x *Index) DirDrift(ctx context.Context, host string, subdirs []string, maxDepth int) (map[string]string, error) {
@@ -121,56 +125,19 @@ func (x *Index) DirDrift(ctx context.Context, host string, subdirs []string, max
 	}
 	out := map[string]string{}
 	for _, name := range subdirs {
-		root := filepath.Join(host, name)
-		id, found, err := db.DirByPath(d, root)
-		if err != nil {
-			return nil, err
-		}
-		if !found || id == nil {
+		differs := false
+		deeper, err := driftWalk(ctx, d, rules, filepath.Join(host, name), maxDepth, nil, func(Difference) bool {
+			differs = true
+			return false
+		})
+		if errors.Is(err, ErrNotIndexed) {
 			continue
 		}
-		recorded, err := d.FilesUnder(*id, true)
 		if err != nil {
 			return nil, err
 		}
-		want := make(map[string]db.Recorded, len(recorded))
-		for _, e := range recorded {
-			if maxDepth == 0 || dirDepth(root, e.Path) <= maxDepth {
-				want[e.Path] = db.Recorded{Size: e.Size, Mtime: e.Mtime}
-			}
-		}
-		differs, seen, deeper := false, 0, false
-		visit := func(p string) bool {
-			if ctx.Err() != nil {
-				return false
-			}
-			rec, ok := want[p]
-			if !ok {
-				differs = true
-				return false
-			}
-			seen++
-			// size and mtime only, as a file row's changed status; an unhashed file is pending work, not drift
-			if fi, err := os.Stat(p); err == nil && !rec.Same(fi.Size(), fi.ModTime()) {
-				differs = true
-				return false
-			}
-			return true
-		}
-		if maxDepth == 0 {
-			for p := range rules.Walk(root) {
-				if !visit(p) {
-					break
-				}
-			}
-		} else {
-			deeper = walkToDepth(rules, root, maxDepth, visit)
-		}
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
 		switch {
-		case differs || seen < len(want):
+		case differs:
 			out[name] = StatusDiffers
 		case deeper:
 			out[name] = StatusUnchecked
@@ -179,6 +146,117 @@ func (x *Index) DirDrift(ctx context.Context, host string, subdirs []string, max
 		}
 	}
 	return out, nil
+}
+
+// ErrNotIndexed is returned by driftWalk (and the differences task) for a directory the index does
+// not have.
+var ErrNotIndexed = errors.New("not in the index")
+
+// Difference states: how a path under an indexed directory differs from the index.
+const (
+	DiffNew     = "new"     // on disk, included by the scan rules, not in the index
+	DiffChanged = "changed" // in the index with another size or modification time
+	DiffMissing = "missing" // in the index, gone from disk
+)
+
+// Difference is one path where the disk and the index disagree.
+type Difference struct {
+	Path  string
+	State string // DiffNew, DiffChanged or DiffMissing
+}
+
+// driftWalk compares the files under the indexed directory root (host path, as the index records
+// it) with the index and yields each difference, stopping when yield returns false. It is the one
+// source of "differs" for the directory state icon (DirDrift) and the differences report.
+//
+// The walk applies the scan rules (the files a scan would add) down to maxDepth directory levels
+// below root (0 = unlimited) and reports deeper whether it skipped a directory below that limit.
+// A walked file is new when the index has no record of it and changed when it is recorded with
+// another size or mtime (Recorded.Same, as a file row's status). Once the walk has finished (not
+// when yield stopped it), every recorded file within the depth that the walk did not visit is
+// checked on its own: it differs (missing) only when Stat says it is gone, so a record under an
+// excluded or unreadable directory, or one that is no longer a regular file, is no difference.
+// onFile, when not nil, is called with each walked file's path. ErrNotIndexed means root is not in
+// the index.
+func driftWalk(ctx context.Context, d *db.DB, rules scan.Rules, root string, maxDepth int, onFile func(string), yield func(Difference) bool) (deeper bool, err error) {
+	id, found, err := db.DirByPath(d, root)
+	if err != nil {
+		return false, err
+	}
+	if !found || id == nil {
+		return false, ErrNotIndexed
+	}
+	recorded, err := d.FilesUnder(*id, true)
+	if err != nil {
+		return false, err
+	}
+	want := make(map[string]db.Recorded, len(recorded))
+	for _, e := range recorded {
+		if maxDepth == 0 || dirDepth(root, e.Path) <= maxDepth {
+			want[e.Path] = db.Recorded{Size: e.Size, Mtime: e.Mtime}
+		}
+	}
+	seen := make(map[string]bool, len(want))
+	stopped := false
+	visit := func(p string) bool {
+		if ctx.Err() != nil {
+			return false
+		}
+		if onFile != nil {
+			onFile(p)
+		}
+		rec, ok := want[p]
+		if !ok {
+			stopped = !yield(Difference{Path: p, State: DiffNew})
+			return !stopped
+		}
+		seen[p] = true
+		// size and mtime only, as a file row's changed status; an unhashed file is pending work, not
+		// drift. A file that cannot be stat'ed counts as seen.
+		if fi, err := os.Stat(p); err == nil && !rec.Same(fi.Size(), fi.ModTime()) {
+			stopped = !yield(Difference{Path: p, State: DiffChanged})
+			return !stopped
+		}
+		return true
+	}
+	if maxDepth == 0 {
+		for p := range rules.Walk(root) {
+			if !visit(p) {
+				break
+			}
+		}
+	} else {
+		deeper = walkToDepth(rules, root, maxDepth, visit)
+	}
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
+	if stopped {
+		return deeper, nil
+	}
+	unseen := make([]string, 0, len(want)-len(seen))
+	for p := range want {
+		if !seen[p] {
+			unseen = append(unseen, p)
+		}
+	}
+	slices.Sort(unseen)
+	for i, p := range unseen {
+		if i%256 == 0 && ctx.Err() != nil {
+			return false, ctx.Err()
+		}
+		if gone(p) && !yield(Difference{Path: p, State: DiffMissing}) {
+			break
+		}
+	}
+	return deeper, nil
+}
+
+// gone reports whether Stat finds p missing, as fileindex's own prune decides (db.missing): only a
+// missing path, a missing directory above it or a symlink loop count, not an access error.
+func gone(p string) bool {
+	_, err := os.Stat(p)
+	return errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR) || errors.Is(err, syscall.ELOOP)
 }
 
 // dirDepth is the number of directory levels file lies below root.
@@ -195,6 +273,11 @@ func dirDepth(root, file string) int {
 // whether it skipped a directory below the limit.
 func walkToDepth(rules scan.Rules, root string, maxDepth int, yield func(string) bool) (deeper bool) {
 	visited := map[scan.DirKey]bool{}
+	if fi, err := os.Stat(root); err == nil {
+		if k, ok := scan.KeyOf(fi); ok {
+			visited[k] = true // a link back to root is not entered again, as in scan.Rules.WalkDirs
+		}
+	}
 	var walk func(dir string, depth int) bool
 	walk = func(dir string, depth int) bool {
 		entries, err := os.ReadDir(dir)

@@ -223,19 +223,20 @@ const (
 	ActionRemoteSFTPLink = "remote.sftp-link"
 
 	// fileindex (the built-in index feature, internal/apphandler/fileindex)
-	ActionFileIndexMenu           = "fileindex.menu"
-	ActionFileIndexScan           = "fileindex.scan"
-	ActionFileIndexScanFast       = "fileindex.scan-fast"
-	ActionFileIndexPrune          = "fileindex.prune"
-	ActionFileIndexTagAdd         = "fileindex.tag-add"
-	ActionFileIndexTagRemove      = "fileindex.tag-remove"
-	ActionFileIndexBrowse         = "fileindex.browse"
-	ActionFileIndexBrowseWith     = "fileindex.browse-with"
-	ActionFileIndexFind           = "fileindex.find"
-	ActionFileIndexReveal         = "fileindex.reveal"
-	ActionFileIndexCopies         = "fileindex.other-copies"
-	ActionFileIndexCopiesOutside  = "fileindex.copies-outside"
-	ActionFileIndexFindDuplicates = "fileindex.find-duplicates"
+	ActionFileIndexMenu              = "fileindex.menu"
+	ActionFileIndexScan              = "fileindex.scan"
+	ActionFileIndexScanFast          = "fileindex.scan-fast"
+	ActionFileIndexPrune             = "fileindex.prune"
+	ActionFileIndexTagAdd            = "fileindex.tag-add"
+	ActionFileIndexTagRemove         = "fileindex.tag-remove"
+	ActionFileIndexBrowse            = "fileindex.browse"
+	ActionFileIndexBrowseWith        = "fileindex.browse-with"
+	ActionFileIndexFind              = "fileindex.find"
+	ActionFileIndexReveal            = "fileindex.reveal"
+	ActionFileIndexCopies            = "fileindex.other-copies"
+	ActionFileIndexCopiesOutside     = "fileindex.copies-outside"
+	ActionFileIndexReportDifferences = "fileindex.report-differences"
+	ActionFileIndexFindDuplicates    = "fileindex.find-duplicates"
 
 	// Jobs dialog
 	ActionJobsOpen          = "jobs.open"
@@ -567,19 +568,20 @@ var KnownActions = map[string]struct{}{
 
 	ActionRemoteSFTPLink: {},
 
-	ActionFileIndexMenu:           {},
-	ActionFileIndexScan:           {},
-	ActionFileIndexScanFast:       {},
-	ActionFileIndexPrune:          {},
-	ActionFileIndexTagAdd:         {},
-	ActionFileIndexTagRemove:      {},
-	ActionFileIndexBrowse:         {},
-	ActionFileIndexBrowseWith:     {},
-	ActionFileIndexFind:           {},
-	ActionFileIndexReveal:         {},
-	ActionFileIndexCopies:         {},
-	ActionFileIndexCopiesOutside:  {},
-	ActionFileIndexFindDuplicates: {},
+	ActionFileIndexMenu:              {},
+	ActionFileIndexScan:              {},
+	ActionFileIndexScanFast:          {},
+	ActionFileIndexPrune:             {},
+	ActionFileIndexTagAdd:            {},
+	ActionFileIndexTagRemove:         {},
+	ActionFileIndexBrowse:            {},
+	ActionFileIndexBrowseWith:        {},
+	ActionFileIndexFind:              {},
+	ActionFileIndexReveal:            {},
+	ActionFileIndexCopies:            {},
+	ActionFileIndexCopiesOutside:     {},
+	ActionFileIndexReportDifferences: {},
+	ActionFileIndexFindDuplicates:    {},
 
 	ActionMenuFileChattr: {},
 

@@ -188,22 +188,19 @@ func (h *Handler) showFileInPanel(file string, indexPanel bool) bool {
 		}
 	}
 	if err != nil {
-		h.host.SetErrorMessage("Other copies", err)
+		h.host.SetErrorMessage("Show file", err)
 		return false
 	}
 	h.host.ActivePanel().EnsureCursorVisible(h.host.ActiveViewportRows())
 	return true
 }
 
-// OpenFileCopiesPicker opens the path picker over the host paths of files (fileindex.other-copies);
-// confirming one shows it in the active panel, as a fileindex:// path when indexPanel.
-func (h *Handler) OpenFileCopiesPicker(title string, files []string, indexPanel bool) {
+// OpenFilePicker opens the path picker over items, whose Path is a host file path (other copies,
+// the differences report); confirming one shows it in the active panel, as a fileindex:// path
+// when indexPanel.
+func (h *Handler) OpenFilePicker(title string, items []dialog.PathPickerItem, indexPanel bool) {
 	if h.host.InQuickFilterUI() {
 		h.host.ActivePanel().CancelFilter(h.host.ActiveViewportRows())
-	}
-	items := make([]dialog.PathPickerItem, len(files))
-	for i, f := range files {
-		items[i] = dialog.PathPickerItem{Path: f}
 	}
 	h.pathPickerMissingGen++
 	h.model.PathPicker = dialog.PathPickerState{

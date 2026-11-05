@@ -12,7 +12,7 @@ var fileIndexMenuGroups = []struct {
 }{
 	{"Browse", []string{ActionFileIndexFind, ActionFileIndexBrowseWith, ActionFileIndexBrowse, ActionFileIndexReveal}},
 	{"Tagging", []string{ActionFileIndexTagAdd, ActionFileIndexTagRemove}},
-	{"Actions", []string{ActionFileIndexScan, ActionFileIndexScanFast, ActionFileIndexPrune}},
+	{"Actions", []string{ActionFileIndexScan, ActionFileIndexScanFast, ActionFileIndexPrune, ActionFileIndexReportDifferences}},
 	{"Duplicates", []string{ActionFileIndexFindDuplicates, ActionFileIndexCopies, ActionFileIndexCopiesOutside}},
 }
 

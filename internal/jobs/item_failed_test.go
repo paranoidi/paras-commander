@@ -132,3 +132,10 @@ func TestStartSourceAdvancesPhases(t *testing.T) {
 		t.Fatal("a single-source job has no per-source phases")
 	}
 }
+
+func TestRetryCloneKeepsFollowIndex(t *testing.T) {
+	j := &Job{ID: "retry", Type: TypeDelete, FollowIndex: true}
+	if !j.RetryClone().FollowIndex {
+		t.Fatal("a retried job must keep following the index")
+	}
+}

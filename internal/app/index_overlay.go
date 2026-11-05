@@ -74,10 +74,12 @@ func (a *App) wireIndexOverlay() {
 	}
 }
 
-// reloadIndexPanels re-reads every panel that is browsing with fileindex (UI goroutine).
+// reloadIndexPanels re-reads every panel that shows index data: browsing with fileindex, or
+// showing the index itself (fileindex://), whose listing is the index and so follows the changes
+// jobs make on disk through the fschange sink (UI goroutine).
 func (a *App) reloadIndexPanels() {
 	for _, id := range []int{ui.PrimaryPanel, ui.SecondaryPanel} {
-		if p := a.panelByID(id); p.WithIndex && !p.ListingPending {
+		if p := a.panelByID(id); (p.WithIndex || p.Path.Scheme() == pathloc.SchemeFileIndex) && !p.ListingPending {
 			_ = p.Refresh(a.panelViewportRows(id))
 		}
 	}
