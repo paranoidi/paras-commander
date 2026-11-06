@@ -14,7 +14,7 @@ The Commands view, command-output dialog, run-for-each dialog and batch backend 
 
 ## Working directory
 
-User-menu entries (`runUserMenuEntry`: default, `dialog`, `interactive`, `detach`) run in `panel.State.CursorDir()`, the directory holding the cursor row, the same directory the `%d` macro and the mkdir dialog use. There is no fallback for ghost or remote rows: a command that cannot run in that directory fails visibly. `usermenu.ResolveMenuTOML` keeps using the panel directory; the drop-to-shell directory is unchanged.
+User-menu entries (`runUserMenuEntry`: default, `dialog`, `interactive`, `detach`) run in `panel.State.CursorDir()`, the directory holding the cursor row, the same directory the `%d` macro and the mkdir dialog use. There is no fallback to another directory: `runUserMenuEntry` and `OpenRunForEachDialog` first ask `panel.State.UserCommandRefusal` (same file as `GhostRefusal`), which refuses a non-local panel (`!Path.IsLocal()`, or a `CursorDir` that is not local) with "User commands run on local panels only", and any ghost row (`GhostSources`) among the cursor row (not `..`) and the tagged rows with `panel.GhostRefusal`. A refusal toasts a warning and returns before the selection is cleared, a Commands row is appended or the KeepOpen toast is set; the Run-for-each dialog does not open. Meta `[[entry]]` columns and Enter on an executable are not user-menu launches and do not use it. `usermenu.ResolveMenuTOML` keeps using the panel directory; the drop-to-shell directory is unchanged.
 
 ## Run for each
 

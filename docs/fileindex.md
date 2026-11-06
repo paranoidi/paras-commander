@@ -124,7 +124,8 @@ On a ghost row:
   because the operation started from a Browse-with panel (see
   [Operations and the index](#operations-and-the-index)).
 - **Copy, move, view and edit** are refused with "Only in the index: name":
-  there is no file to read.
+  there is no file to read. So are [user menu and Run for each commands](commands.md#local-panels-only)
+  when a ghost row is highlighted or tagged.
 
 A symlink to a file is judged by what it points to: its target's size and
 modification time are compared with the index, as a scan records them, and a

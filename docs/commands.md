@@ -32,7 +32,7 @@ Runs one command once per selected item (or the highlighted item when nothing is
 - **Worker pool**: when `pools.toml` defines pools, radios let the batch share a limited number of parallel slots; see [Worker pools](#worker-pools).
 - **History** (`F3`, `file.run-for-each.history`): fuzzy picker over the command lines you ran earlier in this session.
 
-The selection is cleared when the batch starts. A failed batch shows a summary toast and opens the Commands view.
+The dialog does not open, and nothing runs, on a panel that is not local (SFTP, the file index) or when the highlighted or a tagged row is only in the index (see [Local panels only](#local-panels-only)). The selection is cleared when the batch starts. A failed batch shows a summary toast and opens the Commands view.
 
 ## Commands view
 
@@ -58,6 +58,10 @@ A `menu.toml` in the active directory (name from `local_names`, default `menu.to
 ### Working directory
 
 A user menu command runs in the directory holding the highlighted row, the same directory `%d` expands to. In a flat listing that is the panel directory; in a tree layout, a highlighted row inside an expanded subdirectory runs the command in that subdirectory, and a highlighted directory row runs it in the directory that contains it. A `run_for_each` entry runs each item in the directory holding that item's row. The `menu.toml` lookup still uses the panel directory.
+
+### Local panels only
+
+User menu entries and Run for each run on local panels only. They are refused with a warning, before anything runs and with the selection left as it is, when the active panel is an SFTP or file index (`fileindex://`) panel ("User commands run on local panels only"), or when the highlighted row or any tagged row is only in the index (a [ghost row](fileindex.md#browsing-with-fileindex): "Only in the index: name"). The `..` row and an empty panel are not refused. A menu that stays open (`keep_open`) shows the warning instead of its "Ran" toast.
 
 ### Entry modes
 

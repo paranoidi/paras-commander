@@ -114,6 +114,35 @@ func GhostRefusal(names []string) string {
 	return "Only in the index: " + strings.Join(names, ", ")
 }
 
+// UserCommandRefusal is the message for refusing a user-menu or Run-for-each command on this
+// panel, or "" when it may run. User commands run on real local files: a non-local panel (SFTP,
+// fileindex://) has no directory to run in, and a ghost row among the cursor row and the tagged
+// rows has no file behind it. A pure string check, safe on the UI goroutine.
+func (s *State) UserCommandRefusal() string {
+	const nonLocal = "User commands run on local panels only"
+	if !s.Path.IsLocal() {
+		return nonLocal
+	}
+	paths := make([]string, 0, len(s.SelectedPaths)+1)
+	for p, tagged := range s.SelectedPaths {
+		if tagged {
+			paths = append(paths, p)
+		}
+	}
+	if e, ok := s.CurrentEntry(); ok && e.Name != ".." {
+		paths = append(paths, e.Path)
+	}
+	slices.Sort(paths) // map order is random; the message lists each name once, sorted
+	paths = slices.Compact(paths)
+	if msg := GhostRefusal(s.GhostSources(paths...)); msg != "" {
+		return msg
+	}
+	if !s.CursorDir().IsLocal() {
+		return nonLocal
+	}
+	return ""
+}
+
 // ShowsIndex reports whether the panel shows index data: browsing with fileindex or showing the
 // index itself (fileindex:// path).
 func (s *State) ShowsIndex() bool {

@@ -14,8 +14,11 @@ import (
 	commandsctrl "github.com/paranoidi/paras-commander/internal/apphandler/commands"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/usermenu"
 )
@@ -917,6 +920,13 @@ func TestUserMenuClearsOnlyConsumedSelection(t *testing.T) {
 // tree layout with orchard expanded and the user menu file at cfgDir (outside root).
 func userMenuTreeFixture(t *testing.T, menuBody string) (app *App, root, sub string) {
 	t.Helper()
+	return userMenuTreeFixtureWith(t, menuBody, nil)
+}
+
+// userMenuTreeFixtureWith is userMenuTreeFixture with a browse-with index overlay on the panel
+// (nil for none), which adds ghost rows to the expanded directories.
+func userMenuTreeFixtureWith(t *testing.T, menuBody string, overlay panel.IndexOverlayFunc) (app *App, root, sub string) {
+	t.Helper()
 	root = t.TempDir()
 	sub = filepath.Join(root, "orchard")
 	if err := os.Mkdir(sub, 0o755); err != nil {
@@ -932,10 +942,16 @@ func userMenuTreeFixture(t *testing.T, menuBody string) (app *App, root, sub str
 	app = testUserMenuApp(t, root, cfgDir)
 	// Without a scheduler the expansion loads synchronously, so no async wake is awaited.
 	app.model.Primary.ScheduleTreeChildLoad = nil
+	want := 3
+	if overlay != nil {
+		app.model.Primary.WithIndex = true
+		app.model.Primary.IndexOverlay = overlay
+		want = 4
+	}
 	// Directories sort first, so the cursor sits on orchard and the toggle expands it.
 	app.dispatchActionLikeKeyboardShortcut(keymap.ActionPanelToggleTree)
-	if got := app.model.Primary.VisibleEntryCount(); got != 3 {
-		t.Fatalf("VisibleEntryCount = %d, want 3 (orchard, ember.txt, lantern.txt)", got)
+	if got := app.model.Primary.VisibleEntryCount(); got != want {
+		t.Fatalf("VisibleEntryCount = %d, want %d", got, want)
 	}
 	return app, root, sub
 }
@@ -1056,4 +1072,187 @@ func TestUserMenuRunForEachFlatUsesPanelDirectory(t *testing.T) {
 	waitCommandsDone(t, app)
 
 	assertFileExists(t, filepath.Join(root, "stamp"), true)
+}
+
+// ghostOverlay makes dir listings gain one index-only (ghost) file called name in every
+// directory whose base name is inDir ("" for any), like the fileindex overlay of a browse-with panel.
+func ghostOverlay(name, inDir string) panel.IndexOverlayFunc {
+	return func(_ context.Context, dir pathloc.Path, entries []fsbackend.Entry) ([]fsbackend.Entry, error) {
+		if inDir != "" && dir.Base() != inDir {
+			return entries, nil
+		}
+		return append(entries, fsbackend.Entry{
+			Name:        name,
+			Loc:         pathloc.MustParse(pathloc.FileIndexPrefix + filepath.Join(dir.String(), name)),
+			Type:        fsbackend.EntryFile,
+			IndexStatus: localfs.IndexStatusMissing,
+		}), nil
+	}
+}
+
+// userMenuGhostApp is a flat browse-with panel over dir holding the real file "harbor.txt" and the
+// ghost "phantom.txt", with a user menu whose entry "r" runs command (extra TOML lines in extra).
+func userMenuGhostApp(t *testing.T, command, extra string) (*App, string) {
+	t.Helper()
+	dir := t.TempDir()
+	cfgDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "harbor.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	writeUserMenuFile(t, filepath.Join(cfgDir, config.DefaultUserMenuFileName),
+		"[run]\nkey = \"r\"\ntitle = \"Run\"\ncommand = \""+command+"\"\n"+extra)
+	app := testUserMenuApp(t, dir, cfgDir)
+	p := &app.model.Primary
+	p.WithIndex = true
+	p.IndexOverlay = ghostOverlay("phantom.txt", "")
+	p.ScheduleAsyncLoad = nil // list synchronously, through the overlay
+	if err := p.Load(dir); err != nil {
+		t.Fatal(err)
+	}
+	selectEntryByName(t, app, "phantom.txt")
+	return app, dir
+}
+
+func assertUserCommandRefused(t *testing.T, app *App, wantMsg string) {
+	t.Helper()
+	if len(app.model.CommandsList) != 0 {
+		t.Fatalf("a command row was recorded: %+v", app.model.CommandsList)
+	}
+	if !strings.Contains(app.model.Message, wantMsg) {
+		t.Fatalf("message = %q, want it to contain %q", app.model.Message, wantMsg)
+	}
+}
+
+func TestUserMenuRefusesGhostCursorRow(t *testing.T) {
+	app, dir := userMenuGhostApp(t, "mkdir -p %f", "")
+	runUserMenuKey(app, 'r')
+	assertUserCommandRefused(t, app, "Only in the index: phantom.txt")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("directory gained entries: %v", entries)
+	}
+}
+
+func TestUserMenuRefusesGhostKeepOpenWithoutRanToast(t *testing.T) {
+	app, _ := userMenuGhostApp(t, "echo %f", "background = true\nkeep_open = true\n")
+	runUserMenuKey(app, 'r')
+	assertUserCommandRefused(t, app, "Only in the index: phantom.txt")
+	if strings.Contains(app.model.Message, "Ran") {
+		t.Fatalf("message = %q claims the command ran", app.model.Message)
+	}
+}
+
+func TestUserMenuRefusesTaggedGhostAndKeepsTags(t *testing.T) {
+	app, dir := userMenuGhostApp(t, "echo %t", "detach = true\n")
+	ran := false
+	prev := userMenuDetachRunner
+	userMenuDetachRunner = func([]string, string) error { ran = true; return nil }
+	t.Cleanup(func() { userMenuDetachRunner = prev })
+	selectEntryByName(t, app, "harbor.txt")
+	app.model.Primary.SelectedPaths = map[string]bool{
+		filepath.Join(dir, "harbor.txt"):                            true,
+		pathloc.FileIndexPrefix + filepath.Join(dir, "phantom.txt"): true,
+	}
+
+	runUserMenuKey(app, 'r')
+
+	assertUserCommandRefused(t, app, "Only in the index: phantom.txt")
+	if ran {
+		t.Fatal("command ran")
+	}
+	if got := len(app.model.Primary.SelectedPaths); got != 2 {
+		t.Fatalf("tags = %d, want 2 (kept)", got)
+	}
+}
+
+func TestUserMenuRunForEachRefusesGhost(t *testing.T) {
+	app, dir := userMenuGhostApp(t, "mkdir -p %f", "run_for_each = [\"files\"]\n")
+	app.model.Primary.SelectedPaths = map[string]bool{
+		filepath.Join(dir, "harbor.txt"):                            true,
+		pathloc.FileIndexPrefix + filepath.Join(dir, "phantom.txt"): true,
+	}
+	runUserMenuKey(app, 'r')
+	assertUserCommandRefused(t, app, "Only in the index: phantom.txt")
+	if got := len(app.model.Primary.SelectedPaths); got != 2 {
+		t.Fatalf("tags = %d, want 2 (kept)", got)
+	}
+}
+
+func TestUserMenuRunsRealRowOnBrowseWithPanel(t *testing.T) {
+	app, _ := userMenuGhostApp(t, "echo %f", "detach = true\n")
+	var gotDir string
+	prev := userMenuDetachRunner
+	userMenuDetachRunner = func(_ []string, dir string) error { gotDir = dir; return nil }
+	t.Cleanup(func() { userMenuDetachRunner = prev })
+	selectEntryByName(t, app, "harbor.txt")
+
+	runUserMenuKey(app, 'r')
+
+	if gotDir != app.model.Primary.PathString() {
+		t.Fatalf("detach dir = %q, want the panel directory", gotDir)
+	}
+}
+
+func TestUserMenuRefusesNonLocalPanels(t *testing.T) {
+	for _, path := range []string{"sftp://paras@example.invalid/srv", pathloc.FileIndexPrefix + "/srv/orchard"} {
+		app, _ := userMenuGhostApp(t, "echo %d", "detach = true\n")
+		ran := false
+		prev := userMenuDetachRunner
+		userMenuDetachRunner = func([]string, string) error { ran = true; return nil }
+		t.Cleanup(func() { userMenuDetachRunner = prev })
+		app.model.Primary.Path = pathloc.MustParse(path)
+
+		runUserMenuKey(app, 'r')
+
+		assertUserCommandRefused(t, app, "User commands run on local panels only")
+		if ran {
+			t.Fatalf("%s: command ran", path)
+		}
+	}
+}
+
+func TestUserMenuRefusesGhostRowInTreeLayout(t *testing.T) {
+	app, _, _ := userMenuTreeFixtureWith(t, "[run]\nkey = \"r\"\ntitle = \"Run\"\ncommand = \"mkdir -p %f\"\n",
+		ghostOverlay("phantom.txt", "orchard"))
+	selectEntryByName(t, app, "phantom.txt")
+
+	runUserMenuKey(app, 'r')
+
+	assertUserCommandRefused(t, app, "Only in the index: phantom.txt")
+}
+
+func TestRunForEachDialogRefusesGhostAtOpen(t *testing.T) {
+	app, dir := userMenuGhostApp(t, "echo", "")
+	app.commandsCtrl.OpenRunForEachDialog()
+	if app.model.FileDialog.Open {
+		t.Fatal("dialog opened over a ghost cursor row")
+	}
+	if !strings.Contains(app.model.Message, "Only in the index: phantom.txt") {
+		t.Fatalf("message = %q", app.model.Message)
+	}
+
+	selectEntryByName(t, app, "harbor.txt")
+	app.model.Primary.SelectedPaths = map[string]bool{pathloc.FileIndexPrefix + filepath.Join(dir, "phantom.txt"): true}
+	app.commandsCtrl.OpenRunForEachDialog()
+	if app.model.FileDialog.Open {
+		t.Fatal("dialog opened over a tagged ghost")
+	}
+
+	app.model.Primary.SelectedPaths = nil
+	app.commandsCtrl.OpenRunForEachDialog()
+	if !app.model.FileDialog.Open {
+		t.Fatal("dialog should open on a real row")
+	}
+}
+
+func TestRunForEachDialogRefusesNonLocalPanel(t *testing.T) {
+	app, _ := userMenuGhostApp(t, "echo", "")
+	app.model.Primary.Path = pathloc.MustParse("sftp://paras@example.invalid/srv")
+	app.commandsCtrl.OpenRunForEachDialog()
+	if app.model.FileDialog.Open || !strings.Contains(app.model.Message, "local panels only") {
+		t.Fatalf("open=%v message=%q", app.model.FileDialog.Open, app.model.Message)
+	}
 }

@@ -22,6 +22,10 @@ func (h *Handler) OpenRunForEachDialog() {
 		return
 	}
 	active := h.host.ActivePanel()
+	if msg := active.UserCommandRefusal(); msg != "" {
+		h.host.SetTransientMessage(msg, ui.MessageUrgencyWarn)
+		return
+	}
 	src, err := ops.ResolveSource(active)
 	if err != nil {
 		h.host.SetErrorMessage("Run for each", err)

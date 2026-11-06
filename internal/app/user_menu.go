@@ -229,6 +229,10 @@ func userMenuLeaderMenuItems(entries []usermenu.MenuEntry, styles theme.Theme) [
 func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 	active := a.activePanel()
 	other := a.inactivePanel()
+	if msg := active.UserCommandRefusal(); msg != "" {
+		a.setTransientMessage(msg, ui.MessageUrgencyWarn)
+		return
+	}
 	if entry.KeepOpen && entry.Toast == "" {
 		prefix := "Ran"
 		if a.styles.UseNerdfontIcons {
