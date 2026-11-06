@@ -81,8 +81,8 @@ func (h *Handler) HandleTagKey(ev *tcell.EventKey) {
 }
 
 // tagJumpKey applies the keys the grid keeps from the engine: Space toggles, a printable rune
-// extends the jump text, and while there is jump text Up/Down cycle its matches and Backspace
-// trims it. It reports whether the key was one of them.
+// extends the jump text, and while there is jump text Up/Down cycle several matches and
+// Backspace trims it. It reports whether the key was one of them.
 func tagJumpKey(st *dialog.IndexTagsDialogState, ev *tcell.EventKey) bool {
 	switch {
 	case keymap.IsPlainPrintableRune(ev) && ev.Rune() == ' ':
@@ -91,9 +91,9 @@ func tagJumpKey(st *dialog.IndexTagsDialogState, ev *tcell.EventKey) bool {
 		st.TypeJump(ev.Rune())
 	case st.JumpQuery == "":
 		return false
-	case ev.Key() == tcell.KeyUp:
+	case ev.Key() == tcell.KeyUp && st.CanCycleJump():
 		st.CycleJump(-1)
-	case ev.Key() == tcell.KeyDown:
+	case ev.Key() == tcell.KeyDown && st.CanCycleJump():
 		st.CycleJump(1)
 	case ev.Key() == tcell.KeyBackspace, ev.Key() == tcell.KeyBackspace2:
 		st.BackspaceJump()

@@ -325,6 +325,7 @@ Nothing is written until OK; Cancel or Esc discards the edits.
 - **Checkboxes:** Tab moves into the list. Space, Enter or a click toggles a
   tag. A mixed tag cycles through set on all, removed from all, and mixed,
   which leaves each entry as it was.
+- **Leaving the list:** Tab, or Up on the first row and Down on the last.
 - **Jump:** typing in the list jumps to the best fuzzy match, and the typed
   text shows in the border above the list. With several matches, Up and Down
   cycle through them. Backspace trims the text and Esc clears it.

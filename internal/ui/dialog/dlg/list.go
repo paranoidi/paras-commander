@@ -120,6 +120,9 @@ func listKey(it Item, ev *tcell.EventKey, driven bool) (Event, bool) {
 	}
 	cur := it.cursorRow()
 	page := it.pageStep()
+	if it.CellColumns > 0 && ((ev.Key() == tcell.KeyUp && cur == 0) || (ev.Key() == tcell.KeyDown && cur == n-1)) {
+		return Event{}, false // a checkbox grid hands its ends on like a block of checkboxes
+	}
 	var next int
 	switch ev.Key() {
 	case tcell.KeyLeft, tcell.KeyRight:

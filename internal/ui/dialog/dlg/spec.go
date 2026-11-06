@@ -164,7 +164,8 @@ type Item struct {
 	// ListRow.Cells in equal-width columns and Col names the cursor's cell on the Cursor row.
 	// Rows stay the unit of Offset, Height and the scrollbar. Left/Right move between the cells of
 	// a row, Up/Down keep the column (clamped on a short last row), and Enter, Space or a click on
-	// a cell activate it. Col stays in the caller's state like Cursor.
+	// a cell activate it; Up on the first row and Down on the last leave the list like any other
+	// focus move. Col stays in the caller's state like Cursor.
 	CellColumns int
 	Col         int
 	// ScrollOnly makes a list a scrolling view without a cursor (the delete list, a preview,

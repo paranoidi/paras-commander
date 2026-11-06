@@ -47,6 +47,36 @@ func TestCellListKeys(t *testing.T) {
 	}
 }
 
+func TestCellListLeavesAtItsEnds(t *testing.T) {
+	grid := cellList()
+	spec := Spec{Width: 40, Groups: []Group{{Columns: [][]Item{{
+		{ID: "name", Kind: KindInput},
+		grid,
+		{ID: "deep", Kind: KindCheckbox, Label: "Deep"},
+	}}}}, Buttons: OKCancelButtons()}
+	press := func(k tcell.Key) ID {
+		t.Helper()
+		focus := ID("grid")
+		if _, ok := HandleKey(spec, &focus, tcell.NewEventKey(k, 0, tcell.ModNone)); !ok {
+			t.Fatalf("key %v not handled", k)
+		}
+		return focus
+	}
+	if got := press(tcell.KeyUp); got != "name" {
+		t.Fatalf("Up on the first row focused %q", got)
+	}
+	if got := press(tcell.KeyDown); got != "grid" {
+		t.Fatalf("Down on the first row focused %q", got)
+	}
+	spec.Groups[0].Columns[0][1].Cursor = 2
+	if got := press(tcell.KeyDown); got != "deep" {
+		t.Fatalf("Down on the last row focused %q", got)
+	}
+	if got := press(tcell.KeyUp); got != "grid" {
+		t.Fatalf("Up on the last row focused %q", got)
+	}
+}
+
 func TestCellListClickAndHover(t *testing.T) {
 	spec := listOnlySpec(cellList())
 	const w, h = 80, 24

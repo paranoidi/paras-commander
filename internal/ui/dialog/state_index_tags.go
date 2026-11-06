@@ -166,6 +166,9 @@ func (st *IndexTagsDialogState) BackspaceJump() {
 	st.setJump(query)
 }
 
+// CanCycleJump reports whether the jump text has several matches to cycle.
+func (st *IndexTagsDialogState) CanCycleJump() bool { return len(st.jumpMatches(st.JumpQuery)) > 1 }
+
 // CycleJump moves delta matches on, wrapping around.
 func (st *IndexTagsDialogState) CycleJump(delta int) {
 	matches := st.jumpMatches(st.JumpQuery)

@@ -318,6 +318,37 @@ func TestFileIndexTagEditorShowsAndTogglesTags(t *testing.T) {
 	}
 }
 
+func TestFileIndexTagEditorArrowsLeaveTheGrid(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	seedTags(t, a, dir, []string{"amber", "birch", "cedar"}, "harbor.txt")
+	cursorTo(t, a, "harbor.txt")
+	a.dispatch(keymap.ActionFileIndexTags)
+	waitTagPrompt(t, a, screen)
+	st := &a.model.IndexTagsDialog
+	press := func(k tcell.Key, want dlg.ID) {
+		t.Helper()
+		a.handleKey(tcell.NewEventKey(k, 0, tcell.ModNone))
+		if st.Focus != want {
+			t.Fatalf("focus = %q, want %q", st.Focus, want)
+		}
+	}
+	press(tcell.KeyDown, dialog.IndexTagsGrid)
+	press(tcell.KeyUp, dialog.IndexTagsInput)
+	press(tcell.KeyDown, dialog.IndexTagsGrid)
+	press(tcell.KeyDown, dialog.IndexTagsGrid) // the second row
+	press(tcell.KeyDown, dialog.IndexTagsRecursive)
+	press(tcell.KeyDown, dlg.OK)
+	press(tcell.KeyUp, dialog.IndexTagsRecursive)
+	press(tcell.KeyUp, dialog.IndexTagsGrid)
+
+	// One jump match leaves nothing to cycle: arrows move on and drop the jump text.
+	typeTags(a, "cedar")
+	press(tcell.KeyDown, dialog.IndexTagsRecursive)
+	if st.JumpQuery != "" {
+		t.Fatalf("jump text = %q", st.JumpQuery)
+	}
+}
+
 func TestFileIndexTagEditorCancelDiscards(t *testing.T) {
 	a, screen, dir, _ := fileIndexApp(t)
 	cursorTo(t, a, "harbor.txt")
