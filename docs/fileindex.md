@@ -328,7 +328,8 @@ Nothing is written until OK; Cancel or Esc discards the edits.
 - **Leaving the list:** Tab, or Up on the first row and Down on the last.
 - **Jump:** typing in the list jumps to the best fuzzy match, and the typed
   text shows in the border above the list. With several matches, Up and Down
-  cycle through them. Backspace trims the text and Esc clears it.
+  cycle through them. Backspace trims the text and Esc clears it. Toggling a tag
+  clears it too, so you can type the next search straight away.
 - **Recursive** applies the edits to a directory, every directory under it and
   every file in them, instead of the directory alone. Only the tags you changed
   are applied, so a tag the directory already has does not spread down the tree

@@ -80,13 +80,14 @@ func (h *Handler) HandleTagKey(ev *tcell.EventKey) {
 	}
 }
 
-// tagJumpKey applies the keys the grid keeps from the engine: Space toggles, a printable rune
-// extends the jump text, and while there is jump text Up/Down cycle several matches and
-// Backspace trims it. It reports whether the key was one of them.
+// tagJumpKey applies the keys the grid keeps from the engine: Space toggles and ends the jump, a
+// printable rune extends the jump text, and while there is jump text Up/Down cycle several matches
+// and Backspace trims it. It reports whether the key was one of them.
 func tagJumpKey(st *dialog.IndexTagsDialogState, ev *tcell.EventKey) bool {
 	switch {
 	case keymap.IsPlainPrintableRune(ev) && ev.Rune() == ' ':
 		st.ToggleCursor()
+		st.ClearJump()
 	case keymap.IsPlainPrintableRune(ev):
 		st.TypeJump(ev.Rune())
 	case st.JumpQuery == "":
@@ -117,9 +118,9 @@ func (h *Handler) ApplyTagEvent(ev dlg.Event) {
 	case ev.ID == dialog.IndexTagsGrid:
 		if !ev.Enter { // a click: it lands on the cell it toggles
 			st.Cursor, st.Col = ev.Index, ev.Col
-			st.ClearJump()
 		}
 		st.ToggleCell(ev.Index, ev.Col)
+		st.ClearJump()
 	case ev.ID == dialog.IndexTagsInput:
 		h.commitTagInput()
 	case ev.ID == dialog.IndexTagsRecursive:

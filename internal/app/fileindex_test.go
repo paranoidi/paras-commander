@@ -303,12 +303,23 @@ func TestFileIndexTagEditorShowsAndTogglesTags(t *testing.T) {
 		t.Fatalf("focus = %q, want the grid", st.Focus)
 	}
 	checkDialogInvariants(t, a)
-	typeTags(a, "b ")
+	typeTags(a, "c")
 	a.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if !st.Open || st.JumpQuery != "" {
 		t.Fatalf("Esc should clear the jump text first: open %v, query %q", st.Open, st.JumpQuery)
 	}
-	typeTags(a, "c ")
+	typeTags(a, "b ") // Space toggles and ends this search...
+	if st.JumpQuery != "" {
+		t.Fatalf("jump text after Space = %q", st.JumpQuery)
+	}
+	typeTags(a, "c") // ...so the next letter starts a new one, and Enter ends it the same way.
+	if st.JumpQuery != "c" {
+		t.Fatalf("jump text = %q", st.JumpQuery)
+	}
+	a.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if st.JumpQuery != "" {
+		t.Fatalf("jump text after Enter = %q", st.JumpQuery)
+	}
 	a.handleKey(altKey('o'))
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
 		return a.model.Message == "Added 1 tag, removed 1 tag on 1 entry"
