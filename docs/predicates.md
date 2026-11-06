@@ -211,7 +211,7 @@ The user menu evaluates `when` against the cursor instead of a single row, which
 | `F <pattern>` | the name under the cursor in the **other** panel |
 | `D <pattern>` | the directory holding the other panel's cursor row |
 | `T <letters>` | the type of the other panel's cursor entry |
-| `t t` | the active panel has tagged (selected) entries |
+| `t t` | `%t` would have tagged paths: the active panel has tagged entries in its directory, or in an expanded folder under it in the tree layout; tagged [ghost rows](fileindex.md#browsing-with-fileindex) count, so the entry shows and then refuses |
 
 `d` here is the directory holding the active panel's cursor row (in an expanded tree that is the subfolder the row is in; in the flat layout it is the panel directory). In meta, preview and execute rules, `F`/`D`/`T` are
 always false and `t t` never matches.

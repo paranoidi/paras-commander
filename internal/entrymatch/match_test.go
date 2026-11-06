@@ -106,3 +106,70 @@ func TestEvalWhenDirUsesCursorDirInTree(t *testing.T) {
 		t.Fatalf("empty panel d = %v %v", ok, err)
 	}
 }
+
+// `t t` is true exactly when %t has tagged paths: in a tree layout a tag in an expanded folder
+// counts, in the flat layout it does not, and an untagged (false) entry never does.
+func TestEvalWhenTaggedMatchesPercentT(t *testing.T) {
+	root := t.TempDir()
+	orchard := filepath.Join(root, "orchard")
+	if err := os.Mkdir(orchard, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	ember := filepath.Join(orchard, "ember.txt")
+	if err := os.WriteFile(ember, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	newPanel := func(layout panel.ListLayout) *panel.State {
+		ps, err := panel.New(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if layout == panel.ListLayoutTree {
+			if !ps.SetListLayout(panel.ListLayoutTree, 10) {
+				t.Fatal("SetListLayout(Tree) = false")
+			}
+			if err := ps.ToggleTreeExpand(10); err != nil { // cursor starts on orchard
+				t.Fatal(err)
+			}
+		}
+		return &ps
+	}
+	tagged := func(ps *panel.State, paths ...string) *panel.State {
+		ps.SelectedPaths = map[string]bool{}
+		for _, p := range paths {
+			ps.SelectedPaths[p] = true
+		}
+		return ps
+	}
+	cases := []struct {
+		name string
+		ps   *panel.State
+		want bool
+	}{
+		{"tree, only tag in an expanded folder", tagged(newPanel(panel.ListLayoutTree), ember), true},
+		{"tree, tag in the panel directory", tagged(newPanel(panel.ListLayoutTree), orchard), true},
+		{"flat, tag in the panel directory", tagged(newPanel(panel.ListLayoutFlat), orchard), true},
+		{"flat, only tag in a subfolder", tagged(newPanel(panel.ListLayoutFlat), ember), false},
+		{"tree, no tags", newPanel(panel.ListLayoutTree), false},
+		{"flat, only a ghost tag", tagged(newPanel(panel.ListLayoutFlat), pathloc.FileIndexPrefix+filepath.Join(root, "phantom.txt")), true},
+		{"flat, ghost tag in a subfolder", tagged(newPanel(panel.ListLayoutFlat), pathloc.FileIndexPrefix+filepath.Join(orchard, "phantom.txt")), false},
+		{"tree, ghost tag in an expanded folder", tagged(newPanel(panel.ListLayoutTree), pathloc.FileIndexPrefix+filepath.Join(orchard, "phantom.txt")), true},
+		{"ghost tag of another directory", tagged(newPanel(panel.ListLayoutTree), pathloc.FileIndexPrefix+filepath.Join(filepath.Dir(root), "phantom.txt")), false},
+		{"tree, entry switched off", func() *panel.State {
+			ps := tagged(newPanel(panel.ListLayoutTree), ember)
+			ps.SelectedPaths[ember] = false
+			return ps
+		}(), false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := EvalWhen("t t", &Context{Active: tc.ps})
+			if err != nil || got != tc.want {
+				t.Fatalf("t t = %v %v, want %v", got, err, tc.want)
+			}
+			if has := len(tc.ps.CommandTags()) > 0; has != tc.want {
+				t.Fatalf("CommandTags non-empty = %v, want %v", has, tc.want)
+			}
+		})
+	}
+}

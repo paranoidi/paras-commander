@@ -2,7 +2,6 @@ package usermenu
 
 import (
 	"path/filepath"
-	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/cmdmacro"
 	"github.com/paranoidi/paras-commander/internal/entrymatch"
@@ -62,17 +61,6 @@ func panelSnapshot(ps *panel.State) *cmdmacro.PanelSnapshot {
 			snap.Dir = filepath.Clean(filepath.Dir(ent.Path))
 		}
 	}
-	tree := ps.ListLayout == panel.ListLayoutTree
-	for p, on := range ps.SelectedPaths {
-		// Tree view tags rows at any depth, so %t takes every tag under the root.
-		if on && (filepath.Clean(filepath.Dir(p)) == root || tree && underDir(root, p)) {
-			snap.TaggedInDir = append(snap.TaggedInDir, p)
-		}
-	}
+	snap.TaggedInDir = ps.CommandTags()
 	return snap
-}
-
-func underDir(dir, p string) bool {
-	rel, err := filepath.Rel(dir, p)
-	return err == nil && rel != "." && rel != ".." && !strings.HasPrefix(rel, "../")
 }

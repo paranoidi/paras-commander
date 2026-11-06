@@ -345,7 +345,7 @@ func matchEntryTypes(ent *localfs.Entry, types string, ctx *Context) (bool, erro
 			if ctx.Row != nil {
 				// tagged predicate N/A in row mode
 			} else if ctx.Active != nil {
-				acc = acc || hasTaggedInPanelDir(ctx.Active)
+				acc = acc || len(ctx.Active.CommandTags()) > 0
 			}
 		default:
 			// ignore unknown letters
@@ -416,17 +416,4 @@ func validationEvalContext(shellPatterns bool) *Context {
 		Other:         other,
 		ShellPatterns: shellPatterns,
 	}
-}
-
-func hasTaggedInPanelDir(ps *panel.State) bool {
-	if ps == nil || len(ps.SelectedPaths) == 0 {
-		return false
-	}
-	base := filepath.Clean(ps.PathString())
-	for p := range ps.SelectedPaths {
-		if filepath.Clean(filepath.Dir(p)) == base {
-			return true
-		}
-	}
-	return false
 }
