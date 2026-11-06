@@ -27,8 +27,19 @@ func PathPickerListRows(state PathPickerState, layout Layout) int {
 	return fittedListHeight(pathPickerFrame(state, layout, theme.Theme{}, ""), layout, PathPickerList)
 }
 
-// pathPickerWidth is the dialog width on a layout of layoutWidth columns.
-func pathPickerWidth(layoutWidth int) int { return min(78, layoutWidth-4) }
+// pathPickerFindExtraRows is the 2 rows the Find dialog spends on its options row and the separator
+// under it, which the picker lacks; the file picker's list gets them so both frames are as tall.
+// Keep the two dialogs' sizes in step (docs/agents/dialogs.md, Shared dialog sizes).
+const pathPickerFindExtraRows = 2
+
+// pathPickerWidth is the dialog width on a layout of layoutWidth columns; the file picker takes
+// the Find dialog's width.
+func pathPickerWidth(state PathPickerState, layoutWidth int) int {
+	if state.Purpose == PathPickerPurposeNavigateFile {
+		return min(findDialogPreferredWidth, layoutWidth-4)
+	}
+	return min(78, layoutWidth-4)
+}
 
 // pathPickerList is the item list (windowed: only the visible rows are built): each ranked item as
 // one pre-fitted row of aligned source,
@@ -77,7 +88,7 @@ func EnsurePathPickerListScroll(state *PathPickerState, listRows int) {
 // navigates, since Enter already confirms). rowMarks may be nil (no pinned / job marks).
 func PathPickerView(state PathPickerState, layout Layout, styles theme.Theme, scrollbarStyle uiscrollbar.Style, rowMarks RowMarksFunc) dlg.Spec {
 	spec, _ := fillList(pathPickerFrame(state, layout, styles, scrollbarStyle), layout, PathPickerList, func(height, _ int) dlg.Item {
-		return pathPickerList(state, height, pathPickerWidth(layout.Width)-4, rowMarks)
+		return pathPickerList(state, height, pathPickerWidth(state, layout.Width)-4, rowMarks)
 	})
 	return spec
 }
@@ -102,12 +113,16 @@ func pathPickerFrame(state PathPickerState, layout Layout, styles theme.Theme, s
 	if state.Purpose == PathPickerPurposeNavigate {
 		buttons = buttons[1:]
 	}
+	listH := pickerListHeight(layout.Height)
+	if state.Purpose == PathPickerPurposeNavigateFile {
+		listH = findListHeight(layout.Height) + pathPickerFindExtraRows
+	}
 	return dlg.Spec{
-		Title: title, Width: pathPickerWidth(layout.Width), MinWidth: pathPickerMinWidth,
+		Title: title, Width: pathPickerWidth(state, layout.Width), MinWidth: pathPickerMinWidth,
 		ScrollbarStyle: scrollbarStyle,
 		Groups: []dlg.Group{{Columns: [][]dlg.Item{{
 			filter, {Kind: dlg.KindSeparator},
-			{ID: PathPickerList, Kind: dlg.KindList, Height: pickerListHeight(layout.Height), MinHeight: pickerMinListRows},
+			{ID: PathPickerList, Kind: dlg.KindList, Height: listH, MinHeight: pickerMinListRows},
 		}}}},
 		Buttons: buttons, ButtonsLabel: label,
 	}

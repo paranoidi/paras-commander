@@ -210,3 +210,27 @@ func TestPathPickerGoldenRender(t *testing.T) {
 	add("bm_n20_sel9_h10", 80, 10, st4, ascii, nil)
 	runSimpleGoldens(t, "path_picker", cases)
 }
+
+// TestPathPickerFileMatchesFindSize pins the file picker to the Find dialog's frame; other
+// purposes keep the standard picker width.
+func TestPathPickerFileMatchesFindSize(t *testing.T) {
+	for _, sz := range [][2]int{{80, 24}, {140, 40}, {200, 60}} {
+		layout := Layout{Width: sz[0], Height: sz[1]}
+		st := pickerGoldenState(6, 2, 0, false, "filter")
+		st.Purpose = PathPickerPurposeNavigateFile
+		p, ok := dlg.Place(layout.Width, layout.Height, PathPickerView(st, layout, theme.Default(), uiscrollbar.StyleThumb, nil))
+		fw, fh, _, fok := FindDialogMetrics(layout, &FindDialogState{})
+		if !ok || !fok {
+			t.Fatalf("%dx%d: picker fits %v, find fits %v", sz[0], sz[1], ok, fok)
+		}
+		if p.Rect.Width != fw || p.Rect.Height != fh {
+			t.Errorf("%dx%d: picker %dx%d, find %dx%d", sz[0], sz[1], p.Rect.Width, p.Rect.Height, fw, fh)
+		}
+	}
+	layout := Layout{Width: 200, Height: 60}
+	bm := pickerGoldenState(6, 2, 0, true, "filter")
+	p, ok := dlg.Place(layout.Width, layout.Height, PathPickerView(bm, layout, theme.Default(), uiscrollbar.StyleThumb, nil))
+	if !ok || p.Rect.Width != 78 {
+		t.Errorf("bookmark picker width = %d (fits %v), want 78", p.Rect.Width, ok)
+	}
+}

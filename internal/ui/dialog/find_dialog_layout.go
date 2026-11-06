@@ -10,7 +10,8 @@ const (
 
 // findListHeight is how many result rows the find dialog wants on a layout of layoutHeight rows
 // (4..26, leaving a margin around the dialog); dlg.FitSpec shortens it where the dialog's other
-// rows do not leave that many.
+// rows do not leave that many. A row added to or removed from the dialog must be mirrored in
+// pathPickerFindExtraRows (docs/agents/dialogs.md, Shared dialog sizes).
 func findListHeight(layoutHeight int) int {
 	return min(max(layoutHeight-14, findDialogMinListRows), findDialogMaxListRows)
 }

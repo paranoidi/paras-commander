@@ -103,7 +103,9 @@ func findDialogDepthFieldWidth(styles theme.Theme) int {
 	return draw.LeadingIconCols(styles.IconDialogDepth()) + findDialogDepthInputCells
 }
 
-const findDialogPreferredWidth = 125 // preferred frame width; clamped to the terminal in FindDialogMetrics
+// findDialogPreferredWidth is the preferred frame width, clamped to the terminal in
+// FindDialogMetrics. The file picker shares it (docs/agents/dialogs.md, Shared dialog sizes).
+const findDialogPreferredWidth = 125
 
 // FindRowIconPainter draws file-list devicons for one find dialog row (in the disabled style
 // when disabled); nil skips icons.
