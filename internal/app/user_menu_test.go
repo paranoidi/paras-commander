@@ -3,8 +3,10 @@ package app
 import (
 	"context"
 	"errors"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -1227,13 +1229,12 @@ func TestUserMenuRefusesGhostKeepOpenWithoutRanToast(t *testing.T) {
 	}
 }
 
-func TestUserMenuRefusesTaggedGhostAndKeepsTags(t *testing.T) {
-	app, dir := userMenuGhostApp(t, "echo %t", "detach = true\n")
+func TestUserMenuRefusesGhostCursorWithTagsAndKeepsTags(t *testing.T) {
+	app, dir := userMenuGhostApp(t, "echo %t %f", "detach = true\n")
 	ran := false
 	prev := userMenuDetachRunner
 	userMenuDetachRunner = func([]string, string) error { ran = true; return nil }
 	t.Cleanup(func() { userMenuDetachRunner = prev })
-	selectEntryByName(t, app, "harbor.txt")
 	app.model.Primary.SelectedPaths = map[string]bool{
 		filepath.Join(dir, "harbor.txt"):                            true,
 		pathloc.FileIndexPrefix + filepath.Join(dir, "phantom.txt"): true,
@@ -1247,6 +1248,107 @@ func TestUserMenuRefusesTaggedGhostAndKeepsTags(t *testing.T) {
 	}
 	if got := len(app.model.Primary.SelectedPaths); got != 2 {
 		t.Fatalf("tags = %d, want 2 (kept)", got)
+	}
+}
+
+func TestUserMenuRefusesPercentTWithTaggedGhost(t *testing.T) {
+	app, dir := userMenuGhostApp(t, "echo %t", "detach = true\n")
+	ran := false
+	prev := userMenuDetachRunner
+	userMenuDetachRunner = func([]string, string) error { ran = true; return nil }
+	t.Cleanup(func() { userMenuDetachRunner = prev })
+	selectEntryByName(t, app, "harbor.txt")
+	tags := map[string]bool{
+		filepath.Join(dir, "harbor.txt"):                            true,
+		pathloc.FileIndexPrefix + filepath.Join(dir, "phantom.txt"): true,
+	}
+	app.model.Primary.SelectedPaths = maps.Clone(tags)
+
+	runUserMenuKey(app, 'r')
+
+	assertUserCommandRefused(t, app, "Only in the index: phantom.txt")
+	if ran {
+		t.Fatal("command ran")
+	}
+	if !maps.Equal(app.model.Primary.SelectedPaths, tags) {
+		t.Fatalf("tags = %v, want them intact: %v", app.model.Primary.SelectedPaths, tags)
+	}
+}
+
+// The cursor row is not part of %t: real tags run even with a ghost row under the cursor.
+func TestUserMenuPercentTRealTagsGhostCursorRuns(t *testing.T) {
+	app, dir := userMenuGhostApp(t, "echo %t", "detach = true\n")
+	var gotArgv []string
+	prev := userMenuDetachRunner
+	userMenuDetachRunner = func(argv []string, _ string) error { gotArgv = argv; return nil }
+	t.Cleanup(func() { userMenuDetachRunner = prev })
+	app.model.Primary.SelectedPaths = map[string]bool{filepath.Join(dir, "harbor.txt"): true}
+
+	runUserMenuKey(app, 'r')
+
+	if want := []string{"echo", filepath.Join(dir, "harbor.txt")}; !slices.Equal(gotArgv, want) {
+		t.Fatalf("argv = %q, want %q", gotArgv, want)
+	}
+}
+
+func TestUserMenuNoPercentTLeavesTaggedGhostAlone(t *testing.T) {
+	app, dir := userMenuGhostApp(t, "touch x", "detach = true\n")
+	ran := false
+	prev := userMenuDetachRunner
+	userMenuDetachRunner = func([]string, string) error { ran = true; return nil }
+	t.Cleanup(func() { userMenuDetachRunner = prev })
+	selectEntryByName(t, app, "harbor.txt")
+	tags := map[string]bool{
+		filepath.Join(dir, "harbor.txt"):                            true,
+		pathloc.FileIndexPrefix + filepath.Join(dir, "phantom.txt"): true,
+	}
+	app.model.Primary.SelectedPaths = maps.Clone(tags)
+
+	runUserMenuKey(app, 'r')
+
+	if !ran {
+		t.Fatalf("command did not run: %q", app.model.Message)
+	}
+	if !maps.Equal(app.model.Primary.SelectedPaths, tags) {
+		t.Fatalf("tags = %v, want them untouched: %v", app.model.Primary.SelectedPaths, tags)
+	}
+}
+
+func TestUserMenuGhostCursorRunsCommandWithoutMacros(t *testing.T) {
+	app, _ := userMenuGhostApp(t, "touch x", "detach = true\n")
+	var gotDir string
+	prev := userMenuDetachRunner
+	userMenuDetachRunner = func(_ []string, dir string) error { gotDir = dir; return nil }
+	t.Cleanup(func() { userMenuDetachRunner = prev })
+
+	runUserMenuKey(app, 'r')
+
+	if gotDir != app.model.Primary.PathString() {
+		t.Fatalf("detach dir = %q, want the panel directory", gotDir)
+	}
+}
+
+func TestUserMenuRefusesGhostOnOtherPanel(t *testing.T) {
+	app, dir := userMenuGhostApp(t, "diff %f %F", "background = true\nkeep_open = true\n")
+	other := &app.model.Secondary
+	other.WithIndex = true
+	other.IndexOverlay = ghostOverlay("phantom.txt", "")
+	other.ScheduleAsyncLoad = nil
+	if err := other.Load(dir); err != nil {
+		t.Fatal(err)
+	}
+	selectEntryByName(t, app, "harbor.txt")
+	for i := 0; i < other.VisibleEntryCount(); i++ {
+		if e, _, ok := other.VisibleEntry(i); ok && e.Name == "phantom.txt" {
+			other.Cursor = i
+		}
+	}
+
+	runUserMenuKey(app, 'r')
+
+	assertUserCommandRefused(t, app, "Only in the index: phantom.txt")
+	if strings.Contains(app.model.Message, "Ran") {
+		t.Fatalf("message = %q claims the command ran", app.model.Message)
 	}
 }
 
@@ -1306,6 +1408,38 @@ func TestUserMenuRefusesGhostRowInTreeLayout(t *testing.T) {
 	assertUserCommandRefused(t, app, "Only in the index: phantom.txt")
 }
 
+func TestUserMenuTreeGhostCursorRefusedByCursorDirectory(t *testing.T) {
+	app, _, _ := userMenuTreeFixtureWith(t, "[run]\nkey = \"r\"\ntitle = \"Run\"\ncommand = \"touch x\"\n",
+		ghostOverlay("phantom.txt", "orchard"))
+	selectEntryByName(t, app, "phantom.txt")
+
+	runUserMenuKey(app, 'r')
+
+	assertUserCommandRefused(t, app, "Only in the index: phantom.txt")
+}
+
+func TestUserMenuTreeGhostCursorRunsInPanelDirectory(t *testing.T) {
+	app, root, sub := userMenuTreeFixtureWith(t, "[run]\nkey = \"r\"\ntitle = \"Run\"\ncommand = \"touch x\"\ncwd = \"panel\"\n",
+		ghostOverlay("phantom.txt", "orchard"))
+	selectEntryByName(t, app, "phantom.txt")
+
+	runUserMenuKey(app, 'r')
+	waitCommandsDone(t, app)
+
+	assertFileExists(t, filepath.Join(root, "x"), true)
+	assertFileExists(t, filepath.Join(sub, "x"), false)
+}
+
+func TestUserMenuRunForEachRealTagsGhostCursorRuns(t *testing.T) {
+	app, dir := userMenuGhostApp(t, "touch %f.copy", "run_for_each = [\"files\"]\ncwd = \"panel\"\n")
+	app.model.Primary.SelectedPaths = map[string]bool{filepath.Join(dir, "harbor.txt"): true}
+
+	runUserMenuKey(app, 'r')
+	waitCommandsDone(t, app)
+
+	assertFileExists(t, filepath.Join(dir, "harbor.txt.copy"), true)
+}
+
 func TestRunForEachDialogRefusesGhostAtOpen(t *testing.T) {
 	app, dir := userMenuGhostApp(t, "echo", "")
 	app.commandsCtrl.OpenRunForEachDialog()
@@ -1327,6 +1461,53 @@ func TestRunForEachDialogRefusesGhostAtOpen(t *testing.T) {
 	app.commandsCtrl.OpenRunForEachDialog()
 	if !app.model.FileDialog.Open {
 		t.Fatal("dialog should open on a real row")
+	}
+}
+
+func TestRunForEachDialogOpensOnRealTagsWithGhostCursor(t *testing.T) {
+	app, dir := userMenuGhostApp(t, "echo", "")
+	app.model.Primary.SelectedPaths = map[string]bool{filepath.Join(dir, "harbor.txt"): true}
+	app.commandsCtrl.OpenRunForEachDialog()
+	if !app.model.FileDialog.Open {
+		t.Fatalf("dialog should open on real tags: %q", app.model.Message)
+	}
+}
+
+func TestRunForEachDialogRefusesGhostOnOtherPanelOnceTyped(t *testing.T) {
+	app, dir := userMenuGhostApp(t, "echo", "")
+	other := &app.model.Secondary
+	other.WithIndex = true
+	other.IndexOverlay = ghostOverlay("phantom.txt", "")
+	other.ScheduleAsyncLoad = nil
+	if err := other.Load(dir); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < other.VisibleEntryCount(); i++ {
+		if e, _, ok := other.VisibleEntry(i); ok && e.Name == "phantom.txt" {
+			other.Cursor = i
+		}
+	}
+	selectEntryByName(t, app, "harbor.txt")
+	app.commandsCtrl.OpenRunForEachDialog()
+	if !app.model.FileDialog.Open {
+		t.Fatalf("dialog should open: %q", app.model.Message)
+	}
+
+	app.model.FileDialog.Fields[0].Value = "diff %f %F"
+	app.commandsCtrl.ExecuteRunForEach()
+
+	fd := app.model.FileDialog
+	if !fd.Open || fd.RunForEachCommandError != "Only in the index: phantom.txt" || !fd.Fields[0].InputInvalid {
+		t.Fatalf("open=%v error=%q invalid=%v", fd.Open, fd.RunForEachCommandError, fd.Fields[0].InputInvalid)
+	}
+	if len(app.model.CommandsList) != 0 {
+		t.Fatalf("a command row was recorded: %+v", app.model.CommandsList)
+	}
+
+	app.model.FileDialog.Fields[0].Value = "echo %f"
+	app.commandsCtrl.RecomputeRunForEachValidation()
+	if got := app.model.FileDialog.RunForEachCommandError; got != "" {
+		t.Fatalf("error = %q for a command without %%F", got)
 	}
 }
 

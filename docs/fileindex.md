@@ -125,7 +125,8 @@ On a ghost row:
   [Operations and the index](#operations-and-the-index)).
 - **Copy, move, view and edit** are refused with "Only in the index: name":
   there is no file to read. So are [user menu and Run for each commands](commands.md#local-panels-only)
-  when a ghost row is highlighted or tagged.
+  that would receive the ghost row (as `%f`, as a Run for each item, or as the
+  directory they run in); a command that does not use it runs normally.
 
 A symlink to a file is judged by what it points to: its target's size and
 modification time are compared with the index, as a scan records them, and a

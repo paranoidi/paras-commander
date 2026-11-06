@@ -9,6 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/usermenu"
 )
 
 // maxRunForEachHistory caps the in-memory, session-only recently-run command list (see
@@ -22,7 +23,9 @@ func (h *Handler) OpenRunForEachDialog() {
 		return
 	}
 	active := h.host.ActivePanel()
-	if msg := active.UserCommandRefusal(); msg != "" {
+	other := h.host.InactivePanel()
+	// Resolving the source of a remote panel may do I/O: refuse it first.
+	if msg := runForEachRefusal("", nil, active, other); msg != "" {
 		h.host.SetTransientMessage(msg, ui.MessageUrgencyWarn)
 		return
 	}
@@ -32,6 +35,12 @@ func (h *Handler) OpenRunForEachDialog() {
 		return
 	}
 	entries := append([]localfs.Entry(nil), src.Entries...)
+	// The command is not typed yet: the rows alone decide here, the macros in
+	// RecomputeRunForEachValidation.
+	if msg := runForEachRefusal("", entries, active, other); msg != "" {
+		h.host.SetTransientMessage(msg, ui.MessageUrgencyWarn)
+		return
+	}
 	msg := "Runs once per selected item. Default mode must include %f (iterated item path).\n" +
 		"Other macros: %d active dir, %F/%D other panel, %t/%T tagged paths.\n" +
 		"Do not wrap % macros in quotes.\n" +
@@ -154,9 +163,21 @@ func validateRunForEachCommand(cmdLine string, entries []localfs.Entry, active, 
 	if ent.Path == "" && active != nil {
 		ent.Path = active.PathString()
 	}
+	if msg := runForEachRefusal(cmdLine, entries, active, other); msg != "" {
+		return "", msg
+	}
 	built, err := BuildRunForEachItem(cmdLine, ent, active, other, false, !inDirs)
 	if err != nil {
 		return "", err.Error()
 	}
 	return built.UserLine, ""
+}
+
+// runForEachRefusal is usermenu.CommandRefusal for the Run-for-each dialog: it runs cmdLine on
+// entries, in each row's own directory.
+func runForEachRefusal(cmdLine string, entries []localfs.Entry, active, other *panel.State) string {
+	return usermenu.CommandRefusal(usermenu.Launch{
+		Command:        cmdLine,
+		RunForEachRows: func() []localfs.Entry { return entries },
+	}, active, other)
 }

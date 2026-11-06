@@ -70,7 +70,16 @@ cwd = "panel"
 
 ### Local panels only
 
-User menu entries and Run for each run on local panels only. They are refused with a warning, before anything runs and with the selection left as it is, when the active panel is an SFTP or file index (`fileindex://`) panel ("User commands run on local panels only"), or when the highlighted row or any tagged row is only in the index (a [ghost row](fileindex.md#browsing-with-fileindex): "Only in the index: name"). The `..` row and an empty panel are not refused. A menu that stays open (`keep_open`) shows the warning instead of its "Ran" toast.
+User menu entries and Run for each run on local panels only, and a command never receives a path that is only in the file index. A command is refused with a warning, before anything runs and with the selection left as it is, when:
+
+- the active panel is an SFTP or file index (`fileindex://`) panel, whatever the command ("User commands run on local panels only");
+- it uses `%f` and the highlighted row is only in the index (a [ghost row](fileindex.md#browsing-with-fileindex): "Only in the index: name");
+- it uses `%t` and one of the tagged rows `%t` expands to (the tags in the panel directory, and in expanded folders in a tree layout) is a ghost row; the highlighted row is not part of `%t`;
+- it uses `%d`, or runs in the highlighted row's directory (the default `cwd`), and that row is a ghost row in a tree layout, whose directory is an index path;
+- it is a `run_for_each` entry or Run for each and one of the rows it runs on is a ghost row. The rows are the tagged rows, or the highlighted row when nothing is tagged, so real tags with a ghost row highlighted are not refused;
+- it uses `%F`, `%T` or `%D` and the other panel's highlighted row, the tags `%T` expands to or its directory is an index path. This includes a `fileindex://` other panel. An SFTP other panel is not refused.
+
+So a ghost row highlighted in a flat listing does not stop `touch x`, which runs in the panel directory, but it stops `mkdir -p %f`. In a tree layout it stops `touch x` unless the entry sets `cwd = "panel"`. A command without the macro that would read a tagged ghost row runs normally and leaves the tags alone. The `..` row and an empty panel are not refused. Run for each checks the rows when it opens and the other panel's macros once the command is typed, as the red error line of the dialog. A menu that stays open (`keep_open`) shows the warning instead of its "Ran" toast.
 
 ### Entry modes
 

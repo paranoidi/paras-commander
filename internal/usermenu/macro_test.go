@@ -17,6 +17,7 @@ func TestCommandRequiresIteratedF(t *testing.T) {
 		{`gzip -9 %f`, true},
 		{`gzip -9`, false},
 		{`echo %%f`, false},
+		{`echo %%%f`, true},
 		{`echo %f %d`, true},
 	}
 	for _, tc := range tests {

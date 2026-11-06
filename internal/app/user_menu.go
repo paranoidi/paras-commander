@@ -229,7 +229,14 @@ func userMenuLeaderMenuItems(entries []usermenu.MenuEntry, styles theme.Theme) [
 func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 	active := a.activePanel()
 	other := a.inactivePanel()
-	if msg := active.UserCommandRefusal(); msg != "" {
+	launch := usermenu.Launch{Command: entry.Command, CwdPanel: entry.CwdPanel()}
+	if len(entry.RunForEach) > 0 {
+		launch.RunForEachRows = func() []localfs.Entry {
+			src, _ := ops.ResolveSource(active) // an error is reported by executeUserMenuRunForEach
+			return src.Entries
+		}
+	}
+	if msg := usermenu.CommandRefusal(launch, active, other); msg != "" {
 		a.setTransientMessage(msg, ui.MessageUrgencyWarn)
 		return
 	}
