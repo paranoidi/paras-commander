@@ -188,6 +188,10 @@ func (h *Handler) HandleFilePreviewViewKey(event *tcell.EventKey) (quit bool) {
 	if h.model.FullscreenFilePreview.Search.Editing {
 		return h.handleFilePreviewSearchTypingKey(event)
 	}
+	// Before the vi-motion remap so remapped j/k (Down/Up) keep scrolling.
+	if !h.model.FilePreviewThemePicker.Open && h.handleFilePreviewSearchNavKey(event) {
+		return false
+	}
 	if h.model.ViMotionMode {
 		event = keymap.RemapViMotionKey(event)
 	}

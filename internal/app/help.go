@@ -325,6 +325,9 @@ func (a *App) effectiveKeyStringsForView(actionID string, defaults []string, vm 
 	if vm == ui.ViewFilePreview && a.keys.FilePreview != nil {
 		add(a.keys.FilePreview.BindingsForAction(actionID))
 	}
+	if vm == ui.ViewFilePreview && a.keys.FilePreviewSearch != nil {
+		add(a.keys.FilePreviewSearch.BindingsForAction(actionID))
+	}
 	if len(out) > 0 {
 		return out
 	}
@@ -374,6 +377,9 @@ func (a *App) effectiveKeyStringsForView(actionID string, defaults []string, vm 
 	}
 	if vm == ui.ViewFilePreview {
 		if od := keymap.DefaultFilePreviewOverlayKeys()[actionID]; len(od) > 0 {
+			add(od)
+		}
+		if od := keymap.DefaultFilePreviewSearchOverlayKeys()[actionID]; len(od) > 0 {
 			add(od)
 		}
 	}

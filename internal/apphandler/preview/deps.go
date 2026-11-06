@@ -28,6 +28,9 @@ type Deps struct {
 	// Keys is the [dialog.input] keymap overlay used for the style-picker query field and any
 	// other scrolling-query editing owned by this handler.
 	KeysDialogInput *keymap.Map
+	// KeysFilePreviewSearch is the [preview_search] overlay: match-jump chords consulted only while
+	// the fullscreen preview search has matches. Nil means no binding.
+	KeysFilePreviewSearch *keymap.Map
 	// Mu is the App's shared async-model-mutation lock (guards FilePreview/CarouselFilePreview/
 	// FullscreenFilePreview and other model fields written from background goroutines). render()
 	// copies the whole App.model under this same lock, so mutations here must use the identical
@@ -49,12 +52,13 @@ const (
 
 // Handler owns quick view, fullscreen (F3) preview, and carousel preview state and dispatch.
 type Handler struct {
-	host            Host
-	screen          tcell.Screen
-	model           *ui.Model
-	keysDialogInput *keymap.Map
-	mu              *sync.RWMutex
-	ctx             context.Context
+	host                  Host
+	screen                tcell.Screen
+	model                 *ui.Model
+	keysDialogInput       *keymap.Map
+	keysFilePreviewSearch *keymap.Map
+	mu                    *sync.RWMutex
+	ctx                   context.Context
 
 	// filePreviewRunGen invalidates in-flight inactive-column (quick view) preview completions.
 	filePreviewRunGen atomic.Uint64
@@ -180,12 +184,13 @@ func currentPreviewExec() func(context.Context, previewrun.Request) previewrun.R
 // New constructs a Handler.
 func New(d Deps) *Handler {
 	h := &Handler{
-		host:            d.Host,
-		screen:          d.Screen,
-		model:           d.Model,
-		keysDialogInput: d.KeysDialogInput,
-		mu:              d.Mu,
-		ctx:             d.Ctx,
+		host:                  d.Host,
+		screen:                d.Screen,
+		model:                 d.Model,
+		keysDialogInput:       d.KeysDialogInput,
+		keysFilePreviewSearch: d.KeysFilePreviewSearch,
+		mu:                    d.Mu,
+		ctx:                   d.Ctx,
 	}
 	h.ensurePrefetch()
 	return h

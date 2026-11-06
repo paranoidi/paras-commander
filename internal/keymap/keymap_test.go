@@ -1415,3 +1415,24 @@ func TestDialogInputPathPickerAllKeysParse(t *testing.T) {
 		}
 	}
 }
+
+func TestPreviewSearchOverlayRebindAndRejection(t *testing.T) {
+	dir := t.TempDir()
+	write := func(body string) config.Paths {
+		f := filepath.Join(dir, "keybindings.toml")
+		if err := os.WriteFile(f, []byte(body), 0o600); err != nil {
+			t.Fatalf("write keybindings: %v", err)
+		}
+		return config.Paths{ConfigDir: dir, KeybindingsFile: f}
+	}
+	b, err := LoadFromPaths(write("[preview_search]\npreview.search-next = [\"C-n\"]\n"))
+	if err != nil {
+		t.Fatalf("LoadFromPaths: %v", err)
+	}
+	if got := b.FilePreviewSearch.BindingsForAction(ActionPreviewSearchNext); len(got) != 1 || got[0] != "C-n" {
+		t.Fatalf("search-next bindings = %v, want [C-n]", got)
+	}
+	if _, err := LoadFromPaths(write("[preview_search]\npreview.scroll-down = [\"C-n\"]\n")); err == nil {
+		t.Fatal("want error for disallowed action in [preview_search]")
+	}
+}

@@ -803,12 +803,13 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		FileIndex:  app.fileIndex,
 	})
 	app.previewCtrl = previewctrl.New(previewctrl.Deps{
-		Host:            previewHost{appShellHost: appShellHost{app: app}},
-		Screen:          screen,
-		Model:           &app.model,
-		KeysDialogInput: keys.DialogInput,
-		Mu:              &app.commandsMu,
-		Ctx:             app.commandsCtx,
+		Host:                  previewHost{appShellHost: appShellHost{app: app}},
+		Screen:                screen,
+		Model:                 &app.model,
+		KeysDialogInput:       keys.DialogInput,
+		KeysFilePreviewSearch: keys.FilePreviewSearch,
+		Mu:                    &app.commandsMu,
+		Ctx:                   app.commandsCtx,
 	})
 	app.model.Primary.PreviewDirRule = app.previewCtrl.CarouselDirRule
 	app.model.Secondary.PreviewDirRule = app.previewCtrl.CarouselDirRule
@@ -962,6 +963,7 @@ func resolveKeymapBundle(opts Options) (*keymap.Bundle, error) {
 		{&rk.HelpDialog, keymap.DefaultHelpDialogOverlayKeys, "help dialog overlay"},
 		{&rk.UserMenu, keymap.DefaultUserMenuOverlayKeys, "user menu overlay"},
 		{&rk.FilePreview, keymap.DefaultFilePreviewOverlayKeys, "preview overlay"},
+		{&rk.FilePreviewSearch, keymap.DefaultFilePreviewSearchOverlayKeys, "preview search overlay"},
 		{&rk.FlattenDialog, keymap.DefaultFlattenDialogOverlayKeys, "flatten dialog overlay"},
 		{&rk.TransferDialog, keymap.DefaultTransferDialogOverlayKeys, "transfer dialog overlay"},
 		{&rk.Compare, keymap.DefaultCompareOverlayKeys, "compare overlay"},

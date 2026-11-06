@@ -32,3 +32,20 @@ func AllowedInFilePreviewOverlay(actionID string) bool {
 	}
 	return strings.HasPrefix(actionID, "preview.") && actionID != ActionPreviewSettingsDialog
 }
+
+// DefaultFilePreviewSearchOverlayKeys holds built-in chords for [preview_search]: match-jump
+// chords consulted only while a fullscreen-preview search has matches. They are a separate table
+// from [preview] because that overlay is consulted before the global map and would shadow the
+// plain scroll/page chords when no search is active.
+func DefaultFilePreviewSearchOverlayKeys() map[string][]string {
+	return map[string][]string{
+		ActionPreviewSearchNext: {"down", "C-j"},
+		ActionPreviewSearchPrev: {"up", "C-k"},
+	}
+}
+
+// AllowedInFilePreviewSearchOverlay reports whether actionID may appear under [preview_search].
+func AllowedInFilePreviewSearchOverlay(actionID string) bool {
+	_, ok := DefaultFilePreviewSearchOverlayKeys()[actionID]
+	return ok
+}

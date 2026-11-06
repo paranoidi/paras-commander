@@ -554,6 +554,8 @@ Built-in defaults are written to `keybindings.toml` via `pc --config-stub`. F-ke
 
 **`[preview]`** (keybindings) — keys active only in the F3 fullscreen preview. Besides the menu/search/theme actions, defaults include vim-style navigation: `j` / `k` scroll a line, `C-d` / `C-u` a half page, `C-f` / `C-b` a full page, `g` / `G` go to the start / end, and `q` or `h` close. Arrow keys, PgUp/PgDn, Space, Home and End keep working.
 
+**`[preview_search]`** (keybindings) — match-jump chords consulted only while an F3 preview search has matches (while typing the query and after Enter). Defaults: next match `down`, `C-j`; previous match `up`, `C-k`. Only those two actions are allowed. With no search or no matches the chords keep their normal meaning (line scroll, page, line editing in the search field). Next / previous match also stay bound to `n` / `p` in `[preview]`.
+
 **`[preview_menu]`** — letter keys for the `:` fullscreen-preview menu, open only while the F3 fullscreen preview is focused. Defaults: theme picker `t`, toggle raw `r`, reload `R`, search `s`, next / previous diff hunk `n` / `p`, edit `e`, delete `d`, quit `q`. `r`/`R` is a deliberate case pair (toggle raw markdown vs. reload). Empty value omits the row. Keys must be letters and unique within the table.
 
 Notable dual bindings:

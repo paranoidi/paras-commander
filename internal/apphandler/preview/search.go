@@ -2,6 +2,7 @@ package preview
 
 import (
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
@@ -48,6 +49,9 @@ func (h *Handler) applyFilePreviewSearchFieldEdit(field dialog.FileDialogField) 
 // being edited (Search.Editing). All runes, including ones that would otherwise be bound
 // to actions like "n"/"p", are literal query text here.
 func (h *Handler) handleFilePreviewSearchTypingKey(event *tcell.EventKey) (quit bool) {
+	if h.handleFilePreviewSearchNavKey(event) {
+		return false
+	}
 	switch event.Key() {
 	case tcell.KeyEsc:
 		h.clearFilePreviewSearchField()
@@ -78,18 +82,34 @@ func (h *Handler) handleFilePreviewSearchTypingKey(event *tcell.EventKey) (quit 
 }
 
 // filePreviewSearchNav moves to the next (dir>0) or previous (dir<0) search match, wrapping
-// at the ends, and scrolls the preview to reveal it.
-func (h *Handler) filePreviewSearchNav(dir int) {
+// at the ends, and scrolls the preview to reveal it. It reports false when there is no active
+// search or no matches, true when it moved.
+func (h *Handler) filePreviewSearchNav(dir int) bool {
 	h.mu.RLock()
 	st := h.model.FullscreenFilePreview
 	h.mu.RUnlock()
 	if !st.Search.Active || len(st.Search.Matches) == 0 {
-		return
+		return false
 	}
 	n := len(st.Search.Matches)
 	next := (st.Search.Current + dir + n) % n
 	h.patchFullscreenFilePreview(func(fp *ui.FilePreviewState) { fp.Search.Current = next })
 	h.scrollFilePreviewToSearchMatch(next)
+	return true
+}
+
+// handleFilePreviewSearchNavKey jumps between matches for [preview_search] chords. It reports
+// false when the key isn't bound there or the search has no matches, so those chords keep their
+// normal meaning (scrolling, or line editing while typing).
+func (h *Handler) handleFilePreviewSearchNavKey(event *tcell.EventKey) bool {
+	id, _ := h.keysFilePreviewSearch.Lookup(event)
+	switch id {
+	case keymap.ActionPreviewSearchNext:
+		return h.filePreviewSearchNav(1)
+	case keymap.ActionPreviewSearchPrev:
+		return h.filePreviewSearchNav(-1)
+	}
+	return false
 }
 
 // scrollFilePreviewToSearchMatch scrolls the fullscreen preview so search match idx is centered

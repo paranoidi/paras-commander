@@ -26,6 +26,7 @@ type Bundle struct {
 	UserMenu            *Map // F2 user menu strip (back to parent submenu)
 	CommandOutputDialog *Map // user-menu command output dialog (toggle path selection)
 	MetaDialog          *Map // meta columns picker (save default columns)
+	FilePreviewSearch   *Map // F3 preview search match-jump chords, consulted only while a search has matches; may be nil
 	// LeaderKey maps action ID → single-letter Esc function-menu leader key (merged defaults + user).
 	LeaderKey map[string]string
 	// CopyMenuKey maps action ID → single-letter `"` copy-menu key (merged defaults + user).

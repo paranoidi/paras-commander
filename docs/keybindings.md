@@ -44,6 +44,7 @@ Bindings are grouped by context. While a view or dialog has focus, its table is 
 | `[main]` | Global and file browser actions |
 | `[jobs]`, `[commands]`, `[messages]`, `[compare]`, `[dedup]` | The matching view |
 | `[preview]` | Fullscreen preview (F3) |
+| `[preview_search]` | Fullscreen preview, consulted only while a search has matches (match-jump chords) |
 | `[terminal]` | Embedded terminal panel |
 | `[dialog.input]` | Text inputs and the OK/Cancel chords of every dialog |
 | `[dialog.rename]`, `[dialog.mass_rename]`, `[dialog.mkdir]`, `[dialog.bookmark]`, `[dialog.find]`, `[dialog.history]`, `[dialog.meta]`, `[dialog.pin]`, `[dialog.flatten]`, `[dialog.transfer]`, `[dialog.run_for_each]`, `[dialog.command_output]`, `[dialog.help]`, `[dialog.user_menu]` | The matching dialog |

@@ -112,6 +112,7 @@ func buildBundle(global map[string][]string, overlayLayers []map[string][]string
 		UserMenu:            overlayMaps[19],
 		CommandOutputDialog: overlayMaps[20],
 		MetaDialog:          overlayMaps[21],
+		FilePreviewSearch:   overlayMaps[22],
 		LeaderKey:           menus[LeaderKeyShortcutsTable],
 		CopyMenuKey:         menus[CopyMenuShortcutsTable],
 		PreviewMenuKey:      menus[PreviewMenuShortcutsTable],
@@ -196,7 +197,7 @@ func validateKeybindingsTopLevel(top map[string]interface{}, label string) error
 			continue
 		}
 		switch k {
-		case MainShortcutsTable, JobsShortcutsTable, CommandsShortcutsTable, MessagesShortcutsTable, FilePreviewShortcutsTable, CompareShortcutsTable, DedupShortcutsTable, TerminalShortcutsTable:
+		case MainShortcutsTable, JobsShortcutsTable, CommandsShortcutsTable, MessagesShortcutsTable, FilePreviewShortcutsTable, FilePreviewSearchShortcutsTable, CompareShortcutsTable, DedupShortcutsTable, TerminalShortcutsTable:
 			if _, ok := v.(map[string]interface{}); !ok {
 				return fmt.Errorf("parse keybindings %q: [%s] must be a table", label, k)
 			}
@@ -214,7 +215,7 @@ func validateKeybindingsTopLevel(top map[string]interface{}, label string) error
 				}
 			}
 		default:
-			return fmt.Errorf("parse keybindings %q: unknown field %q (allowed: main, leader_key, copy_menu, preview_menu, fileindex_menu, jobs, commands, messages, preview, compare, dedup, terminal, dialog)", label, k)
+			return fmt.Errorf("parse keybindings %q: unknown field %q (allowed: main, leader_key, copy_menu, preview_menu, fileindex_menu, jobs, commands, messages, preview, preview_search, compare, dedup, terminal, dialog)", label, k)
 		}
 	}
 	return nil
@@ -344,32 +345,34 @@ func EncodeDefaultStub(w io.Writer) error {
 		return fmt.Errorf("encode keybindings stub header: %w", err)
 	}
 	payload := struct {
-		Main        map[string][]string `toml:"main"`
-		LeaderKey   map[string]string   `toml:"leader_key"`
-		CopyMenu    map[string]string   `toml:"copy_menu"`
-		PreviewMenu map[string]string   `toml:"preview_menu"`
-		FileIndex   map[string]string   `toml:"fileindex_menu"`
-		Jobs        map[string][]string `toml:"jobs"`
-		Commands    map[string][]string `toml:"commands"`
-		Messages    map[string][]string `toml:"messages"`
-		FilePreview map[string][]string `toml:"preview"`
-		Compare     map[string][]string `toml:"compare"`
-		Dedup       map[string][]string `toml:"dedup"`
-		Terminal    map[string][]string `toml:"terminal"`
-		Dialog      dialogShortcuts     `toml:"dialog"`
+		Main          map[string][]string `toml:"main"`
+		LeaderKey     map[string]string   `toml:"leader_key"`
+		CopyMenu      map[string]string   `toml:"copy_menu"`
+		PreviewMenu   map[string]string   `toml:"preview_menu"`
+		FileIndex     map[string]string   `toml:"fileindex_menu"`
+		Jobs          map[string][]string `toml:"jobs"`
+		Commands      map[string][]string `toml:"commands"`
+		Messages      map[string][]string `toml:"messages"`
+		FilePreview   map[string][]string `toml:"preview"`
+		PreviewSearch map[string][]string `toml:"preview_search"`
+		Compare       map[string][]string `toml:"compare"`
+		Dedup         map[string][]string `toml:"dedup"`
+		Terminal      map[string][]string `toml:"terminal"`
+		Dialog        dialogShortcuts     `toml:"dialog"`
 	}{
-		Main:        DefaultActionKeys(),
-		LeaderKey:   DefaultLeaderKeys(),
-		CopyMenu:    DefaultCopyMenuKeys(),
-		PreviewMenu: DefaultPreviewMenuKeys(),
-		FileIndex:   DefaultFileIndexMenuKeys(),
-		Jobs:        DefaultJobsOverlayKeys(),
-		Commands:    DefaultCommandsOverlayKeys(),
-		Messages:    DefaultMessagesOverlayKeys(),
-		FilePreview: DefaultFilePreviewOverlayKeys(),
-		Compare:     DefaultCompareOverlayKeys(),
-		Dedup:       DefaultDedupOverlayKeys(),
-		Terminal:    DefaultTerminalOverlayKeys(),
+		Main:          DefaultActionKeys(),
+		LeaderKey:     DefaultLeaderKeys(),
+		CopyMenu:      DefaultCopyMenuKeys(),
+		PreviewMenu:   DefaultPreviewMenuKeys(),
+		FileIndex:     DefaultFileIndexMenuKeys(),
+		Jobs:          DefaultJobsOverlayKeys(),
+		Commands:      DefaultCommandsOverlayKeys(),
+		Messages:      DefaultMessagesOverlayKeys(),
+		FilePreview:   DefaultFilePreviewOverlayKeys(),
+		PreviewSearch: DefaultFilePreviewSearchOverlayKeys(),
+		Compare:       DefaultCompareOverlayKeys(),
+		Dedup:         DefaultDedupOverlayKeys(),
+		Terminal:      DefaultTerminalOverlayKeys(),
 		Dialog: dialogShortcuts{
 			Input:         DefaultDialogInputOverlayKeys(),
 			Rename:        DefaultRenameDialogOverlayKeys(),

@@ -28,7 +28,7 @@ Quick view is per panel: the panel you turn it on for becomes the driver, and th
 
 ## Fullscreen preview (F3)
 
-The preview takes the whole screen (no menu bar; the filename is the top row). Besides the vim-style keys below, arrows, PgUp/PgDn, Home, End and Space scroll as usual.
+The preview takes the whole screen (no menu bar; the filename is the top row). Besides the vim-style keys below, arrows, PgUp/PgDn, Home, End and Space scroll as usual (while a search has matches, Up/Down jump between matches instead, see below).
 
 | Key | Does |
 |---|---|
@@ -38,6 +38,7 @@ The preview takes the whole screen (no menu bar; the filename is the top row). B
 | `g` / `G` | Start / end |
 | `/` | Search (case-insensitive, literal); Enter accepts, Esc cancels; match locations are marked on the scrollbar |
 | `n` / `p` | Next / previous match (wraps) |
+| `Down` / `Up`, `C-j` / `C-k` | Next / previous match, only while a search has matches, also while typing the query (so `C-k` jumps instead of killing the line); otherwise they scroll or page as usual; rebind in `[preview_search]` |
 | `F5` | Re-read the file from disk, keeping scroll and search |
 | `F6` | Markdown: switch between rendered and raw source |
 | `F9` | Pick the syntax theme (live preview, Enter saves, Esc reverts) |

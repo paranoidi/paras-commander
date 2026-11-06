@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
@@ -99,5 +100,103 @@ func TestScrollFilePreviewToSearchMatchClampsNearEndOfFile(t *testing.T) {
 	want := max(0, lc-ch)
 	if scroll != want {
 		t.Fatalf("Scroll = %d, want %d (clamped to bottom of file)", scroll, want)
+	}
+}
+
+// newSearchNavHandler opens a preview of a generated file with three "needle" lines and wires the
+// [preview_search] defaults.
+func newSearchNavHandler(t *testing.T) *Handler {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "haystack.txt")
+	var b strings.Builder
+	for i := 1; i <= 100; i++ {
+		if i%30 == 0 {
+			b.WriteString("needle here\n")
+		} else {
+			fmt.Fprintf(&b, "line %d\n", i)
+		}
+	}
+	if err := os.WriteFile(path, []byte(b.String()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	h, _ := newTestHandler(t, 80, 24)
+	km, err := keymap.Build(keymap.DefaultFilePreviewSearchOverlayKeys())
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.keysFilePreviewSearch = km
+	openFullscreenPreviewSync(t, h, path)
+	return h
+}
+
+func (h *Handler) searchCurrent() int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.model.FullscreenFilePreview.Search.Current
+}
+
+func TestSearchNavKeysWhileEditing(t *testing.T) {
+	h := newSearchNavHandler(t)
+	h.startFilePreviewSearch()
+	h.applyFilePreviewSearchFieldEdit(dialog.FileDialogField{Value: "needle"})
+	if n := len(h.model.FullscreenFilePreview.Search.Matches); n != 3 {
+		t.Fatalf("Matches = %d, want 3", n)
+	}
+	steps := []struct {
+		ev   *tcell.EventKey
+		want int
+	}{
+		{tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone), 1},
+		{tcell.NewEventKey(tcell.KeyCtrlJ, 0, tcell.ModCtrl), 2},
+		{tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone), 0},
+		{tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone), 2},
+		{tcell.NewEventKey(tcell.KeyCtrlK, 0, tcell.ModCtrl), 1},
+	}
+	for i, st := range steps {
+		h.HandleFilePreviewViewKey(st.ev)
+		if got := h.searchCurrent(); got != st.want {
+			t.Fatalf("step %d: Current = %d, want %d", i, got, st.want)
+		}
+	}
+	if v := h.model.FullscreenFilePreviewSearchField.Value; v != "needle" {
+		t.Fatalf("query field = %q, want unchanged", v)
+	}
+	if !h.model.FullscreenFilePreview.Search.Editing {
+		t.Fatal("search should still be editing")
+	}
+}
+
+func TestSearchNavKeysAfterAccept(t *testing.T) {
+	h := newSearchNavHandler(t)
+	h.startFilePreviewSearch()
+	h.applyFilePreviewSearchFieldEdit(dialog.FileDialogField{Value: "needle"})
+	h.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if h.model.FullscreenFilePreview.Search.Editing {
+		t.Fatal("Enter should accept the search")
+	}
+	h.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if got := h.searchCurrent(); got != 1 {
+		t.Fatalf("after Down: Current = %d, want 1", got)
+	}
+	h.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
+	if got := h.searchCurrent(); got != 0 {
+		t.Fatalf("after Up: Current = %d, want 0", got)
+	}
+}
+
+func TestDownScrollsWithoutSearch(t *testing.T) {
+	h := newSearchNavHandler(t)
+	h.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if got := h.model.FullscreenFilePreview.Scroll; got != 1 {
+		t.Fatalf("Scroll = %d, want 1", got)
+	}
+}
+
+func TestSearchNavKeyIgnoredWithoutMatches(t *testing.T) {
+	h := newSearchNavHandler(t)
+	h.startFilePreviewSearch()
+	h.applyFilePreviewSearchFieldEdit(dialog.FileDialogField{Value: "zzzzz"})
+	if h.handleFilePreviewSearchNavKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone)) {
+		t.Fatal("Down with no matches should not be consumed")
 	}
 }
