@@ -28,7 +28,6 @@ func (h *Handler) OpenRunForEachDialog() {
 		return
 	}
 	entries := append([]localfs.Entry(nil), src.Entries...)
-	dir := active.PathString()
 	msg := "Runs once per selected item. Default mode must include %f (iterated item path).\n" +
 		"Other macros: %d active dir, %F/%D other panel, %t/%T tagged paths.\n" +
 		"Do not wrap % macros in quotes.\n" +
@@ -43,7 +42,6 @@ func (h *Handler) OpenRunForEachDialog() {
 		Fields:            fields,
 		Message:           msg,
 		RunForEachEntries: entries,
-		RunForEachDir:     dir,
 		RunForEachPools:   h.workPools.Names(),
 		RunForEachPool:    "",
 	}
@@ -60,7 +58,6 @@ func (h *Handler) ExecuteRunForEach() {
 	}
 	cmdLine := strings.TrimSpace(fd.Fields[0].Value)
 	entries := append([]localfs.Entry(nil), fd.RunForEachEntries...)
-	workDir := fd.RunForEachDir
 	poolName := strings.TrimSpace(fd.RunForEachPool)
 	inDirs := fd.RunForEachInDirs
 	usePTY := fd.RunForEachPTY
@@ -77,7 +74,6 @@ func (h *Handler) ExecuteRunForEach() {
 		Entries:         entries,
 		AllowDirs:       true,
 		AllowFiles:      !inDirs,
-		WorkDir:         workDir,
 		PerEntryWorkDir: inDirs,
 		PoolName:        poolName,
 		Background:      false,

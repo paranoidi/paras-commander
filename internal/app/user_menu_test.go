@@ -912,3 +912,148 @@ func TestUserMenuClearsOnlyConsumedSelection(t *testing.T) {
 		})
 	}
 }
+
+// userMenuTreeFixture builds root/{orchard/ember.txt, lantern.txt}, shows the primary panel in
+// tree layout with orchard expanded and the user menu file at cfgDir (outside root).
+func userMenuTreeFixture(t *testing.T, menuBody string) (app *App, root, sub string) {
+	t.Helper()
+	root = t.TempDir()
+	sub = filepath.Join(root, "orchard")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range []string{filepath.Join(sub, "ember.txt"), filepath.Join(root, "lantern.txt")} {
+		if err := os.WriteFile(f, []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cfgDir := t.TempDir()
+	writeUserMenuFile(t, filepath.Join(cfgDir, config.DefaultUserMenuFileName), menuBody)
+	app = testUserMenuApp(t, root, cfgDir)
+	// Without a scheduler the expansion loads synchronously, so no async wake is awaited.
+	app.model.Primary.ScheduleTreeChildLoad = nil
+	// Directories sort first, so the cursor sits on orchard and the toggle expands it.
+	app.dispatchActionLikeKeyboardShortcut(keymap.ActionPanelToggleTree)
+	if got := app.model.Primary.VisibleEntryCount(); got != 3 {
+		t.Fatalf("VisibleEntryCount = %d, want 3 (orchard, ember.txt, lantern.txt)", got)
+	}
+	return app, root, sub
+}
+
+func runUserMenuKey(app *App, key rune) {
+	app.openUserMenu()
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, key, tcell.ModNone))
+}
+
+func assertFileExists(t *testing.T, path string, want bool) {
+	t.Helper()
+	_, err := os.Stat(path)
+	if (err == nil) != want {
+		t.Fatalf("exists(%s) = %v, want %v", path, err == nil, want)
+	}
+}
+
+func TestUserMenuTreeCursorRowRunsInItsDirectory(t *testing.T) {
+	app, root, sub := userMenuTreeFixture(t, "[touch]\nkey = \"t\"\ntitle = \"Touch\"\ncommand = \"touch foobar\"\n")
+	selectEntryByName(t, app, "ember.txt")
+
+	runUserMenuKey(app, 't')
+	waitCommandsDone(t, app)
+
+	assertFileExists(t, filepath.Join(sub, "foobar"), true)
+	assertFileExists(t, filepath.Join(root, "foobar"), false)
+}
+
+func TestUserMenuTreeInteractiveGetsCursorRowDirectory(t *testing.T) {
+	cases := []struct {
+		name, row string
+		want      func(root, sub string) string
+	}{
+		{"child row", "ember.txt", func(_, sub string) string { return sub }},
+		{"directory row is held by the root", "orchard", func(root, _ string) string { return root }},
+		{"root-level row", "lantern.txt", func(root, _ string) string { return root }},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			app, root, sub := userMenuTreeFixture(t, "[run]\nkey = \"g\"\ntitle = \"Run\"\ncommand = \"lazygit\"\ninteractive = true\n")
+			var gotDir string
+			prev := userMenuInteractiveRunner
+			userMenuInteractiveRunner = func(_ context.Context, _ []string, dir string) error {
+				gotDir = dir
+				return nil
+			}
+			t.Cleanup(func() { userMenuInteractiveRunner = prev })
+			selectEntryByName(t, app, tc.row)
+
+			runUserMenuKey(app, 'g')
+
+			if want := tc.want(root, sub); gotDir != want {
+				t.Fatalf("dir = %q, want %q", gotDir, want)
+			}
+		})
+	}
+}
+
+func TestUserMenuTreeRootRowRunsInPanelRoot(t *testing.T) {
+	app, root, sub := userMenuTreeFixture(t, "[touch]\nkey = \"t\"\ntitle = \"Touch\"\ncommand = \"touch foobar\"\n")
+	selectEntryByName(t, app, "lantern.txt")
+
+	runUserMenuKey(app, 't')
+	waitCommandsDone(t, app)
+
+	assertFileExists(t, filepath.Join(root, "foobar"), true)
+	assertFileExists(t, filepath.Join(sub, "foobar"), false)
+}
+
+func TestUserMenuRunForEachTreeItemsRunInOwnDirectory(t *testing.T) {
+	app, root, sub := userMenuTreeFixture(t, "[each]\nkey = \"e\"\ntitle = \"Each\"\ncommand = \"touch stamp && echo %f\"\nrun_for_each = [\"files\"]\n")
+	p := &app.model.Primary
+	p.SelectedPaths = map[string]bool{
+		filepath.Join(root, "lantern.txt"): true,
+		filepath.Join(sub, "ember.txt"):    true,
+	}
+
+	runUserMenuKey(app, 'e')
+	waitCommandsDone(t, app)
+
+	assertFileExists(t, filepath.Join(root, "stamp"), true)
+	assertFileExists(t, filepath.Join(sub, "stamp"), true)
+}
+
+func TestRunForEachDialogTreeItemsRunInOwnDirectory(t *testing.T) {
+	app, root, sub := userMenuTreeFixture(t, "")
+	app.model.Primary.SelectedPaths = map[string]bool{
+		filepath.Join(root, "lantern.txt"): true,
+		filepath.Join(sub, "ember.txt"):    true,
+	}
+
+	app.commandsCtrl.OpenRunForEachDialog()
+	app.model.FileDialog.Fields[0].Value = "touch stamp && echo %f"
+	app.commandsCtrl.ExecuteRunForEach()
+	waitCommandsDone(t, app)
+
+	assertFileExists(t, filepath.Join(root, "stamp"), true)
+	assertFileExists(t, filepath.Join(sub, "stamp"), true)
+}
+
+func TestUserMenuRunForEachFlatUsesPanelDirectory(t *testing.T) {
+	root := t.TempDir()
+	cfgDir := t.TempDir()
+	for _, f := range []string{"lantern.txt", "willow.txt"} {
+		if err := os.WriteFile(filepath.Join(root, f), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeUserMenuFile(t, filepath.Join(cfgDir, config.DefaultUserMenuFileName),
+		"[each]\nkey = \"e\"\ntitle = \"Each\"\ncommand = \"touch stamp && echo %f\"\nrun_for_each = [\"files\"]\n")
+	app := testUserMenuApp(t, root, cfgDir)
+	app.model.Primary.SelectedPaths = map[string]bool{
+		filepath.Join(root, "lantern.txt"): true,
+		filepath.Join(root, "willow.txt"):  true,
+	}
+
+	runUserMenuKey(app, 'e')
+	waitCommandsDone(t, app)
+
+	assertFileExists(t, filepath.Join(root, "stamp"), true)
+}

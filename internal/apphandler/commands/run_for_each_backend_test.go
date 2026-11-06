@@ -43,13 +43,12 @@ func TestRunForEachUnifiedBatchPerEntryWorkDir(t *testing.T) {
 	spec := RunForEachBatchSpec{
 		Entries:         entries,
 		AllowDirs:       true,
-		WorkDir:         "/should-not-be-used",
 		PerEntryWorkDir: true,
 		BuildItem: func(localfs.Entry) (RunForEachBuiltItem, error) {
 			return RunForEachBuiltItem{Argv: []string{"pwd"}, UserLine: "pwd"}, nil
 		},
 	}
-	h.runForEachUnifiedBatch(context.Background(), 0, spec)
+	h.runForEachUnifiedBatch(context.Background(), 0, spec, sameDirs(len(spec.Entries), "/should-not-be-used"))
 
 	for i, ent := range entries {
 		got := strings.TrimSpace(h.model.CommandsList[i].Stdout)
@@ -111,7 +110,6 @@ func TestRunForEachPoolWaitingStaysPending(t *testing.T) {
 	hold := RunForEachBatchSpec{
 		Entries:    entry,
 		AllowDirs:  true,
-		WorkDir:    dir,
 		PoolName:   "one",
 		Background: true,
 		BuildItem: func(localfs.Entry) (RunForEachBuiltItem, error) {
@@ -238,7 +236,6 @@ func TestRunForEachCancelWhilePoolWaiting(t *testing.T) {
 	spec := RunForEachBatchSpec{
 		Entries:   []localfs.Entry{{Name: "lantern", Path: dir, Type: localfs.EntryDirectory}},
 		AllowDirs: true,
-		WorkDir:   dir,
 		PoolName:  "one",
 		BuildItem: func(localfs.Entry) (RunForEachBuiltItem, error) {
 			return RunForEachBuiltItem{Argv: []string{"true"}, UserLine: "true"}, nil
@@ -249,7 +246,7 @@ func TestRunForEachCancelWhilePoolWaiting(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		h.runForEachUnifiedBatch(ctx, 0, spec)
+		h.runForEachUnifiedBatch(ctx, 0, spec, sameDirs(len(spec.Entries), dir))
 	}()
 
 	deadline := time.Now().Add(2 * time.Second)
@@ -320,13 +317,12 @@ func TestRunForEachPoolRunsEntriesConcurrently(t *testing.T) {
 		Entries:    entries,
 		Background: true,
 		AllowFiles: true,
-		WorkDir:    dir,
 		PoolName:   "io",
 		BuildItem: func(localfs.Entry) (RunForEachBuiltItem, error) {
 			return RunForEachBuiltItem{Argv: []string{"sh", "-c", script}, UserLine: strconv.Quote(script)}, nil
 		},
 	}
-	h.runForEachUnifiedBatch(context.Background(), 0, spec)
+	h.runForEachUnifiedBatch(context.Background(), 0, spec, sameDirs(len(spec.Entries), dir))
 
 	for i, e := range h.model.CommandsList {
 		if e.Phase != ui.CommandRunDone || e.ExitCode != 0 {
@@ -369,7 +365,6 @@ func TestStartRunForEachBatchClearsSelectionAtStart(t *testing.T) {
 	h.StartRunForEachBatch(RunForEachBatchSpec{
 		Entries:    []localfs.Entry{{Name: "harbor", Path: dir, Type: localfs.EntryDirectory}},
 		AllowDirs:  true,
-		WorkDir:    dir,
 		Background: true,
 		BuildItem: func(localfs.Entry) (RunForEachBuiltItem, error) {
 			return RunForEachBuiltItem{Argv: []string{"sleep", "5"}, UserLine: "sleep"}, nil
@@ -378,4 +373,13 @@ func TestStartRunForEachBatchClearsSelectionAtStart(t *testing.T) {
 	if len(pnl.SelectedPaths) != 0 {
 		t.Fatalf("selection = %v, want cleared at start", pnl.SelectedPaths)
 	}
+}
+
+// sameDirs is the per-entry row directory slice StartRunForEachBatch resolves, all equal to dir.
+func sameDirs(n int, dir string) []string {
+	out := make([]string, n)
+	for i := range out {
+		out[i] = dir
+	}
+	return out
 }

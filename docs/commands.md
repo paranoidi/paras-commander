@@ -25,8 +25,9 @@ A line containing shell operators (`|`, `>>`, `&&`) runs through `sh -c`; any ot
 Runs one command once per selected item (or the highlighted item when nothing is selected).
 
 - **Open**: `C-M-r` (`file.run-for-each`), menu **Command -> Run for each...** (`f`), or Esc menu `R`.
+- Each item runs in the directory holding its row: in a flat listing that is the panel directory, in a tree layout an item in an expanded subdirectory runs in that subdirectory.
 - The command must contain `%f`. The field validates as you type: an invalid command shows a red message, a valid one shows `-> <expanded command>` for the first item.
-- **Run in each selected directory** (`M-r`): runs the command with each selected directory as its working directory instead of the active panel's directory. Only directories may be selected in this mode, and `%f` becomes optional.
+- **Run in each selected directory** (`M-r`): runs the command with each selected directory as its working directory instead of the directory holding its row. Only directories may be selected in this mode, and `%f` becomes optional.
 - **Allocate pseudo-TTY (interactive)** (`M-t`): runs each item on a live terminal shown in the bottom [terminal panel](subshell.md#terminal-panel), for tools that need a real terminal. Only one foreground batch uses the panel at a time; others wait. The Commands view records the final screen of each run. Linux only; elsewhere it falls back to normal capture.
 - **Worker pool**: when `pools.toml` defines pools, radios let the batch share a limited number of parallel slots; see [Worker pools](#worker-pools).
 - **History** (`F3`, `file.run-for-each.history`): fuzzy picker over the command lines you ran earlier in this session.
@@ -53,6 +54,10 @@ Quitting with commands still running asks for confirmation, like unfinished jobs
 `F2` (`app.user-menu`, also `§` or `;`; menu **Command -> User menu**, Esc menu `X`) opens a strip of your own commands. Press the highlighted letter to run an entry; `Left` or `Backspace` leaves a submenu, `Esc` closes the menu. `F9` inside the menu, or `S-F2` (`app.user-menu-edit`) anywhere, opens `menu.toml` in `$EDITOR` and reloads it. A missing file is created with a commented reference of every field.
 
 A `menu.toml` in the active directory (name from `local_names`, default `menu.toml`) takes precedence over the global one; see [Config](config.md#user_menu). The same trust rule as [Meta columns](meta-columns.md#open) applies: a group- or world-writable `menu.toml` (other than one writable only by your private group) or one owned by another user is skipped with a warning, and the user menu then shows that warning instead of opening the editor.
+
+### Working directory
+
+A user menu command runs in the directory holding the highlighted row, the same directory `%d` expands to. In a flat listing that is the panel directory; in a tree layout, a highlighted row inside an expanded subdirectory runs the command in that subdirectory, and a highlighted directory row runs it in the directory that contains it. A `run_for_each` entry runs each item in the directory holding that item's row. The `menu.toml` lookup still uses the panel directory.
 
 ### Entry modes
 

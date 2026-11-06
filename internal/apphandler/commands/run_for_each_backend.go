@@ -31,10 +31,8 @@ type RunForEachBatchSpec struct {
 	AllowFiles bool
 	AllowDirs  bool
 
-	// WorkDir is used as exec.Cmd.Dir.
-	WorkDir string
 	// PerEntryWorkDir uses each entry's own absolute path as the working directory instead of
-	// WorkDir.
+	// the directory holding the entry's panel row.
 	PerEntryWorkDir bool
 
 	// PoolName optionally gates each invocation through the work pool registry.
@@ -69,7 +67,15 @@ func (h *Handler) StartRunForEachBatch(spec RunForEachBatchSpec) {
 	}
 
 	// The batch iterates the selection; the tags are already captured in spec.Entries.
-	h.host.ActivePanel().ClearSelection()
+	active := h.host.ActivePanel()
+	active.ClearSelection()
+
+	// Each entry runs in the directory holding its row (the panel directory in flat layout);
+	// resolved here because the batch goroutine must not read panel state.
+	rowDirs := make([]string, len(spec.Entries))
+	for i, ent := range spec.Entries {
+		rowDirs[i] = active.EntryDir(ent).String()
+	}
 
 	entries := make([]ui.CommandRunEntry, len(spec.Entries))
 	for i := range spec.Entries {
@@ -91,10 +97,10 @@ func (h *Handler) StartRunForEachBatch(spec RunForEachBatchSpec) {
 	}
 
 	h.BeginBatch()
-	go h.runForEachUnifiedBatch(h.ctx, start, spec)
+	go h.runForEachUnifiedBatch(h.ctx, start, spec, rowDirs)
 }
 
-func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec RunForEachBatchSpec) {
+func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec RunForEachBatchSpec, rowDirs []string) {
 	var panelOwner int64
 	acquired := false
 	var wg sync.WaitGroup
@@ -251,7 +257,7 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 				h.PostRenderWake()
 			}
 
-			workDir := spec.WorkDir
+			workDir := rowDirs[i]
 			if spec.PerEntryWorkDir {
 				workDir = abs
 			}

@@ -16,7 +16,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
-		"github.com/paranoidi/paras-commander/internal/usermenu"
+	"github.com/paranoidi/paras-commander/internal/usermenu"
 )
 
 var userMenuInteractiveRunner = func(ctx context.Context, argv []string, dir string) error {
@@ -261,7 +261,7 @@ func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 	argv := built.Argv
 	macros := cmdmacro.MacroDisplayValues(entry.Command, macroCtx)
 
-	workDir := active.PathString()
+	workDir := active.CursorDir().String()
 	switch {
 	case entry.Dialog:
 		clearConsumedSelection(entry.Command, active, other)
@@ -327,7 +327,6 @@ func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active, other 
 	}
 
 	cmdTemplate := entry.Command
-	workDir := active.PathString()
 	notifyLabel := "User menu: " + strings.TrimSpace(entry.Title)
 	if notifyLabel == "User menu:" {
 		notifyLabel = "User menu"
@@ -337,7 +336,6 @@ func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active, other 
 		Entries:     append([]localfs.Entry(nil), src.Entries...),
 		AllowFiles:  allowFiles,
 		AllowDirs:   allowDirs,
-		WorkDir:     workDir,
 		PoolName:    strings.TrimSpace(entry.Pool),
 		Background:  entry.Background,
 		PTY:         entry.PTY,

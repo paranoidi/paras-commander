@@ -106,7 +106,6 @@ func runForEachKeyDialog(name string, dirs bool, pools []string, history, noEntr
 			for _, n := range names {
 				d.RunForEachEntries = append(d.RunForEachEntries, localfs.Entry{Name: n, Path: "/srv/harbor/" + n, Type: typ})
 			}
-			d.RunForEachDir = "/srv/harbor"
 			if noEntries {
 				d.RunForEachEntries = nil
 			}

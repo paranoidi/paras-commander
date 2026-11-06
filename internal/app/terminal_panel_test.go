@@ -244,7 +244,6 @@ func TestResizeTerminalFeedToLayoutUpdatesRunForEachPTY(t *testing.T) {
 	app.commandsCtrl.StartRunForEachBatch(commandsctrl.RunForEachBatchSpec{
 		Entries:   []localfs.Entry{{Name: "willow", Path: dir, Type: localfs.EntryDirectory}},
 		AllowDirs: true,
-		WorkDir:   dir,
 		PTY:       true,
 		BuildItem: func(localfs.Entry) (commandsctrl.RunForEachBuiltItem, error) {
 			return commandsctrl.RunForEachBuiltItem{Argv: []string{"sleep", "60"}, UserLine: "sleep 60"}, nil

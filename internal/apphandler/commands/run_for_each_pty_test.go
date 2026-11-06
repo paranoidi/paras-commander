@@ -145,7 +145,6 @@ func TestForegroundPTYOwnershipIsBatchLevel(t *testing.T) {
 				ptyDirEntry("aspen", dir),
 			},
 			AllowDirs: true,
-			WorkDir:   dir,
 			PTY:       true,
 			BuildItem: func(ent localfs.Entry) (RunForEachBuiltItem, error) {
 				if ent.Name == "aspen" {
@@ -294,7 +293,6 @@ func blockingPTYSpec(entries []localfs.Entry) RunForEachBatchSpec {
 	return RunForEachBatchSpec{
 		Entries:   entries,
 		AllowDirs: true,
-		WorkDir:   entries[0].Path,
 		PTY:       true,
 		BuildItem: func(localfs.Entry) (RunForEachBuiltItem, error) {
 			return RunForEachBuiltItem{Argv: []string{"sleep", "60"}, UserLine: "sleep 60"}, nil

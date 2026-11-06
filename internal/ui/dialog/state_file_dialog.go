@@ -123,9 +123,8 @@ type FileDialogState struct {
 	// ID, dlg.OK, dlg.Cancel); empty is the first widget. The picker sub-screens keep their own.
 	Focus   dlg.ID
 	Message string
-	// RunForEachPaths / RunForEachDir apply when DialogType == FileDialogRunForEach (targets resolved at dialog open).
+	// RunForEachEntries applies when DialogType == FileDialogRunForEach (targets resolved at dialog open).
 	RunForEachEntries []localfs.Entry
-	RunForEachDir     string
 	// RunForEachPools is the configured pool list; when non-empty, the dialog renders a pool selector.
 	RunForEachPools []string
 	// RunForEachPool is the selected pool name; empty means no pool (unlimited parallelism).

@@ -71,7 +71,6 @@ func runForEachGoldenState(value, opts, focus string) FileDialogState {
 		DialogType:       FileDialogRunForEach,
 		Fields:           []FileDialogField{{Label: "Command"}},
 		Message:          runForEachGoldenHelp,
-		RunForEachDir:    "/srv/harbor",
 		RunForEachInDirs: strings.Contains(opts, "d"),
 		RunForEachPTY:    strings.Contains(opts, "t"),
 	}
