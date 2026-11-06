@@ -28,7 +28,6 @@ func (jobsHostStub) LayoutForTerminalSize(w, h int) ui.Layout {
 
 func (jobsHostStub) SetTransientMessage(string, ui.MessageUrgency) {}
 func (jobsHostStub) SetErrorMessage(string, error)                 {}
-func (jobsHostStub) SetUnsupportedMessage(string)                  {}
 func (jobsHostStub) RefreshBothPanels()                            {}
 func (jobsHostStub) RequestBothPanelsVolumeSpaceRefreshAsync()     {}
 func (jobsHostStub) ActivePanel() *panel.State                     { return nil }
@@ -36,23 +35,21 @@ func (jobsHostStub) ActivePanelSources() []string                  { return nil 
 func (jobsHostStub) InactivePanel() *panel.State                   { return nil }
 func (jobsHostStub) PrimaryPanel() *panel.State                    { return &panel.State{} }
 func (jobsHostStub) SecondaryPanel() *panel.State                  { return &panel.State{} }
-func (jobsHostStub) OpenTransferDialogSelfCopyRename(dialog.TransferKind, string, string) {
-}
-func (jobsHostStub) HandleQuit() bool                           { return false }
-func (jobsHostStub) HandleQuitImmediate() bool                  { return false }
-func (jobsHostStub) OpenMenu()                                  {}
-func (jobsHostStub) OpenMenuByShortcut(rune) bool               { return false }
-func (jobsHostStub) Dispatch(string)                            {}
-func (jobsHostStub) TryDispatchAuxiliaryScreens(string) bool    { return false }
-func (jobsHostStub) ActionFromKeyEvent(*tcell.EventKey) string  { return "" }
-func (jobsHostStub) SetJobFailedTransientMessage(error, string) {}
-func (jobsHostStub) DevMode() bool                              { return false }
-func (jobsHostStub) DiskUsagePainter() ui.DiskUsagePainter      { return nil }
-func (jobsHostStub) PromptDanglingDirDelete([]string)           {}
-func (jobsHostStub) ToggleLeaderMenu()                          {}
-func (jobsHostStub) AdjustJobsThroughputChartColumnMS(int)      {}
-func (jobsHostStub) CopyToClipboard(string, string)             {}
-func (jobsHostStub) DispatchLeaderLetter(*tcell.EventKey) bool  { return false }
+func (jobsHostStub) HandleQuit() bool                              { return false }
+func (jobsHostStub) HandleQuitImmediate() bool                     { return false }
+func (jobsHostStub) OpenMenu()                                     {}
+func (jobsHostStub) OpenMenuByShortcut(rune) bool                  { return false }
+func (jobsHostStub) Dispatch(string)                               {}
+func (jobsHostStub) TryDispatchAuxiliaryScreens(string) bool       { return false }
+func (jobsHostStub) ActionFromKeyEvent(*tcell.EventKey) string     { return "" }
+func (jobsHostStub) SetJobFailedTransientMessage(error, string)    {}
+func (jobsHostStub) DevMode() bool                                 { return false }
+func (jobsHostStub) DiskUsagePainter() ui.DiskUsagePainter         { return nil }
+func (jobsHostStub) PromptDanglingDirDelete([]string)              {}
+func (jobsHostStub) ToggleLeaderMenu()                             {}
+func (jobsHostStub) AdjustJobsThroughputChartColumnMS(int)         {}
+func (jobsHostStub) CopyToClipboard(string, string)                {}
+func (jobsHostStub) DispatchLeaderLetter(*tcell.EventKey) bool     { return false }
 
 func TestOpenJobsViewFocusesFirstPendingBlocker(t *testing.T) {
 	t.Parallel()

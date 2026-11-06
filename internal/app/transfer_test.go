@@ -127,12 +127,13 @@ func TestCopyMoveClearsSelectionOnlyWhenQueued(t *testing.T) {
 		t.Fatal("unexpected quit")
 	}
 	nJobs := len(app.jobState.AllJobs())
-	app.jobsCtrl.EnqueueCopyJob()
+	app.dialogCtrl.OpenCopyDialog()
+	app.dialogCtrl.ConfirmCopy()
 	if len(p.SelectedPaths) != 0 {
-		t.Fatal("enqueueCopyJob should clear current-directory selection")
+		t.Fatal("confirming copy should clear current-directory selection")
 	}
 	if len(app.jobState.AllJobs()) != nJobs+1 {
-		t.Fatalf("expected one new job from enqueueCopyJob")
+		t.Fatalf("expected one new job from confirming copy")
 	}
 }
 
@@ -423,7 +424,8 @@ func TestTransferDestinationShortcutNoOpDuringSelfCopyRename(t *testing.T) {
 
 	p := app.activePanel()
 	p.SelectedPaths = map[string]bool{aaa: true}
-	app.jobsCtrl.EnqueueCopyJob()
+	app.dialogCtrl.OpenCopyDialog()
+	app.dialogCtrl.ConfirmCopy()
 	if app.model.TransferDialog.Phase != dialog.TransferPhaseSelfCopyRename || !app.model.TransferDialog.FocusOnInput() {
 		t.Fatalf("want self-copy rename dialog focused on the new name, got %+v", app.model.TransferDialog)
 	}
@@ -466,26 +468,6 @@ func TestTransferSelfCopyRenameFlow(t *testing.T) {
 		}
 		if len(p.SelectedPaths) == 0 {
 			t.Fatal("selection should remain until the job is queued")
-		}
-	})
-
-	t.Run("enqueueCopyJob opens rename phase", func(t *testing.T) {
-		dir := t.TempDir()
-		aaa := filepath.Join(dir, "aaa")
-		if err := os.Mkdir(aaa, 0o755); err != nil {
-			t.Fatal(err)
-		}
-		screen := newScreen(t, 80, 24)
-		app := newApp(t, screen, dir)
-
-		p := app.activePanel()
-		p.SelectedPaths = map[string]bool{aaa: true}
-		app.jobsCtrl.EnqueueCopyJob()
-		if !app.model.TransferDialog.Open || app.model.TransferDialog.Phase != dialog.TransferPhaseSelfCopyRename {
-			t.Fatalf("want self-copy rename dialog, got %+v", app.model.TransferDialog)
-		}
-		if len(p.SelectedPaths) == 0 {
-			t.Fatal("enqueue should not clear selection until confirm")
 		}
 	})
 
@@ -576,23 +558,7 @@ func TestTransferSelfCopyMultipleSourcesRejected(t *testing.T) {
 	}
 }
 
-func TestEnqueueMoveJobSameDirUnsupportedDoesNotClearSelection(t *testing.T) {
-	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "only.txt"))
-	screen := newScreen(t, 80, 24)
-	app := newApp(t, screen, dir)
-
-	p := app.activePanel()
-	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)); quit {
-		t.Fatal("unexpected quit")
-	}
-	app.jobsCtrl.EnqueueMoveJob()
-	if len(p.SelectedPaths) == 0 {
-		t.Fatal("unsupported same-directory move should leave selection intact")
-	}
-}
-
-func TestEnqueueCopyJobClearsCrossDirectorySelections(t *testing.T) {
+func TestConfirmCopyClearsCrossDirectorySelections(t *testing.T) {
 	dir := t.TempDir()
 	here := filepath.Join(dir, "here")
 	other := filepath.Join(dir, "other")
@@ -627,7 +593,8 @@ func TestEnqueueCopyJobClearsCrossDirectorySelections(t *testing.T) {
 	p.SelectedPaths = map[string]bool{hereTxt: true, otherTxt: true}
 	p.SelectedStripOrder = []string{otherTxt}
 
-	app.jobsCtrl.EnqueueCopyJob()
+	app.dialogCtrl.OpenCopyDialog()
+	app.dialogCtrl.ConfirmCopy()
 
 	if p.SelectedPaths != nil {
 		t.Fatalf("expected all queued sources removed from selection, got %#v", p.SelectedPaths)
@@ -640,7 +607,7 @@ func TestEnqueueCopyJobClearsCrossDirectorySelections(t *testing.T) {
 	}
 }
 
-func TestEnqueueMoveJobClearsCrossDirectorySelections(t *testing.T) {
+func TestConfirmMoveClearsCrossDirectorySelections(t *testing.T) {
 	dir := t.TempDir()
 	here := filepath.Join(dir, "here")
 	other := filepath.Join(dir, "other")
@@ -675,7 +642,8 @@ func TestEnqueueMoveJobClearsCrossDirectorySelections(t *testing.T) {
 	p.SelectedPaths = map[string]bool{hereTxt: true, otherTxt: true}
 	p.SelectedStripOrder = []string{otherTxt}
 
-	app.jobsCtrl.EnqueueMoveJob()
+	app.dialogCtrl.OpenMoveDialog()
+	app.dialogCtrl.ConfirmCopy()
 
 	if p.SelectedPaths != nil {
 		t.Fatalf("expected all queued sources removed from selection, got %#v", p.SelectedPaths)

@@ -166,29 +166,3 @@ func TestUndoJobKeepsFollowIndex(t *testing.T) {
 		t.Fatalf("undo = %v, ok %v; want a job that follows the index like its target", undo, ok)
 	}
 }
-
-// directMoveHost is a fileindex:// active panel with a source and a local inactive panel.
-type directMoveHost struct {
-	activePanelHost
-	inactive *panel.State
-}
-
-func (h directMoveHost) ActivePanelSources() []string {
-	return []string{"fileindex:///orchard/harbor.txt"}
-}
-func (h directMoveHost) InactivePanel() *panel.State { return h.inactive }
-
-func TestDirectMoveOutOfIndexKeepsRefusalMessage(t *testing.T) {
-	h, state, msgs := followHandlerMsgs(t, "fileindex:///orchard", false)
-	h.host = directMoveHost{
-		activePanelHost: h.host.(activePanelHost),
-		inactive:        &panel.State{Path: pathloc.MustParse("/meadow")},
-	}
-	h.EnqueueMoveJob()
-	if got := state.AllJobs(); len(got) != 0 {
-		t.Fatalf("queued %d jobs, want none", len(got))
-	}
-	if len(*msgs) == 0 || (*msgs)[len(*msgs)-1] != ops.IndexMoveOutRefusal {
-		t.Fatalf("messages = %q, want the refusal last", *msgs)
-	}
-}

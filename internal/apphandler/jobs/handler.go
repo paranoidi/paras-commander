@@ -1406,74 +1406,6 @@ func (h *Handler) AddTaskJob(task *jobs.Task, sources []pathloc.Path) {
 	h.commitJob(jobs.NewTaskJob(task, sources))
 }
 
-type transferEnqueueOpts struct {
-	kind                   dialog.TransferKind
-	jobType                jobs.Type
-	unsupportedSameDirMove bool
-	toastVerb              string
-}
-
-func (h *Handler) enqueueTransferJob(opts transferEnqueueOpts) {
-	sources, dest := h.sourceAndDestination()
-	if len(sources) == 0 {
-		h.host.SetTransientMessage("No source files selected", ui.MessageUrgencyWarn)
-		return
-	}
-	if opts.unsupportedSameDirMove {
-		active := h.host.ActivePanel()
-		if len(sources) == 1 && dest == active.PathString() {
-			h.host.SetUnsupportedMessage("Rename/Move (same-directory rename not supported yet)")
-			return
-		}
-	}
-	destLoc, err := pathloc.Parse(dest)
-	if err != nil {
-		h.host.SetTransientMessage(fmt.Sprintf("Invalid destination: %v", err), ui.MessageUrgencyWarn)
-		return
-	}
-	absDest := destLoc.String()
-	srcLocs := make([]pathloc.Path, len(sources))
-	for i, src := range sources {
-		srcLocs[i] = pathloc.MustParse(src)
-	}
-	nSelf := ops.SelfTargetCount(srcLocs, destLoc, false)
-	if nSelf > 0 {
-		if len(sources) > 1 {
-			h.host.SetTransientMessage("Cannot transfer multiple items when some would overwrite themselves", ui.MessageUrgencyWarn)
-			return
-		}
-		h.host.OpenTransferDialogSelfCopyRename(opts.kind, absDest, sources[0])
-		return
-	}
-	if !h.AddTransferJob(TransferJobRequest{
-		Type:     opts.jobType,
-		Sources:  sources,
-		Dest:     dest,
-		Preserve: jobs.TransferPreserveFromConfig(h.config.Operations.PreservePermissions, h.config.Operations.PreserveTimestamps, h.config.Operations.DereferenceSymlinks),
-	}) {
-		return // refused (shown)
-	}
-	h.host.ActivePanel().ClearSelection()
-	h.host.SetTransientMessage(fmt.Sprintf("%s queued (%d %s)", opts.toastVerb, len(sources), jobbridge.Plural(len(sources), "file", "files")), ui.MessageUrgencyInfo)
-}
-
-func (h *Handler) EnqueueCopyJob() {
-	h.enqueueTransferJob(transferEnqueueOpts{
-		kind:      dialog.TransferKindCopy,
-		jobType:   jobs.TypeCopy,
-		toastVerb: "Copy",
-	})
-}
-
-func (h *Handler) EnqueueMoveJob() {
-	h.enqueueTransferJob(transferEnqueueOpts{
-		kind:                   dialog.TransferKindMove,
-		jobType:                jobs.TypeMove,
-		unsupportedSameDirMove: true,
-		toastVerb:              "Move",
-	})
-}
-
 // AddTransferJob enqueues a copy or move job after scanning. It reports false, after showing why,
 // when no job was queued.
 func (h *Handler) AddTransferJob(req TransferJobRequest) bool {
@@ -1658,15 +1590,6 @@ func (h *Handler) AddFlattenJob(req FlattenJobRequest) {
 		FlattenRecursive:   req.Recursive,
 	}
 	h.commitJob(job)
-}
-
-func (h *Handler) sourceAndDestination() (sources []string, dest string) {
-	sources = h.host.ActivePanelSources()
-	if sources == nil {
-		return nil, ""
-	}
-	dest = h.host.InactivePanel().PathString()
-	return sources, dest
 }
 
 func (h *Handler) AffectVisible() bool             { return h.affectVisible }

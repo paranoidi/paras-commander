@@ -5,7 +5,6 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // jobsHost implements apphandler/jobs.Host for *App.
@@ -18,10 +17,6 @@ func (h jobsHost) AdjustJobsThroughputChartColumnMS(deltaMS int) {
 }
 
 func (h jobsHost) CopyToClipboard(text, done string) { h.app.setClipboard(text, done) }
-
-func (h jobsHost) SetUnsupportedMessage(msg string) {
-	h.app.setUnsupportedMessage(msg)
-}
 
 func (h jobsHost) RefreshBothPanels() { h.app.dialogCtrl.RefreshBothPanels() }
 
@@ -36,10 +31,6 @@ func (h jobsHost) InactivePanel() *panel.State { return h.app.inactivePanel() }
 func (h jobsHost) PrimaryPanel() *panel.State { return &h.app.model.Primary }
 
 func (h jobsHost) SecondaryPanel() *panel.State { return &h.app.model.Secondary }
-
-func (h jobsHost) OpenTransferDialogSelfCopyRename(kind dialog.TransferKind, absDest, source string) {
-	h.app.dialogCtrl.OpenTransferDialogSelfCopyRename(kind, absDest, source)
-}
 
 func (h jobsHost) SetJobFailedTransientMessage(err error, fallback string) {
 	log := fmt.Sprintf("Job failed: %s", jobFailureLogDetail(err, fallback))
