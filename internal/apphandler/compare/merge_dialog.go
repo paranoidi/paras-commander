@@ -121,23 +121,19 @@ func (h *Handler) confirmMerge() {
 	if d.MoveMode {
 		jobType = jobs.TypeMove
 	}
-	queued := true
 	for _, item := range plan.Copies {
-		queued = h.jobsCtrl.AddTransferJob(jobsctrl.TransferJobRequest{
+		h.jobsCtrl.AddTransferJob(jobsctrl.TransferJobRequest{
 			Type: jobType, Sources: []string{item.Src}, Dest: mergeCopyDest(item.Dst), Preserve: preserve,
-		}) && queued
+		})
 	}
 	// A rename's Dest is the target file path (not a directory), so the move takes its name.
 	for _, item := range plan.Renames {
-		queued = h.jobsCtrl.AddTransferJob(jobsctrl.TransferJobRequest{
+		h.jobsCtrl.AddTransferJob(jobsctrl.TransferJobRequest{
 			Type: jobs.TypeMove, Sources: []string{item.Src}, Dest: item.Dst, Preserve: preserve,
-		}) && queued
+		})
 	}
 	h.closeMergeDialog()
 	h.Refresh()
-	if !queued {
-		return // a refusal is showing; do not replace it with "queued"
-	}
 	verb := "copies"
 	if d.MoveMode {
 		verb = "moves"

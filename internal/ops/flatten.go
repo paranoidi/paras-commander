@@ -334,7 +334,7 @@ func PreviewEmptyDirsUnder(ctx context.Context, roots []pathloc.Path, removed ma
 		local[k] = true
 	}
 	removed = local
-	for _, root := range onDiskRoots(roots) {
+	for _, root := range skipIndexPaths(OnDiskPaths(roots)) {
 		if _, err := previewEmptyDirsPostOrder(ctx, root, removed, &out); err != nil {
 			return nil, err
 		}

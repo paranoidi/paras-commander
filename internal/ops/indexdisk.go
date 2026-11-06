@@ -51,15 +51,3 @@ func OnDiskPaths(locs []pathloc.Path) []pathloc.Path {
 func notThere(err error) bool {
 	return errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR)
 }
-
-// onDiskRoots translates fileindex:// roots with OnDisk and drops those that are not on disk,
-// so cleanup walks only real directories and never the index backend.
-func onDiskRoots(roots []pathloc.Path) []pathloc.Path {
-	out := make([]pathloc.Path, 0, len(roots))
-	for _, r := range roots {
-		if r = OnDisk(r); r.Scheme() != pathloc.SchemeFileIndex {
-			out = append(out, r)
-		}
-	}
-	return out
-}

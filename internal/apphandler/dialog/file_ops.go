@@ -687,12 +687,16 @@ func (h *Handler) applyMkdirSuccess(st mkdirApply) {
 		h.host.SetTransientMessage(fmt.Sprintf("Created directory %s", plan.Name), ui.MessageUrgencyInfo)
 	case dialog.MkdirActionCreateCopySelect:
 		h.setEnqueueDestIsDir(true)
-		h.AddTransferJob(jobs.TypeCopy, st.sources, plan.Path, false, h.TransferPreserveFromConfig())
+		if !h.AddTransferJob(jobs.TypeCopy, st.sources, plan.Path, false, h.TransferPreserveFromConfig()) {
+			return // refused (shown)
+		}
 		h.host.ActivePanel().ClearSelection()
 		h.host.SetTransientMessage(fmt.Sprintf("Created %s; copy queued (%d %s)", plan.Name, len(st.sources), jobbridge.Plural(len(st.sources), "file", "files")), ui.MessageUrgencyInfo)
 	case dialog.MkdirActionCreateMoveSelect:
 		h.setEnqueueDestIsDir(true)
-		h.AddTransferJob(jobs.TypeMove, st.sources, plan.Path, false, h.TransferPreserveFromConfig())
+		if !h.AddTransferJob(jobs.TypeMove, st.sources, plan.Path, false, h.TransferPreserveFromConfig()) {
+			return // refused (shown)
+		}
 		h.host.ActivePanel().ClearSelection()
 		h.host.SetTransientMessage(fmt.Sprintf("Created %s; move queued (%d %s)", plan.Name, len(st.sources), jobbridge.Plural(len(st.sources), "file", "files")), ui.MessageUrgencyInfo)
 	}

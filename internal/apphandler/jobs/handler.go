@@ -2,7 +2,6 @@ package jobs
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"slices"
@@ -1499,7 +1498,7 @@ func (h *Handler) AddTransferJob(req TransferJobRequest) bool {
 		Sources:             srcLocs,
 		Destination:         destLoc,
 		DestIsDir:           ops.DestinationIsDirAtEnqueue(destLoc),
-		FollowIndex:         h.followIndex(srcLocs...) || h.followIndex(destLoc),
+		FollowIndex:         h.followIndex(srcLocs...), // a fileindex:// dest implies fileindex:// sources (refusal above)
 		PausedAfterScan:     req.StartPaused,
 		PreservePermissions: req.Preserve.PreservePermissions,
 		PreserveTimestamps:  req.Preserve.PreserveTimestamps,
@@ -1623,9 +1622,6 @@ func (h *Handler) EnqueueExtractJob(sources []string, dest string) {
 		return
 	}
 	// An extract only creates files, which the index learns of on the next scan: no FollowIndex.
-	// A fileindex:// source names the archive on disk, which the job only reads; a fileindex://
-	// destination is refused by the dialog.
-	srcLocs = pathloc.Locals(srcLocs)
 	job := &jobs.Job{
 		ID:          jobs.NewJobID(),
 		Type:        jobs.TypeExtract,
@@ -1650,15 +1646,6 @@ func (h *Handler) AddFlattenJob(req FlattenJobRequest) {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
 		return
 	}
-	if err := ops.ValidateFlattenTarget(srcLocs, destLoc); err != nil {
-		var opsErr *ops.Error
-		if errors.As(err, &opsErr) {
-			h.host.SetTransientMessage(opsErr.Text, ui.MessageUrgencyWarn)
-		} else {
-			h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyWarn)
-		}
-		return
-	}
 	job := &jobs.Job{
 		ID:                 jobs.NewJobID(),
 		Type:               jobs.TypeFlatten,
@@ -1666,7 +1653,7 @@ func (h *Handler) AddFlattenJob(req FlattenJobRequest) {
 		Sources:            srcLocs,
 		Destination:        destLoc,
 		DestIsDir:          ops.DestinationIsDirAtEnqueue(destLoc),
-		FollowIndex:        h.followIndex(srcLocs...) || h.followIndex(destLoc),
+		FollowIndex:        h.followIndex(), // the dialog refused fileindex:// paths
 		FlattenRemoveEmpty: req.RemoveEmpty,
 		FlattenRecursive:   req.Recursive,
 	}

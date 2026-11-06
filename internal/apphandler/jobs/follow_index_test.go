@@ -137,18 +137,7 @@ func TestDedupDeleteJobDeletesOnDisk(t *testing.T) {
 	}
 }
 
-func TestFlattenJobRefusesIndexPaths(t *testing.T) {
-	for name, req := range map[string]FlattenJobRequest{
-		"root": {Roots: []string{"fileindex:///orchard/lantern"}, Dest: "/meadow"},
-		"dest": {Roots: []string{"/orchard/lantern"}, Dest: "fileindex:///meadow"},
-	} {
-		h, state, msgs := followHandlerMsgs(t, "fileindex:///orchard", false)
-		h.AddFlattenJob(req)
-		if n := len(state.AllJobs()); n != 0 || len(*msgs) != 1 || (*msgs)[0] != ops.FlattenIndexRefusal {
-			t.Fatalf("%s: jobs %d, messages %q; want a refusal and no job", name, n, *msgs)
-		}
-	}
-
+func TestFlattenJobFollowsOnlyFromPanelShowingIndex(t *testing.T) {
 	h, state := followHandler(t, "/orchard", false)
 	h.AddFlattenJob(FlattenJobRequest{Roots: []string{"/orchard/lantern"}, Dest: "/orchard"})
 	if onlyJob(t, state).FollowIndex {
@@ -156,15 +145,11 @@ func TestFlattenJobRefusesIndexPaths(t *testing.T) {
 	}
 }
 
-func TestExtractJobTranslatesSourcesAndDoesNotFollowIndex(t *testing.T) {
+func TestExtractJobDoesNotFollowIndex(t *testing.T) {
 	h, state := followHandler(t, "fileindex:///orchard", false)
-	h.EnqueueExtractJob([]string{"fileindex:///orchard/harbor.zip"}, "/meadow")
-	j := onlyJob(t, state)
-	if j.FollowIndex {
+	h.EnqueueExtractJob([]string{"/orchard/harbor.zip"}, "/meadow")
+	if onlyJob(t, state).FollowIndex {
 		t.Fatal("an extract only creates files: it must not follow the index")
-	}
-	if j.Sources[0].String() != "/orchard/harbor.zip" || j.Destination.String() != "/meadow" {
-		t.Fatalf("extract job = %s -> %s; want the archive read from disk", j.Sources[0], j.Destination)
 	}
 }
 

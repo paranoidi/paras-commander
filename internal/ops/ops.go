@@ -249,7 +249,7 @@ func ResolvedSameAsSource(src, destDir pathloc.Path) bool {
 // flatDestNames mirrors the "Flatten into destination" transfer option: when true,
 // naming is basename-only (zero root) instead of batch-relative structure.
 func SelfTargetCount(sources []pathloc.Path, destDir pathloc.Path, flatDestNames bool) int {
-	sources, destDir = pathloc.Locals(sources), destDir.Local() // as the job will see them
+	sources, destDir = pathloc.Locals(sources), destDir.Local() // compare the files the entries name
 	var root pathloc.Path
 	if !flatDestNames {
 		root = TransferNameRoot(sources)
