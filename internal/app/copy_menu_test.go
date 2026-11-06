@@ -11,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/clipboard"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -304,5 +305,84 @@ func TestCopyMenuFileContentsOnlyInFullscreenTextPreview(t *testing.T) {
 	app.copyToClipboard(keymap.ActionClipboardCopyFileContents)
 	if got := clipboard.LastSet(); got != "" {
 		t.Fatalf("binary file copied: %q", got)
+	}
+}
+
+// testCopyMenuTreeGitApp lists a plain (non-repo) root in tree layout with a git work tree
+// "orchard" expanded under it and the cursor on its file "ember.txt". "willow.txt" sits in the root.
+func testCopyMenuTreeGitApp(t *testing.T) (*App, string) {
+	t.Helper()
+	clipboard.Reset()
+	prevWriter := clipboard.OSWriter
+	clipboard.OSWriter = func(string) error { return nil }
+	t.Cleanup(func() { clipboard.OSWriter = prevWriter })
+	root := t.TempDir()
+	repo := filepath.Join(root, "orchard")
+	if err := os.MkdirAll(filepath.Join(repo, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(repo, ".git", "HEAD"))
+	writeFile(t, filepath.Join(repo, "ember.txt"))
+	writeFile(t, filepath.Join(root, "willow.txt"))
+	screen := newScreen(t, 80, 50)
+	app := newTestApp(t, screen, Options{
+		CWD:    func() (string, error) { return root, nil },
+		Config: config.Default(),
+		Paths:  config.Paths{ConfigDir: filepath.Join(root, "config")},
+	})
+	app.model.ViewMode = ui.ViewBrowser
+	p := &app.model.Primary
+	// Directories sort first: the cursor sits on orchard. Child loading is async.
+	app.dispatchActionLikeKeyboardShortcut(keymap.ActionPanelToggleTree)
+	applyNextInterruptEvent(t, app, screen)
+	if p.ListLayout != panel.ListLayoutTree || p.VisibleEntryCount() != 3 {
+		t.Fatalf("tree layout=%v rows=%d, want tree with orchard expanded", p.ListLayout, p.VisibleEntryCount())
+	}
+	for i := 0; i < p.VisibleEntryCount(); i++ {
+		if e, _, ok := p.VisibleEntry(i); ok && e.Name == "ember.txt" {
+			p.Cursor = i
+		}
+	}
+	return app, root
+}
+
+func TestCopyMenuGitTreeCursorInRepoUnderPlainRoot(t *testing.T) {
+	app, _ := testCopyMenuTreeGitApp(t)
+	app.toggleCopyMenu()
+	if gitMenuItem(app).Disabled {
+		t.Fatal("g row should be enabled with the cursor inside a repo under a plain root")
+	}
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'g', tcell.ModNone))
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModNone))
+	if got, want := clipboard.LastSet(), "ember.txt"; got != want {
+		t.Fatalf("git file path = %q, want %q", got, want)
+	}
+	app.toggleCopyMenu()
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'g', tcell.ModNone))
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModNone))
+	if got, want := clipboard.LastSet(), "."; got != want {
+		t.Fatalf("git dir path = %q, want %q", got, want)
+	}
+}
+
+func TestCopyMenuGitSelectionAcrossFolders(t *testing.T) {
+	app, root := testCopyMenuTreeGitApp(t)
+	// A tagged file outside any repo is skipped; the one in the repo is relative to its work tree.
+	app.model.Primary.SelectedPaths = map[string]bool{
+		filepath.Join(root, "orchard", "ember.txt"): true,
+		filepath.Join(root, "willow.txt"):           true,
+	}
+	app.toggleCopyMenu()
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'g', tcell.ModNone))
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModNone))
+	if got, want := clipboard.LastSet(), "ember.txt"; got != want {
+		t.Fatalf("git file path = %q, want %q", got, want)
+	}
+	// Only outside the repo: refused.
+	clipboard.Reset()
+	app.model.Primary.SelectedPaths = map[string]bool{filepath.Join(root, "willow.txt"): true}
+	app.toggleCopyMenu()
+	if !gitMenuItem(app).Disabled {
+		t.Fatal("g row should be disabled when no target is in a work tree")
 	}
 }

@@ -38,14 +38,14 @@ func (a *App) toggleCopyMenu() {
 	}
 	var items []ui.LeaderMenuItem
 	var actions []string
-	_, _, dirPath, _, hasTarget := a.copyTargets()
+	paths, _, dirPath, _, hasTarget := a.copyTargets()
 	for _, e := range entries {
 		label := e.Label
 		disabled := false
 		if e.ActionID == keymap.ActionClipboardGitMenu {
 			// Same submenu marker as the user menu (userMenuLeaderMenuItems).
 			label += " " + string(a.styles.IconTreeExpand())
-			disabled = hasTarget && gitignore.ValidWorkTreeRoot(dirPath) == ""
+			disabled = hasTarget && !gitAvailable(paths, dirPath)
 		}
 		if e.ActionID == keymap.ActionClipboardCopyFileContents {
 			disabled = !a.fullscreenTextPreviewOpen()
@@ -59,11 +59,11 @@ func (a *App) toggleCopyMenu() {
 // openCopyGitMenu opens the "Relative to git root" submenu, or warns when the
 // target directory is not in a git work tree.
 func (a *App) openCopyGitMenu() {
-	_, _, dirPath, _, ok := a.copyTargets()
+	paths, _, dirPath, _, ok := a.copyTargets()
 	if !ok || a.keys == nil {
 		return
 	}
-	if gitignore.ValidWorkTreeRoot(dirPath) == "" {
+	if !gitAvailable(paths, dirPath) {
 		a.setTransientMessage("Copy: not in a git repository", ui.MessageUrgencyWarn)
 		return
 	}
@@ -90,7 +90,7 @@ func (a *App) copyTargets() (paths []string, entries []localfs.Entry, dirPath, w
 	switch a.model.ViewMode {
 	case ui.ViewBrowser:
 		p := a.activePanel()
-		return panelTargetPaths(p), panelTargetEntries(p), p.PathString(), "", true
+		return panelTargetPaths(p), panelTargetEntries(p), p.CursorDir().String(), "", true
 	case ui.ViewFilePreview:
 		path := a.model.FullscreenFilePreview.Path
 		if path == "" {
@@ -114,6 +114,20 @@ func (a *App) copyTargets() (paths []string, entries []localfs.Entry, dirPath, w
 		return paths, entries, dirPath, "", true
 	}
 	return nil, nil, "", "", false
+}
+
+// gitAvailable reports whether the copy targets can be made git-relative: any target's directory,
+// or dirPath (the cursor directory) when there are no targets, is inside a work tree.
+func gitAvailable(paths []string, dirPath string) bool {
+	if len(paths) == 0 {
+		return gitignore.ValidWorkTreeRoot(dirPath) != ""
+	}
+	for _, p := range paths {
+		if gitignore.ValidWorkTreeRoot(filepath.Dir(p)) != "" {
+			return true
+		}
+	}
+	return false
 }
 
 // fullscreenTextPreviewOpen reports whether the F3 fullscreen preview shows a
@@ -183,25 +197,30 @@ func (a *App) copyToClipboard(actionID string) {
 		}
 		text = clipboard.BuildFilenamesWithoutExt(entries)
 	case keymap.ActionClipboardCopyGitFilePath, keymap.ActionClipboardCopyGitDirPath:
-		root := gitignore.ValidWorkTreeRoot(dirPath)
-		if root == "" {
-			a.setTransientMessage("Copy: not in a git repository", ui.MessageUrgencyWarn)
-			return
-		}
+		// Targets can live in different folders (tree layout, selection across folders), so each
+		// is made relative to the work tree holding it; targets outside any repository are skipped.
+		targets := paths
 		if actionID == keymap.ActionClipboardCopyGitDirPath {
-			dirs := make([]string, 0, len(paths))
+			targets = make([]string, 0, len(paths))
 			for _, p := range paths {
-				dirs = append(dirs, filepath.Dir(p))
+				targets = append(targets, filepath.Dir(p))
 			}
-			if len(dirs) == 0 {
-				dirs = []string{dirPath}
+			if len(targets) == 0 {
+				targets = []string{dirPath}
 			}
-			paths = dirs
 		}
-		rel := make([]string, 0, len(paths))
-		seen := make(map[string]struct{}, len(paths))
-		for _, p := range paths {
-			r, err := filepath.Rel(root, p)
+		rel := make([]string, 0, len(targets))
+		seen := make(map[string]struct{}, len(targets))
+		for _, t := range targets {
+			lookup := t
+			if actionID == keymap.ActionClipboardCopyGitFilePath {
+				lookup = filepath.Dir(t)
+			}
+			root := gitignore.ValidWorkTreeRoot(lookup)
+			if root == "" {
+				continue
+			}
+			r, err := filepath.Rel(root, t)
 			if err != nil {
 				continue
 			}
@@ -210,6 +229,10 @@ func (a *App) copyToClipboard(actionID string) {
 			}
 			seen[r] = struct{}{}
 			rel = append(rel, r)
+		}
+		if len(rel) == 0 && !gitAvailable(paths, dirPath) {
+			a.setTransientMessage("Copy: not in a git repository", ui.MessageUrgencyWarn)
+			return
 		}
 		text = strings.Join(rel, "\n")
 	default:
