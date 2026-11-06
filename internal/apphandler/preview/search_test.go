@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -105,7 +106,7 @@ func TestScrollFilePreviewToSearchMatchClampsNearEndOfFile(t *testing.T) {
 
 // newSearchNavHandler opens a preview of a generated file with three "needle" lines and wires the
 // [preview_search] defaults.
-func newSearchNavHandler(t *testing.T) *Handler {
+func newSearchNavHandler(t *testing.T) (*Handler, *fakeHost) {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "haystack.txt")
 	var b strings.Builder
@@ -119,14 +120,14 @@ func newSearchNavHandler(t *testing.T) *Handler {
 	if err := os.WriteFile(path, []byte(b.String()), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	h, _ := newTestHandler(t, 80, 24)
+	h, fh := newTestHandler(t, 80, 24)
 	km, err := keymap.Build(keymap.DefaultFilePreviewSearchOverlayKeys())
 	if err != nil {
 		t.Fatal(err)
 	}
 	h.keysFilePreviewSearch = km
 	openFullscreenPreviewSync(t, h, path)
-	return h
+	return h, fh
 }
 
 func (h *Handler) searchCurrent() int {
@@ -136,26 +137,39 @@ func (h *Handler) searchCurrent() int {
 }
 
 func TestSearchNavKeysWhileEditing(t *testing.T) {
-	h := newSearchNavHandler(t)
+	h, fh := newSearchNavHandler(t)
 	h.startFilePreviewSearch()
 	h.applyFilePreviewSearchFieldEdit(dialog.FileDialogField{Value: "needle"})
 	if n := len(h.model.FullscreenFilePreview.Search.Matches); n != 3 {
 		t.Fatalf("Matches = %d, want 3", n)
 	}
+	const below, above = "Search: no more matches below", "Search: no more matches above"
+	key := func(k tcell.Key, m tcell.ModMask) *tcell.EventKey { return tcell.NewEventKey(k, 0, m) }
+	down, ctrlJ := key(tcell.KeyDown, tcell.ModNone), key(tcell.KeyCtrlJ, tcell.ModCtrl)
+	up, ctrlK := key(tcell.KeyUp, tcell.ModNone), key(tcell.KeyCtrlK, tcell.ModCtrl)
 	steps := []struct {
 		ev   *tcell.EventKey
 		want int
+		msgs []string
 	}{
-		{tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone), 1},
-		{tcell.NewEventKey(tcell.KeyCtrlJ, 0, tcell.ModCtrl), 2},
-		{tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone), 0},
-		{tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone), 2},
-		{tcell.NewEventKey(tcell.KeyCtrlK, 0, tcell.ModCtrl), 1},
+		{down, 1, nil},
+		{ctrlJ, 2, nil},
+		{down, 2, []string{below}},
+		{ctrlJ, 2, []string{below, below}},
+		{up, 1, []string{below, below}},
+		{ctrlK, 0, []string{below, below}},
+		{up, 0, []string{below, below, above}},
+		{ctrlK, 0, []string{below, below, above, above}},
 	}
 	for i, st := range steps {
-		h.HandleFilePreviewViewKey(st.ev)
+		if !h.handleFilePreviewSearchNavKey(st.ev) {
+			t.Fatalf("step %d: key not handled", i)
+		}
 		if got := h.searchCurrent(); got != st.want {
 			t.Fatalf("step %d: Current = %d, want %d", i, got, st.want)
+		}
+		if !slices.Equal(fh.messages, st.msgs) {
+			t.Fatalf("step %d: messages = %q, want %q", i, fh.messages, st.msgs)
 		}
 	}
 	if v := h.model.FullscreenFilePreviewSearchField.Value; v != "needle" {
@@ -167,7 +181,7 @@ func TestSearchNavKeysWhileEditing(t *testing.T) {
 }
 
 func TestSearchNavKeysDoNotJumpAfterAccept(t *testing.T) {
-	h := newSearchNavHandler(t)
+	h, _ := newSearchNavHandler(t)
 	h.startFilePreviewSearch()
 	h.applyFilePreviewSearchFieldEdit(dialog.FileDialogField{Value: "needle"})
 	h.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
@@ -186,7 +200,7 @@ func TestSearchNavKeysDoNotJumpAfterAccept(t *testing.T) {
 }
 
 func TestDownScrollsWithoutSearch(t *testing.T) {
-	h := newSearchNavHandler(t)
+	h, _ := newSearchNavHandler(t)
 	h.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	if got := h.model.FullscreenFilePreview.Scroll; got != 1 {
 		t.Fatalf("Scroll = %d, want 1", got)
@@ -194,7 +208,7 @@ func TestDownScrollsWithoutSearch(t *testing.T) {
 }
 
 func TestSearchNavKeyIgnoredWithoutMatches(t *testing.T) {
-	h := newSearchNavHandler(t)
+	h, _ := newSearchNavHandler(t)
 	h.startFilePreviewSearch()
 	h.applyFilePreviewSearchFieldEdit(dialog.FileDialogField{Value: "zzzzz"})
 	if h.handleFilePreviewSearchNavKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone)) {

@@ -81,9 +81,9 @@ func (h *Handler) handleFilePreviewSearchTypingKey(event *tcell.EventKey) (quit 
 	return false
 }
 
-// filePreviewSearchNav moves to the next (dir>0) or previous (dir<0) search match, wrapping
-// at the ends, and scrolls the preview to reveal it. It reports false when there is no active
-// search or no matches, true when it moved.
+// filePreviewSearchNav moves to the next (dir>0) or previous (dir<0) search match and scrolls the
+// preview to reveal it. At the first/last match it stays put and shows a warning toast; that still
+// counts as handled. It reports false only when there is no active search or no matches.
 func (h *Handler) filePreviewSearchNav(dir int) bool {
 	h.mu.RLock()
 	st := h.model.FullscreenFilePreview
@@ -91,8 +91,15 @@ func (h *Handler) filePreviewSearchNav(dir int) bool {
 	if !st.Search.Active || len(st.Search.Matches) == 0 {
 		return false
 	}
-	n := len(st.Search.Matches)
-	next := (st.Search.Current + dir + n) % n
+	next := st.Search.Current + dir
+	if next < 0 || next >= len(st.Search.Matches) {
+		msg := "Search: no more matches below"
+		if dir < 0 {
+			msg = "Search: no more matches above"
+		}
+		h.host.SetTransientMessage(msg, ui.MessageUrgencyWarn)
+		return true
+	}
 	h.patchFullscreenFilePreview(func(fp *ui.FilePreviewState) { fp.Search.Current = next })
 	h.scrollFilePreviewToSearchMatch(next)
 	return true
