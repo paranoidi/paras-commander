@@ -1,6 +1,7 @@
 package panel
 
 import (
+	"slices"
 	"sort"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -102,7 +103,12 @@ type TreeRefreshReq struct {
 // round-robin order so off-screen changes surface eventually without re-listing everything each
 // tick. Nil outside tree layout.
 func (s *State) TreeRefreshPlan(viewportRows, offscreenPerTick int) []TreeRefreshReq {
+	// A folder still loading is skipped: its own fetch is in flight and a re-list would only
+	// duplicate that read (a prefetched result for it would re-root the tree and abandon the load).
 	ids := s.TreePrefetchIDs(s.Path)
+	if loading := collectLoadingTreeIDs(s.TreeRoots, nil); len(loading) > 0 {
+		ids = slices.DeleteFunc(ids, func(id string) bool { return loading[id] })
+	}
 	if len(ids) == 0 {
 		return nil
 	}

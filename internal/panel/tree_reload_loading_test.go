@@ -126,9 +126,10 @@ func TestSameDirReloadServesLoadingFolderFromPrefetch(t *testing.T) {
 	}
 }
 
-func TestNavigationDoesNotCarryLoadingFolder(t *testing.T) {
+func TestNavigationBackReExpandsFolderThatWasLoading(t *testing.T) {
 	s, orchard := orchardTree(t)
 	h := newTreeLoadHarness(t, s)
+	home := s.Path
 	if err := s.ExpandTreeCursorRow(10); err != nil {
 		t.Fatal(err)
 	}
@@ -138,47 +139,135 @@ func TestNavigationDoesNotCarryLoadingFolder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Leaving remembers the expand intent (load() does this before applying the new listing).
+	s.rememberCursorForPath(home.String())
 	if err := s.ApplyListing(otherLoc, nil, "", 10, 0, false); err != nil {
 		t.Fatal(err)
 	}
-	if len(h.dispatched) != 1 || len(h.pending) != 0 {
-		t.Fatalf("dispatched = %v pending = %v, want no re-dispatch after navigation", h.dispatched, h.pending)
+	if len(h.pending) != 0 || s.TreeExpanded[orchard] {
+		t.Fatalf("pending = %v expanded = %v, want the abandoned load gone in the other directory", h.pending, s.TreeExpanded[orchard])
 	}
-	if s.TreeExpanded[orchard] {
-		t.Fatal("loading folder must not be remembered across navigation")
+	be, _, _, _, err := s.fetchBackendEntries(home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.ApplyListing(home, be, "", 10, 0, false); err != nil {
+		t.Fatal(err)
+	}
+	if len(h.dispatched) != 2 || len(h.pending) != 1 || !s.TreeExpanded[orchard] {
+		t.Fatalf("dispatched = %v pending = %v expanded = %v, want the load restarted on return", h.dispatched, h.pending, s.TreeExpanded[orchard])
+	}
+	h.settle()
+	if n := findTreeNode(s.TreeRoots, orchard); n == nil || n.Children == nil || !s.TreeExpanded[orchard] {
+		t.Fatal("orchard must be expanded with children after the restarted load lands")
 	}
 }
 
-func TestCollapseDuringRestoredLoadStaysNoOp(t *testing.T) {
+func TestCollapseDuringLoadTakesEffectAndLateResultStaysCollapsed(t *testing.T) {
+	s, orchard := orchardTree(t)
+	h := newTreeLoadHarness(t, s)
+	pine := filepath.Join(orchard, "pine")
+	touchTreeFile(t, filepath.Join(pine, "willow.txt"))
+	if err := s.ExpandTreeCursorRow(10); err != nil {
+		t.Fatal(err)
+	}
+	s.TreeExpanded[pine] = true // remembered nested expansion that a landing orchard would cascade into
+	if err := s.CollapseTreeCursorRow(10); err != nil {
+		t.Fatal(err)
+	}
+	if s.TreeExpanded[orchard] {
+		t.Fatal("collapse during the load must clear the expand intent at once")
+	}
+	h.settle()
+	n := findTreeNode(s.TreeRoots, orchard)
+	if n == nil || n.Children == nil || n.Value.Loading {
+		t.Fatal("late result must still attach the children")
+	}
+	if s.TreeExpanded[orchard] || s.VisibleEntryCount() != 2 {
+		t.Fatalf("expanded = %v rows = %d, want orchard collapsed", s.TreeExpanded[orchard], s.VisibleEntryCount())
+	}
+	if len(h.dispatched) != 1 {
+		t.Fatalf("dispatched = %v, want no nested load for a collapsed folder", h.dispatched)
+	}
+	// Expanding again uses the attached children without another fetch.
+	if err := s.ExpandTreeCursorRow(10); err != nil {
+		t.Fatal(err)
+	}
+	if !s.TreeExpanded[orchard] || len(h.dispatched) != 1 || s.VisibleEntryCount() != 4 {
+		t.Fatalf("expanded = %v dispatched = %v rows = %d, want expanded from cache", s.TreeExpanded[orchard], h.dispatched, s.VisibleEntryCount())
+	}
+}
+
+func TestCollapseThenReExpandDuringLoadDoesNotRefetch(t *testing.T) {
 	s, orchard := orchardTree(t)
 	h := newTreeLoadHarness(t, s)
 	if err := s.ExpandTreeCursorRow(10); err != nil {
 		t.Fatal(err)
 	}
-	h.refresh(nil)
-	if !s.TreeExpanded[orchard] {
-		t.Fatal("test setup: restored load should leave TreeExpanded set")
-	}
-	s.Cursor = 0
-	if err := s.CollapseTreeCursorRow(10); err != nil {
+	if err := s.ToggleTreeExpand(10); err != nil { // collapse
 		t.Fatal(err)
 	}
-	if err := s.ToggleTreeExpand(10); err != nil {
+	if err := s.ToggleTreeExpand(10); err != nil { // expand again, load still in flight
 		t.Fatal(err)
 	}
-	if !s.TreeExpanded[orchard] {
-		t.Fatal("collapse must not clear the flag while the load is in flight")
+	if !s.TreeExpanded[orchard] || len(h.dispatched) != 1 {
+		t.Fatalf("expanded = %v dispatched = %v, want intent set and no second fetch", s.TreeExpanded[orchard], h.dispatched)
 	}
 	h.settle()
-	// The late result expands the folder; a press afterwards collapses it for good.
-	if !s.TreeExpanded[orchard] {
-		t.Fatal("orchard must be expanded after the load lands")
+	if n := findTreeNode(s.TreeRoots, orchard); n == nil || n.Children == nil || !s.TreeExpanded[orchard] {
+		t.Fatal("orchard must be expanded once the load lands")
 	}
-	if err := s.CollapseTreeCursorRow(10); err != nil {
+	if s.VisibleEntryCount() != 3 {
+		t.Fatalf("rows = %d, want orchard, its child and lantern", s.VisibleEntryCount())
+	}
+}
+
+func TestFailedLoadClearsIntentAndRetries(t *testing.T) {
+	s, orchard := orchardTree(t)
+	h := newTreeLoadHarness(t, s)
+	if err := s.ExpandTreeCursorRow(10); err != nil {
 		t.Fatal(err)
 	}
+	h.pending = nil
+	s.ApplyTreeChildLoad(orchard, nil, os.ErrPermission, 10)
 	if s.TreeExpanded[orchard] {
-		t.Fatal("collapse after the load landed must collapse")
+		t.Fatal("a failed load must clear the expand intent")
+	}
+	if err := s.ExpandTreeCursorRow(10); err != nil {
+		t.Fatal(err)
+	}
+	if len(h.dispatched) != 2 || !s.TreeExpanded[orchard] {
+		t.Fatalf("dispatched = %v expanded = %v, want a retry fetch", h.dispatched, s.TreeExpanded[orchard])
+	}
+}
+
+func TestCollapseAllDuringLoadDropsIntent(t *testing.T) {
+	s, orchard := orchardTree(t)
+	h := newTreeLoadHarness(t, s)
+	if err := s.ExpandTreeCursorRow(10); err != nil {
+		t.Fatal(err)
+	}
+	s.treeExpandAllDepth = 1 // partial-collapse path, not the clear-everything one
+	s.CollapseAllTree(10)
+	if s.TreeExpanded[orchard] || len(h.pending) != 0 {
+		t.Fatalf("expanded = %v pending = %v, want the abandoned load's intent dropped", s.TreeExpanded[orchard], h.pending)
+	}
+	if err := s.ExpandTreeCursorRow(10); err != nil {
+		t.Fatal(err)
+	}
+	if len(h.dispatched) != 2 {
+		t.Fatalf("dispatched = %v, want a fresh fetch after the abandon", h.dispatched)
+	}
+}
+
+func TestRefreshPlanSkipsFolderStillLoading(t *testing.T) {
+	s, _ := orchardTree(t)
+	newTreeLoadHarness(t, s)
+	if err := s.ExpandTreeCursorRow(10); err != nil {
+		t.Fatal(err)
+	}
+	if plan := s.TreeRefreshPlan(10, 4); len(plan) != 0 {
+		t.Fatalf("plan = %v, want the loading folder left to its own fetch", plan)
 	}
 }
 

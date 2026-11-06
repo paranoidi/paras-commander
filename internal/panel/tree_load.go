@@ -22,14 +22,17 @@ type TreeChildLoadRequest struct {
 type TreeChildLoadScheduler func(req TreeChildLoadRequest) bool
 
 // ApplyTreeChildLoad applies the result of an async child fetch dispatched via
-// ScheduleTreeChildLoad; call on the main thread. Returns false if the result is stale (the node
-// no longer exists — e.g. ApplyListing re-rooted TreeRoots on navigation — or is no longer marked
-// Loading, e.g. a superseded duplicate callback, or because abandonTreeChildLoads cleared it on a
-// whole-tree collapse/re-root/mode switch) and was silently dropped, or when the apply is part of
-// an ExpandAllTreeShallow coalesce (treeExpandQuiet > 0 after decrement) that should not
-// rebuild/redraw yet. A same-directory reload does not drop a load in flight: it re-dispatches the
-// folder (ApplyListing -> restoreTreeExpansions), so the result applied here comes from the
-// re-dispatched fetch. Returns true when the visible tree was rebuilt and the UI should redraw.
+// ScheduleTreeChildLoad; call on the main thread. The expand intent (TreeExpanded[dirID]) was
+// recorded at dispatch: a success attaches the children and leaves the folder expanded or
+// collapsed as the user last set it, a failure clears the intent. Returns false if the result is
+// stale (the node no longer exists — e.g. ApplyListing re-rooted TreeRoots on navigation — or is
+// no longer marked Loading, e.g. a superseded duplicate callback, or because abandonTreeChildLoads
+// cleared it on a whole-tree collapse/re-root/mode switch) and was silently dropped, or when the
+// apply is part of an ExpandAllTreeShallow coalesce (treeExpandQuiet > 0 after decrement) that
+// should not rebuild/redraw yet. A same-directory reload does not drop a load in flight: it
+// re-dispatches the folder (ApplyListing -> restoreTreeExpansions), so the result applied here
+// comes from the re-dispatched fetch. Returns true when the visible tree was rebuilt and the UI
+// should redraw.
 func (s *State) ApplyTreeChildLoad(dirID string, entries []localfs.Entry, err error, viewportRows int) bool {
 	node := findTreeNode(s.TreeRoots, dirID)
 	if node == nil || !node.Value.Loading {
@@ -44,10 +47,6 @@ func (s *State) ApplyTreeChildLoad(dirID string, entries []localfs.Entry, err er
 	}
 	node.Value.LoadErr = nil
 	s.attachTreeChildren(node, entries)
-	if s.TreeExpanded == nil {
-		s.TreeExpanded = make(map[string]bool)
-	}
-	s.TreeExpanded[dirID] = true
 	s.TreeExpandGen++
 	// Cascades any remembered-but-not-yet-restored expansion nested under the directory that just
 	// finished loading (e.g. a recalled snapshot with several levels deep on an SFTP panel, where
@@ -65,7 +64,9 @@ func (s *State) ApplyTreeChildLoad(dirID string, entries []localfs.Entry, err er
 	// not a user-facing limit, so undercounting it here by node's own depth is an acceptable
 	// simplification. Thread real depth through if a deeply-nested SFTP snapshot ever needs the
 	// exact global cap enforced mid-cascade.
-	s.restoreTreeExpansionsIn(node.Children, 0)
+	if s.TreeExpanded[dirID] { // collapsed during the load: keep the children, start no nested loads
+		s.restoreTreeExpansionsIn(node.Children, 0)
+	}
 	return s.finishTreeChildLoadApply(dirID, viewportRows)
 }
 

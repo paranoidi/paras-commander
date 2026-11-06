@@ -286,8 +286,9 @@ type State struct {
 	// TreeRoots holds the tree built for tree-layout rendering. Depth-0 nodes mirror Entries;
 	// deeper nodes are loaded lazily on first expand (see ToggleTreeExpand).
 	TreeRoots []treeflat.Node[TreeEntry]
-	// TreeExpanded tracks expand state by node ID (absolute path); default collapsed, so a path
-	// absent from the map means collapsed.
+	// TreeExpanded tracks the expand intent by node ID (absolute path); default collapsed, so a
+	// path absent from the map means collapsed. Set when an expand is accepted, also while the
+	// folder's children are still loading.
 	TreeExpanded map[string]bool
 	// TreeExpandGen increments on every change to TreeExpanded outside a re-root (which bumps
 	// ListingEpoch instead), so a caller can notice changes to the expanded set in O(1); collapsing
@@ -1632,17 +1633,6 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 		var keep map[string]bool
 		if sameDirReload {
 			keep = s.TreeExpanded
-			// A first expand still in flight is not in TreeExpanded yet (ApplyTreeChildLoad sets
-			// it on success); carry it over so restoreTreeExpansions re-dispatches the load
-			// instead of forgetting the folder along with its abandoned result.
-			if ids := loadingTreeIDs(s.TreeRoots, nil); len(ids) > 0 {
-				if keep == nil {
-					keep = make(map[string]bool, len(ids))
-				}
-				for _, id := range ids {
-					keep[id] = true
-				}
-			}
 		} else if snap, ok := s.HistoryCursorByPath[cleanPathString(listingLoc.String())]; ok {
 			keep = maps.Clone(snap.TreeExpanded)
 			s.treeExpandAllDepth = snap.TreeExpandAllDepth
@@ -1653,7 +1643,7 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 		}
 		// Every location change (and same-dir refresh) discards the old TreeRoots and re-fetches
 		// remembered dirs, so anything still in flight is dead work.
-		s.abandonTreeChildLoads()
+		s.abandonTreeChildLoads(false)
 		s.treePriorChildren = nil
 		if diffListing {
 			s.treePriorChildren = make(map[string][]localfs.Entry)

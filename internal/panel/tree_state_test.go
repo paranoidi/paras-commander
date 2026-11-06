@@ -1088,8 +1088,11 @@ func TestExpandAllTreeShallowAsyncCoalescesRedrawAndKeepsCursor(t *testing.T) {
 	if !ok || cur.Path != meadow {
 		t.Fatalf("cursor after first apply = %q ok=%v, want meadow", cur.Path, ok)
 	}
-	if state.TreeExpanded[bravo] {
-		t.Fatal("bravo must still be collapsed until its apply")
+	if !state.TreeExpanded[bravo] {
+		t.Fatal("bravo's expand intent must be recorded at dispatch")
+	}
+	if n := findTreeNode(state.TreeRoots, bravo); n == nil || n.Children != nil {
+		t.Fatal("bravo must have no children until its apply")
 	}
 
 	bravoEntries := []localfs.Entry{{Name: "child", Path: filepath.Join(bravo, "child"), Type: localfs.EntryDirectory}}

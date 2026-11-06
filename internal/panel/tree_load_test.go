@@ -60,9 +60,9 @@ func TestSetTreeNodeExpandedSyncFallbackWhenNoScheduler(t *testing.T) {
 }
 
 // TestApplyTreeChildLoadSuccessExpandsDirectory drives the async path end to end: expanding
-// dispatches a request (captured, not actually run on a goroutine) and leaves the directory
-// collapsed-but-loading; delivering a successful ApplyTreeChildLoad then expands it and shows the
-// children, mirroring what the app-layer callback does on the main thread.
+// dispatches a request (captured, not actually run on a goroutine) and records the expand intent
+// with the directory still loading and childless; delivering a successful ApplyTreeChildLoad then
+// shows the children, mirroring what the app-layer callback does on the main thread.
 func TestApplyTreeChildLoadSuccessExpandsDirectory(t *testing.T) {
 	s, dirID := setupTreeStateWithOneDir(t)
 	var captured *TreeChildLoadRequest
@@ -80,14 +80,14 @@ func TestApplyTreeChildLoadSuccessExpandsDirectory(t *testing.T) {
 	if captured.DirID != dirID {
 		t.Fatalf("captured.DirID = %q, want %q", captured.DirID, dirID)
 	}
-	if s.TreeExpanded[dirID] {
-		t.Fatal("TreeExpanded must stay false until the async load succeeds")
+	if !s.TreeExpanded[dirID] {
+		t.Fatal("TreeExpanded must be set at dispatch, while the load is still in flight")
 	}
 	if node := findTreeNode(s.TreeRoots, dirID); node == nil || !node.Value.Loading {
 		t.Fatal("node must be marked Loading immediately after dispatch")
 	}
 	if got := s.VisibleEntryCount(); got != 2 {
-		t.Fatalf("VisibleEntryCount while loading = %d, want 2 (still collapsed)", got)
+		t.Fatalf("VisibleEntryCount while loading = %d, want 2 (no children yet)", got)
 	}
 
 	entries := []localfs.Entry{{Name: "harbor.txt", Path: filepath.Join(dirID, "harbor.txt"), Type: localfs.EntryFile}}
@@ -164,14 +164,14 @@ func TestExpandWhileLoadingDoesNotDispatchTwice(t *testing.T) {
 	if err := s.ExpandTreeCursorRow(10); err != nil {
 		t.Fatalf("ExpandTreeCursorRow (1st): %v", err)
 	}
-	if err := s.ToggleTreeExpand(10); err != nil {
-		t.Fatalf("ToggleTreeExpand (2nd, while loading): %v", err)
+	if err := s.ExpandTreeCursorRow(10); err != nil {
+		t.Fatalf("ExpandTreeCursorRow (2nd, while loading): %v", err)
 	}
 	if dispatches != 1 {
 		t.Fatalf("dispatches after second expand attempt while loading = %d, want 1", dispatches)
 	}
-	if s.TreeExpanded[dirID] {
-		t.Fatal("TreeExpanded must still be false while loading")
+	if !s.TreeExpanded[dirID] {
+		t.Fatal("expand intent must stay set while loading")
 	}
 }
 
@@ -475,7 +475,7 @@ func TestApplyTreeChildLoadSkipsGitStatusWhenColumnInactive(t *testing.T) {
 
 // TestRestoreLocalTreeExpansionsUsesChildScheduler proves ApplyListing restores a remembered
 // local expansion through ScheduleTreeChildLoad instead of ReadDir on the caller: a blocking
-// scheduler must not stall ApplyListing, the first frame keeps the directory collapsed-but-loading,
+// scheduler must not stall ApplyListing, the first frame shows the directory loading without children,
 // and applying the child result restores the expansion and reattaches the cursor.
 func TestRestoreLocalTreeExpansionsUsesChildScheduler(t *testing.T) {
 	root := t.TempDir()

@@ -16,8 +16,8 @@ type TreeEntry struct {
 	// setTreeNodeExpanded / ApplyTreeChildLoad in tree_load.go). Drives FolderIconContext.TreeLoading.
 	Loading bool
 	// LoadErr holds the error from the most recent failed child fetch. Cleared on the next
-	// successful fetch. The directory stays collapsed (TreeExpanded never set) while set, so a
-	// later expand attempt naturally retries.
+	// successful fetch. A failed fetch clears TreeExpanded[id] and leaves Children nil, so a later
+	// expand attempt naturally retries.
 	LoadErr error
 }
 
@@ -86,7 +86,7 @@ func (s *State) SetListLayout(layout ListLayout, viewportRows int) bool {
 		s.rebuildTreeRows()
 	} else {
 		// Leaving tree mode: any in-flight child fetch would never be shown, so abandon it.
-		s.abandonTreeChildLoads()
+		s.abandonTreeChildLoads(false)
 		s.treeByPath = nil
 		s.treePriorChildren = nil
 		s.recomputeSelectionListedBytes()
@@ -390,7 +390,7 @@ func (s *State) CollapseAllTree(viewportRows int) {
 		return
 	}
 	s.treeExpandAllAuto = false
-	s.abandonTreeChildLoads()
+	s.abandonTreeChildLoads(true)
 	if s.treeExpandAllDepth == 0 {
 		s.CollapseAllTreeFully(viewportRows)
 		return
@@ -469,7 +469,7 @@ func (s *State) CollapseAllTreeFully(viewportRows int) {
 	if s.ListLayout != ListLayoutTree {
 		return
 	}
-	s.abandonTreeChildLoads()
+	s.abandonTreeChildLoads(true)
 	if len(s.TreeExpanded) == 0 && s.treeExpandAllDepth == 0 {
 		return
 	}
@@ -490,34 +490,52 @@ func (s *State) CollapseAllTreeFully(viewportRows int) {
 // abandonTreeChildLoads drops every in-flight child fetch dispatched via ScheduleTreeChildLoad:
 // clearing Loading on every node makes ApplyTreeChildLoad reject any late result via its existing
 // !node.Value.Loading check, the coalesce counter resets so nothing waits on results that will
-// never come, and the app cancels the goroutines.
-func (s *State) abandonTreeChildLoads() {
-	abandonTreeChildLoadsIn(s.TreeRoots)
+// never come, and the app cancels the goroutines. dropIntent also clears TreeExpanded for each
+// dropped load (the collapse-all paths), so no folder is left expanded with neither children nor a
+// load; a re-root passes false because it re-dispatches those folders from the same set.
+func (s *State) abandonTreeChildLoads(dropIntent bool) {
+	var expanded map[string]bool
+	if dropIntent {
+		expanded = s.TreeExpanded
+	}
+	if abandonTreeChildLoadsIn(s.TreeRoots, expanded) {
+		s.TreeExpandGen++
+	}
 	s.treeExpandQuiet = 0
 	if s.CancelTreeChildLoads != nil {
 		s.CancelTreeChildLoads()
 	}
 }
 
-// loadingTreeIDs appends the ID of every node under nodes still marked Loading to out.
-func loadingTreeIDs(nodes []treeflat.Node[TreeEntry], out []string) []string {
+// collectLoadingTreeIDs walks nodes once and returns the set of ids still marked Loading (nil when
+// none); into, when non-nil, is extended.
+func collectLoadingTreeIDs(nodes []treeflat.Node[TreeEntry], into map[string]bool) map[string]bool {
 	for i := range nodes {
 		if nodes[i].Value.Loading {
-			out = append(out, nodes[i].ID)
+			if into == nil {
+				into = make(map[string]bool)
+			}
+			into[nodes[i].ID] = true
 		}
-		out = loadingTreeIDs(nodes[i].Children, out)
+		into = collectLoadingTreeIDs(nodes[i].Children, into)
 	}
-	return out
+	return into
 }
 
-// abandonTreeChildLoadsIn recursively clears Loading on every node in nodes and its descendants.
-func abandonTreeChildLoadsIn(nodes []treeflat.Node[TreeEntry]) {
+// abandonTreeChildLoadsIn recursively clears Loading on every node in nodes and its descendants,
+// deleting each such node's id from expanded when it is non-nil, and reports whether it deleted one.
+func abandonTreeChildLoadsIn(nodes []treeflat.Node[TreeEntry], expanded map[string]bool) (dropped bool) {
 	for i := range nodes {
+		if nodes[i].Value.Loading && expanded != nil && expanded[nodes[i].ID] {
+			delete(expanded, nodes[i].ID)
+			dropped = true
+		}
 		nodes[i].Value.Loading = false
-		if nodes[i].Children != nil {
-			abandonTreeChildLoadsIn(nodes[i].Children)
+		if nodes[i].Children != nil && abandonTreeChildLoadsIn(nodes[i].Children, expanded) {
+			dropped = true
 		}
 	}
+	return dropped
 }
 
 // treeRootAncestorID returns the ID of the cursor row's depth-0 ancestor (or the cursor row's own
@@ -676,14 +694,15 @@ func (s *State) expandAllTreeDirsAtDepth(nodes []treeflat.Node[TreeEntry], depth
 // first time it is expanded, respecting maxTreeExpandDepth. Shared by ToggleTreeExpand and the
 // dedicated expand/collapse methods so the child-loading/dispatch logic lives in one place.
 //
-// The first expand of an unloaded directory (Children == nil) marks the node Loading and either
-// dispatches the fetch via ScheduleTreeChildLoad (async: TreeExpanded[id] is deliberately left
-// false here — the caller's immediate rebuildTreeRows()/cursor-reattach only shows the row's
-// loading icon; the real expand happens later in ApplyTreeChildLoad on the main thread once the
-// fetch completes) or, when no scheduler is wired (nil, or it declines the request — same
-// fallback convention as AsyncLoadScheduler), reads the children synchronously inline exactly as
-// before. A second expand press while a fetch is already in flight for the same node is a no-op,
-// and so is a collapse: the late result would set TreeExpanded[id] again.
+// TreeExpanded[id] records the user's intent and is set the moment an expand is accepted, also
+// while the children are still loading. The first expand of an unloaded directory (Children ==
+// nil) marks the node Loading and either dispatches the fetch via ScheduleTreeChildLoad (async:
+// the row shows its loading icon and no children until ApplyTreeChildLoad attaches them) or, when
+// no scheduler is wired (nil, or it declines the request — same fallback convention as
+// AsyncLoadScheduler), reads the children synchronously inline. A second expand while a fetch is
+// already in flight only re-sets the intent; it never dispatches a second fetch. A collapse during
+// a load takes effect at once by clearing the intent: the late result still attaches Children but
+// leaves the folder collapsed, and expanding it again uses them without another fetch.
 //
 // quiet=true (ExpandAllTreeShallow) skips the per-dispatch rebuildTreeRows and increments
 // treeExpandQuiet so ApplyTreeChildLoad coalesces N async results into one rebuild/redraw.
@@ -692,19 +711,12 @@ func (s *State) expandAllTreeDirsAtDepth(nodes []treeflat.Node[TreeEntry], depth
 // treeflat.Flatten only reveals a node's children once Node.Children is non-nil, so a loading
 // directory simply shows no children yet (correct, there aren't any to show); the loading
 // affordance lives entirely in the row's own icon (TreeEntry.Loading -> FolderIconScanning, see
-// panellist.ResolveFolderIconKind). This also makes retry free on failure: TreeExpanded[id] is
-// never set and Children stays nil, so pressing expand again just re-enters this function and
-// dispatches a new fetch — no separate retry state machine needed.
+// panellist.ResolveFolderIconKind, which checks it before TreeExpanded). Retry on failure is free:
+// ApplyTreeChildLoad clears the intent and Children stays nil, so pressing expand again just
+// re-enters this function and dispatches a new fetch — no separate retry state machine needed.
 func (s *State) setTreeNodeExpanded(id string, depth int, expand bool, quiet bool) error {
 	if s.TreeExpanded == nil {
 		s.TreeExpanded = make(map[string]bool)
-	}
-	if !expand {
-		// A load in flight (first expand, or one re-dispatched by a same-directory reload that
-		// left TreeExpanded[id] set) would re-expand the row when it lands; collapsing waits for it.
-		if node := findTreeNode(s.TreeRoots, id); node != nil && node.Value.Loading {
-			return nil
-		}
 	}
 	if expand && depth < maxTreeExpandDepth {
 		if node := findTreeNode(s.TreeRoots, id); node != nil && node.Children == nil {
@@ -720,7 +732,10 @@ func (s *State) setTreeNodeExpanded(id string, depth int, expand bool, quiet boo
 				return nil
 			}
 			if node.Value.Loading {
-				return nil // already loading; don't dispatch a second concurrent fetch
+				// Already loading; don't dispatch a second concurrent fetch, the result expands it.
+				s.TreeExpanded[id] = true
+				s.TreeExpandGen++
+				return nil
 			}
 			node.Value.Loading = true
 			if s.ScheduleTreeChildLoad != nil {
@@ -730,11 +745,13 @@ func (s *State) setTreeNodeExpanded(id string, depth int, expand bool, quiet boo
 					return err
 				}
 				if s.ScheduleTreeChildLoad(TreeChildLoadRequest{DirID: id, Loc: loc}) {
+					s.TreeExpanded[id] = true
+					s.TreeExpandGen++
 					if quiet {
 						s.treeExpandQuiet++
 						return nil
 					}
-					s.rebuildTreeRows() // show the loading icon now; real expand happens on async apply
+					s.rebuildTreeRows() // show the loading icon now; the children land on async apply
 					return nil
 				}
 			}
@@ -775,7 +792,7 @@ func (s *State) loadTreeChildren(dirPath string) ([]localfs.Entry, error) {
 // Every remembered directory goes through setTreeNodeExpanded, including local ones: a hanging
 // local ReadDir (network mount, autofs) must not run on the UI goroutine. When
 // ScheduleTreeChildLoad is wired the first paint after navigating back shows the directory
-// collapsed-but-loading for one frame; ApplyTreeChildLoad then expands it and calls this again
+// expanded-but-loading for one frame; ApplyTreeChildLoad then attaches its children and calls this again
 // to cascade into the next remembered level. When no scheduler is wired (tests, nil fallback)
 // setTreeNodeExpanded still loads children synchronously and this walk recurses immediately, so
 // several nested levels restore within a single call.
