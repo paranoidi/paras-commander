@@ -26,6 +26,13 @@ func TestNavigateToSameDirKeepsCursorEntry(t *testing.T) {
 		}
 		return &s
 	}
+	removeUntilCleanup := func(t *testing.T, name string) {
+		t.Helper()
+		if err := os.Remove(filepath.Join(root, name)); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = os.WriteFile(filepath.Join(root, name), []byte("x"), 0o644) })
+	}
 	cursorName := func(t *testing.T, s *State) string {
 		t.Helper()
 		e, ok := s.CurrentEntry()
@@ -84,10 +91,7 @@ func TestNavigateToSameDirKeepsCursorEntry(t *testing.T) {
 	})
 	t.Run("refresh after the last file is deleted lands on the new last row", func(t *testing.T) {
 		s := newState(t, "fig")
-		if err := os.Remove(filepath.Join(root, "fig")); err != nil {
-			t.Fatal(err)
-		}
-		t.Cleanup(func() { _ = os.WriteFile(filepath.Join(root, "fig"), []byte("x"), 0o644) })
+		removeUntilCleanup(t, "fig")
 		if err := s.Refresh(10); err != nil {
 			t.Fatal(err)
 		}
@@ -95,4 +99,74 @@ func TestNavigateToSameDirKeepsCursorEntry(t *testing.T) {
 			t.Fatalf("cursor on %q, want elder (the row that is now last)", got)
 		}
 	})
+	t.Run("last file deleted lands on the new last row", func(t *testing.T) {
+		s := newState(t, "fig")
+		removeUntilCleanup(t, "fig")
+		if err := s.NavigateTo(root, "", 10); err != nil {
+			t.Fatal(err)
+		}
+		if got := cursorName(t, s); got != "elder" {
+			t.Fatalf("cursor on %q, want elder (the row that is now last)", got)
+		}
+	})
+	t.Run("last two files deleted land on the new last row", func(t *testing.T) {
+		s := newState(t, "fig")
+		removeUntilCleanup(t, "fig")
+		removeUntilCleanup(t, "elder")
+		if err := s.NavigateTo(root, "", 10); err != nil {
+			t.Fatal(err)
+		}
+		if got := cursorName(t, s); got != "damson" {
+			t.Fatalf("cursor on %q, want damson (the row that is now last)", got)
+		}
+	})
+	t.Run("last file deleted with a filter active keeps a valid cursor", func(t *testing.T) {
+		s := newState(t, "")
+		s.OpenFilter(10)
+		s.AppendFilterRune('e', 10)
+		if !s.SelectVisibleEntry("elder") {
+			t.Fatal("elder not visible")
+		}
+		removeUntilCleanup(t, "elder")
+		if err := s.NavigateTo(root, "", 10); err != nil {
+			t.Fatal(err)
+		}
+		if n := s.VisibleEntryCount(); s.Cursor < 0 || s.Cursor >= n {
+			t.Fatalf("cursor %d out of range of %d visible rows", s.Cursor, n)
+		}
+	})
+}
+
+// A same-directory load of a directory whose files are all gone leaves a valid empty state.
+func TestNavigateToSameDirAllFilesDeleted(t *testing.T) {
+	root := t.TempDir()
+	for _, name := range []string{"quince", "rowan"} {
+		if err := os.WriteFile(filepath.Join(root, name), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s, err := New(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !s.SelectVisibleEntry("rowan") {
+		t.Fatal("rowan not listed")
+	}
+	for _, name := range []string{"quince", "rowan"} {
+		if err := os.Remove(filepath.Join(root, name)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.NavigateTo(root, "", 10); err != nil {
+		t.Fatal(err)
+	}
+	n := s.VisibleEntryCount()
+	if s.Cursor < 0 || (n == 0 && s.Cursor != 0) || (n > 0 && s.Cursor >= n) {
+		t.Fatalf("cursor %d invalid for %d visible rows", s.Cursor, n)
+	}
+	if n > 0 {
+		if _, ok := s.CurrentEntry(); !ok {
+			t.Fatal("cursor row has no entry")
+		}
+	}
 }

@@ -1550,6 +1550,10 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 	treeReselect := priorTreeCursorID != "" || recalledTreeCursor != ""
 	if sameDirReload {
 		wasCentered = s.cursorAppearsCentered(s.effectiveFileListViewportRows(viewportRows))
+		if indexFallback < 0 {
+			// No caller index: a cursor entry deleted with nothing below it lands on the new last row.
+			indexFallback = priorCursor
+		}
 		if !treeReselect {
 			nextSurvivor = s.firstSurvivingNameAfterCursor(localEntries)
 		}
