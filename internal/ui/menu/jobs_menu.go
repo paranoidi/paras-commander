@@ -18,6 +18,7 @@ func DefinitionsJobs() []Definition {
 				{Action: keymap.ActionJobsQueueDown, Label: "Move down in queue", Shortcut: 'd'},
 				{Action: keymap.ActionJobsClearFinished, Label: "Clear finished", Shortcut: 'l'},
 				{Action: keymap.ActionJobsUndo, Label: "Undo job", Shortcut: 'j'},
+				{Action: keymap.ActionJobsShowResults, Label: "Show results", Shortcut: 'h'},
 				{Action: keymap.ActionJobsRateLimitClear, Label: "Clear rate limit", Shortcut: 'C'},
 				{Action: keymap.ActionJobsResultFilter, Label: "Filter by result", Shortcut: 'f'},
 				{Action: keymap.ActionJobsResetFilter, Label: "Reset filter", Shortcut: 'e'},

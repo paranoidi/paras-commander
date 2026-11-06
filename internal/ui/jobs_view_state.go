@@ -52,6 +52,7 @@ func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool, queueE
 			CurrentDestPath: j.CurrentDestPath,
 			Workers:         j.Workers,
 			Steps:           taskSteps(j),
+			Results:         taskResultsLabel(j),
 			Step:            j.Step,
 			VerifyDone:      j.VerifyDone,
 			VerifyTotal:     j.VerifyTotal,
@@ -148,6 +149,14 @@ func (s *JobsViewState) EnsureSelectionVisible(rows []JobsListRow, visibleRows i
 // EnsureSelectionVisible clamps the selected compare row and scroll offset.
 func (s *CompareViewState) EnsureSelectionVisible(total int, visibleRows int) {
 	ensureSelectionVisible(&s.Selected, &s.ListScroll, total, visibleRows)
+}
+
+// taskResultsLabel returns a task job's results summary (empty when it has none).
+func taskResultsLabel(j *jobs.Job) string {
+	if j.Task == nil || j.Task.Results == nil {
+		return ""
+	}
+	return j.Task.Results.Label
 }
 
 // taskSteps returns a task job's step names (nil for other jobs).

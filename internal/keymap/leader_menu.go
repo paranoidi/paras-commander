@@ -262,6 +262,7 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 				ActionJobsClose,
 				ActionJobsClearFinished,
 				ActionJobsUndo,
+				ActionJobsShowResults,
 				ActionJobsResultFilter,
 				ActionJobsResetFilter,
 				ActionJobsToggleOperationsLayout,

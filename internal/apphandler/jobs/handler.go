@@ -305,6 +305,11 @@ func (h *Handler) TryDispatch(actionID string) bool {
 			h.undoSelectedJob()
 		}
 		return true
+	case keymap.ActionJobsShowResults:
+		if h.model.ViewMode == ui.ViewJobs {
+			h.showSelectedResults()
+		}
+		return true
 	case keymap.ActionJobsRateLimitClear:
 		if h.model.ViewMode != ui.ViewJobs {
 			return true
@@ -953,6 +958,15 @@ func (h *Handler) resumeOrRetrySelectedJob() {
 	h.ensureJobsViewSelectionVisible()
 }
 
+// showSelectedResults opens the selected job's results (Task.Results), or says it has none.
+func (h *Handler) showSelectedResults() {
+	if j := h.state.Job(h.selectedJobEntry().ID); j != nil && j.Task != nil && j.Task.Results != nil {
+		j.Task.Results.Show()
+		return
+	}
+	h.host.SetTransientMessage("This job has no results", ui.MessageUrgencyWarn)
+}
+
 // undoSelectedJob asks to confirm the undo of the selected job, or says why it cannot be undone.
 func (h *Handler) undoSelectedJob() {
 	id := h.selectedJobEntry().ID
@@ -1034,6 +1048,9 @@ func (h *Handler) SelectedJobStatus() jobs.Status {
 	}
 	return jobs.Status(h.model.JobsList[sel].Status)
 }
+
+// SelectedJobHasResults reports whether the selected job has results to show (jobs.show-results).
+func (h *Handler) SelectedJobHasResults() bool { return h.selectedJobEntry().Results != "" }
 
 func (h *Handler) clearFinishedJobs() {
 	h.jobQueue().ClearFinished()

@@ -258,6 +258,7 @@ const (
 	ActionJobsRateLimitDecrease = "jobs.rate-limit-decrease"
 	ActionJobsRateLimitClear    = "jobs.rate-limit-clear"
 	ActionJobsUndo              = "jobs.undo"
+	ActionJobsShowResults       = "jobs.show-results"
 	ActionJobsResultFilter      = "jobs.result-filter"
 	ActionJobsResetFilter       = "jobs.reset-filter"
 	ActionJobsExpand            = "jobs.expand"
@@ -606,6 +607,7 @@ var KnownActions = map[string]struct{}{
 	ActionJobsRateLimitDecrease: {},
 	ActionJobsRateLimitClear:    {},
 	ActionJobsUndo:              {},
+	ActionJobsShowResults:       {},
 	ActionJobsResultFilter:      {},
 	ActionJobsResetFilter:       {},
 	ActionJobsExpand:            {},

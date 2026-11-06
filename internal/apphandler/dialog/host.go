@@ -31,6 +31,9 @@ type Host interface {
 	// ForgetComparePaths prunes deleted paths from the open Compare view's results.
 	ForgetComparePaths(paths []string)
 
+	// CloseJobsView leaves the jobs view for the browser (jobs.close); a no-op elsewhere.
+	CloseJobsView()
+
 	// ClearTransientMessage clears the status banner (e.g. when a transfer/extract dialog opens).
 	ClearTransientMessage()
 

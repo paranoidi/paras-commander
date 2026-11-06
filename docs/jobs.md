@@ -214,6 +214,17 @@ graph's column time (the tickrate, and so how fast the Speed column reacts)
 by 50 ms. The change lasts for the session; set `throughput_chart_column_ms`
 in `[jobs]` to make it permanent.
 
+# Job results
+
+Some background tasks leave a result to look at, such as the file index
+[differences report](fileindex.md#report-differences). The Details panel shows
+it as `Results:` (for example "3 differences"), and the footer offers
+**Results** while such a job is selected. **Jobs -> Show results**
+(`jobs.show-results`) opens the result again, even after you closed it or when
+it arrived while you were busy elsewhere. A picker opened this way returns to
+the jobs view on Esc; choosing a path in it switches to the file list. On a job
+without results, the action says so.
+
 # Undoing a job
 
 A finished copy, move, rename or mass rename can be reversed from the jobs view

@@ -379,8 +379,14 @@ Panels showing the index refresh when the records change.
 directory and lists every difference: the directory under the cursor, else the
 current directory, on a local or `fileindex://` panel. It runs as a task job in
 the [jobs view](jobs.md), with a progress count and cancel, beside a running scan
-(it only reads). When it ends, a picker titled "Differences under NAME (N)"
-lists the paths, filtered as you type, each with its state:
+(it only reads). The "fileindex differences queued" message shows only if the
+report has no result after 2 seconds. When it ends within 2 seconds of the
+request and you are still looking at the file list of the same panel with no
+dialog open, a picker titled "Differences under NAME (N)" opens by itself;
+otherwise a message says "N differences under NAME: see Jobs view". Either way
+the result stays on the job: select it in the jobs view and use **Jobs → Show
+results** (`jobs.show-results`) to open the picker again. The picker lists the
+paths, filtered as you type, each with its state:
 
 | State | Meaning |
 |---|---|
@@ -394,5 +400,7 @@ there). The report looks at the whole subtree, hidden files included, so it expl
 a `differs` icon the panel does not: it uses the same check as the icon. A record
 the scan rules would skip but that is still on disk (below an excluded directory,
 or in a directory pc cannot read) is not a difference. "No differences"
-and "NAME is not in the index" are shown as messages instead of a picker.
+and "NAME is not in the index" are shown as messages instead of a picker, and
+always show, whatever you are doing when the report ends. A picker opened from
+the jobs view returns there on Esc; choosing a path switches to the file list.
 

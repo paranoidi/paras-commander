@@ -653,6 +653,9 @@ func detailLinesIcons(j JobEntry, now time.Time, pathMax int, userHomeDir string
 	if j.Undo != "" {
 		lines = append(lines, "Undo:        "+j.Undo)
 	}
+	if j.Results != "" {
+		lines = append(lines, "Results:     "+j.Results)
+	}
 	if j.Error != "" {
 		lines = append(lines, fmt.Sprintf(prefixError+"%s", primitive.TruncateMiddle(j.Error, jobsDetailPathBudget(pathMax, prefixError))))
 	}

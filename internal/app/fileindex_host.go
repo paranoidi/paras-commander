@@ -42,6 +42,8 @@ func (h fileindexHost) OpenFilePicker(title string, items []dialog.PathPickerIte
 	h.app.dialogCtrl.OpenFilePicker(title, items, indexPanel)
 }
 
+func (h fileindexHost) SyncJobsList() { h.app.jobsCtrl.SyncJobsList() }
+
 func (h fileindexHost) OpenDedupOutside(dir string) { h.app.dedupCtrl.OpenOutside(dir) }
 
 func (h fileindexHost) OpenDedupIndexed(dir string) { h.app.dedupCtrl.OpenIndexed(dir) }

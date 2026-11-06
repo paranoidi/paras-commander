@@ -4,6 +4,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -18,6 +19,8 @@ type dialogHost struct {
 func (h dialogHost) NavigatePanelToPath(panelID int, path, selectName string) error {
 	return h.app.navigatePanelToDirectory(panelID, path, selectName)
 }
+
+func (h dialogHost) CloseJobsView() { h.app.jobsCtrl.TryDispatch(keymap.ActionJobsClose) }
 
 func (h dialogHost) InactivePanel() *panel.State { return h.app.inactivePanel() }
 

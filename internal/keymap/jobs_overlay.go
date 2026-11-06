@@ -25,6 +25,7 @@ func DefaultJobsOverlayKeys() map[string][]string {
 		ActionJobsRateLimitDecrease: {"-"},
 		ActionJobsRateLimitClear:    {"C-u"},
 		ActionJobsUndo:              {"C-z"},
+		ActionJobsShowResults:       {"F4"},
 		ActionJobsResultFilter:      {"F3"},
 		ActionJobsResetFilter:       {"S-F3"},
 		ActionJobsExpand:            {"M-right"},

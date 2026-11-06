@@ -442,7 +442,7 @@ func (a *App) auxiliaryViewFooterKeys() ([]menu.FunctionKey, bool) {
 			return a.viMotionAuxiliaryFooterKeys(menu.FunctionKeysJobsDetailView), true
 		}
 		status := a.jobsCtrl.SelectedJobStatus()
-		return a.viMotionAuxiliaryFooterKeys(menu.FunctionKeysJobsView(status.IsFinished(), status.IsRetryable())), true
+		return a.viMotionAuxiliaryFooterKeys(menu.FunctionKeysJobsView(status.IsFinished(), status.IsRetryable(), a.jobsCtrl.SelectedJobHasResults())), true
 	}
 	return nil, false
 }

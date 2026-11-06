@@ -43,6 +43,7 @@ func (f *fakeMassRenamePatternHost) InactivePanelID() int                       
 func (f *fakeMassRenamePatternHost) PanelByID(int) *panel.State                    { return &panel.State{} }
 func (f *fakeMassRenamePatternHost) ActiveViewportRows() int                       { return 20 }
 func (f *fakeMassRenamePatternHost) PanelViewportRows(int) int                     { return 20 }
+func (f *fakeMassRenamePatternHost) CloseJobsView()                                {}
 func (f *fakeMassRenamePatternHost) ClearTransientMessage()                        {}
 func (f *fakeMassRenamePatternHost) PathVolumeContendsWithActiveJob(string) bool   { return false }
 func (f *fakeMassRenamePatternHost) Config() config.Config                         { return f.cfg }

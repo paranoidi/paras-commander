@@ -2076,6 +2076,15 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:   "z",
 		},
 		{
+			ID:          ActionJobsShowResults,
+			Views:       HelpJobs,
+			Title:       "Show job results",
+			Section:     "Jobs",
+			DefaultKeys: nil, // overlay: DefaultJobsOverlayKeys
+			Keywords:    []string{"differences", "report", "picker", "reopen"},
+			LeaderKey:   "t",
+		},
+		{
 			ID:          ActionJobsResultFilter,
 			Views:       HelpJobs,
 			Title:       "Filter operations by result",

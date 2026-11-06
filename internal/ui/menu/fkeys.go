@@ -24,6 +24,8 @@ type FunctionKey struct {
 	RequiresActiveJob bool
 	// RequiresFinishedJob is the inverse: shown only once the selected job has finished (undo).
 	RequiresFinishedJob bool
+	// RequiresResults marks the jobs-view action shown only when the selected job has results.
+	RequiresResults bool
 	// ActionID is the keymap action bound to this key, used to resolve its vi-motion leader letter.
 	ActionID string
 }
@@ -87,6 +89,7 @@ var FunctionKeysJobs = []FunctionKey{
 	{Key: tcell.KeyUp, Mod: tcell.ModCtrl, KeyLabel: "C-up", Hint: "Move up", RequiresActiveJob: true, ActionID: keymap.ActionJobsQueueUp},
 	{Key: tcell.KeyDown, Mod: tcell.ModCtrl, KeyLabel: "C-down", Hint: "Move down", RequiresActiveJob: true, ActionID: keymap.ActionJobsQueueDown},
 	{Key: tcell.KeyCtrlZ, KeyLabel: "C-z", Hint: "Undo", RequiresFinishedJob: true, ActionID: keymap.ActionJobsUndo},
+	{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Results", RequiresResults: true, ActionID: keymap.ActionJobsShowResults},
 	{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Clear", ActionID: keymap.ActionJobsClearFinished},
 	{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu", ActionID: keymap.ActionAppOpenMenu},
 	{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit", ActionID: keymap.ActionAppQuit},
@@ -106,11 +109,12 @@ var FunctionKeysJobsDetailView = []FunctionKey{
 // FunctionKeysJobsView returns hints for the jobs screen footer. selectedFinished hides the
 // cancel/soft stop/pause/resume/reorder actions, which are no-ops on a completed, failed, or canceled
 // job — except Resume, which selectedRetryable (failed or canceled) keeps around relabeled
-// "Retry" since it doubles as retry on such a job. Undo (RequiresFinishedJob) shows only on a finished job.
-func FunctionKeysJobsView(selectedFinished, selectedRetryable bool) []FunctionKey {
+// "Retry" since it doubles as retry on such a job. Undo (RequiresFinishedJob) shows only on a finished job,
+// Results (RequiresResults) only when selectedHasResults.
+func FunctionKeysJobsView(selectedFinished, selectedRetryable, selectedHasResults bool) []FunctionKey {
 	out := make([]FunctionKey, 0, len(FunctionKeysJobs))
 	for _, fk := range FunctionKeysJobs {
-		if fk.RequiresFinishedJob && !selectedFinished {
+		if fk.RequiresFinishedJob && !selectedFinished || fk.RequiresResults && !selectedHasResults {
 			continue
 		}
 		if fk.RequiresActiveJob && selectedFinished {

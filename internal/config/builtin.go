@@ -94,6 +94,11 @@ const (
 	// config.toml field.
 	NavPaintMaxStale = 33 * time.Millisecond
 
+	// DifferencesFastWindow is how long after the request a fileindex differences report is
+	// "fast": a result inside it may open its picker by itself and no "queued" toast shows; a later
+	// result only notifies and waits in the jobs view. Built-in, not a config.toml field.
+	DifferencesFastWindow = 2 * time.Second
+
 	// DefaultPanelRefreshSlowBackoffFactor sets the start-to-start spacing enforced on periodic
 	// panel refreshes: a refresh that started at start and took elapsed may next start no sooner
 	// than start + factor * elapsed. A 5ms local refresh yields a 20ms deadline (invisible under

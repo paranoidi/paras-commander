@@ -38,6 +38,8 @@ type Host interface {
 
 	// AddTaskJob queues a task job (scan, prune) working on sources.
 	AddTaskJob(task *jobs.Task, sources []pathloc.Path)
+	// SyncJobsList refreshes the jobs list mirror (a task's results can change after its job ended).
+	SyncJobsList()
 	// RefreshMetaColumns re-runs both panels' meta columns, so the tags column shows an edit.
 	RefreshMetaColumns()
 	// PanelByID and PanelViewportRows resolve the panel the find dialog works on.
@@ -194,6 +196,8 @@ func (h *Handler) HandleWake(data any) bool {
 		h.HandleCopies(p)
 	case DifferencesPayload:
 		h.HandleDifferences(p)
+	case DifferencesQueuedPayload:
+		h.HandleDifferencesQueued(p)
 	default:
 		return false
 	}
@@ -240,6 +244,12 @@ func hostPath(raw string) (string, error) {
 }
 
 func (h *Handler) queueTask(title string, task *jobs.Task, paths []string) {
+	h.addTask(task, paths)
+	h.host.SetTransientMessage(title+" queued", ui.MessageUrgencyInfo)
+}
+
+// addTask queues task as a job working on paths, without a toast.
+func (h *Handler) addTask(task *jobs.Task, paths []string) {
 	sources := make([]pathloc.Path, 0, len(paths))
 	for _, p := range paths {
 		if loc, err := pathloc.Parse(p); err == nil {
@@ -247,7 +257,6 @@ func (h *Handler) queueTask(title string, task *jobs.Task, paths []string) {
 		}
 	}
 	h.host.AddTaskJob(task, sources)
-	h.host.SetTransientMessage(title+" queued", ui.MessageUrgencyInfo)
 }
 
 // Scan queues a scan of the selection, else the panel directory (the

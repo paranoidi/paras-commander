@@ -25,6 +25,15 @@ type Task struct {
 	// ReportsOwnOutcome marks a task that shows its own result: the job queue's "Job started" and
 	// "Job completed" toasts are omitted (failure and cancel toasts still show).
 	ReportsOwnOutcome bool
+	// Results is nil until the task has results to look at from the jobs view. It is set and read
+	// only on the UI goroutine; the worker never touches it.
+	Results *TaskResults
+}
+
+// TaskResults is what a finished task leaves to look at from the jobs view.
+type TaskResults struct {
+	Label string // Details pane summary, e.g. "3 differences"
+	Show  func() // opens them; runs on the UI goroutine
 }
 
 // TaskProgress is a task's progress: the same fields a transfer reports. TotalFiles 0 means

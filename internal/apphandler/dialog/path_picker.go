@@ -191,6 +191,7 @@ func (h *Handler) showFileInPanel(file string, indexPanel bool) bool {
 		h.host.SetErrorMessage("Show file", err)
 		return false
 	}
+	h.host.CloseJobsView() // a picker reopened from the jobs view lands in the browser
 	h.host.ActivePanel().EnsureCursorVisible(h.host.ActiveViewportRows())
 	return true
 }

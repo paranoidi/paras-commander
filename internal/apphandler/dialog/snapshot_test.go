@@ -60,6 +60,7 @@ func (f *identityTestHost) PanelViewportRows(int) int                   { return
 func (f *identityTestHost) SelectedStripViewportRows(int) int           { return 0 }
 func (f *identityTestHost) FocusSelectedStrip() bool                    { return false }
 func (f *identityTestHost) PathVolumeContendsWithActiveJob(string) bool { return false }
+func (f *identityTestHost) CloseJobsView()                              {}
 func (f *identityTestHost) ClearTransientMessage()                      {}
 func (f *identityTestHost) Config() config.Config                       { return f.cfg }
 func (f *identityTestHost) Styles() theme.Theme                         { return theme.Default() }

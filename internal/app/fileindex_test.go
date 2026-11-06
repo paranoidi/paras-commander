@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
@@ -15,6 +16,7 @@ import (
 	fileindexctrl "github.com/paranoidi/paras-commander/internal/apphandler/fileindex"
 	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
 	"github.com/paranoidi/paras-commander/internal/config"
+	fi "github.com/paranoidi/paras-commander/internal/fileindex"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -23,6 +25,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
+	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
 var fileIndexActions = []string{
@@ -1219,9 +1222,212 @@ func TestFileIndexReportDifferences(t *testing.T) {
 	if it := got["meadow.txt"]; it.Source != "missing" || !it.PathMissing {
 		t.Errorf("meadow.txt row = %+v, want a missing path", it)
 	}
+	if !slices.ContainsFunc(a.jobState.AllJobs(), func(j *jobs.Job) bool {
+		return j.Task != nil && j.Task.Results != nil && j.Task.Results.Label == "2 differences"
+	}) {
+		t.Fatal("no job kept the 2 differences")
+	}
 	// Choosing a row shows the file in the panel.
 	a.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return !a.model.PathPicker.Open })
+}
+
+// lastTask is the task of the newest job.
+func lastTask(t *testing.T, a *App) *jobs.Task {
+	t.Helper()
+	all := a.jobState.AllJobs()
+	if len(all) == 0 || all[len(all)-1].Task == nil {
+		t.Fatal("no task job queued")
+	}
+	return all[len(all)-1].Task
+}
+
+// differencesApp is a fileIndexApp whose index differs from disk by one missing and one new file.
+func differencesApp(t *testing.T) (*App, tcell.SimulationScreen, string) {
+	t.Helper()
+	a, screen, dir, _ := fileIndexApp(t)
+	rescan(t, a, dir)
+	if err := os.Remove(filepath.Join(dir, "meadow.txt")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "willow.txt"), []byte("fresh"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return a, screen, dir
+}
+
+// requestDifferences dispatches the report and waits until its job has a result in sight: the
+// payload is not handled yet, so the test decides the state it lands in.
+func requestDifferences(t *testing.T, a *App) {
+	t.Helper()
+	a.dispatch(keymap.ActionFileIndexReportDifferences)
+	if a.model.Message == "fileindex differences queued" {
+		t.Fatal("the queued toast showed at once")
+	}
+}
+
+func TestFileIndexReportDifferencesBusyUserGetsToastNotPicker(t *testing.T) {
+	a, screen, dir := differencesApp(t)
+	requestDifferences(t, a)
+	a.model.MessageDialog.Open = true // a dialog is open when the result lands
+	want := "2 differences under " + filepath.Base(dir) + ": see Jobs view"
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.Message == want })
+	if a.model.PathPicker.Open || a.model.MessageUrgency != ui.MessageUrgencySuccess {
+		t.Fatalf("picker %v urgency %v, want no picker and success", a.model.PathPicker.Open, a.model.MessageUrgency)
+	}
+	if r := lastTask(t, a).Results; r == nil || r.Label != "2 differences" {
+		t.Fatalf("job results = %+v, want kept", r)
+	}
+}
+
+func TestFileIndexReportDifferencesOtherViewGetsToast(t *testing.T) {
+	a, screen, _ := differencesApp(t)
+	requestDifferences(t, a)
+	a.model.ViewMode = ui.ViewMessages
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		return strings.HasSuffix(a.model.Message, ": see Jobs view")
+	})
+	if a.model.PathPicker.Open || lastTask(t, a).Results == nil {
+		t.Fatalf("picker %v, results %+v, want a toast and kept results", a.model.PathPicker.Open, lastTask(t, a).Results)
+	}
+}
+
+func TestFileIndexReportDifferencesSlowResultKeepsResultOnFinishedJob(t *testing.T) {
+	a, screen, dir := differencesApp(t)
+	requestDifferences(t, a)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.PathPicker.Open })
+	for deadline := time.Now().Add(3 * time.Second); ; time.Sleep(time.Millisecond) {
+		a.jobsCtrl.PollEvents()
+		if j := a.jobState.AllJobs(); j[len(j)-1].Status.IsFinished() {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("timeout waiting for the job to finish")
+		}
+	}
+	// A result that lands late, after the terminal event: it only notifies.
+	a.dialogCtrl.ClosePathPicker()
+	task := lastTask(t, a)
+	task.Results = nil
+	a.jobsCtrl.SyncJobsList()
+	late := fileindexctrl.DifferencesPayload{
+		PanelID: a.model.ActivePanel, Root: dir, Task: task, Resolved: new(bool),
+		Started: time.Now().Add(-config.DifferencesFastWindow - time.Second),
+		Diffs:   []fi.Difference{{Path: filepath.Join(dir, "willow.txt"), State: fi.DiffNew}},
+	}
+	a.fileindexCtrl.HandleDifferences(late)
+	if want := "1 difference under " + filepath.Base(dir) + ": see Jobs view"; a.model.Message != want || a.model.MessageUrgency != ui.MessageUrgencySuccess {
+		t.Fatalf("message = %q urgency %v, want %q / success", a.model.Message, a.model.MessageUrgency, want)
+	}
+	if a.model.PathPicker.Open {
+		t.Fatal("a slow result opened the picker")
+	}
+	if task.Results == nil || task.Results.Label != "1 difference" {
+		t.Fatalf("results = %+v, want kept", task.Results)
+	}
+	list := a.model.JobsList
+	if len(list) == 0 || list[len(list)-1].Results != "1 difference" {
+		t.Fatalf("jobs list = %+v, want the label on the job entry", list)
+	}
+}
+
+func TestFileIndexReportDifferencesAlwaysShowsEmptyAndErrors(t *testing.T) {
+	a, _, dir, _ := fileIndexApp(t)
+	a.model.MessageDialog.Open = true
+	a.model.ViewMode = ui.ViewJobs
+	old := time.Now().Add(-time.Hour)
+	for _, c := range []struct {
+		p    fileindexctrl.DifferencesPayload
+		want string
+	}{
+		{fileindexctrl.DifferencesPayload{}, "No differences"},
+		{fileindexctrl.DifferencesPayload{Err: fi.ErrNotIndexed}, filepath.Base(dir) + " is not in the index"},
+	} {
+		c.p.PanelID, c.p.Root, c.p.Started, c.p.Resolved = a.model.ActivePanel, dir, old, new(bool)
+		a.model.Message = ""
+		a.fileindexCtrl.HandleDifferences(c.p)
+		if a.model.Message != c.want {
+			t.Errorf("message = %q, want %q", a.model.Message, c.want)
+		}
+	}
+	a.model.Message = ""
+	a.fileindexCtrl.HandleDifferences(fileindexctrl.DifferencesPayload{Root: dir, Err: errors.New("boom"), Resolved: new(bool)})
+	if !a.model.MessageDialog.Open || a.model.Message == "" && a.model.MessageDialog.Message == "" {
+		t.Error("an error report must show")
+	}
+}
+
+func TestFileIndexDifferencesQueuedToast(t *testing.T) {
+	a, _, dir, _ := fileIndexApp(t)
+	resolved := new(bool)
+	a.fileindexCtrl.HandleDifferencesQueued(fileindexctrl.DifferencesQueuedPayload{Resolved: resolved})
+	if a.model.Message != "fileindex differences queued" || a.model.MessageUrgency != ui.MessageUrgencyInfo {
+		t.Fatalf("message = %q urgency %v, want the queued toast / info", a.model.Message, a.model.MessageUrgency)
+	}
+	// A fast result resolves the report: the timer firing after it leaves its message alone.
+	a.fileindexCtrl.HandleDifferences(fileindexctrl.DifferencesPayload{PanelID: a.model.ActivePanel, Root: dir, Started: time.Now(), Resolved: resolved})
+	a.fileindexCtrl.HandleDifferencesQueued(fileindexctrl.DifferencesQueuedPayload{Resolved: resolved})
+	if a.model.Message != "No differences" {
+		t.Fatalf("message = %q, want No differences", a.model.Message)
+	}
+}
+
+func TestFileIndexShowResultsFromJobsView(t *testing.T) {
+	a, screen, dir := differencesApp(t)
+	requestDifferences(t, a)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.PathPicker.Open })
+	a.dialogCtrl.ClosePathPicker()
+
+	openAtJob := func() {
+		a.jobsCtrl.OpenJobsView()
+		a.jobsCtrl.SyncJobsList()
+		a.model.JobsView.Selected = len(a.model.JobsList) - 1
+	}
+	openAtJob()
+	if !slices.ContainsFunc(menu.FunctionKeysJobsView(false, false, a.jobsCtrl.SelectedJobHasResults()), func(fk menu.FunctionKey) bool {
+		return fk.ActionID == keymap.ActionJobsShowResults
+	}) {
+		t.Fatal("the footer lacks the results key for a job with results")
+	}
+
+	// Cancel returns to the jobs view.
+	a.dispatch(keymap.ActionJobsShowResults)
+	if !a.model.PathPicker.Open || a.model.ViewMode != ui.ViewJobs {
+		t.Fatalf("picker %v view %v, want the picker over the jobs view", a.model.PathPicker.Open, a.model.ViewMode)
+	}
+	a.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if a.model.PathPicker.Open || a.model.ViewMode != ui.ViewJobs {
+		t.Fatalf("after cancel: picker %v view %v, want the jobs view", a.model.PathPicker.Open, a.model.ViewMode)
+	}
+
+	// Confirming a path shows it in the browser.
+	a.dispatch(keymap.ActionJobsShowResults)
+	a.model.PathPicker.Selected = slices.IndexFunc(a.model.PathPicker.Items, func(it dialog.PathPickerItem) bool {
+		return it.Path == filepath.Join(dir, "willow.txt")
+	})
+	a.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.ViewMode == ui.ViewBrowser })
+	if a.model.PathPicker.Open {
+		t.Fatal("the picker stayed open after confirming")
+	}
+	if e, ok := a.activePanel().CurrentEntry(); !ok || e.Name != "willow.txt" {
+		t.Fatalf("cursor entry = %+v, want willow.txt", e)
+	}
+}
+
+func TestFileIndexShowResultsWithoutResultsWarns(t *testing.T) {
+	a, _, _, _ := fileIndexApp(t)
+	a.fileindexCtrl.Scan()
+	a.jobsCtrl.OpenJobsView()
+	a.jobsCtrl.SyncJobsList()
+	a.model.JobsView.Selected = 0
+	if a.jobsCtrl.SelectedJobHasResults() {
+		t.Fatal("a scan job has no results")
+	}
+	a.dispatch(keymap.ActionJobsShowResults)
+	if a.model.Message != "This job has no results" || a.model.MessageUrgency != ui.MessageUrgencyWarn || a.model.PathPicker.Open {
+		t.Fatalf("message = %q urgency %v picker %v", a.model.Message, a.model.MessageUrgency, a.model.PathPicker.Open)
+	}
 }
 
 func TestFileIndexReportDifferencesTargetsCursorDirectory(t *testing.T) {
@@ -1243,7 +1449,7 @@ func TestFileIndexReportDifferencesTargetsCursorDirectory(t *testing.T) {
 func TestFileIndexReportDifferencesCanceledShowsNothing(t *testing.T) {
 	a, _, dir, _ := fileIndexApp(t)
 	a.fileindexCtrl.HandleDifferences(fileindexctrl.DifferencesPayload{
-		PanelID: a.model.ActivePanel, Root: dir, Err: context.Canceled,
+		PanelID: a.model.ActivePanel, Root: dir, Err: context.Canceled, Resolved: new(bool),
 	})
 	if a.model.PathPicker.Open || a.model.Message != "" {
 		t.Fatalf("a canceled report showed something: picker %v, message %q", a.model.PathPicker.Open, a.model.Message)

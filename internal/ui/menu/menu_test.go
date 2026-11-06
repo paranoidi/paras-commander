@@ -251,6 +251,7 @@ func TestJobsDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		"Move down in queue": "C-↓",
 		"Clear finished":     "F8",
 		"Undo job":           "C-z",
+		"Show results":       "F4",
 		"Clear rate limit":   "C-u",
 		"Filter by result":   "F3",
 		"Reset filter":       "S-F3",
@@ -663,5 +664,22 @@ func TestFunctionKeysJobsDetailViewTickrateKeysReplay(t *testing.T) {
 		if !ok || ev.Key() != tcell.KeyRune || string(ev.Rune()) != fk.KeyLabel {
 			t.Fatalf("%q footer click event = %v, %v", fk.KeyLabel, ev, ok)
 		}
+	}
+}
+
+func TestFunctionKeysJobsViewResultsKeyOnlyWithResults(t *testing.T) {
+	has := func(keys []FunctionKey) bool {
+		for _, fk := range keys {
+			if fk.ActionID == keymap.ActionJobsShowResults {
+				return true
+			}
+		}
+		return false
+	}
+	if has(FunctionKeysJobsView(true, false, false)) {
+		t.Error("the results key shows for a job without results")
+	}
+	if !has(FunctionKeysJobsView(false, false, true)) || !has(FunctionKeysJobsView(true, false, true)) {
+		t.Error("the results key is missing for a job with results")
 	}
 }
