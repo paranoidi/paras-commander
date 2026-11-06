@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -192,6 +193,161 @@ func TestDedupRowsFromSnapshotDirsMode(t *testing.T) {
 	rows, _ = DedupRowsFromSnapshot(snap, view)
 	if len(rows) != 4 {
 		t.Fatalf("collapsed rows len = %d, want 4", len(rows))
+	}
+}
+
+func TestDedupRowsCompactSingleDirChains(t *testing.T) {
+	type row struct {
+		display string
+		depth   int
+		id      string
+	}
+	dirMark := func(rels ...string) []comparepkg.DedupDirGroup {
+		return []comparepkg.DedupDirGroup{{Kind: comparepkg.DirExact, Rels: rels, Hidden: make([]bool, len(rels))}}
+	}
+	tests := []struct {
+		name   string
+		groups []comparepkg.DedupGroup
+		dirs   []comparepkg.DedupDirGroup
+		want   []row
+	}{
+		{
+			name:   "two levels",
+			groups: []comparepkg.DedupGroup{dedupTestGroup(1, 10, "orchard/meadow/copper", "copper")},
+			want: []row{
+				{"orchard/meadow", 0, "d:orchard/meadow"},
+				{"copper", 1, "/root/orchard/meadow/copper"},
+				{"copper", 0, "/root/copper"},
+			},
+		},
+		{
+			name:   "three levels",
+			groups: []comparepkg.DedupGroup{dedupTestGroup(1, 10, "orchard/meadow/lantern/copper", "copper")},
+			want: []row{
+				{"orchard/meadow/lantern", 0, "d:orchard/meadow/lantern"},
+				{"copper", 1, "/root/orchard/meadow/lantern/copper"},
+				{"copper", 0, "/root/copper"},
+			},
+		},
+		{
+			name:   "two subdirectories stay apart",
+			groups: []comparepkg.DedupGroup{dedupTestGroup(1, 10, "orchard/meadow/copper", "orchard/willow/copper")},
+			want: []row{
+				{"orchard", 0, "d:orchard"},
+				{"meadow", 1, "d:orchard/meadow"},
+				{"copper", 2, "/root/orchard/meadow/copper"},
+				{"willow", 1, "d:orchard/willow"},
+				{"copper", 2, "/root/orchard/willow/copper"},
+			},
+		},
+		{
+			name:   "file beside subdirectory stays apart",
+			groups: []comparepkg.DedupGroup{dedupTestGroup(1, 10, "orchard/meadow/copper", "orchard/copper")},
+			want: []row{
+				{"orchard", 0, "d:orchard"},
+				{"meadow", 1, "d:orchard/meadow"},
+				{"copper", 2, "/root/orchard/meadow/copper"},
+				{"copper", 1, "/root/orchard/copper"},
+			},
+		},
+		{
+			name:   "single file stays below its directory",
+			groups: []comparepkg.DedupGroup{dedupTestGroup(1, 10, "orchard/copper", "meadow/copper")},
+			want: []row{
+				{"meadow", 0, "d:meadow"},
+				{"copper", 1, "/root/meadow/copper"},
+				{"orchard", 0, "d:orchard"},
+				{"copper", 1, "/root/orchard/copper"},
+			},
+		},
+		{
+			name:   "marked directory keeps its row and the chain below compacts",
+			groups: []comparepkg.DedupGroup{dedupTestGroup(1, 10, "orchard/meadow/lantern/copper", "willow/copper")},
+			dirs:   dirMark("orchard", "willow"),
+			want: []row{
+				{"orchard", 0, "d:orchard"},
+				{"meadow/lantern", 1, "d:orchard/meadow/lantern"},
+				{"copper", 2, "/root/orchard/meadow/lantern/copper"},
+				{"willow", 0, "d:willow"},
+				{"copper", 1, "/root/willow/copper"},
+			},
+		},
+		{
+			name:   "marked deepest directory keeps its mark on the combined row",
+			groups: []comparepkg.DedupGroup{dedupTestGroup(1, 10, "orchard/meadow/copper", "willow/copper")},
+			dirs:   dirMark("orchard/meadow", "willow"),
+			want: []row{
+				{"orchard/meadow", 0, "d:orchard/meadow"},
+				{"copper", 1, "/root/orchard/meadow/copper"},
+				{"willow", 0, "d:willow"},
+				{"copper", 1, "/root/willow/copper"},
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			snap := comparepkg.DedupSnapshot{
+				Root:      pathloc.MustParse("/scan/root"),
+				Phase:     comparepkg.DedupDone,
+				Groups:    tc.groups,
+				DirGroups: tc.dirs,
+			}
+			view := DedupViewState{IgnoreEmpty: true, TreeDirs: true}
+			rows, _ := DedupRowsFromSnapshot(snap, view)
+			got := make([]row, len(rows))
+			for i, r := range rows {
+				got[i] = row{r.Value.Display, r.Depth, r.ID}
+			}
+			if !slices.Equal(got, tc.want) {
+				t.Fatalf("rows = %+v, want %+v", got, tc.want)
+			}
+			// Collapse-all must address exactly the rows that exist.
+			var wantIDs []string
+			for _, r := range rows {
+				if r.HasChildren {
+					wantIDs = append(wantIDs, r.ID)
+				}
+			}
+			if ids := DedupExpandableIDs(snap, view); !slices.Equal(ids, wantIDs) {
+				t.Fatalf("expandable IDs = %v, want %v", ids, wantIDs)
+			}
+		})
+	}
+}
+
+func TestDedupRowsCompactKeepsDeepestDirValues(t *testing.T) {
+	snap := comparepkg.DedupSnapshot{
+		Root:   pathloc.MustParse("/scan/root"),
+		Phase:  comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{dedupTestGroup(1, 100, "orchard/meadow/copper", "orchard/meadow/willow", "lantern")},
+		DirGroups: []comparepkg.DedupDirGroup{
+			{Kind: comparepkg.DirContent, Rels: []string{"orchard/meadow", "harbor"}, Hidden: []bool{true, false}},
+		},
+	}
+	rows, _ := DedupRowsFromSnapshot(snap, DedupViewState{IgnoreEmpty: true, TreeDirs: true})
+	d := rows[0].Value
+	if d.Display != "orchard/meadow" || d.DirRel != "orchard/meadow" {
+		t.Fatalf("combined row = %+v, want Display and DirRel orchard/meadow", d)
+	}
+	if d.DupCount != 2 || d.WastedBytes != 200 {
+		t.Fatalf("DupCount = %d, WastedBytes = %d, want 2 and 200", d.DupCount, d.WastedBytes)
+	}
+	if d.DirDup != comparepkg.DirContent || !d.DirHidden {
+		t.Fatalf("DirDup = %v, DirHidden = %v, want content mark with hidden set", d.DirDup, d.DirHidden)
+	}
+}
+
+func TestDedupCopyRowsCompactSingleDirChains(t *testing.T) {
+	snap := comparepkg.DedupSnapshot{
+		Root:   pathloc.MustParse("/scan/root"),
+		Phase:  comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{dedupTestGroup(1, 10, "copper", "orchard/meadow/copper")},
+	}
+	rows, _ := DedupRowsFromSnapshot(snap, DedupViewState{IgnoreEmpty: true, TreeDirs: true})
+	sel := rows[DedupRowIndexByID(rows, "/root/copper")]
+	copies := DedupCopyRows(snap, sel, nil)
+	if len(copies) != 2 || copies[0].Value.Display != "orchard/meadow" || copies[0].ID != "d:orchard/meadow" {
+		t.Fatalf("copies = %+v, want combined orchard/meadow row and its file", copies)
 	}
 }
 

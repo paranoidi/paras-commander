@@ -426,7 +426,7 @@ func dedupDirNodes(b *dedupDirBuild, rel string, snap comparepkg.DedupSnapshot, 
 			}
 			wasted += int64(k) * g.Size
 		}
-		out = append(out, treeflat.Node[DedupRowData]{
+		out = append(out, dedupCompactDir(treeflat.Node[DedupRowData]{
 			ID: "d:" + childRel,
 			Value: DedupRowData{
 				Kind:        DedupRowDir,
@@ -441,13 +441,26 @@ func dedupDirNodes(b *dedupDirBuild, rel string, snap comparepkg.DedupSnapshot, 
 				Display: name,
 			},
 			Children: children,
-		})
+		}))
 	}
 	files := slices.Clone(b.files)
 	slices.SortFunc(files, func(a, b treeflat.Node[DedupRowData]) int {
 		return cmp.Compare(a.Value.Display, b.Value.Display)
 	})
 	return append(out, files...), counts
+}
+
+// dedupCompactDir folds a directory holding only one directory into that child,
+// so the row reads "a/b" and stands for b. A directory with a duplicate-directory
+// mark stays its own row: the mark and its twins belong to that exact path.
+func dedupCompactDir(n treeflat.Node[DedupRowData]) treeflat.Node[DedupRowData] {
+	if n.Value.DirDup != comparepkg.DirNone || len(n.Children) != 1 ||
+		n.Children[0].Value.Kind != DedupRowDir {
+		return n
+	}
+	child := n.Children[0]
+	child.Value.Display = n.Value.Display + "/" + child.Value.Display
+	return child
 }
 
 // DedupRowIndexByID returns the row index with the given node ID, or -1.

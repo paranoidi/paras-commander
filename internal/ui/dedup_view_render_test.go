@@ -1093,6 +1093,10 @@ func TestDedupTreeConnectorTwoRootsOnlyChildDir(t *testing.T) {
 				{Rel: "test-relocate-orig/IMG_4005.jpg", Abs: pathloc.MustParse("/scan/root/test-relocate-orig/IMG_4005.jpg")},
 			},
 		}},
+		// The mark keeps test-relocate-new its own row, so basic stays an only-child dir.
+		DirGroups: []comparepkg.DedupDirGroup{
+			{Kind: comparepkg.DirContent, Size: 4, Files: 1, Rels: []string{"test-relocate-new", "test-relocate-orig"}, Hidden: []bool{false, false}},
+		},
 	}
 	list, _ := DedupRowsFromSnapshot(snap, DedupViewState{IgnoreEmpty: true, TreeDirs: true})
 	styles := theme.Default()
@@ -1857,9 +1861,13 @@ func TestDrawDedupViewCollapsedAncestorOfTwinGetsWithinIcon(t *testing.T) {
 		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 13},
 	}
 	snap := comparepkg.DedupSnapshot{
-		Root:   pathloc.MustParse("/scan/root"),
-		Phase:  comparepkg.DedupDone,
-		Groups: []comparepkg.DedupGroup{dedupTestGroup(1, 1024, "harbor/lantern.bin", "attic/meadow/lantern.bin")},
+		Root:  pathloc.MustParse("/scan/root"),
+		Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{
+			dedupTestGroup(1, 1024, "harbor/lantern.bin", "attic/meadow/lantern.bin"),
+			// A second attic child keeps attic a row of its own, above the twin.
+			dedupTestGroup(2, 512, "attic/pebble.bin", "orchard/pebble.bin"),
+		},
 		DirGroups: []comparepkg.DedupDirGroup{
 			{Kind: comparepkg.DirExact, Size: 1024, Files: 1, Rels: []string{"attic/meadow", "harbor"}, Hidden: []bool{false, false}},
 		},

@@ -835,22 +835,22 @@ func TestDedupViewRightExpandsCollapsedDirInPlace(t *testing.T) {
 	app.dedupCtrl.CollapseAll()
 	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyHome, 0, tcell.ModNone))
 	rows := app.model.DedupList
-	if len(rows) != 2 || rows[0].ID != "d:orchard" {
-		t.Fatalf("collapsed rows = %+v, want [d:orchard, root lantern]", rows)
+	if len(rows) != 2 || rows[0].ID != "d:orchard/deep/deeper" {
+		t.Fatalf("collapsed rows = %+v, want [d:orchard/deep/deeper, root lantern]", rows)
 	}
 
-	// First Right on orchard: expand only, cursor stays on the folder row.
+	// First Right on the combined row: expand only, cursor stays on the folder row.
 	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
 	rows = app.model.DedupList
 	sel := app.model.DedupView.Main.Selected
-	if sel != 0 || rows[sel].ID != "d:orchard" {
-		t.Fatalf("cursor on %q at %d, want orchard dir at 0", rows[sel].ID, sel)
+	if sel != 0 || rows[sel].ID != "d:orchard/deep/deeper" {
+		t.Fatalf("cursor on %q at %d, want combined dir at 0", rows[sel].ID, sel)
 	}
-	if got := len(rows); got != 3 { // orchard, deep (collapsed), root lantern.txt
+	if got := len(rows); got != 3 { // orchard/deep/deeper, its lantern.txt, root lantern.txt
 		t.Fatalf("rows after first Right = %d, want 3", got)
 	}
 	if !rows[0].Expanded {
-		t.Fatal("orchard should be expanded after first Right")
+		t.Fatal("combined dir should be expanded after first Right")
 	}
 }
 
@@ -873,7 +873,7 @@ func TestDedupViewRightDescendsToFirstFile(t *testing.T) {
 	app.dedupCtrl.CollapseAll()
 	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyHome, 0, tcell.ModNone))
 
-	// Expand orchard in place, then descend on the second Right.
+	// Expand the combined row in place, then descend on the second Right.
 	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
 	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
 	rows := app.model.DedupList
@@ -884,11 +884,11 @@ func TestDedupViewRightDescendsToFirstFile(t *testing.T) {
 	if got := rows[sel].Value.File.Rel; got != "orchard/deep/deeper/lantern.txt" {
 		t.Fatalf("selected file rel = %q, want orchard/deep/deeper/lantern.txt", got)
 	}
-	if got := len(rows); got != 5 { // orchard, deep, deeper, deeper/lantern.txt, root lantern.txt
-		t.Fatalf("rows after descend = %d, want 5", got)
+	if got := len(rows); got != 3 { // orchard/deep/deeper, its lantern.txt, root lantern.txt
+		t.Fatalf("rows after descend = %d, want 3", got)
 	}
 	if !rows[0].Expanded {
-		t.Fatal("orchard should stay expanded after descend")
+		t.Fatal("combined dir should stay expanded after descend")
 	}
 }
 
@@ -1466,12 +1466,14 @@ func TestDedupProgressDialogCancelClosesScan(t *testing.T) {
 func TestDedupViewExpandAllStopsAtMainDepthCap(t *testing.T) {
 	dir := t.TempDir()
 	names := []string{"orchard", "meadow", "lantern", "harbor", "willow", "ember", "quartz", "falcon"}
-	deepest := filepath.Join(dir, filepath.Join(names...))
-	if err := os.MkdirAll(deepest, 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, filepath.Join(names...)), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	for _, p := range []string{filepath.Join(dir, "pebble.txt"), filepath.Join(deepest, "pebble.txt")} {
-		if err := os.WriteFile(p, []byte("dup"), 0o644); err != nil {
+	// A file at every level keeps each directory its own row.
+	cur := dir
+	for _, name := range append([]string{""}, names...) {
+		cur = filepath.Join(cur, name)
+		if err := os.WriteFile(filepath.Join(cur, "pebble.txt"), []byte("dup"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -1494,12 +1496,12 @@ func TestDedupViewExpandAllStopsAtMainDepthCap(t *testing.T) {
 
 func TestDedupViewLevelCollapseExpandStepsOneLevel(t *testing.T) {
 	dir := t.TempDir()
-	deepest := filepath.Join(dir, "orchard", "meadow", "lantern")
-	if err := os.MkdirAll(deepest, 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, "orchard", "meadow", "lantern"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	for _, p := range []string{filepath.Join(dir, "pebble.txt"), filepath.Join(deepest, "pebble.txt")} {
-		if err := os.WriteFile(p, []byte("dup"), 0o644); err != nil {
+	// A file at every level keeps each directory its own row.
+	for _, rel := range []string{"", "orchard", "orchard/meadow", "orchard/meadow/lantern"} {
+		if err := os.WriteFile(filepath.Join(dir, rel, "pebble.txt"), []byte("dup"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
