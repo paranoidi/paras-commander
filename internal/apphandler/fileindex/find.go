@@ -1,7 +1,6 @@
 package fileindex
 
 import (
-	"fmt"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -9,6 +8,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
+	apphost "github.com/paranoidi/paras-commander/internal/apphandler/host"
 	fi "github.com/paranoidi/paras-commander/internal/fileindex"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -257,9 +257,9 @@ func (h *Handler) runFindAction(id string) bool {
 	case keymap.ActionFindSelectAll:
 		h.mark(st.Results...)
 	case keymap.ActionOpenInPrimary:
-		h.openCursorIn(ui.PrimaryPanel, "primary")
+		h.openCursorIn(ui.PrimaryPanel)
 	case keymap.ActionOpenInSecondary:
-		h.openCursorIn(ui.SecondaryPanel, "secondary")
+		h.openCursorIn(ui.SecondaryPanel)
 	case keymap.ActionFindSelectGroup:
 		h.host.OpenGroupSelectDialog(findctrl.GroupSelectModeSelect)
 	case keymap.ActionFindUnselectGroup:
@@ -367,7 +367,7 @@ func (h *Handler) applyMarks() {
 	var paths []string
 	isDir := map[string]bool{}
 	for host, on := range st.Marked {
-		loc, err := h.panelPath(host)
+		loc, err := pathloc.ForPanel(host, st.FromIndexPanel)
 		if err != nil || !on {
 			continue
 		}
@@ -385,23 +385,7 @@ func (h *Handler) applyMarks() {
 	h.model.ActivePanel = st.PanelID
 	h.model.ActiveSubFocus = ui.SubFocusFileList
 	h.CloseFindDialog()
-	switch {
-	case len(paths) == 0:
-		h.host.SetTransientMessage("No new selections", ui.MessageUrgencyInfo)
-	case conflicts:
-		h.host.SetTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
-	default:
-		h.host.SetTransientMessage(fmt.Sprintf("Added %d to selection", len(paths)), ui.MessageUrgencyInfo)
-	}
-}
-
-// panelPath is the path a result lives at in the dialog's panel: fileindex:// when the dialog
-// was opened from a fileindex:// panel, else the plain host path.
-func (h *Handler) panelPath(host string) (pathloc.Path, error) {
-	if h.model.IndexFindDialog.FromIndexPanel {
-		return pathloc.FileIndex(host)
-	}
-	return pathloc.File(host)
+	apphost.ReportSelectionAdded(h.host, len(paths), conflicts)
 }
 
 // navigateTo shows the result under the cursor in panelID (a directory itself, a file in its
@@ -415,27 +399,15 @@ func (h *Handler) navigateTo(panelID int) (string, bool) {
 	if !r.IsDir {
 		dir, name = filepath.Dir(r.Path), filepath.Base(r.Path)
 	}
-	loc, err := h.panelPath(dir)
-	if err == nil {
-		err = h.host.NavigatePanelToPath(panelID, loc.String(), name)
-	}
-	if err != nil && !h.model.IndexFindDialog.FromIndexPanel {
-		// ponytail: the real directory is gone, so show it as the index remembers it
-		if loc, ferr := pathloc.FileIndex(dir); ferr == nil {
-			err = h.host.NavigatePanelToPath(panelID, loc.String(), name)
-		}
-	}
-	if err != nil {
-		h.host.SetErrorMessage("Find in index", err)
+	if !apphost.ShowInPanel(h.host, panelID, dir, name, h.model.IndexFindDialog.FromIndexPanel, "Find in index") {
 		return "", false
 	}
-	h.host.PanelByID(panelID).EnsureCursorVisible(h.host.PanelViewportRows(panelID))
 	return filepath.Base(r.Path), true
 }
 
-func (h *Handler) openCursorIn(panelID int, which string) {
+func (h *Handler) openCursorIn(panelID int) {
 	if name, ok := h.navigateTo(panelID); ok {
-		h.host.SetTransientMessage(fmt.Sprintf("Opened %s in %s panel", name, which), ui.MessageUrgencyInfo)
+		apphost.ReportOpenedInPanel(h.host, name, panelID)
 	}
 }
 

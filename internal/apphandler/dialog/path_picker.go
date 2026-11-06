@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/apphandler/host"
 	"github.com/paranoidi/paras-commander/internal/bookmarks"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -113,7 +114,7 @@ func (h *Handler) PathPickerView() dlg.Spec {
 
 func (h *Handler) activatePathPickerSelection() {
 	st := &h.model.PathPicker
-	if st.Purpose == dialog.PathPickerPurposeNavigateFile && len(st.Marked) > 0 {
+	if len(st.Marked) > 0 { // only the file-list picker marks rows
 		h.applyFilePickerMarks()
 		return
 	}
@@ -165,36 +166,13 @@ func (h *Handler) activatePathPickerSelection() {
 		f.PrefillPending = false
 		h.ClosePathPicker()
 	case dialog.PathPickerPurposeNavigateFile:
-		if h.showFileInPanel(h.model.ActivePanel, path, st.IndexPanel) {
+		if host.ShowInPanel(h.host, h.model.ActivePanel, filepath.Dir(path), filepath.Base(path), st.IndexPanel, "Show file") {
+			h.host.CloseJobsView() // a picker reopened from the jobs view lands in the browser
 			h.ClosePathPicker()
 		}
 	default:
 		h.ClosePathPicker()
 	}
-}
-
-// showFileInPanel navigates panelID to the directory of the host path file with the file
-// highlighted, as a fileindex:// path when indexPanel, else a local one (falling back to the
-// index's view when the real directory is gone). Errors are shown; it reports success.
-func (h *Handler) showFileInPanel(panelID int, file string, indexPanel bool) bool {
-	dir, base := filepath.Dir(file), filepath.Base(file)
-	loc, err := filePanelPath(dir, indexPanel)
-	if err == nil {
-		err = h.host.NavigatePanelToPath(panelID, loc.String(), base)
-	}
-	if err != nil && !indexPanel {
-		// ponytail: the real directory is gone, so show it as the index remembers it
-		if loc, ferr := pathloc.FileIndex(dir); ferr == nil {
-			err = h.host.NavigatePanelToPath(panelID, loc.String(), base)
-		}
-	}
-	if err != nil {
-		h.host.SetErrorMessage("Show file", err)
-		return false
-	}
-	h.host.CloseJobsView() // a picker reopened from the jobs view lands in the browser
-	h.host.PanelByID(panelID).EnsureCursorVisible(h.host.PanelViewportRows(panelID))
-	return true
 }
 
 // OpenFilePicker opens the path picker over items, whose Path is a host file path (other copies,
@@ -205,8 +183,12 @@ func (h *Handler) OpenFilePicker(title string, items []dialog.PathPickerItem, in
 		h.host.ActivePanel().CancelFilter(h.host.ActiveViewportRows())
 	}
 	h.pathPickerMissingGen++
+	for i := range items {
+		items[i].Path = filepath.Clean(items[i].Path)
+	}
 	h.model.PathPicker = dialog.PathPickerState{
 		Open: true, Title: title, Purpose: dialog.PathPickerPurposeNavigateFile, IndexPanel: indexPanel, Items: items,
+		Marked: map[string]bool{},
 	}
 	h.SyncPathPickerRanks()
 }

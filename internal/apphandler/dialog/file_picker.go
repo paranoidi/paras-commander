@@ -1,63 +1,62 @@
 package dialog
 
 import (
-	"fmt"
 	"path/filepath"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/apphandler/host"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
+func (h *Handler) filePickerOpen() bool {
+	st := &h.model.PathPicker
+	return st.Open && st.Purpose == dialog.PathPickerPurposeNavigateFile
+}
+
+// FilePickerFooterEligible reports whether the file-list picker is open with a row under the
+// cursor, so the footer can advertise its actions.
+func (h *Handler) FilePickerFooterEligible() bool {
+	_, ok := h.pathPickerSelectedItem()
+	return ok && h.filePickerOpen()
+}
+
 // TryFilePickerShortcut handles the Find-style actions of the file-list picker
 // (PathPickerPurposeNavigateFile): the [dialog.find] view, edit and open-in-panel chords and the
 // global select and pin toggles. Returns true when the event was consumed.
 func (h *Handler) TryFilePickerShortcut(ev *tcell.EventKey) bool {
-	if h.model.PathPicker.Purpose != dialog.PathPickerPurposeNavigateFile {
+	if !h.filePickerOpen() {
 		return false
 	}
-	if h.keysFindDialog != nil {
-		if id, ok := h.keysFindDialog.Lookup(ev); ok {
-			switch id {
-			case keymap.ActionFindView:
-				h.viewFilePickerCursor()
-				return true
-			case keymap.ActionFindEdit:
-				h.editFilePickerCursor()
-				return true
-			case keymap.ActionOpenInPrimary:
-				h.openFilePickerCursorIn(ui.PrimaryPanel, "primary")
-				return true
-			case keymap.ActionOpenInSecondary:
-				h.openFilePickerCursorIn(ui.SecondaryPanel, "secondary")
-				return true
-			}
+	if id, ok := h.keysFindDialog.Lookup(ev); ok {
+		switch id {
+		case keymap.ActionFindView:
+			h.viewFilePickerCursor()
+			return true
+		case keymap.ActionFindEdit:
+			h.editFilePickerCursor()
+			return true
+		case keymap.ActionOpenInPrimary:
+			h.openFilePickerCursorIn(ui.PrimaryPanel)
+			return true
+		case keymap.ActionOpenInSecondary:
+			h.openFilePickerCursorIn(ui.SecondaryPanel)
+			return true
 		}
 	}
-	if h.keysGlobal != nil {
-		if id, ok := h.keysGlobal.Lookup(ev); ok {
-			switch {
-			case id == keymap.ActionPanelPinToggle:
-				h.pinFilePickerCursor()
-				return true
-			// Plain space is filter text here, even though it is globally bound to select-toggle.
-			case id == keymap.ActionPanelSelectToggle && !keymap.IsPlainPrintableRune(ev):
-				h.toggleFilePickerMark()
-				return true
-			}
-		}
+	id, ok := h.keysGlobal.Lookup(ev)
+	switch {
+	case ok && id == keymap.ActionPanelPinToggle:
+		h.pinFilePickerCursor()
+		return true
+	// Plain space is filter text here, even though it is globally bound to select-toggle.
+	case ok && id == keymap.ActionPanelSelectToggle && !keymap.IsPlainPrintableRune(ev):
+		h.toggleFilePickerMark()
+		return true
 	}
 	return false
-}
-
-// filePanelPath is where the host path file lives in a panel of the picker's kind.
-func filePanelPath(file string, indexPanel bool) (pathloc.Path, error) {
-	if indexPanel {
-		return pathloc.FileIndex(file)
-	}
-	return pathloc.File(file)
 }
 
 // toggleFilePickerMark marks or unmarks the row under the cursor and moves to the next row.
@@ -67,14 +66,10 @@ func (h *Handler) toggleFilePickerMark() {
 	if !ok || !st.FilterFocused() {
 		return
 	}
-	path := filepath.Clean(item.Path)
-	if st.Marked[path] {
-		delete(st.Marked, path)
+	if st.Marked[item.Path] {
+		delete(st.Marked, item.Path)
 	} else {
-		if st.Marked == nil {
-			st.Marked = map[string]bool{}
-		}
-		st.Marked[path] = true
+		st.Marked[item.Path] = true
 	}
 	if st.Selected < len(st.Ranked)-1 {
 		st.Selected++
@@ -88,7 +83,7 @@ func (h *Handler) applyFilePickerMarks() {
 	p := h.host.ActivePanel()
 	var paths []string
 	for file := range st.Marked {
-		loc, err := filePanelPath(file, st.IndexPanel)
+		loc, err := pathloc.ForPanel(file, st.IndexPanel)
 		if err != nil || p.SelectedPaths[loc.String()] {
 			continue
 		}
@@ -96,14 +91,7 @@ func (h *Handler) applyFilePickerMarks() {
 	}
 	conflicts := p.BulkAddSelections(paths, func(string) bool { return false })
 	h.ClosePathPicker()
-	switch {
-	case len(paths) == 0:
-		h.host.SetTransientMessage("No new selections", ui.MessageUrgencyInfo)
-	case conflicts:
-		h.host.SetTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
-	default:
-		h.host.SetTransientMessage(fmt.Sprintf("Added %d to selection", len(paths)), ui.MessageUrgencyInfo)
-	}
+	host.ReportSelectionAdded(h.host, len(paths), conflicts)
 }
 
 // filePickerCursorFile is the host path under the cursor for an action that needs the real file;
@@ -117,7 +105,7 @@ func (h *Handler) filePickerCursorFile(action string) (string, bool) {
 		h.host.SetTransientMessage(action+": file is missing", ui.MessageUrgencyWarn)
 		return "", false
 	}
-	return filepath.Clean(item.Path), true
+	return item.Path, true
 }
 
 // viewFilePickerCursor opens the file under the cursor in the fullscreen viewer; closing it brings
@@ -155,14 +143,14 @@ func (h *Handler) editFilePickerCursor() {
 }
 
 // openFilePickerCursorIn shows the file under the cursor in panelID and keeps the picker open.
-func (h *Handler) openFilePickerCursorIn(panelID int, which string) {
+func (h *Handler) openFilePickerCursorIn(panelID int) {
 	item, ok := h.pathPickerSelectedItem()
 	if !ok {
 		return
 	}
-	file := filepath.Clean(item.Path)
-	if h.showFileInPanel(panelID, file, h.model.PathPicker.IndexPanel) {
-		h.host.SetTransientMessage(fmt.Sprintf("Opened %s in %s panel", filepath.Base(file), which), ui.MessageUrgencyInfo)
+	name := filepath.Base(item.Path)
+	if host.ShowInPanel(h.host, panelID, filepath.Dir(item.Path), name, h.model.PathPicker.IndexPanel, "Show file") {
+		host.ReportOpenedInPanel(h.host, name, panelID)
 	}
 }
 
@@ -172,11 +160,10 @@ func (h *Handler) pinFilePickerCursor() {
 	if !ok {
 		return
 	}
-	file := filepath.Clean(item.Path)
-	loc, err := filePanelPath(file, h.model.PathPicker.IndexPanel)
+	loc, err := pathloc.ForPanel(item.Path, h.model.PathPicker.IndexPanel)
 	if err != nil {
 		h.host.SetErrorMessage("Pin", err)
 		return
 	}
-	h.host.PinTogglePath(filepath.Base(file), loc.String(), false)
+	h.host.PinTogglePath(filepath.Base(item.Path), loc.String(), false)
 }

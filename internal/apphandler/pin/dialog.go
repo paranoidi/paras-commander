@@ -3,10 +3,10 @@ package pin
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
+	"github.com/paranoidi/paras-commander/internal/apphandler/host"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -118,16 +118,6 @@ func (h *Handler) selectedItem() (idx int, item ui.PinnedItem, ok bool) {
 	return idx, h.model.PinnedItems[idx], true
 }
 
-// panelLabel mirrors internal/app's identical helper (also used by dialog_settings.go and
-// menu.go there, so it can't move) — trivial enough to duplicate rather than add a Host
-// method for a two-branch string lookup.
-func panelLabel(panelID int) string {
-	if panelID == ui.PrimaryPanel {
-		return "Primary panel"
-	}
-	return "Secondary panel"
-}
-
 // OpenSelected points panelID at the selected pin (cd into a directory; cd into a file's
 // parent and highlight it), leaving the dialog open — mirrors find's navigateFindEntryToPanel.
 // Returns true on success, false on an out-of-range selection or a navigation error (mirrors
@@ -147,7 +137,7 @@ func (h *Handler) OpenSelected(panelID int) bool {
 		return false
 	}
 	h.host.PanelByID(panelID).EnsureCursorVisible(h.host.PanelViewportRows(panelID))
-	h.host.SetTransientMessage(fmt.Sprintf("Opened %s in %s", filepath.Base(item.Path), strings.ToLower(panelLabel(panelID))), ui.MessageUrgencyInfo)
+	host.ReportOpenedInPanel(h.host, filepath.Base(item.Path), panelID)
 	return true
 }
 

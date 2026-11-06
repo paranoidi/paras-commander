@@ -1556,21 +1556,21 @@ func TestFileIndexCopiesPickerPins(t *testing.T) {
 		if !a.model.PathPicker.Open || len(a.model.PinnedItems) != 1 || a.model.PinnedItems[0].Path != want || a.model.PinnedItems[0].IsDir {
 			t.Fatalf("onIndex=%v: open=%v pins=%+v, want %s", onIndex, a.model.PathPicker.Open, a.model.PinnedItems, want)
 		}
-		list := dialog.PathPickerView(a.model.PathPicker, dialog.Layout{Width: 120, Height: 40}, a.styles, a.model.PanelScrollbar, func(path string) dialog.RowMarks {
-			return dialog.RowMarks{Pinned: path == want}
-		})
+		// The row shows the pin mark whichever kind of path it was pinned by.
+		a.render()
+		screen.Show()
+		w, h := screen.Size()
+		cells, _, _ := screen.GetContents()
 		found := false
-		for _, g := range list.Groups {
-			for _, col := range g.Columns {
-				for _, it := range col {
-					if it.ID == dialog.PathPickerList && len(it.Rows) == 1 && it.Rows[0].Marks.Pinned {
-						found = true
-					}
-				}
+		for y := range h {
+			var row strings.Builder
+			for x := range w {
+				row.WriteString(string(cells[y*w+x].Runes))
 			}
+			found = found || (strings.Contains(row.String(), "harbor.txt") && strings.ContainsRune(row.String(), a.styles.IconPinRune()) && strings.Contains(row.String(), "meadow"))
 		}
 		if !found {
-			t.Fatalf("onIndex=%v: row mark not resolved by %s", onIndex, want)
+			t.Fatalf("onIndex=%v: pinned row shows no pin mark", onIndex)
 		}
 	}
 }

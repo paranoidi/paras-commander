@@ -290,7 +290,7 @@ func (a *App) pathPickerMetaFooterKeys() []menu.FunctionKey {
 	if a.dialogCtrl.BookmarkDialogOpenInPanelFooterEligible() {
 		rest = append(openInPanelFooterKeys(a.keys.BookmarkDialog), rest...)
 	}
-	if a.model.PathPicker.Open && a.model.PathPicker.Purpose == dialog.PathPickerPurposeNavigateFile {
+	if a.dialogCtrl.FilePickerFooterEligible() {
 		rest = append(append(findViewEditFooterKeys(a.keys.FindDialog), openInPanelFooterKeys(a.keys.FindDialog)...), rest...)
 	}
 	return footerWithEscClose(rest)

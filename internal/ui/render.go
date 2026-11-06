@@ -1042,7 +1042,11 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 		dialog.DrawListingFormatDialog(screen, layout, model.ListingFormatDialog, styles)
 	}
 	if model.PathPicker.Open {
-		dialog.DrawPathPickerDialog(screen, layout, model.PathPicker, styles, model.PanelScrollbar, rowMarksResolver(model.PinnedItems, model.JobPathMarks))
+		rowMarks := rowMarksResolver(model.PinnedItems, model.JobPathMarks)
+		if model.PathPicker.IndexPanel {
+			rowMarks = withFileIndexPaths(rowMarks)
+		}
+		dialog.DrawPathPickerDialog(screen, layout, model.PathPicker, styles, model.PanelScrollbar, rowMarks)
 	}
 	if model.HistoryDialog.Open {
 		dialog.DrawHistoryDialog(screen, layout, model.HistoryDialog, styles, model.PanelScrollbar, rowMarksResolver(model.PinnedItems, model.JobPathMarks))

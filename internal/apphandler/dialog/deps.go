@@ -170,14 +170,15 @@ type Handler struct {
 	jobs                 *jobsctrl.Handler
 	commands             *commandsctrl.Handler
 	preview              *previewctrl.Handler
+	dedup                *dedupctrl.Handler
+	diskUsage            *diskusage.Engine
+	diskUsageIgnore      diskusage.ShouldIgnoreFolder
+	indexSink            fschange.Sink
+	promptElevate        ops.PermissionWaitFunc
+	getenv               func(string) string // nil: bookmarks fall back to os.Getenv
+
 	// filePickerHiddenForView: the file-list picker is hidden behind the fullscreen viewer it opened.
 	filePickerHiddenForView bool
-	dedup                   *dedupctrl.Handler
-	diskUsage               *diskusage.Engine
-	diskUsageIgnore         diskusage.ShouldIgnoreFolder
-	indexSink               fschange.Sink
-	promptElevate           ops.PermissionWaitFunc
-	getenv                  func(string) string // nil: bookmarks fall back to os.Getenv
 
 	// deleteDialogScanFP is the last enqueued directory set fingerprint for the delete
 	// confirmation dialog.

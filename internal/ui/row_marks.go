@@ -1,6 +1,9 @@
 package ui
 
-import "github.com/paranoidi/paras-commander/internal/ui/dialog"
+import (
+	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+)
 
 // rowMarksResolver closes over pin/job state so the Find, History, Bookmarks/path-picker,
 // Dedup, and Compare row-mark call sites share one resolution path. dialog.RowMarksFunc stays
@@ -15,6 +18,12 @@ func rowMarksResolver(pinnedItems []PinnedItem, jobMarks []JobPathMark) dialog.R
 		hasJob, status, write := EntryPathJobMarkStatus(absPath, jobMarks)
 		return dialog.RowMarks{Pinned: isPinned, HasJob: hasJob, JobStatus: status, JobWrite: write}
 	}
+}
+
+// withFileIndexPaths wraps f for rows listing host paths whose pins were made from an index panel,
+// by fileindex:// path.
+func withFileIndexPaths(f dialog.RowMarksFunc) dialog.RowMarksFunc {
+	return func(hostPath string) dialog.RowMarks { return f(pathloc.FileIndexPrefix + hostPath) }
 }
 
 // withRangeAnchor wraps f so the row at absolute path anchor also reports RangeAnchor

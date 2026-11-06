@@ -314,6 +314,15 @@ func FileIndex(hostPath string) (Path, error) {
 	return parseFileIndex(FileIndexPrefix + hostPath)
 }
 
+// ForPanel is where hostPath lives in a panel of the given kind: fileindex:// on an index panel,
+// else the plain host path.
+func ForPanel(hostPath string, indexPanel bool) (Path, error) {
+	if indexPanel {
+		return FileIndex(hostPath)
+	}
+	return File(hostPath)
+}
+
 // HasURIPrefix reports whether raw is written as a scheme URI (sftp:// or fileindex://) rather
 // than a host path, so it is parsed as given instead of resolved against a directory.
 func HasURIPrefix(raw string) bool {

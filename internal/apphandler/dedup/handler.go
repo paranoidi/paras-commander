@@ -1755,11 +1755,7 @@ func (h *Handler) OpenInPanel(panelID int, path string, isDir bool) {
 		h.host.SetTransientMessage("Open: "+err.Error(), ui.MessageUrgencyWarn)
 		return
 	}
-	which := "primary"
-	if panelID == ui.SecondaryPanel {
-		which = "secondary"
-	}
-	h.host.SetTransientMessage(fmt.Sprintf("Opened %s in %s panel", filepath.Base(path), which), ui.MessageUrgencyInfo)
+	host.ReportOpenedInPanel(h.host, filepath.Base(path), panelID)
 }
 
 // SelectedPinTarget is PaneTarget for the focused pane.

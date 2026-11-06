@@ -2,11 +2,11 @@ package find
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/apphandler/host"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
@@ -797,15 +797,7 @@ func (h *Handler) applyFindDialogMarkedSelections() {
 	h.model.ActivePanel = st.PanelID
 	h.model.ActiveSubFocus = ui.SubFocusFileList
 	h.CloseDialog()
-	if added == 0 {
-		h.host.SetTransientMessage("No new selections", ui.MessageUrgencyInfo)
-		return
-	}
-	if conflicts {
-		h.host.SetTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
-		return
-	}
-	h.host.SetTransientMessage(fmt.Sprintf("Added %d to selection", added), ui.MessageUrgencyInfo)
+	host.ReportSelectionAdded(h.host, added, conflicts)
 }
 
 // findDialogSelectParentDirs replaces the target panel's selection with the
@@ -914,7 +906,7 @@ func (h *Handler) NavigateFindCursor() {
 // leaving the find dialog open.
 func (h *Handler) OpenSelectedInPrimary() {
 	if name, ok := h.navigateFindEntryToPanel(ui.PrimaryPanel); ok {
-		h.host.SetTransientMessage(fmt.Sprintf("Opened %s in primary panel", name), ui.MessageUrgencyInfo)
+		host.ReportOpenedInPanel(h.host, name, ui.PrimaryPanel)
 	}
 }
 
@@ -922,7 +914,7 @@ func (h *Handler) OpenSelectedInPrimary() {
 // result, leaving the find dialog open.
 func (h *Handler) OpenSelectedInSecondary() {
 	if name, ok := h.navigateFindEntryToPanel(ui.SecondaryPanel); ok {
-		h.host.SetTransientMessage(fmt.Sprintf("Opened %s in secondary panel", name), ui.MessageUrgencyInfo)
+		host.ReportOpenedInPanel(h.host, name, ui.SecondaryPanel)
 	}
 }
 
