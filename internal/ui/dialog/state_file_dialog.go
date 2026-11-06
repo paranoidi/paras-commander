@@ -25,8 +25,6 @@ const (
 	FileDialogExtract
 	FileDialogSFTPConnect
 	FileDialogSFTPPassword
-	// FileDialogIndexTags adds or removes fileindex tags (apphandler/fileindex).
-	FileDialogIndexTags
 	// FileDialogIndexInit asks whether to create the missing fileindex database at Message, or
 	// with IndexUpgrade whether to upgrade the outdated one there.
 	FileDialogIndexInit
@@ -241,12 +239,6 @@ type FileDialogState struct {
 	// backed by a different, session-only item source (see apphandler/dialog's massRenameHistory).
 	MassRenameHistoryPicker MassRenamePatternPickerState
 
-	// Fileindex tag prompt (DialogType == FileDialogIndexTags): Fields[0] holds the tags.
-	// IndexTagsRemove picks Remove over Add; IndexTagsRecursive extends directories to their
-	// whole tree; IndexTagsTargets are the panel paths the tags apply to.
-	IndexTagsRemove    bool
-	IndexTagsRecursive bool
-	IndexTagsTargets   []string
 	// IndexUpgrade turns the FileDialogIndexInit prompt from "create" into "upgrade".
 	IndexUpgrade bool
 

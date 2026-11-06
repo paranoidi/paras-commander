@@ -59,9 +59,6 @@ type Host interface {
 	// dialogs and their state remain owned by internal/app.
 	ExecuteSFTPPassword()
 
-	// ExecuteIndexTags runs the fileindex tag prompt's OK action (FileDialogIndexTags); the
-	// fileindex handler owns what it does.
-	ExecuteIndexTags()
 	// ExecuteIndexInit runs the "create the fileindex database?" prompt's Yes (FileDialogIndexInit).
 	ExecuteIndexInit()
 

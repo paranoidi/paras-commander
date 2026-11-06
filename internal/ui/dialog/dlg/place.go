@@ -694,23 +694,20 @@ func drawList(screen tcell.Screen, dialogRect Rect, pi PlacedItem, it Item, focu
 		}
 		rw := it.row(idx)
 		isCursor := focused && idx == it.Cursor && !it.Inert
+		if it.CellColumns > 0 {
+			w := max(r.Width/it.CellColumns, 1)
+			for c, cell := range rw.Cells {
+				cellW := w
+				if c == it.CellColumns-1 {
+					cellW = r.Width - c*w // the last column takes the rounding
+				}
+				drawMarkerRow(screen, r.X+c*w, y, cellW, draw.TriStateCheckboxMarker(styles, cell.Check == CheckOn, cell.Check == CheckMixed), ListRow{Text: cell.Text, Match: cell.Match},
+					it, isCursor && c == it.cellCol(), cell.Check != CheckOff, styles)
+			}
+			continue
+		}
 		if it.Markers {
-			markerStyle, style := styles.DialogOptionMarkerStyles(isCursor, rw.Marked)
-			if it.Inert {
-				style = styles.DialogOptionDisabledStyle()
-				markerStyle = style
-			}
-			part := draw.RadioMarker(styles, rw.Marked)
-			partW := runewidth.StringWidth(part)
-			primitive.Text(screen, r.X, y, partW, part, markerStyle)
-			match := styles.FuzzyHighlight
-			if isCursor {
-				match = styles.FuzzyHighlightCursor
-			}
-			_, bg, _ := style.Decompose()
-			textW := max(r.Width-partW, 0)
-			text, spans := fitRow(rw, it.Fit, textW, match.Background(bg))
-			primitive.StyledText(screen, r.X+partW, y, textW, text, style, spans)
+			drawMarkerRow(screen, r.X, y, r.Width, draw.RadioMarker(styles, rw.Marked), rw, it, isCursor, rw.Marked, styles)
 			continue
 		}
 		drawPlainRow(screen, r.X, y, r.Width, rw, it, isCursor, styles)
@@ -721,6 +718,26 @@ func drawList(screen tcell.Screen, dialogRect Rect, pi PlacedItem, it Item, focu
 		}
 		draw.DrawDialogListScrollbar(screen, dialogRect, r.Y, r.Height, it.rowCount(), pi.Offset, sbStyle, borderStyle, styles)
 	}
+}
+
+// drawMarkerRow paints marker and the fitted text of rw in an option row of width w: a row of a
+// Markers list or one cell of a CellColumns list. checked lights the marker.
+func drawMarkerRow(screen tcell.Screen, x, y, w int, marker string, rw ListRow, it Item, isCursor, checked bool, styles theme.Theme) {
+	markerStyle, style := styles.DialogOptionMarkerStyles(isCursor, checked)
+	if it.Inert {
+		style = styles.DialogOptionDisabledStyle()
+		markerStyle = style
+	}
+	markerW := runewidth.StringWidth(marker)
+	primitive.Text(screen, x, y, markerW, marker, markerStyle)
+	match := styles.FuzzyHighlight
+	if isCursor {
+		match = styles.FuzzyHighlightCursor
+	}
+	_, bg, _ := style.Decompose()
+	textW := max(w-markerW, 0)
+	text, spans := fitRow(rw, it.Fit, textW, match.Background(bg))
+	primitive.StyledText(screen, x+markerW, y, textW, text, style, spans)
 }
 
 // drawPlainRow paints one row of a list without Markers: the optional icon, the fitted text with

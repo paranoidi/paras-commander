@@ -1210,3 +1210,48 @@ func TestDedupFilesThroughSymlinkedDirectory(t *testing.T) {
 		}
 	}
 }
+
+func TestTagStateCountsTargetsAcrossParents(t *testing.T) {
+	x := testIndex(t, initIndex(t))
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	left, right := filepath.Join(root, "orchard"), filepath.Join(root, "pasture")
+	var batch []db.ScannedFile
+	for i, dir := range []string{left, right} {
+		sum := strings.Repeat(string(rune('a'+i)), 32)
+		batch = append(batch, db.ScannedFile{Dir: dir, Name: "lantern.txt", Size: 7, Mtime: time.Now(), MD5: sum, SHA256: sum + sum})
+	}
+	d, err := x.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.CommitScanBatch(batch); err != nil {
+		t.Fatal(err)
+	}
+	a, b := filepath.Join(left, "lantern.txt"), filepath.Join(right, "lantern.txt")
+	for _, edit := range []struct {
+		paths []string
+		tag   string
+	}{{[]string{a, b}, "cobalt"}, {[]string{a}, "sienna"}, {[]string{left}, "umber"}} {
+		if _, err := x.EditTags(edit.paths, []string{edit.tag}, true, false); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	st, err := x.TagState([]string{a, b, a, filepath.Join(right, "absent.txt")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(st.Names, []string{"cobalt", "sienna", "umber"}) || st.Targets != 3 {
+		t.Fatalf("state = %+v", st)
+	}
+	if st.Counts["cobalt"] != 2 || st.Counts["sienna"] != 1 || st.Counts["umber"] != 0 {
+		t.Fatalf("counts = %v", st.Counts)
+	}
+	// A panel directory reads its own tags through its parent.
+	if st, err = x.TagState([]string{left}); err != nil || st.Counts["umber"] != 1 || st.Targets != 1 {
+		t.Fatalf("directory state = %+v, %v", st, err)
+	}
+}

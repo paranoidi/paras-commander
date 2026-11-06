@@ -14,11 +14,12 @@ import (
 //   - a button or a radio / checkbox: its activation (Event.Enter unset: a click toggles);
 //   - an input: an EventCaret with the rune index of the clicked text cell;
 //   - a list row: the EventListMove onto that row, or, when double and the row already holds the
-//     cursor, the activation Enter produces in that list (or in its driving input).
+//     cursor, the activation Enter produces in that list (or in its driving input);
+//   - a cell of an Item.CellColumns list: its activation (Index, Col), like a checkbox.
 //
 // ok is false on a miss: labels, separators, spacers (reserved regions), bars, disabled widgets,
-// ScrollOnly lists, Header rows and list rows past the last row are not targets, and focus is
-// left alone.
+// ScrollOnly lists, Header rows, list rows past the last row and the blank end of a short cell row
+// are not targets, and focus is left alone.
 func Click(spec Spec, screenW, screenH int, focus *ID, x, y int, double bool) (Event, bool) {
 	pi, it, ok := hit(spec, screenW, screenH, x, y)
 	if !ok {
@@ -27,6 +28,14 @@ func Click(spec Spec, screenW, screenH int, focus *ID, x, y int, double bool) (E
 	row := pi.Offset + (y - pi.Rect.Y)
 	if pi.Kind == KindList && (it.ScrollOnly || it.row(row).Header) {
 		return Event{}, false
+	}
+	if pi.Kind == KindList && it.CellColumns > 0 {
+		col, _, ok := it.cellAt(pi.Rect, row, x)
+		if !ok {
+			return Event{}, false
+		}
+		*focus = pi.ID
+		return Event{ID: pi.ID, Index: row, Col: col}, true
 	}
 	*focus = pi.ID
 	switch pi.Kind {
@@ -66,7 +75,7 @@ func Wheel(spec Spec, screenW, screenH int, focus *ID, x, y, delta int) (Event, 
 }
 
 // HoveredListRow returns the screen rect of the list row under (x, y), placed as Draw places it,
-// for DrawListRowHover. Only the pointer highlights the row: the list cursor and focus stay put.
+// for DrawListRowHover (the cell under it in an Item.CellColumns list). Only the pointer highlights the row: the list cursor and focus stay put.
 // ok is false off a list, on a ScrollOnly list, a Header row, a row past the last, and on the
 // cursor row of a focused list (it already shows the cursor).
 func HoveredListRow(spec Spec, screenW, screenH int, focus ID, x, y int) (Rect, bool) {
@@ -75,7 +84,18 @@ func HoveredListRow(spec Spec, screenW, screenH int, focus ID, x, y int) (Rect, 
 		return Rect{}, false
 	}
 	row := pi.Offset + (y - pi.Rect.Y)
-	if row >= it.rowCount() || it.row(row).Header || (row == it.Cursor && listFocused(spec, Focused(spec, focus), pi.ID)) {
+	if row >= it.rowCount() || it.row(row).Header {
+		return Rect{}, false
+	}
+	focused := row == it.Cursor && listFocused(spec, Focused(spec, focus), pi.ID)
+	if it.CellColumns > 0 {
+		col, w, ok := it.cellAt(pi.Rect, row, x)
+		if !ok || (focused && col == it.cellCol()) {
+			return Rect{}, false
+		}
+		return Rect{X: pi.Rect.X + col*w, Y: y, Width: w, Height: 1}, true
+	}
+	if focused {
 		return Rect{}, false
 	}
 	return Rect{X: pi.Rect.X, Y: y, Width: pi.Rect.Width, Height: 1}, true

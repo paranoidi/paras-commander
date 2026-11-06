@@ -22,6 +22,14 @@ func CheckboxMarker(styles theme.Theme, checked bool) string {
 	return " " + styles.IconDialogCheckbox(checked) + " "
 }
 
+// TriStateCheckboxMarker is CheckboxMarker for a tri-state checkbox: mixed wins over checked.
+func TriStateCheckboxMarker(styles theme.Theme, checked, mixed bool) string {
+	if mixed {
+		return " " + styles.IconDialogCheckboxMixed() + " "
+	}
+	return CheckboxMarker(styles, checked)
+}
+
 // CheckboxText returns the ASCII marker+label string for width calculations.
 // Always uses ASCII markers unconditionally; DrawDialogCheckbox renders the actual icons from the theme.
 // Since ASCII markers are always the same width or wider than icon icons, this remains a safe upper bound.

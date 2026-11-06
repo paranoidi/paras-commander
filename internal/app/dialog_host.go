@@ -56,7 +56,6 @@ func (h dialogHost) ExecuteSFTPPassword() {
 
 func (h dialogHost) CancelSFTPPassword() { h.app.cancelSFTPPassword() }
 
-func (h dialogHost) ExecuteIndexTags() { h.app.fileindexCtrl.SubmitTags() }
 
 func (h dialogHost) ExecuteIndexInit() { h.app.fileindexCtrl.SubmitInit() }
 

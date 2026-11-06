@@ -19,7 +19,6 @@ const (
 	FileSanitizeUnderscores = dlg.ID("sanitize-underscores")
 	FileSlugifyDot          = dlg.ID("slugify-dot")
 	FileSlugifyUnderscore   = dlg.ID("slugify-underscore")
-	FileIndexTagsRecursive  = dlg.ID("index-tags-recursive")
 	fileDeleteList          = dlg.ID("delete-list")
 	fileFieldPrefix         = "field-"
 	fileEncodingPrefix      = "encoding-"
@@ -201,8 +200,6 @@ func fieldViewGroups(st FileDialogState) []dlg.Group {
 		if renameHasOpenOtherCheckbox(st) {
 			options = append(options, dlg.Item{ID: FileRenameOpenOther, Kind: dlg.KindCheckbox, Label: renameOpenOtherLabel, Mnemonic: 'p', On: st.RenameOpenInOther})
 		}
-	case st.DialogType == FileDialogIndexTags:
-		options = append(options, dlg.Item{ID: FileIndexTagsRecursive, Kind: dlg.KindCheckbox, Label: "Recursive (whole directory trees)", Mnemonic: 'R', On: st.IndexTagsRecursive})
 	case mkdirHasActions(st):
 		for _, r := range MkdirActionRadioSpecs() {
 			options = append(options, dlg.Item{ID: MkdirActionID(r.Action), Kind: dlg.KindRadio, Label: r.Label, Mnemonic: r.Shortcut, On: st.MkdirAction == r.Action})
@@ -317,8 +314,6 @@ func (st *FileDialogState) Apply(ev dlg.Event) {
 		st.RenameFocusAfter = !st.RenameFocusAfter
 	case FileRenameOpenOther:
 		st.RenameOpenInOther = !st.RenameOpenInOther
-	case FileIndexTagsRecursive:
-		st.IndexTagsRecursive = !st.IndexTagsRecursive
 	case FileSanitizeDots:
 		st.RenameSanitizeDots = !st.RenameSanitizeDots
 	case FileSanitizeUnderscores:

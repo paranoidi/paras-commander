@@ -56,9 +56,6 @@ func fileDialogOuterTitle(state FileDialogState) string {
 			return "Pattern history"
 		}
 	}
-	if state.DialogType == FileDialogIndexTags && state.IndexTagsRemove {
-		return "Remove tags"
-	}
 	if state.DialogType == FileDialogRunForEach && state.RunForEachHistoryOpen {
 		return "History"
 	}
@@ -101,8 +98,6 @@ func fileDialogTitle(dialogType FileDialogType) string {
 		return "SFTP"
 	case FileDialogSFTPPassword:
 		return "SSH password"
-	case FileDialogIndexTags:
-		return "Add tags"
 	case FileDialogIndexInit:
 		return "fileindex"
 	default:

@@ -2,6 +2,7 @@ package fileindex
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/paranoidi/fileindex/db"
@@ -73,4 +74,58 @@ func (x *Index) EditTags(paths []string, tags []string, add, recursive bool) (Ta
 	removed, err := d.RemoveTags(target, tags)
 	res.Changed = len(removed)
 	return res, err
+}
+
+// TagState is what a tag editor shows for a set of paths: every tag in the database, sorted by
+// name, how many distinct paths were asked about, and how many of them carry each tag (absent:
+// none).
+type TagState struct {
+	Names   []string
+	Targets int
+	Counts  map[string]int
+}
+
+// TagState reads the tags of the index and of paths (local or fileindex://). A path the index
+// lacks carries no tags, and a path named twice counts once.
+func (x *Index) TagState(paths []string) (TagState, error) {
+	state := TagState{Counts: map[string]int{}}
+	d, err := x.DB()
+	if err != nil {
+		return state, err
+	}
+	all, err := d.ListTags()
+	if err != nil {
+		return state, err
+	}
+	for _, t := range all {
+		state.Names = append(state.Names, t.Name)
+	}
+	byParent := map[string][]string{}
+	seen := map[string]bool{}
+	for _, p := range paths {
+		host, err := IndexPath(p)
+		if err != nil {
+			return state, err
+		}
+		host = filepath.Clean(host)
+		if !seen[host] {
+			seen[host] = true
+			state.Targets++
+			parent := filepath.Dir(host)
+			byParent[parent] = append(byParent[parent], filepath.Base(host))
+		}
+	}
+	for parent, names := range byParent {
+		tags, err := d.EntryTags(parent, names)
+		if err != nil {
+			return state, err
+		}
+		for _, entry := range tags {
+			slices.Sort(entry)
+			for _, t := range slices.Compact(entry) { // a file and a subdir may share a name
+				state.Counts[t]++
+			}
+		}
+	}
+	return state, nil
 }

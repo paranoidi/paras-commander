@@ -229,8 +229,7 @@ const (
 	ActionFileIndexScan              = "fileindex.scan"
 	ActionFileIndexScanFast          = "fileindex.scan-fast"
 	ActionFileIndexPrune             = "fileindex.prune"
-	ActionFileIndexTagAdd            = "fileindex.tag-add"
-	ActionFileIndexTagRemove         = "fileindex.tag-remove"
+	ActionFileIndexTags              = "fileindex.tags"
 	ActionFileIndexBrowse            = "fileindex.browse"
 	ActionFileIndexBrowseWith        = "fileindex.browse-with"
 	ActionFileIndexFind              = "fileindex.find"
@@ -577,8 +576,7 @@ var KnownActions = map[string]struct{}{
 	ActionFileIndexScan:              {},
 	ActionFileIndexScanFast:          {},
 	ActionFileIndexPrune:             {},
-	ActionFileIndexTagAdd:            {},
-	ActionFileIndexTagRemove:         {},
+	ActionFileIndexTags:              {},
 	ActionFileIndexBrowse:            {},
 	ActionFileIndexBrowseWith:        {},
 	ActionFileIndexFind:              {},

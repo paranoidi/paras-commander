@@ -57,7 +57,6 @@ func (f *fakeMassRenamePatternHost) FilterCursorEntry(uidialog.FilterTarget) (st
 func (f *fakeMassRenamePatternHost) OpenFileInExternalEditor(string) error { return nil }
 func (f *fakeMassRenamePatternHost) ExecuteSFTPPassword()                  {}
 func (f *fakeMassRenamePatternHost) CancelSFTPPassword()                   {}
-func (f *fakeMassRenamePatternHost) ExecuteIndexTags()                     {}
 func (f *fakeMassRenamePatternHost) ExecuteIndexInit()                     {}
 func (f *fakeMassRenamePatternHost) HandlePathPickerScrollingQueryKey(*tcell.EventKey) bool {
 	return false

@@ -384,6 +384,7 @@ success = "\uf05d"       # fa-circle_check, prefix on success toasts
 [icons.dialog.checkbox]
 checked = "\U000F0856"
 unchecked = "\U000F0131"
+mixed = "\U000F06F2"
 
 [icons.dialog.radio]
 selected = "\U000F043E"

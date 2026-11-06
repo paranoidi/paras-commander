@@ -7,6 +7,7 @@ import (
 const (
 	IconKeyDialogCheckboxChecked   = "dialog.checkbox.checked"
 	IconKeyDialogCheckboxUnchecked = "dialog.checkbox.unchecked"
+	IconKeyDialogCheckboxMixed     = "dialog.checkbox.mixed"
 	IconKeyDialogRadioSelected     = "dialog.radio.selected"
 	IconKeyDialogRadioUnselected   = "dialog.radio.unselected"
 	IconKeyDialogInfo              = "dialog.info"
@@ -112,6 +113,15 @@ func (t Theme) IconDialogCheckbox(checked bool) string {
 		return t.iconOr(IconKeyDialogCheckboxChecked, "\U000F0856")
 	}
 	return t.iconOr(IconKeyDialogCheckboxUnchecked, "\U000F0131")
+}
+
+// IconDialogCheckboxMixed returns the marker of a tri-state checkbox set on only some of its
+// targets. When UseNerdfontIcons is false, returns the ASCII marker [-].
+func (t Theme) IconDialogCheckboxMixed() string {
+	if !t.UseNerdfontIcons {
+		return "[-]"
+	}
+	return t.iconOr(IconKeyDialogCheckboxMixed, "\U000F06F2")
 }
 
 // IconDialogRadio returns the radio marker icon for the given state.

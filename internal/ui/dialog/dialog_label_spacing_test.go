@@ -95,13 +95,11 @@ func TestDialogLabelsAreFollowedByContentRow(t *testing.T) {
 		{
 			name: "fileindex tags",
 			draw: func(screen tcell.Screen) {
-				DrawFileDialog(screen, layout, FileDialogState{
-					Open:       true,
-					DialogType: FileDialogIndexTags,
-					Fields:     []FileDialogField{{Label: "Tags (comma or space separated)", Value: "clover, meadow"}},
-				}, DialogRenderContext{Styles: styles}, nil)
+				st := NewIndexTagsDialog([]string{"/meadow"}, []string{"clover"}, nil, 1)
+				st.Input = "clover, meadow"
+				DrawIndexTagsDialog(screen, layout, st, styles)
 			},
-			labels: []string{"Tags (comma or space separated):"},
+			labels: []string{"New tags (comma or space separated):"},
 		},
 		{
 			name: "rename tool preview",

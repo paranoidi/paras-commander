@@ -19,7 +19,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	fi "github.com/paranoidi/paras-commander/internal/fileindex"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
-	"github.com/paranoidi/paras-commander/internal/jobbridge"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -121,15 +120,6 @@ func New(deps Deps) *Handler {
 	return h
 }
 
-// TagsPayload carries the outcome of a tag edit.
-type TagsPayload struct {
-	Remove    bool
-	Tags      []string
-	Recursive bool
-	Res       fi.TagEdit
-	Err       error
-}
-
 // NavigatePayload asks the event loop to show Dir in PanelID with Select highlighted, once a
 // goroutine has checked the target (Err set when it cannot be shown).
 type NavigatePayload struct {
@@ -152,10 +142,8 @@ func (h *Handler) Dispatch(actionID string) bool {
 		h.withIndex(h.ScanFast)
 	case keymap.ActionFileIndexPrune:
 		h.withIndex(h.Prune)
-	case keymap.ActionFileIndexTagAdd:
-		h.withIndex(func() { h.OpenTagDialog(false) })
-	case keymap.ActionFileIndexTagRemove:
-		h.withIndex(func() { h.OpenTagDialog(true) })
+	case keymap.ActionFileIndexTags:
+		h.withIndex(h.OpenTagDialog)
 	case keymap.ActionFileIndexFind:
 		if h.localOrIndex() {
 			h.OpenFindDialog(h.model.ActivePanel, false)
@@ -188,6 +176,8 @@ func (h *Handler) HandleWake(data any) bool {
 		h.HandleReady(p)
 	case InitPayload:
 		h.HandleInit(p)
+	case TagsLoadedPayload:
+		h.HandleTagsLoaded(p)
 	case TagsPayload:
 		h.HandleTags(p)
 	case NavigatePayload:
@@ -300,75 +290,6 @@ func (h *Handler) Prune() {
 		return
 	}
 	h.queueTask("fileindex prune", h.index.PruneTask(dir), []string{dir})
-}
-
-// OpenTagDialog opens the tag prompt for the selection, else the cursor entry, else the panel
-// directory; remove picks Remove tags over Add tags.
-func (h *Handler) OpenTagDialog(remove bool) {
-	if !h.localOrIndex() {
-		return
-	}
-	h.model.FileDialog = dialog.FileDialogState{
-		Open:             true,
-		DialogType:       dialog.FileDialogIndexTags,
-		Fields:           []dialog.FileDialogField{{Label: "Tags (comma or space separated)"}},
-		IndexTagsRemove:  remove,
-		IndexTagsTargets: h.targets(),
-	}
-}
-
-// SubmitTags is the tag prompt's OK: it closes the prompt and edits the tags off the UI thread.
-// An empty tag list keeps the prompt open.
-func (h *Handler) SubmitTags() {
-	st := h.model.FileDialog
-	var raw string
-	if len(st.Fields) > 0 {
-		raw = st.Fields[0].Value
-	}
-	tags := fi.ParseTags(raw)
-	if len(tags) == 0 {
-		h.host.SetTransientMessage("Type at least one tag", ui.MessageUrgencyWarn)
-		return
-	}
-	h.model.FileDialog = dialog.FileDialogState{}
-	targets, remove, recursive := st.IndexTagsTargets, st.IndexTagsRemove, st.IndexTagsRecursive
-	go func() {
-		res, err := h.index.EditTags(targets, tags, !remove, recursive)
-		h.post(TagsPayload{Remove: remove, Tags: tags, Recursive: recursive, Res: res, Err: err})
-	}()
-}
-
-// HandleTags reports a finished tag edit and refreshes the tags column. Paths the index lacks are
-// counted when removing; when adding, a scan is queued that records and tags them.
-func (h *Handler) HandleTags(p TagsPayload) {
-	if p.Err != nil {
-		h.host.SetErrorMessage(messageTitle, p.Err)
-		return
-	}
-	verb := "Added"
-	if p.Remove {
-		verb = "Removed"
-	}
-	msg := fmt.Sprintf("%s %d %s on %d %s", verb, p.Res.Changed, jobbridge.Plural(p.Res.Changed, "tag", "tags"),
-		p.Res.Targeted, jobbridge.Plural(p.Res.Targeted, "entry", "entries"))
-	urgency := ui.MessageUrgencySuccess
-	if n := len(p.Res.Unknown); n > 0 {
-		if p.Remove {
-			msg += fmt.Sprintf("; %d not in the index", n)
-			urgency = ui.MessageUrgencyWarn
-		} else {
-			h.queueTask("fileindex scan", h.index.ScanTagTask(p.Res.Unknown, p.Tags, p.Recursive), p.Res.Unknown)
-			scanning := fmt.Sprintf("canning %d %s to tag", n, jobbridge.Plural(n, "entry", "entries"))
-			if p.Res.Targeted == 0 {
-				msg = "S" + scanning
-			} else {
-				msg += "; s" + scanning
-			}
-			urgency = ui.MessageUrgencyInfo
-		}
-	}
-	h.host.SetTransientMessage(msg, urgency)
-	h.host.RefreshMetaColumns()
 }
 
 // BrowseWith toggles "browse with fileindex" on the active panel: the real directory with the

@@ -90,7 +90,23 @@ func (it Item) pageStep() int {
 // with it.
 func listMove(it Item, next int) Event {
 	it.Cursor = next
-	return Event{ID: it.ID, Kind: EventListMove, Index: next, Offset: it.ViewOffset()}
+	return Event{ID: it.ID, Kind: EventListMove, Index: next, Col: it.cellCol(), Offset: it.ViewOffset()}
+}
+
+// cellCol is the list's Col clamped to the cells of the Cursor row (0 outside a CellColumns list).
+func (it Item) cellCol() int {
+	if it.CellColumns == 0 {
+		return 0
+	}
+	return min(max(it.Col, 0), max(len(it.row(it.cursorRow()).Cells)-1, 0))
+}
+
+// cellAt is the cell column of an Item.CellColumns list under screen column x of its placed rect
+// r, and the width of a cell. ok is false past the last cell of row.
+func (it Item) cellAt(r Rect, row, x int) (col, width int, ok bool) {
+	width = max(r.Width/it.CellColumns, 1)
+	col = min((x-r.X)/width, it.CellColumns-1)
+	return col, width, col < len(it.row(row).Cells)
 }
 
 // listKey applies a list-motion key to it. A focused list handles Up/Down/PgUp/PgDn and
@@ -106,6 +122,15 @@ func listKey(it Item, ev *tcell.EventKey, driven bool) (Event, bool) {
 	page := it.pageStep()
 	var next int
 	switch ev.Key() {
+	case tcell.KeyLeft, tcell.KeyRight:
+		if it.CellColumns == 0 || driven {
+			return Event{}, false
+		}
+		it.Col = it.cellCol() - 1
+		if ev.Key() == tcell.KeyRight {
+			it.Col += 2
+		}
+		return listMove(it, cur), true
 	case tcell.KeyUp, tcell.KeyDown, tcell.KeyPgUp, tcell.KeyPgDn:
 		if it.Wrap {
 			delta := map[tcell.Key]int{tcell.KeyUp: -1, tcell.KeyDown: 1, tcell.KeyPgUp: -page, tcell.KeyPgDn: page}[ev.Key()]
@@ -209,7 +234,7 @@ func driverOf(spec Spec, id ID) (ID, bool) {
 func activation(spec Spec, id ID) Event {
 	if p, ok := find(spec, id); ok && !p.isButton() {
 		if it := widgetAt(spec, p); it.Kind == KindList {
-			return Event{ID: id, Index: min(max(it.Cursor, 0), it.rowCount()-1)}
+			return Event{ID: id, Index: min(max(it.Cursor, 0), it.rowCount()-1), Col: it.cellCol()}
 		}
 	}
 	return Event{ID: id}

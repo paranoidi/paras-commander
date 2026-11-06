@@ -50,8 +50,7 @@ fileindex. The keys below are the defaults; rebind the shortcuts under
 | `M-A` | `S` | `fileindex.scan-fast` | [Fast scan](#scan-and-prune) the selected entries, else the current directory: hash only the first 8 KB of larger files |
 | `M-P` | `p` | `fileindex.prune` | Remove what is gone from disk under the current directory |
 | `M-E` | `e` | `fileindex.report-differences` | [Report differences](#report-differences) between the disk and the index under the directory under the cursor, else the current directory |
-| `M-T` | `t` | `fileindex.tag-add` | Add tags |
-| `M-U` | `u` | `fileindex.tag-remove` | Remove tags |
+| `M-T` | `t` | `fileindex.tags` | [Edit tags](#tags) |
 
 ## Browsing with fileindex
 
@@ -313,16 +312,33 @@ fileindex), and switches them off again when it leaves both.
 
 ## Tags
 
-`fileindex.tag-add` and `fileindex.tag-remove` open a prompt for the
-selection, else the entry under the cursor, else the current directory. Type
-one or more tags separated by commas or spaces. **Recursive** applies the tags
-to a directory, every directory under it and every file in them, instead of
-the directory alone. Tags work on entries that are gone from disk too. Adding
-tags to a path the index does not know queues a scan of it (a task job, see
-below) that applies the tags once the walk has recorded the path, before
-hashing; a path the scan rules skip stays untagged and is listed as a warning
-on the job. Removing tags only counts such paths in the message after OK. The
-tags column updates when the edit finishes.
+`fileindex.tags` opens the tag editor for the selection, else the entry under
+the cursor, else the current directory. It lists every tag in the database as
+checkboxes in two columns, with the tags the entries already carry checked. A
+tag that only some of the selected entries carry shows as mixed (`[-]`).
+
+Nothing is written until OK; Cancel or Esc discards the edits.
+
+- **New tags:** type one or more tags separated by commas or spaces and press
+  Enter. They appear checked in the list and the dialog stays open for more.
+  OK also takes whatever is still in the input.
+- **Checkboxes:** Tab moves into the list. Space, Enter or a click toggles a
+  tag. A mixed tag cycles through set on all, removed from all, and mixed,
+  which leaves each entry as it was.
+- **Jump:** typing in the list jumps to the best fuzzy match, and the typed
+  text shows in the border above the list. With several matches, Up and Down
+  cycle through them. Backspace trims the text and Esc clears it.
+- **Recursive** applies the edits to a directory, every directory under it and
+  every file in them, instead of the directory alone. Only the tags you changed
+  are applied, so a tag the directory already has does not spread down the tree
+  until you remove it, then add it again with Recursive on.
+
+Tags work on entries that are gone from disk too. Adding tags to a path the
+index does not know queues a scan of it (a task job, see below) that applies the
+tags once the walk has recorded the path, before hashing; a path the scan rules
+skip stays untagged and is listed as a warning on the job. Removing tags only
+counts such paths in the message after OK. The tags column updates when the edit
+finishes. A tag no entry uses any more stays in the list.
 
 ## Scan and prune
 

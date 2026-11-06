@@ -201,7 +201,8 @@ func tabTarget(spec Spec, id ID) ID {
 //     when Item.Wrap), and the key is consumed even there: Up on the first row never leaves the
 //     list. An empty list is never focused (it is skipped by every focus move);
 //   - Enter and Space return an EventActivate event for the list with Index = the cursor row;
-//   - Tab/Backtab leave the list (every list is a Tab segment of its own); Left/Right do nothing;
+//   - Tab/Backtab leave the list (every list is a Tab segment of its own); Left/Right do nothing,
+//     except in an Item.CellColumns list, where they move between the row's cells (Event.Col);
 //   - a plain letter acts as its Alt+letter mnemonic (unless Spec.AltOnly), else it returns
 //     (Event{}, false); Alt+mnemonic focuses and activates its widget.
 //

@@ -11,7 +11,7 @@ var fileIndexMenuGroups = []struct {
 	actions []string
 }{
 	{"Browse", []string{ActionFileIndexFind, ActionFileIndexBrowseWith, ActionFileIndexBrowse, ActionFileIndexReveal}},
-	{"Tagging", []string{ActionFileIndexTagAdd, ActionFileIndexTagRemove}},
+	{"Tagging", []string{ActionFileIndexTags}},
 	{"Actions", []string{ActionFileIndexScan, ActionFileIndexScanFast, ActionFileIndexPrune, ActionFileIndexReportDifferences}},
 	{"Duplicates", []string{ActionFileIndexFindDuplicates, ActionFileIndexCopies, ActionFileIndexCopiesOutside}},
 }

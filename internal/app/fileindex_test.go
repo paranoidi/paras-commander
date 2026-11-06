@@ -34,8 +34,7 @@ var fileIndexActions = []string{
 	keymap.ActionFileIndexBrowseWith,
 	keymap.ActionFileIndexBrowse,
 	keymap.ActionFileIndexReveal,
-	keymap.ActionFileIndexTagAdd,
-	keymap.ActionFileIndexTagRemove,
+	keymap.ActionFileIndexTags,
 	keymap.ActionFileIndexScan,
 	keymap.ActionFileIndexScanFast,
 	keymap.ActionFileIndexPrune,
@@ -132,11 +131,7 @@ func TestFileIndexMenuOpensOnLessThanAndRunsLetter(t *testing.T) {
 		t.Fatal("activating an entry should close the menu")
 	}
 	waitTagPrompt(t, a, screen)
-	if fd := a.model.FileDialog; !fd.Open || fd.DialogType != dialog.FileDialogIndexTags || fd.IndexTagsRemove {
-		t.Fatalf("dialog = %+v, want the add-tags prompt", fd)
-	}
-
-	a.dialogCtrl.CloseFileDialog()
+	a.fileindexCtrl.CloseTagDialog()
 	a.handleKey(tcell.NewEventKey(tcell.KeyRune, '<', tcell.ModNone))
 	a.handleKey(tcell.NewEventKey(tcell.KeyRune, '<', tcell.ModNone))
 	if a.model.LeaderMenu.Open {
@@ -194,8 +189,41 @@ func fileIndexAppWith(t *testing.T, tune func(*Options)) (*App, tcell.Simulation
 func waitTagPrompt(t *testing.T, a *App, screen tcell.SimulationScreen) {
 	t.Helper()
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
-		return a.model.FileDialog.Open && a.model.FileDialog.DialogType == dialog.FileDialogIndexTags
+		return a.model.IndexTagsDialog.Open
 	})
+}
+
+func typeTags(a *App, text string) {
+	for _, r := range text {
+		a.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+}
+
+func altKey(r rune) *tcell.EventKey { return tcell.NewEventKey(tcell.KeyRune, r, tcell.ModAlt) }
+
+// seedTags tags entries of dir before the dialog opens.
+func seedTags(t *testing.T, a *App, dir string, tags []string, names ...string) {
+	t.Helper()
+	var paths []string
+	for _, n := range names {
+		paths = append(paths, filepath.Join(dir, n))
+	}
+	if _, err := a.fileIndex.EditTags(paths, tags, true, false); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func harborTags(t *testing.T, a *App, dir string) map[string][]string {
+	t.Helper()
+	d, err := a.fileIndex.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tags, err := d.EntryTags(dir, []string{"harbor.txt", "meadow.txt"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return tags
 }
 
 func cursorTo(t *testing.T, a *App, name string) {
@@ -214,21 +242,22 @@ func TestFileIndexTagPromptTagsCursorEntry(t *testing.T) {
 	a, screen, dir, _ := fileIndexApp(t)
 	cursorTo(t, a, "harbor.txt")
 
-	a.dispatch(keymap.ActionFileIndexTagAdd)
+	a.dispatch(keymap.ActionFileIndexTags)
 	waitTagPrompt(t, a, screen)
-	fd := a.model.FileDialog
-	if !fd.Open || fd.DialogType != dialog.FileDialogIndexTags || fd.IndexTagsRemove {
-		t.Fatalf("dialog = %+v, want the add-tags prompt", fd)
+	if got := a.model.IndexTagsDialog.Targets; !slices.Equal(got, []string{filepath.Join(dir, "harbor.txt")}) {
+		t.Fatalf("targets = %v", got)
 	}
-	if !slices.Equal(fd.IndexTagsTargets, []string{filepath.Join(dir, "harbor.txt")}) {
-		t.Fatalf("targets = %v", fd.IndexTagsTargets)
-	}
-	for _, r := range "clover, field" {
-		a.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
-	}
+	typeTags(a, "clover, field")
 	a.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
-	if a.model.FileDialog.Open {
-		t.Fatal("OK should close the prompt")
+	if !a.model.IndexTagsDialog.Open {
+		t.Fatal("Enter in the input should keep the dialog open")
+	}
+	if a.model.IndexTagsDialog.Input != "" {
+		t.Fatalf("input = %q, want it cleared", a.model.IndexTagsDialog.Input)
+	}
+	a.handleKey(altKey('o'))
+	if a.model.IndexTagsDialog.Open {
+		t.Fatal("OK should close the dialog")
 	}
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
 		return strings.HasPrefix(a.model.Message, "Added")
@@ -247,6 +276,106 @@ func TestFileIndexTagPromptTagsCursorEntry(t *testing.T) {
 	if !slices.Equal(tags["harbor.txt"], []string{"clover", "field"}) || len(tags["meadow.txt"]) != 0 {
 		t.Fatalf("tags = %v", tags)
 	}
+}
+
+func TestFileIndexTagEditorShowsAndTogglesTags(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	seedTags(t, a, dir, []string{"amber"}, "harbor.txt", "meadow.txt")
+	seedTags(t, a, dir, []string{"birch"}, "harbor.txt")
+	seedTags(t, a, dir, []string{"cedar"}, "meadow.txt")
+	cursorTo(t, a, "harbor.txt")
+
+	a.dispatch(keymap.ActionFileIndexTags)
+	waitTagPrompt(t, a, screen)
+	st := &a.model.IndexTagsDialog
+	want := []dialog.IndexTag{
+		{Name: "amber", Initial: dlg.CheckOn, State: dlg.CheckOn},
+		{Name: "birch", Initial: dlg.CheckOn, State: dlg.CheckOn},
+		{Name: "cedar"},
+	}
+	if !slices.Equal(st.Tags, want) {
+		t.Fatalf("tags = %+v", st.Tags)
+	}
+	checkDialogInvariants(t, a)
+	// Into the grid, then jump to and swap two tags with the keyboard.
+	a.handleKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
+	if st.Focus != dialog.IndexTagsGrid {
+		t.Fatalf("focus = %q, want the grid", st.Focus)
+	}
+	checkDialogInvariants(t, a)
+	typeTags(a, "b ")
+	a.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if !st.Open || st.JumpQuery != "" {
+		t.Fatalf("Esc should clear the jump text first: open %v, query %q", st.Open, st.JumpQuery)
+	}
+	typeTags(a, "c ")
+	a.handleKey(altKey('o'))
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		return a.model.Message == "Added 1 tag, removed 1 tag on 1 entry"
+	})
+	if got := harborTags(t, a, dir); !slices.Equal(got["harbor.txt"], []string{"amber", "cedar"}) {
+		t.Fatalf("tags = %v", got)
+	}
+}
+
+func TestFileIndexTagEditorCancelDiscards(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	cursorTo(t, a, "harbor.txt")
+	a.dispatch(keymap.ActionFileIndexTags)
+	waitTagPrompt(t, a, screen)
+	typeTags(a, "clover")
+	a.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	a.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if a.model.IndexTagsDialog.Open {
+		t.Fatal("Esc should close the dialog")
+	}
+	if got := harborTags(t, a, dir); len(got) != 0 {
+		t.Fatalf("tags = %v, want nothing written", got)
+	}
+}
+
+func TestFileIndexTagEditorKeepsMixedTag(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	seedTags(t, a, dir, []string{"amber"}, "harbor.txt")
+	p := a.activePanel()
+	p.SelectedPaths = map[string]bool{filepath.Join(dir, "harbor.txt"): true, filepath.Join(dir, "meadow.txt"): true}
+
+	a.dispatch(keymap.ActionFileIndexTags)
+	waitTagPrompt(t, a, screen)
+	if got := a.model.IndexTagsDialog.Tags[0].State; got != dlg.CheckMixed {
+		t.Fatalf("state = %v, want mixed", got)
+	}
+	typeTags(a, "clover")
+	a.handleKey(altKey('o'))
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		return strings.HasPrefix(a.model.Message, "Added")
+	})
+	got := harborTags(t, a, dir)
+	if !slices.Equal(got["harbor.txt"], []string{"amber", "clover"}) || !slices.Equal(got["meadow.txt"], []string{"clover"}) {
+		t.Fatalf("tags = %v", got)
+	}
+}
+
+func TestFileIndexTagEditorScansUnknownWithAddedTagsOnly(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	if err := os.WriteFile(filepath.Join(dir, "willow.txt"), []byte("willow"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	seedTags(t, a, dir, []string{"amber"}, "harbor.txt")
+	a.fileindexCtrl.HandleTags(fileindexctrl.TagsPayload{
+		Added: []string{"clover"}, AddRes: fi.TagEdit{Unknown: []string{filepath.Join(dir, "willow.txt")}},
+	})
+	if a.model.Message != "Scanning 1 entry to tag" {
+		t.Fatalf("message = %q", a.model.Message)
+	}
+	drainInterruptEventsUntil(t, a, screen, 5*time.Second, func() bool {
+		d, err := a.fileIndex.DB()
+		if err != nil {
+			return false
+		}
+		tags, err := d.EntryTags(dir, []string{"willow.txt"})
+		return err == nil && slices.Equal(tags["willow.txt"], []string{"clover"})
+	})
 }
 
 func TestFileIndexOpenAndReveal(t *testing.T) {
@@ -298,7 +427,7 @@ func TestFileIndexOutdatedIndexAsksToUpgrade(t *testing.T) {
 	a := newTestApp(t, screen, opts)
 	t.Cleanup(func() { _ = a.fileIndex.Close() })
 
-	a.dispatch(keymap.ActionFileIndexTagAdd)
+	a.dispatch(keymap.ActionFileIndexTags)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
 		fd := a.model.FileDialog
 		return fd.Open && fd.DialogType == dialog.FileDialogIndexInit
@@ -360,12 +489,10 @@ func TestFileIndexMissingIndexAsksToCreate(t *testing.T) {
 	}
 
 	// Yes: the database is created and the waiting action continues.
-	a.dispatch(keymap.ActionFileIndexTagAdd)
+	a.dispatch(keymap.ActionFileIndexTags)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, initPrompt)
 	a.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
-	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
-		return a.model.FileDialog.Open && a.model.FileDialog.DialogType == dialog.FileDialogIndexTags
-	})
+	waitTagPrompt(t, a, screen)
 	if _, err := os.Stat(dbPath); err != nil {
 		t.Fatalf("database not created: %v", err)
 	}

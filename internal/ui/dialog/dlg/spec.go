@@ -52,7 +52,8 @@ const (
 	//
 	// Row features: Text, fuzzy-match highlights (Match), a leading Icon, an invalid-path variant
 	// (Missing), trailing Marks (pinned / job / missing icons), a radio-style marker (Marked, with
-	// Item.Markers) and the cursor row's focus style.
+	// Item.Markers), checkbox cells side by side (ListRow.Cells, Item.CellColumns) and the cursor
+	// row's focus style.
 	KindList
 	// KindSpacer reserves Height rows of the column for the caller to paint after Draw (the
 	// overlay escape hatch, see dialogs.md). It is never focusable or a hit target and its ID
@@ -159,6 +160,13 @@ type Item struct {
 	// as an option row; otherwise rows are plain dialog text and only the focused cursor row is
 	// highlighted.
 	Markers bool
+	// CellColumns > 0 makes a Markers list a checkbox grid: each row holds up to CellColumns
+	// ListRow.Cells in equal-width columns and Col names the cursor's cell on the Cursor row.
+	// Rows stay the unit of Offset, Height and the scrollbar. Left/Right move between the cells of
+	// a row, Up/Down keep the column (clamped on a short last row), and Enter, Space or a click on
+	// a cell activate it. Col stays in the caller's state like Cursor.
+	CellColumns int
+	Col         int
 	// ScrollOnly makes a list a scrolling view without a cursor (the delete list, a preview,
 	// command output): never focused, Offset is its only state and clicks on it are misses. It
 	// scrolls with PgUp/PgDn from any widget that does not use them, with Up/Down when focus has
@@ -250,6 +258,24 @@ type ListRow struct {
 	// Header draws the row as a section header (dialog.help.section): the cursor never lands on it
 	// (motion skips it, a click on it is a miss) and revealing the row under it reveals it too.
 	Header bool
+	// Cells are the checkboxes of a row of an Item.CellColumns list; Text is unused there.
+	Cells []ListCell
+}
+
+// CheckState is the state of a tri-state checkbox.
+type CheckState int
+
+const (
+	CheckOff CheckState = iota
+	CheckOn
+	CheckMixed // set on some of the things the checkbox stands for
+)
+
+// ListCell is one checkbox of a row of an Item.CellColumns list.
+type ListCell struct {
+	Text  string
+	Match []search.Range // fuzzy-match highlight ranges (rune offsets into Text)
+	Check CheckState
 }
 
 // Focusable reports whether keyboard focus and mouse clicks can land on the item.
@@ -403,7 +429,8 @@ type Placement struct {
 // List events carry the list's ID. EventActivate (the zero Kind) reports the activated row in
 // Index. EventListMove reports the list's new Cursor in Index and the new first visible row in
 // Offset; the caller stores both in its state. EventCaret (Click on an input) reports the rune
-// index the input's text cursor goes to in Index.
+// index the input's text cursor goes to in Index. Col is the cell on that row in an
+// Item.CellColumns list.
 //
 // Enter is set on activations made with the Enter key (or a double click, which stands for it),
 // for dialogs where Enter on a checkbox confirms while Space or a click toggles it.
@@ -411,6 +438,7 @@ type Event struct {
 	ID     ID
 	Kind   EventKind
 	Index  int
+	Col    int
 	Offset int
 	Enter  bool
 }
