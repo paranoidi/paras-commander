@@ -1232,16 +1232,17 @@ func clampScrollKeepingCursorVisible(preferredScroll, cursor, viewportRows, entr
 	return scroll
 }
 
-// firstSurvivingNameAfterCursor returns the name of the first entry below the cursor (in the
-// current visible order) that is still present in fresh, or "" when none is. Used on a
-// same-directory reload so a deleted cursor entry hands the highlight to its next neighbour
-// rather than to whatever now sits at the old row index.
+// firstSurvivingNameAfterCursor returns the name of the cursor entry if it is still present in
+// fresh, otherwise of the first entry below it (in the current visible order) that is, or ""
+// when none is. Used on a same-directory reload so the highlight stays on its entry, and a
+// deleted cursor entry hands it to its next neighbour rather than to whatever now sits at the
+// old row index.
 func (s *State) firstSurvivingNameAfterCursor(fresh []localfs.Entry) string {
 	names := make(map[string]struct{}, len(fresh))
 	for i := range fresh {
 		names[fresh[i].Name] = struct{}{}
 	}
-	for i := s.Cursor + 1; i < s.VisibleEntryCount(); i++ {
+	for i := s.Cursor; i < s.VisibleEntryCount(); i++ {
 		entry, _, ok := s.VisibleEntry(i)
 		if !ok {
 			continue
