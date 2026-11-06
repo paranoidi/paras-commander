@@ -499,6 +499,17 @@ func (s *State) abandonTreeChildLoads() {
 	}
 }
 
+// loadingTreeIDs appends the ID of every node under nodes still marked Loading to out.
+func loadingTreeIDs(nodes []treeflat.Node[TreeEntry], out []string) []string {
+	for i := range nodes {
+		if nodes[i].Value.Loading {
+			out = append(out, nodes[i].ID)
+		}
+		out = loadingTreeIDs(nodes[i].Children, out)
+	}
+	return out
+}
+
 // abandonTreeChildLoadsIn recursively clears Loading on every node in nodes and its descendants.
 func abandonTreeChildLoadsIn(nodes []treeflat.Node[TreeEntry]) {
 	for i := range nodes {
@@ -671,7 +682,8 @@ func (s *State) expandAllTreeDirsAtDepth(nodes []treeflat.Node[TreeEntry], depth
 // loading icon; the real expand happens later in ApplyTreeChildLoad on the main thread once the
 // fetch completes) or, when no scheduler is wired (nil, or it declines the request — same
 // fallback convention as AsyncLoadScheduler), reads the children synchronously inline exactly as
-// before. A second expand press while a fetch is already in flight for the same node is a no-op.
+// before. A second expand press while a fetch is already in flight for the same node is a no-op,
+// and so is a collapse: the late result would set TreeExpanded[id] again.
 //
 // quiet=true (ExpandAllTreeShallow) skips the per-dispatch rebuildTreeRows and increments
 // treeExpandQuiet so ApplyTreeChildLoad coalesces N async results into one rebuild/redraw.
@@ -686,6 +698,13 @@ func (s *State) expandAllTreeDirsAtDepth(nodes []treeflat.Node[TreeEntry], depth
 func (s *State) setTreeNodeExpanded(id string, depth int, expand bool, quiet bool) error {
 	if s.TreeExpanded == nil {
 		s.TreeExpanded = make(map[string]bool)
+	}
+	if !expand {
+		// A load in flight (first expand, or one re-dispatched by a same-directory reload that
+		// left TreeExpanded[id] set) would re-expand the row when it lands; collapsing waits for it.
+		if node := findTreeNode(s.TreeRoots, id); node != nil && node.Value.Loading {
+			return nil
+		}
 	}
 	if expand && depth < maxTreeExpandDepth {
 		if node := findTreeNode(s.TreeRoots, id); node != nil && node.Children == nil {
@@ -764,10 +783,12 @@ func (s *State) loadTreeChildren(dirPath string) ([]localfs.Entry, error) {
 // A load error drops the id from TreeExpanded so the row renders collapsed and a later manual
 // expand retries — same recovery as a failed manual expand.
 //
-// ponytail: each restore dispatches one setTreeNodeExpanded call rather than batching through
-// the treeExpandQuiet coalescer ExpandAllTreeShallow uses; a stale dispatch from that counter
-// never decrements it (ApplyTreeChildLoad returns early on a vanished node), so sharing it
+// ponytail: outside an ExpandAllTreeFully cascade each restore dispatches one setTreeNodeExpanded
+// call rather than batching through the treeExpandQuiet coalescer; a stale dispatch from that
+// counter never decrements it (ApplyTreeChildLoad returns early on a vanished node), so sharing it
 // across independent per-directory restores risked wedging it permanently on rapid navigation.
+// During a cascade (treeExpandAllAuto) restores are quiet, so the next level waits for all of
+// them; abandonTreeChildLoads zeroes the counter before every re-root, so none can strand.
 func (s *State) restoreTreeExpansions() {
 	s.restoreTreeExpansionsIn(s.TreeRoots, 0)
 }
@@ -779,7 +800,9 @@ func (s *State) restoreTreeExpansionsIn(nodes []treeflat.Node[TreeEntry], depth 
 			continue
 		}
 		if node.Children == nil {
-			if err := s.setTreeNodeExpanded(node.ID, depth, true, false); err != nil {
+			// Quiet during an ExpandAllTreeFully cascade, so the next level waits for every
+			// restored load (finishTreeChildLoadApply) instead of firing on the first one.
+			if err := s.setTreeNodeExpanded(node.ID, depth, true, s.treeExpandAllAuto); err != nil {
 				delete(s.TreeExpanded, node.ID)
 				s.TreeExpandGen++
 				continue

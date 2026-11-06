@@ -1627,6 +1627,17 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 		var keep map[string]bool
 		if sameDirReload {
 			keep = s.TreeExpanded
+			// A first expand still in flight is not in TreeExpanded yet (ApplyTreeChildLoad sets
+			// it on success); carry it over so restoreTreeExpansions re-dispatches the load
+			// instead of forgetting the folder along with its abandoned result.
+			if ids := loadingTreeIDs(s.TreeRoots, nil); len(ids) > 0 {
+				if keep == nil {
+					keep = make(map[string]bool, len(ids))
+				}
+				for _, id := range ids {
+					keep[id] = true
+				}
+			}
 		} else if snap, ok := s.HistoryCursorByPath[cleanPathString(listingLoc.String())]; ok {
 			keep = maps.Clone(snap.TreeExpanded)
 			s.treeExpandAllDepth = snap.TreeExpandAllDepth
@@ -1648,6 +1659,11 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 		s.TreeExpanded = keep
 		s.restoreTreeExpansions()
 		s.rebuildTreeRows()
+		if s.treeExpandAllAuto && s.treeExpandQuiet == 0 {
+			// A mid-cascade reload re-fetched the in-flight level synchronously (prefetch), so no
+			// ApplyTreeChildLoad is left to drive the next level.
+			_ = s.driveExpandAllTreeAuto(viewportRows)
+		}
 	}
 	s.rebuildFilter()
 	found := false

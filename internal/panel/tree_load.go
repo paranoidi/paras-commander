@@ -27,7 +27,9 @@ type TreeChildLoadScheduler func(req TreeChildLoadRequest) bool
 // Loading, e.g. a superseded duplicate callback, or because abandonTreeChildLoads cleared it on a
 // whole-tree collapse/re-root/mode switch) and was silently dropped, or when the apply is part of
 // an ExpandAllTreeShallow coalesce (treeExpandQuiet > 0 after decrement) that should not
-// rebuild/redraw yet. Returns true when the visible tree was rebuilt and the UI should redraw.
+// rebuild/redraw yet. A same-directory reload does not drop a load in flight: it re-dispatches the
+// folder (ApplyListing -> restoreTreeExpansions), so the result applied here comes from the
+// re-dispatched fetch. Returns true when the visible tree was rebuilt and the UI should redraw.
 func (s *State) ApplyTreeChildLoad(dirID string, entries []localfs.Entry, err error, viewportRows int) bool {
 	node := findTreeNode(s.TreeRoots, dirID)
 	if node == nil || !node.Value.Loading {
