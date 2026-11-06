@@ -364,7 +364,9 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 	layout := a.layoutForTerminalSize(w, h)
 	x, y := ev.Position()
 	if a.inputMode() == InputModeFilePreviewView {
-		if text, handled := a.previewCtrl.HandleFullscreenSelectionMouse(x, y, pressed&tcell.Button1 != 0, buttons&tcell.Button1 != 0); handled {
+		left := pressed&tcell.Button1 != 0
+		double := left && a.mouse.doubleClick("preview", y)
+		if text, handled := a.previewCtrl.HandleFullscreenSelectionMouse(x, y, left, double, buttons&tcell.Button1 != 0); handled {
 			a.copyPreviewSelection(text)
 			a.render()
 			return false, true

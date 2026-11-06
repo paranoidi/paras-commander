@@ -1,12 +1,16 @@
 package preview
 
-import "github.com/paranoidi/paras-commander/internal/ui"
+import (
+	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
+)
 
 // HandleFullscreenSelectionMouse drives text selection in the fullscreen preview: a left press on
 // the text area starts it, dragging extends it (scrolling one row per report past the top or
-// bottom edge) and the release returns the text to copy. handled is false for reports that are
-// not part of a selection.
-func (h *Handler) HandleFullscreenSelectionMouse(x, y int, pressed, held bool) (text string, handled bool) {
+// bottom edge) and the release returns the text to copy. A doubleClick press selects the word under
+// the pointer and returns it at once, so a stray drag before the release cannot shrink it. handled
+// is false for reports that are not part of a selection.
+func (h *Handler) HandleFullscreenSelectionMouse(x, y int, pressed, doubleClick, held bool) (text string, handled bool) {
 	textW, contentH, ok := h.fullscreenFilePreviewLayoutMetrics()
 	rect, rectOK := h.fullscreenPreviewRect()
 	if !ok || !rectOK || contentH <= 0 {
@@ -25,9 +29,15 @@ func (h *Handler) HandleFullscreenSelectionMouse(x, y int, pressed, held bool) (
 		if !st.TextSelectable() || x < textX || x >= textX+textW || y < top || y >= top+contentH {
 			return "", false
 		}
+		if doubleClick {
+			word := st.WordSelectionAt(st.Scroll+y-top, x-textX, textW, base)
+			h.patchFullscreenFilePreview(func(s *ui.FilePreviewState) { s.Selection = word })
+			st.Selection = word
+			return st.SelectedText(), true
+		}
 		off := st.CellOffsetAt(st.Scroll+y-top, x-textX, textW, base)
 		h.patchFullscreenFilePreview(func(s *ui.FilePreviewState) {
-			s.Selection.Anchor, s.Selection.Head, s.Selection.Dragging = off, off, true
+			s.Selection = previewpanel.Selection{Anchor: off, Head: off, Dragging: true}
 		})
 		return "", true
 	case !st.Selection.Dragging:

@@ -1078,3 +1078,47 @@ func TestMousePreviewDragPastBottomEdgeScrolls(t *testing.T) {
 		t.Fatalf("clipboard = %q", got)
 	}
 }
+
+func TestMousePreviewDoubleClickCopiesWord(t *testing.T) {
+	app := fullscreenTextPreviewApp(t, 3)
+	app.handleMouse(mouseEv(6, 2, tcell.Button1))
+	app.handleMouse(mouseEv(6, 2, tcell.ButtonNone))
+	if got := clipboard.LastSet(); got != "" {
+		t.Fatalf("first click copied %q", got)
+	}
+	app.handleMouse(mouseEv(6, 2, tcell.Button1))
+	if got := clipboard.LastSet(); got != "harbor2" {
+		t.Fatalf("clipboard = %q", got)
+	}
+	if got := app.model.MessageLog[0].Text; !strings.Contains(got, "Copied: harbor2") {
+		t.Fatalf("toast = %q", got)
+	}
+	// Motion before the release must not shrink the word.
+	app.handleMouse(mouseEv(7, 2, tcell.Button1))
+	app.handleMouse(mouseEv(7, 2, tcell.ButtonNone))
+	st := app.model.FullscreenFilePreview
+	if got := st.SelectedText(); got != "harbor2" {
+		t.Fatalf("selection = %q", got)
+	}
+}
+
+func TestCopyPreviewSelectionToast(t *testing.T) {
+	short := strings.Repeat("x", config.MouseCopyToastMaxRunes-1)
+	long := strings.Repeat("x", config.MouseCopyToastMaxRunes)
+	for _, c := range []struct{ text, want string }{
+		{"lantern\n  meadow", "Copied: lantern meadow"},
+		{short, "Copied: " + short},
+		{long, "Copied 1 line"},
+		{long + "\n" + long + "\n", "Copied 2 lines"},
+		{"\n\n", "Copied 2 lines"},
+	} {
+		app := fullscreenTextPreviewApp(t, 1)
+		app.copyPreviewSelection(c.text)
+		if got := app.model.MessageLog[0].Text; !strings.Contains(got, c.want) {
+			t.Errorf("toast for %q = %q, want %q", c.text, got, c.want)
+		}
+		if got := clipboard.LastSet(); got != c.text {
+			t.Errorf("clipboard = %q, want %q", got, c.text)
+		}
+	}
+}

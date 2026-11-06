@@ -99,3 +99,37 @@ func TestDrawReversesOnlySelectedTextCells(t *testing.T) {
 		}
 	}
 }
+
+func TestWordSelectionAt(t *testing.T) {
+	st := State{Source: SourceInternalHighlighted, GutterWidth: 3}
+	st.SetHighlightedCells(plainCells("1  a tin-can\n2  ember\n"))
+	base := tcell.StyleDefault
+	for _, c := range []struct {
+		row, col int
+		want     string
+		name     string
+	}{
+		{0, 3, "a", "one-cell word"},
+		{0, 6, "tin", "hyphen ends a word"},
+		{0, 8, "", "punctuation"},
+		{0, 4, "", "blank"},
+		{0, 1, "", "gutter"},
+		{1, 40, "", "past a hard line end"},
+	} {
+		st.Selection = st.WordSelectionAt(c.row, c.col, 40, base)
+		if got := st.SelectedText(); got != c.want {
+			t.Errorf("%s: (%d,%d) = %q, want %q", c.name, c.row, c.col, got, c.want)
+		}
+	}
+	// A word longer than the row breaks mid-word; both of its rows select all of it.
+	st.SetHighlightedCells(plainCells("1  marigolds\n"))
+	if got := len(previewWrappedLines(st, 8, base)); got != 2 {
+		t.Fatalf("wrapped rows = %d, want 2", got)
+	}
+	for row := range 2 {
+		st.Selection = st.WordSelectionAt(row, 3, 8, base)
+		if got := st.SelectedText(); got != "marigolds" {
+			t.Errorf("row %d word = %q", row, got)
+		}
+	}
+}

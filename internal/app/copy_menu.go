@@ -2,13 +2,16 @@ package app
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/paranoidi/paras-commander/internal/clipboard"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
+	"github.com/paranoidi/paras-commander/internal/jobbridge"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/textutil"
@@ -236,13 +239,18 @@ func (a *App) setClipboardToast(text, done string, urgency ui.MessageUrgency) {
 	a.setTransientMessage(done, urgency)
 }
 
-// copyPreviewSelection copies the text selected with the mouse in the fullscreen preview.
+// copyPreviewSelection copies the text selected with the mouse in the fullscreen preview. The toast
+// quotes a selection shorter than config.MouseCopyToastMaxRunes and counts the lines of a longer one.
 func (a *App) copyPreviewSelection(text string) {
 	if text == "" {
 		return
 	}
-	preview := textutil.TruncateBannerRunes(strings.Join(strings.Fields(text), " "), textutil.BannerMaxRunes)
-	a.setClipboardToast(text, "Copied: "+preview, ui.MessageUrgencySuccess)
+	done := "Copied: " + strings.Join(strings.Fields(text), " ")
+	if utf8.RuneCountInString(text) >= config.MouseCopyToastMaxRunes || strings.TrimSpace(text) == "" {
+		lines := strings.Count(strings.TrimSuffix(text, "\n"), "\n") + 1
+		done = fmt.Sprintf("Copied %d %s", lines, jobbridge.Plural(lines, "line", "lines"))
+	}
+	a.setClipboardToast(text, done, ui.MessageUrgencySuccess)
 }
 
 // copyFileContentsToClipboard copies the fullscreen-previewed text file verbatim.

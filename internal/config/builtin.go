@@ -385,6 +385,9 @@ const (
 	// MouseDoubleClickMS is the largest gap between two left presses on the same row that still
 	// counts as a double click.
 	MouseDoubleClickMS = 400
+	// MouseCopyToastMaxRunes is the selection length from which the copy toast of a mouse selection
+	// gives the line count instead of the selected text.
+	MouseCopyToastMaxRunes = 70
 	// MouseWheelRows is how many rows one wheel notch moves the cursor over a file panel.
 	MouseWheelRows = 3
 	// NarrowPanelRowTextWidthThreshold is the row text width (cells) below which a panel counts as

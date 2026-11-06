@@ -5,6 +5,8 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
+
+	"github.com/paranoidi/paras-commander/internal/ui/lineedit"
 )
 
 // Selection is a mouse text selection as cell offsets into the flat pre-wrap body (same indexing
@@ -12,15 +14,18 @@ import (
 type Selection struct {
 	Anchor, Head int
 	Dragging     bool
+	// Word marks a double-clicked word, which counts as selected even when it is one cell long.
+	Word bool
 }
 
 // Range is the selected half-open offset range, including the cells under both ends. ok is false
-// until the pointer has left the anchor cell, so a plain click selects nothing.
+// until the pointer has left the anchor cell, so a plain click selects nothing; a Word selection
+// is always ok.
 func (s Selection) Range() (lo, hi int, ok bool) {
 	switch {
-	case s.Anchor == s.Head:
+	case s.Anchor == s.Head && !s.Word:
 		return 0, 0, false
-	case s.Anchor < s.Head:
+	case s.Anchor <= s.Head:
 		return s.Anchor, s.Head + 1, true
 	}
 	return s.Head, s.Anchor + 1, true
@@ -88,6 +93,28 @@ func (st State) CellOffsetAt(row, col, textWidth int, base tcell.Style) int {
 		return end
 	}
 	return max(0, end-1)
+}
+
+// WordSelectionAt returns the selection of the word at wrapped row and screen column, with the
+// word runes of the line editor. A column on the gutter, a blank or punctuation selects nothing.
+// The word is whole across a soft wrap because the walk runs over the flat cells.
+func (st State) WordSelectionAt(row, col, textWidth int, base tcell.Style) Selection {
+	if col < st.wrapGutter() {
+		return Selection{}
+	}
+	cells := st.bodyCellsRaw(base)
+	off := st.CellOffsetAt(row, col, textWidth, base)
+	if off >= len(cells) || !lineedit.IsWordRune(cells[off].R) {
+		return Selection{}
+	}
+	lo, hi := off, off
+	for lo > 0 && lineedit.IsWordRune(cells[lo-1].R) {
+		lo--
+	}
+	for hi+1 < len(cells) && lineedit.IsWordRune(cells[hi+1].R) {
+		hi++
+	}
+	return Selection{Anchor: lo, Head: hi, Word: true}
 }
 
 // SelectedText returns the selected text with its hard line breaks and without gutter cells; soft
