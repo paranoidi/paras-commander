@@ -316,3 +316,45 @@ func TestMetaRowText_pendingHiddenPaintsBlankAtSameWidth(t *testing.T) {
 		t.Fatalf("resolved cell = %q, want it still painted", got)
 	}
 }
+
+func TestLayoutMetaColumns_cachedWhileGenerationUnchanged(t *testing.T) {
+	cols := []MetaColumnState{{EntryName: "mint", ColumnTitle: "Mint", ResultsGen: 1, Results: map[string]string{"/walnut": "alder"}}}
+	first, _ := LayoutMetaColumns(cols)
+	cols[0].Results["/walnut"] = "birch" // no bump: the cached layout is served
+	second, _ := LayoutMetaColumns(cols)
+	if got := second[0].Formatted["/walnut"]; got != first[0].Formatted["/walnut"] || strings.TrimSpace(got) != "alder" {
+		t.Fatalf("same generation: cell = %q, want the cached alder", got)
+	}
+	cols[0].ResultsGen++
+	third, _ := LayoutMetaColumns(cols)
+	if got := strings.TrimSpace(third[0].Formatted["/walnut"]); got != "birch" {
+		t.Fatalf("bumped generation: cell = %q, want birch", got)
+	}
+}
+
+func TestLayoutMetaColumns_unmanagedGenerationNeverCached(t *testing.T) {
+	cols := []MetaColumnState{{EntryName: "mint", ColumnTitle: "Mint", Results: map[string]string{"/walnut": "alder"}}}
+	LayoutMetaColumns(cols)
+	if cols[0].layoutCache != nil {
+		t.Fatal("ResultsGen 0 must not store a cache")
+	}
+	cols[0].Results["/walnut"] = "birch"
+	layouts, _ := LayoutMetaColumns(cols)
+	if got := strings.TrimSpace(layouts[0].Formatted["/walnut"]); got != "birch" {
+		t.Fatalf("cell = %q, want birch at once", got)
+	}
+}
+
+func TestLayoutMetaColumns_titleAndPendingHiddenNeedNoBump(t *testing.T) {
+	cols := []MetaColumnState{{EntryName: "mint", ColumnTitle: "Mi", Pending: "*", ResultsGen: 1, Results: map[string]string{"/walnut": "*"}}}
+	first, _ := LayoutMetaColumns(cols)
+	cols[0].ColumnTitle = "A much longer title"
+	cols[0].PendingHidden = true
+	second, _ := LayoutMetaColumns(cols)
+	if second[0].Title != "A much longer title" || second[0].Width <= first[0].Width {
+		t.Fatalf("title/width not refreshed: %q width %d -> %d", second[0].Title, first[0].Width, second[0].Width)
+	}
+	if !second[0].PendingHidden || strings.TrimSpace(MetaRowText(second, "/walnut")) != "" {
+		t.Fatal("PendingHidden must take effect without a bump")
+	}
+}

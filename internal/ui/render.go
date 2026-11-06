@@ -74,6 +74,15 @@ type MetaColumnState struct {
 	// (or never, when the pending marker delay is -1). Results still hold the marker, so sort,
 	// filters and PendingCount are unaffected. The zero value shows the marker.
 	PendingHidden bool
+	// ResultsGen is bumped by whoever mutates Results or Pending (the meta handler), so
+	// LayoutMetaColumns can reuse its formatted cells while the generation is unchanged. It must
+	// only grow over the column's lifetime. 0 means unmanaged: never cached, so a column built as
+	// a literal always lays out its current Results.
+	ResultsGen uint64
+	// layoutCache is the layout LayoutMetaColumns last computed for ResultsGen. It is replaced,
+	// never mutated, and only touched on the event loop; a copy of the column that misses it
+	// simply recomputes.
+	layoutCache *metaCellsCache
 }
 
 // MetaColumnByName finds the column with the given EntryName in cols. Shared by every lookup

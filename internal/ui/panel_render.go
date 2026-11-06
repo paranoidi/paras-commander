@@ -695,9 +695,8 @@ func panelNameColumnWidth(layoutRes panelColumnLayoutResult, f panel.ListFormat,
 // PanelNameColumnWidth is the file-name column width drawPanel would give a panel panelWidth
 // cells wide (border, icon gutter/strip, git strip, listing format and meta columns all
 // counted). A name-only (narrow) panel hides meta, so the name takes the whole row.
-// ponytail: LayoutMetaColumns formats every row of every meta column, so this costs
-// O(rows x columns) per call while meta columns are on and the app calls it on each layout
-// (including mouse motion). Cache the meta total width on the meta handler if it shows in profiles.
+// LayoutMetaColumns reuses each column's cached cells while its ResultsGen is unchanged, so
+// repeated calls (each layout, including mouse motion) are cheap.
 func PanelNameColumnWidth(panelWidth int, state panel.State, showIcons, narrowPanelsNameOnly bool, metaCols []MetaColumnState) int {
 	layoutRes := panelColumnLayout(Rect{Width: panelWidth}, state, PanelDisplayConfig{ShowIcons: showIcons, NarrowPanelsNameOnly: narrowPanelsNameOnly})
 	showMeta := len(metaCols) > 0 && !layoutRes.NameOnlyDisplay

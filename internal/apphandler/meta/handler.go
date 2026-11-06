@@ -79,6 +79,7 @@ func (h *Handler) applyWakeResult(d WakePayload) {
 		}
 		old, hadOld := cols[i].Results[d.Path]
 		cols[i].Results[d.Path] = d.Value
+		cols[i].ResultsGen++
 		if hadOld && cols[i].Pending != "" && old == cols[i].Pending && d.Value != cols[i].Pending {
 			cols[i].PendingCount--
 		}
@@ -747,6 +748,7 @@ func (h *Handler) runForPanel(panelID int, cmdDefs []metacmds.MetaEntry, cols []
 	for i := range cols {
 		cols[i].Results = make(map[string]string, len(groups[0].entries))
 		cols[i].PendingCount = 0
+		cols[i].ResultsGen++
 	}
 	h.model.MetaResults[panelID] = cols
 	h.dispatch(ctx, panelID, cmdDefs, cols, groups)
@@ -797,6 +799,7 @@ func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.
 			}
 		}
 		cols[i].Pending = runningMarker
+		cols[i].ResultsGen++
 	}
 
 	if delay := h.config.Panels.PendingMarkerDelayMS; wasIdle && delay != 0 && h.pendingCount(cols) > 0 {

@@ -1261,3 +1261,33 @@ func TestPendingReveal_stopRunInvalidatesTimer(t *testing.T) {
 		t.Fatal("timer armed after stopRun")
 	}
 }
+
+func TestResultsGen_wakeAndDispatchBumpAndLayoutSeesNewValue(t *testing.T) {
+	h, cedar, _ := pendingRevealHandler(t, 0)
+	gen0 := h.model.MetaResults[0][0].ResultsGen
+	if gen0 == 0 {
+		t.Fatal("dispatch must leave the column managed (ResultsGen > 0)")
+	}
+	before, _ := ui.LayoutMetaColumns(h.model.MetaResults[0]) // fills the layout cache
+	if got := before[0].Formatted[cedar]; got != h.host.IconMetaRunning() {
+		t.Fatalf("before wake: cell = %q, want the running marker", got)
+	}
+
+	h.HandleWake(WakePayload{PanelID: 0, EntryName: "words", Path: cedar, Value: "pear", Gen: h.runGen[0]})
+	if h.model.MetaResults[0][0].ResultsGen <= gen0 {
+		t.Fatal("a wake result must bump ResultsGen")
+	}
+	after, _ := ui.LayoutMetaColumns(h.model.MetaResults[0])
+	if got := strings.TrimSpace(after[0].Formatted[cedar]); got != "pear" {
+		t.Fatalf("after wake: cell = %q, want pear", got)
+	}
+
+	gen1 := h.model.MetaResults[0][0].ResultsGen
+	p := h.host.PanelByID(0)
+	extra := filepath.Join(p.PathString(), "maple.txt")
+	p.Entries = append(p.Entries, localfs.Entry{Name: "maple.txt", Path: extra, Type: localfs.EntryFile})
+	h.ReconcileForPanel(0) // dispatches into the existing column
+	if h.model.MetaResults[0][0].ResultsGen <= gen1 {
+		t.Fatal("dispatch must bump ResultsGen")
+	}
+}

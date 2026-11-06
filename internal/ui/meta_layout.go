@@ -29,6 +29,15 @@ type MetaColumnLayout struct {
 	PendingHidden bool
 }
 
+// metaCellsCache is the part of a column's layout derived from Results and Pending alone.
+type metaCellsCache struct {
+	gen        uint64
+	width      int
+	formatted  map[string]string
+	rightAlign bool
+	numeric    bool
+}
+
 // LayoutMetaColumns formats each active meta column and returns layouts plus total terminal width
 // (including two-cell gaps between columns).
 func LayoutMetaColumns(cols []MetaColumnState) (layouts []MetaColumnLayout, totalWidth int) {
@@ -36,8 +45,20 @@ func LayoutMetaColumns(cols []MetaColumnState) (layouts []MetaColumnLayout, tota
 		return nil, 0
 	}
 	layouts = make([]MetaColumnLayout, len(cols))
-	for i, col := range cols {
-		w, formatted, rightAlign := layoutMetaCells(col.Results, col.Pending)
+	for i := range cols {
+		col := &cols[i]
+		c := col.layoutCache
+		if col.ResultsGen == 0 || c == nil || c.gen != col.ResultsGen {
+			w, formatted, rightAlign := layoutMetaCells(col.Results, col.Pending)
+			c = &metaCellsCache{
+				gen: col.ResultsGen, width: w, formatted: formatted, rightAlign: rightAlign,
+				numeric: panel.MetaValuesNumeric(col.Results, col.Pending),
+			}
+			if col.ResultsGen != 0 {
+				col.layoutCache = c
+			}
+		}
+		w := c.width
 		// The title sets a floor so the header is not clipped while cells are still narrow
 		// (e.g. every row showing the pending icon).
 		w = max(w, min(runewidth.StringWidth(col.ColumnTitle), panelListMetaMax))
@@ -45,9 +66,9 @@ func LayoutMetaColumns(cols []MetaColumnState) (layouts []MetaColumnLayout, tota
 			EntryName:  col.EntryName,
 			Title:      col.ColumnTitle,
 			Width:      w,
-			Formatted:  formatted,
-			RightAlign: rightAlign,
-			Numeric:    panel.MetaValuesNumeric(col.Results, col.Pending),
+			Formatted:  c.formatted, // shared with later draws: read-only
+			RightAlign: c.rightAlign,
+			Numeric:    c.numeric,
 			Pending:    col.Pending,
 
 			PendingHidden: col.PendingHidden,
