@@ -293,11 +293,11 @@ func TestQuickViewUpdatesAfterDeletedDirectoryRefresh(t *testing.T) {
 	}
 }
 
-// TestLocalTreeRestoreUsesChildSchedulerKeepsLoopResponsive covers returning to a previously
-// expanded local tree: a child whose prefetch misses the time budget must go through
+// TestLocalTreeReloadUsesChildSchedulerKeepsLoopResponsive covers reloading an expanded local
+// tree in place: a child whose prefetch misses the time budget must go through
 // ScheduleTreeChildLoad instead of ReadDir on the event goroutine, so a still-blocked child
 // fetch cannot stall further input.
-func TestLocalTreeRestoreUsesChildSchedulerKeepsLoopResponsive(t *testing.T) {
+func TestLocalTreeReloadUsesChildSchedulerKeepsLoopResponsive(t *testing.T) {
 	root := t.TempDir()
 	harbor := filepath.Join(root, "harbor")
 	if err := os.Mkdir(harbor, 0o755); err != nil {
@@ -309,10 +309,6 @@ func TestLocalTreeRestoreUsesChildSchedulerKeepsLoopResponsive(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "beacon.txt"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	other := t.TempDir()
-	if err := os.WriteFile(filepath.Join(other, "cinder.txt"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
@@ -322,10 +318,6 @@ func TestLocalTreeRestoreUsesChildSchedulerKeepsLoopResponsive(t *testing.T) {
 	if !left.TreeExpanded[harbor] {
 		t.Fatal("expected harbor expanded before leaving")
 	}
-	if err := left.NavigateTo(other, "", 20); err != nil {
-		t.Fatalf("NavigateTo other: %v", err)
-	}
-	applyNextInterruptEvent(t, app, screen)
 
 	app.config.SFTP.ListTimeoutSecs = 1 // prefetch budget is half of the remaining timeout
 	block := make(chan struct{})
@@ -342,12 +334,14 @@ func TestLocalTreeRestoreUsesChildSchedulerKeepsLoopResponsive(t *testing.T) {
 		return true
 	}
 
-	if err := left.NavigateTo(root, "", 20); err != nil {
-		t.Fatalf("NavigateTo root: %v", err)
+	// A same-directory reload (not a navigation) keeps the remembered folders: the one that missed
+	// the prefetch budget goes through the async child path instead of collapsing.
+	if err := left.Refresh(20); err != nil {
+		t.Fatalf("Refresh root: %v", err)
 	}
 	drainInterruptEventsUntil(t, app, screen, 3*time.Second, func() bool { return scheduled.Load() }) // listing apply + restore dispatch
 	if !scheduled.Load() {
-		t.Fatal("returning to a locally expanded tree must use ScheduleTreeChildLoad")
+		t.Fatal("reloading a locally expanded tree must use ScheduleTreeChildLoad")
 	}
 	if got := left.VisibleEntryCount(); got != 2 {
 		t.Fatalf("VisibleEntryCount while restore is in flight = %d, want 2", got)

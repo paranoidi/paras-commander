@@ -1165,3 +1165,30 @@ func TestPendingMarkerDelayMS(t *testing.T) {
 		t.Fatal("default stub lacks pending_marker_delay_ms = 800")
 	}
 }
+
+func TestTreeRestoreTimeoutMS(t *testing.T) {
+	if got := Default().Panels.TreeRestoreTimeoutMS; got != 1500 || DefaultTreeRestoreTimeoutMS != 1500 {
+		t.Fatalf("default TreeRestoreTimeoutMS = %d (const %d), want 1500", got, DefaultTreeRestoreTimeoutMS)
+	}
+	for v, want := range map[int]int{-3: DefaultTreeRestoreTimeoutMS, 0: DefaultTreeRestoreTimeoutMS, 1: 1, 250: 250, 9000: 9000} {
+		cfg := Default()
+		cfg.Panels.TreeRestoreTimeoutMS = v
+		if err := cfg.Validate(); err != nil {
+			t.Fatalf("Validate(%d): %v", v, err)
+		}
+		if cfg.Panels.TreeRestoreTimeoutMS != want {
+			t.Fatalf("Validate(%d) -> %d, want %d", v, cfg.Panels.TreeRestoreTimeoutMS, want)
+		}
+	}
+	cfg, err := LoadFromPaths(Paths{ConfigFile: writeConfig(t, "[panels]\ntree_restore_timeout_ms = 300\n")})
+	if err != nil || cfg.Panels.TreeRestoreTimeoutMS != 300 {
+		t.Fatalf("explicit value: got=%d err=%v", cfg.Panels.TreeRestoreTimeoutMS, err)
+	}
+	var buffer bytes.Buffer
+	if err := EncodeDefaultStub(&buffer); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buffer.String(), "tree_restore_timeout_ms = 1500") {
+		t.Fatal("default stub lacks tree_restore_timeout_ms = 1500")
+	}
+}

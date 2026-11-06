@@ -59,6 +59,8 @@ Left/Right menu, Tree view (`panel.toggle-tree`, unbound by default) turns the p
 
 Expand-all is capped (a depth limit for the shallow variant and a total row limit) and shows a `Depth: N/5` toast. The expanded set and cursor are remembered per directory for the session. Enter and Right still change into a directory.
 
+When you return to a directory, the folders that were expanded there are fetched together with its listing so the tree appears at once. On a slow filesystem that wait is capped by `[panels].tree_restore_timeout_ms` (default 1500 ms, counted from the start of the load, so the directory's own listing time counts): folders that were not fetched in time stay collapsed, along with any remembered folders inside them, and a `Slow filesystem, reverted to collapsed state` message appears. The collapsed state is what the directory remembers from then on. Refreshing the directory you are in never collapses its tree.
+
 ## Git
 
 Inside a local git work tree a two-cell status column appears before the name (not on SFTP panels or in name-only layout). Letters follow `eza`: staged in the first cell, unstaged in the second.

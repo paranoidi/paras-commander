@@ -6,11 +6,13 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -417,5 +419,145 @@ func TestAsyncNavigationHistoryOmitsSupersededVisits(t *testing.T) {
 				t.Fatalf("History = %v, want starting path %q retained", pan.History, start)
 			}
 		})
+	}
+}
+
+// treeRestoreFixture is a tree-view primary panel at root with harbor expanded, currently showing
+// a different directory (the remembered expansion waits in the recall snapshot for root).
+type treeRestoreFixture struct {
+	app    *App
+	screen tcell.SimulationScreen
+	left   *panel.State
+	root   string
+	harbor string
+}
+
+func newTreeRestoreFixture(t *testing.T) treeRestoreFixture {
+	t.Helper()
+	root := t.TempDir()
+	harbor := filepath.Join(root, "harbor")
+	if err := os.Mkdir(harbor, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range []string{filepath.Join(harbor, "willow.txt"), filepath.Join(root, "beacon.txt")} {
+		if err := os.WriteFile(f, []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	other := t.TempDir()
+	if err := os.WriteFile(filepath.Join(other, "cinder.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	left := app.panelByID(ui.PrimaryPanel)
+	app.dispatchActionLikeKeyboardShortcut(keymap.ActionPanelToggleTree)
+	applyNextInterruptEvent(t, app, screen) // tree child load for harbor
+	if !left.TreeExpanded[harbor] {
+		t.Fatal("expected harbor expanded before leaving")
+	}
+	if err := left.NavigateTo(other, "", 20); err != nil {
+		t.Fatal(err)
+	}
+	applyNextInterruptEvent(t, app, screen)
+	return treeRestoreFixture{app: app, screen: screen, left: left, root: root, harbor: harbor}
+}
+
+// blockHarborFetch makes every listing of harbor hang until the test ends.
+func (f treeRestoreFixture) blockHarborFetch(t *testing.T) {
+	t.Helper()
+	block := make(chan struct{})
+	t.Cleanup(func() { close(block) })
+	swapFetchListingForAsyncLoad(t, func(ctx context.Context, snap panel.ListingRefreshSnapshot) ([]fsbackend.Entry, pathloc.Path, bool, bool, error) {
+		if filepath.Clean(snap.Loc.String()) == f.harbor {
+			<-block
+		}
+		return panel.FetchListing(ctx, snap)
+	})
+}
+
+// countChildLoads counts async tree child loads dispatched on the panel.
+func (f treeRestoreFixture) countChildLoads() *atomic.Int32 {
+	var n atomic.Int32
+	f.left.ScheduleTreeChildLoad = func(panel.TreeChildLoadRequest) bool {
+		n.Add(1)
+		return true
+	}
+	return &n
+}
+
+func TestTreeNavigationCollapsesFolderThatMissedRestoreBudget(t *testing.T) {
+	f := newTreeRestoreFixture(t)
+	f.app.config.SFTP.ListTimeoutSecs = 10 // without the cap the prefetch would wait 5s
+	f.app.config.Panels.TreeRestoreTimeoutMS = 200
+	f.blockHarborFetch(t)
+	loads := f.countChildLoads()
+
+	if err := f.left.NavigateTo(f.root, "", 20); err != nil {
+		t.Fatal(err)
+	}
+	// Without the cap the prefetch would outlast this drain (5s).
+	drainInterruptEventsUntil(t, f.app, f.screen, 3*time.Second, func() bool { return !f.left.ListingPending })
+	if got := f.left.Path.String(); filepath.Clean(got) != f.root {
+		t.Fatalf("panel path = %q, want the listing switched to %q", got, f.root)
+	}
+	if f.left.TreeExpanded[f.harbor] {
+		t.Fatal("folder that missed the budget must collapse")
+	}
+	if got := f.left.VisibleEntryCount(); got != 2 { // beacon, harbor (collapsed)
+		t.Fatalf("VisibleEntryCount = %d, want 2", got)
+	}
+	if loads.Load() != 0 {
+		t.Fatalf("child loads dispatched = %d, want none for a dropped folder", loads.Load())
+	}
+	if f.app.model.Message != "Slow filesystem, reverted to collapsed state" || f.app.model.MessageUrgency != ui.MessageUrgencyWarn {
+		t.Fatalf("message = %q (urgency %v), want the slow-filesystem warning", f.app.model.Message, f.app.model.MessageUrgency)
+	}
+}
+
+func TestTreeNavigationKeepsFolderFetchedInTimeWithoutToast(t *testing.T) {
+	f := newTreeRestoreFixture(t)
+	loads := f.countChildLoads()
+
+	if err := f.left.NavigateTo(f.root, "", 20); err != nil {
+		t.Fatal(err)
+	}
+	drainInterruptEventsUntil(t, f.app, f.screen, 3*time.Second, func() bool { return !f.left.ListingPending })
+	if !f.left.TreeExpanded[f.harbor] || f.left.VisibleEntryCount() != 3 {
+		t.Fatalf("expanded = %v rows = %d, want harbor expanded with its child", f.left.TreeExpanded[f.harbor], f.left.VisibleEntryCount())
+	}
+	if loads.Load() != 0 {
+		t.Fatalf("child loads dispatched = %d, want none", loads.Load())
+	}
+	if f.app.model.Message == "Slow filesystem, reverted to collapsed state" {
+		t.Fatal("no toast expected when nothing was dropped")
+	}
+}
+
+// A same-directory reload (what the periodic refresh does) keeps its rows on screen, never
+// collapses, and sends a slow folder through the async child path.
+func TestTreeSameDirectoryReloadNeverCollapsesOrToasts(t *testing.T) {
+	f := newTreeRestoreFixture(t)
+	if err := f.left.NavigateTo(f.root, "", 20); err != nil {
+		t.Fatal(err)
+	}
+	drainInterruptEventsUntil(t, f.app, f.screen, 3*time.Second, func() bool { return !f.left.ListingPending })
+	f.app.config.SFTP.ListTimeoutSecs = 1
+	f.app.config.Panels.TreeRestoreTimeoutMS = 1 // would drop everything if a reload were capped
+	f.blockHarborFetch(t)
+	loads := f.countChildLoads()
+
+	if err := f.left.Refresh(20); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.left.VisibleEntryCount(); got != 3 || !f.left.ListingPending {
+		t.Fatalf("rows = %d pending = %v, want the old rows kept while the reload runs", got, f.left.ListingPending)
+	}
+	drainInterruptEventsUntil(t, f.app, f.screen, 3*time.Second, func() bool { return loads.Load() > 0 })
+	if !f.left.TreeExpanded[f.harbor] {
+		t.Fatal("reload must keep the folder expanded (async child path)")
+	}
+	if f.app.model.Message == "Slow filesystem, reverted to collapsed state" {
+		t.Fatal("reload must not toast")
 	}
 }

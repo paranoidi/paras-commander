@@ -487,6 +487,11 @@ const (
 	// marker, 0 shows it immediately.
 	DefaultPendingMarkerDelayMS = 800
 
+	// DefaultTreeRestoreTimeoutMS caps how long navigating into a tree-view directory waits,
+	// measured from the start of the load, for the remembered expanded folders' children before
+	// showing the listing; folders that miss it collapse. A same-directory reload is not capped.
+	DefaultTreeRestoreTimeoutMS = 1500
+
 	// DefaultMetaMaxActiveColumns caps how many meta columns may be active per panel at once.
 	DefaultMetaMaxActiveColumns = 8
 

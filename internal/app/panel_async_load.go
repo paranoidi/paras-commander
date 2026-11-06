@@ -84,13 +84,20 @@ type asyncListingResult struct {
 	// treeChildren holds prefetched child listings for the request's TreePrefetch dirs that
 	// finished within the time budget; the rest fall back to the async per-child path.
 	treeChildren map[string]panel.TreePrefetchResult
-	err          error
+	// collapseMissing is set for a navigation: remembered tree folders absent from treeChildren
+	// collapse on apply instead of falling back to the async per-child path.
+	collapseMissing bool
+	err             error
 }
 
 // treePrefetchBudgetDivisor splits the time left of the listing timeout: the prefetch waits at
 // most 1/divisor of it, so the give-up timer can never fire while prefetch is still collecting
 // and turn an otherwise good root listing into a timeout error.
 const treePrefetchBudgetDivisor = 2
+
+// treeRestoreMessage is the toast shown when a navigation collapsed remembered tree folders
+// because their children were not fetched within [panels].tree_restore_timeout_ms.
+const treeRestoreMessage = "Slow filesystem, reverted to collapsed state"
 
 // treeRefreshPrio maps a refresh tier to its queue priority.
 func treeRefreshPrio(t panel.TreeRefreshTier) treeListPrio {
@@ -177,7 +184,11 @@ func (a *App) prefetchTreeChildren(snap panel.ListingRefreshSnapshot, reqs []tre
 // network mount) on the fetch goroutine, for callers that go on to ApplyListing the result; the
 // heavy volume probes are skipped while a job saturates that volume, matching what
 // ApplyListing's SuppressHeavyPathProbes gate would decide.
-func (a *App) raceAsyncListingFetch(snap panel.ListingRefreshSnapshot, timeout time.Duration, withProbes bool, prefetch []string, onResult func(asyncListingResult)) {
+//
+// navBudget > 0 marks a navigation: the prefetch wait is additionally capped at navBudget minus
+// the time since the call started, and the result asks the panel to collapse the remembered tree
+// folders that missed it. Zero (reloads, carousel) keeps the plain timeout-fraction budget.
+func (a *App) raceAsyncListingFetch(snap panel.ListingRefreshSnapshot, timeout time.Duration, withProbes bool, prefetch []string, navBudget time.Duration, onResult func(asyncListingResult)) {
 	start := time.Now()
 	var settled atomic.Bool
 	var timer atomic.Pointer[time.Timer] // set right after time.AfterFunc below; both post() callers only ever run after that
@@ -194,12 +205,17 @@ func (a *App) raceAsyncListingFetch(snap panel.ListingRefreshSnapshot, timeout t
 	}))
 	go func() {
 		entries, loc, gitignoreActive, dotfilesHiddenActive, err := fetchListingForAsyncLoad(context.Background(), snap)
-		res := asyncListingResult{loc: loc, entries: entries, gitignoreActive: gitignoreActive, dotfilesHiddenActive: dotfilesHiddenActive, err: err}
+		res := asyncListingResult{loc: loc, entries: entries, gitignoreActive: gitignoreActive, dotfilesHiddenActive: dotfilesHiddenActive, err: err, collapseMissing: navBudget > 0}
 		if err == nil && withProbes {
 			res.probes = a.probeListingPath(loc)
 		}
 		if err == nil && len(prefetch) > 0 {
-			if wait := (timeout - time.Since(start)) / treePrefetchBudgetDivisor; wait > 0 {
+			elapsed := time.Since(start)
+			wait := (timeout - elapsed) / treePrefetchBudgetDivisor
+			if navBudget > 0 {
+				wait = min(wait, navBudget-elapsed)
+			}
+			if wait > 0 {
 				res.treeChildren = a.prefetchTreeChildren(snap, userTreeRefreshReqs(prefetch), wait)
 			}
 		}
@@ -242,8 +258,15 @@ func (a *App) asyncLoadScheduler(panelID int) panel.AsyncLoadScheduler {
 	return func(req panel.AsyncLoadRequest) bool {
 		gen := a.panelAsyncLoadGen[panelID].Add(1)
 		timeout := time.Duration(a.config.SFTP.ListTimeoutSecs) * time.Second
-		snap := a.panelByID(panelID).ListingRefreshSnapshot(req.Loc, timeout)
-		a.raceAsyncListingFetch(snap, timeout, true, req.TreePrefetch, func(res asyncListingResult) {
+		pan := a.panelByID(panelID)
+		snap := pan.ListingRefreshSnapshot(req.Loc, timeout)
+		// Only a navigation (a different directory) is capped: a same-directory reload keeps its
+		// rows on screen while it waits and must never collapse the tree.
+		var navBudget time.Duration
+		if !req.Loc.Equal(pan.Path) {
+			navBudget = time.Duration(a.config.Panels.TreeRestoreTimeoutMS) * time.Millisecond
+		}
+		a.raceAsyncListingFetch(snap, timeout, true, req.TreePrefetch, navBudget, func(res asyncListingResult) {
 			p := panelAsyncLoadPayload{
 				panelID: panelID,
 				gen:     gen,
@@ -324,7 +347,11 @@ func (a *App) applyOnePanelAsyncLoad(p panelAsyncLoadPayload) bool {
 	}
 	pan.GitignoreActive = p.res.gitignoreActive
 	pan.DotfilesHiddenActive = p.res.dotfilesHiddenActive
-	if err := pan.ApplyListingPrefetched(p.res.loc, p.res.entries, p.req.SelectedName, p.req.ViewportRows, p.req.IndexFallback, p.req.CenterRecalledCursor, p.res.probes, p.res.treeChildren); err != nil {
+	// The prefetch ids were computed for req.Loc; if the listing landed elsewhere (ancestor climb)
+	// they say nothing about the folders remembered there, so nothing may be collapsed.
+	collapseMissing := p.res.collapseMissing && p.res.loc.Equal(p.req.Loc)
+	reverted, err := pan.ApplyListingPrefetched(p.res.loc, p.res.entries, p.req.SelectedName, p.req.ViewportRows, p.req.IndexFallback, p.req.CenterRecalledCursor, p.res.probes, p.res.treeChildren, collapseMissing)
+	if err != nil {
 		if p.req.Rollback != nil {
 			p.req.Rollback()
 		}
@@ -332,6 +359,9 @@ func (a *App) applyOnePanelAsyncLoad(p panelAsyncLoadPayload) bool {
 			a.setErrorMessage("List failed", err)
 		}
 		return true
+	}
+	if reverted > 0 && (p.panelID == ui.PrimaryPanel || p.panelID == ui.SecondaryPanel) {
+		a.setTransientMessage(treeRestoreMessage, ui.MessageUrgencyWarn)
 	}
 	a.startPrefetchedTreeDiskScans(p.panelID, p.res.treeChildren)
 	if p.req.SyncHistoryHead && pan.HistoryIndex == 0 && len(pan.History) > 0 {

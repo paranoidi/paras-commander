@@ -68,7 +68,7 @@ func TestApplyListingPrefetchedRestoresNestedExpansionsWithoutAsyncLoads(t *test
 		meadow: prefetchTestChildren(t, &s, meadow),
 		harbor: prefetchTestChildren(t, &s, harbor),
 	}
-	if err := s.ApplyListingPrefetched(s.Path, be, "", 10, NoIndexCursorFallback, false, nil, prefetch); err != nil {
+	if _, err := s.ApplyListingPrefetched(s.Path, be, "", 10, NoIndexCursorFallback, false, nil, prefetch, false); err != nil {
 		t.Fatal(err)
 	}
 	// beacon, meadow, harbor, willow, lantern
@@ -99,7 +99,7 @@ func TestApplyListingPrefetchedErrorCollapsesDirectory(t *testing.T) {
 		meadow: prefetchTestChildren(t, &s, meadow),
 		harbor: {Err: errors.New("denied")},
 	}
-	if err := s.ApplyListingPrefetched(s.Path, be, "", 10, NoIndexCursorFallback, false, nil, prefetch); err != nil {
+	if _, err := s.ApplyListingPrefetched(s.Path, be, "", 10, NoIndexCursorFallback, false, nil, prefetch, false); err != nil {
 		t.Fatal(err)
 	}
 	if s.TreeExpanded[harbor] {
@@ -184,5 +184,115 @@ func TestTreeRefreshPlanTiersAndRoundRobin(t *testing.T) {
 	plan = s.TreeRefreshPlan(4, 1)
 	if plan[0].Tier != TreeRefreshCaret || plan[1] != (TreeRefreshReq{abs("bramble"), TreeRefreshVisible}) {
 		t.Fatalf("wide plan = %v, want caret anchor then visible bramble", plan)
+	}
+}
+
+// collapseMissingFixture builds root{meadow{harbor{willow.txt}, lantern.txt}, orchard{pine.txt},
+// beacon.txt}, remembers meadow, harbor and orchard as expanded, leaves for another directory and
+// returns the panel plus the root's listing ready for a navigation back.
+func collapseMissingFixture(t *testing.T) (s *State, root pathloc.Path, be []fsbackend.Entry, meadow, harbor, orchard string) {
+	t.Helper()
+	dir, meadow, harbor := prefetchTestTree(t)
+	orchard = filepath.Join(dir, "orchard")
+	if err := os.MkdirAll(orchard, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(orchard, "pine.txt"), []byte("z"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	st, err := New(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s = &st
+	s.SetListLayout(ListLayoutTree, 10)
+	s.TreeExpanded = map[string]bool{meadow: true, harbor: true, orchard: true}
+	s.treeExpandAllDepth = 2
+	root = s.Path
+	s.rememberCursorForPath(root.String())
+	otherLoc, err := pathloc.File(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.ApplyListing(otherLoc, nil, "", 10, 0, false); err != nil {
+		t.Fatal(err)
+	}
+	be, _, _, _, err = FetchListing(context.Background(), s.ListingRefreshSnapshot(root, 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s, root, be, meadow, harbor, orchard
+}
+
+func TestApplyListingPrefetchedCollapseMissingDropsUnfetchedFolders(t *testing.T) {
+	s, root, be, meadow, harbor, orchard := collapseMissingFixture(t)
+	s.ScheduleTreeChildLoad = func(req TreeChildLoadRequest) bool {
+		t.Errorf("ScheduleTreeChildLoad called for %s despite collapseMissing", req.DirID)
+		return true
+	}
+	prefetch := map[string]TreePrefetchResult{orchard: prefetchTestChildren(t, s, orchard)}
+	reverted, err := s.ApplyListingPrefetched(root, be, "", 10, NoIndexCursorFallback, false, nil, prefetch, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reverted != 2 { // meadow missed, and harbor (expected, nested under it) missed with it
+		t.Fatalf("reverted = %d, want 2", reverted)
+	}
+	if !s.TreeExpanded[orchard] {
+		t.Fatal("fetched folder must stay expanded")
+	}
+	if n := findTreeNode(s.TreeRoots, orchard); n == nil || len(n.Children) != 1 {
+		t.Fatal("fetched folder must carry its children")
+	}
+	for _, id := range []string{meadow, harbor} {
+		if s.TreeExpanded[id] {
+			t.Fatalf("%s must be dropped from TreeExpanded", id)
+		}
+	}
+	if n := findTreeNode(s.TreeRoots, meadow); n == nil || n.Value.Loading || n.Children != nil {
+		t.Fatal("missed folder must be collapsed, not loading")
+	}
+	if s.treeExpandAllDepth != 0 {
+		t.Fatalf("treeExpandAllDepth = %d, want 0 after a revert", s.treeExpandAllDepth)
+	}
+	// beacon, meadow, orchard, pine
+	if got := s.VisibleEntryCount(); got != 4 {
+		t.Fatalf("VisibleEntryCount = %d, want 4", got)
+	}
+	// The next remembered snapshot for this directory is the collapsed state.
+	if s.TreeExpanded[meadow] || s.TreeExpanded[harbor] {
+		t.Fatal("collapsed state must be the remembered state")
+	}
+}
+
+func TestApplyListingPrefetchedCollapseMissingWithNothingMissingReportsZero(t *testing.T) {
+	s, root, be, meadow, harbor, orchard := collapseMissingFixture(t)
+	prefetch := map[string]TreePrefetchResult{
+		meadow:  prefetchTestChildren(t, s, meadow),
+		harbor:  prefetchTestChildren(t, s, harbor),
+		orchard: prefetchTestChildren(t, s, orchard),
+	}
+	reverted, err := s.ApplyListingPrefetched(root, be, "", 10, NoIndexCursorFallback, false, nil, prefetch, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reverted != 0 || !s.TreeExpanded[meadow] || !s.TreeExpanded[harbor] || !s.TreeExpanded[orchard] {
+		t.Fatalf("reverted = %d expanded = %v, want nothing dropped", reverted, s.TreeExpanded)
+	}
+	if s.treeExpandAllDepth != 2 {
+		t.Fatalf("treeExpandAllDepth = %d, want the recalled 2 kept", s.treeExpandAllDepth)
+	}
+}
+
+func TestApplyListingPrefetchedCollapseMissingIgnoresFetchErrors(t *testing.T) {
+	s, root, be, meadow, harbor, orchard := collapseMissingFixture(t)
+	prefetch := map[string]TreePrefetchResult{
+		meadow:  prefetchTestChildren(t, s, meadow),
+		harbor:  prefetchTestChildren(t, s, harbor),
+		orchard: {Err: errors.New("denied")},
+	}
+	reverted, err := s.ApplyListingPrefetched(root, be, "", 10, NoIndexCursorFallback, false, nil, prefetch, true)
+	if err != nil || reverted != 0 {
+		t.Fatalf("reverted = %d err = %v, want a fetch error not counted as a miss", reverted, err)
 	}
 }

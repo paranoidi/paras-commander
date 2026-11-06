@@ -467,7 +467,7 @@ func (s *State) ApplyPeriodicRefresh(listingLoc pathloc.Path, backendEntries []f
 	if ok {
 		selectedName = entry.Name
 	}
-	if err := s.ApplyListingPrefetched(listingLoc, backendEntries, selectedName, viewportRows, priorCursor, false, probes, prefetch); err != nil {
+	if _, err := s.ApplyListingPrefetched(listingLoc, backendEntries, selectedName, viewportRows, priorCursor, false, probes, prefetch, false); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -1498,18 +1498,24 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 // device id, git work-tree root) supplied by the caller — normally computed off the UI goroutine
 // by ProbeListingPath right after the listing fetch. A nil probes runs them synchronously here.
 func (s *State) ApplyListingWithProbes(listingLoc pathloc.Path, backendEntries []fsbackend.Entry, selectedName string, viewportRows int, indexFallback int, centerRecalled bool, probes *PathProbes) error {
-	return s.ApplyListingPrefetched(listingLoc, backendEntries, selectedName, viewportRows, indexFallback, centerRecalled, probes, nil)
+	_, err := s.ApplyListingPrefetched(listingLoc, backendEntries, selectedName, viewportRows, indexFallback, centerRecalled, probes, nil, false)
+	return err
 }
 
 // ApplyListingPrefetched is ApplyListingWithProbes plus already-fetched child listings
 // (AsyncLoadRequest.TreePrefetch results) that the tree re-expansion consumes synchronously
 // instead of dispatching one async load per remembered directory.
-func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries []fsbackend.Entry, selectedName string, viewportRows int, indexFallback int, centerRecalled bool, probes *PathProbes, prefetch map[string]TreePrefetchResult) error {
+//
+// collapseMissing (navigation only) drops, instead of loading asynchronously, every remembered
+// expanded folder (TreePrefetchIDs of the recalled snapshot) that is absent from prefetch, plus
+// every remembered folder beneath one. reverted is the number of dropped folders that were
+// expected in prefetch; a same-directory reload ignores collapseMissing.
+func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries []fsbackend.Entry, selectedName string, viewportRows int, indexFallback int, centerRecalled bool, probes *PathProbes, prefetch map[string]TreePrefetchResult, collapseMissing bool) (reverted int, err error) {
 	s.treePrefetch = prefetch
 	defer func() { s.treePrefetch = nil }()
 	localEntries, err := fsbackend.ToPanelEntries(backendEntries)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	s.ListingEpoch++
@@ -1637,6 +1643,13 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 			keep = maps.Clone(snap.TreeExpanded)
 			s.treeExpandAllDepth = snap.TreeExpandAllDepth
 			s.treeExpandAllAuto = false
+			if collapseMissing {
+				// Evaluated against keep (the recalled snapshot) and listingLoc, not s.Path:
+				// s.Path already equals listingLoc here, so TreePrefetchIDs would read the live set.
+				if reverted = dropUnfetchedTreeFolders(listingLoc, keep, prefetch); reverted > 0 {
+					s.treeExpandAllDepth = 0 // the recalled depth no longer describes the tree
+				}
+			}
 		} else {
 			s.treeExpandAllDepth = 0
 			s.treeExpandAllAuto = false
@@ -1704,7 +1717,7 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 	if s.OnDirectoryChange != nil {
 		s.OnDirectoryChange()
 	}
-	return nil
+	return reverted, nil
 }
 
 // probes, when non-nil, supplies the already-resolved work-tree root (see PathProbes); nil

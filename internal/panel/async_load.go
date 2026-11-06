@@ -59,6 +59,12 @@ func (s *State) TreePrefetchIDs(loc pathloc.Path) []string {
 	} else if snap, ok := s.HistoryCursorByPath[cleanPathString(loc.String())]; ok {
 		keep = snap.TreeExpanded
 	}
+	return treePrefetchIDsFor(loc, keep)
+}
+
+// treePrefetchIDsFor is TreePrefetchIDs over an explicit expanded set: the ids in keep under loc
+// whose ancestors up to loc are all in keep, sorted.
+func treePrefetchIDsFor(loc pathloc.Path, keep map[string]bool) []string {
 	var ids []string
 	for id, on := range keep {
 		if !on {
@@ -81,6 +87,39 @@ func (s *State) TreePrefetchIDs(loc pathloc.Path) []string {
 	}
 	sort.Strings(ids)
 	return ids
+}
+
+// dropUnfetchedTreeFolders removes from keep every folder treePrefetchIDsFor(loc, keep) expects
+// that is absent from prefetch (a slow-filesystem miss), together with every remembered folder
+// beneath one, so restoring the tree never dispatches a child load for them. It returns the
+// number of misses (an expected id absent from prefetch, nested ones included); remembered folders
+// beneath a miss that were not themselves expected are dropped without being counted.
+func dropUnfetchedTreeFolders(loc pathloc.Path, keep map[string]bool, prefetch map[string]TreePrefetchResult) int {
+	missed := make(map[string]bool)
+	for _, id := range treePrefetchIDsFor(loc, keep) {
+		if _, ok := prefetch[id]; !ok {
+			missed[id] = true
+		}
+	}
+	if len(missed) == 0 {
+		return 0
+	}
+	for id := range keep {
+		p, err := pathloc.Parse(id)
+		if err != nil {
+			continue
+		}
+		for q := p; q.HasPrefix(loc) && !q.Equal(loc); q = q.Parent() {
+			if missed[q.String()] {
+				delete(keep, id)
+				break
+			}
+			if q.Equal(q.Parent()) {
+				break
+			}
+		}
+	}
+	return len(missed)
 }
 
 // TreeRefreshTier ranks how urgently a tree directory's periodic refresh is wanted.

@@ -98,6 +98,7 @@ File panel browsing, sorting, and listing.
 | `execute_rules` | array of tables | see below | Per-pattern rules choosing background vs. foreground mode for Enter-executed files — see below. |
 | `shell_patterns` | bool | `true` | Selects glob matching (`filepath.Match`, `true`, default) vs. regexp matching (`false`) for every `execute_rules` rule's `f`/`d` predicates. |
 | `pending_marker_delay_ms` | int | `800` | How long a meta command or a directory-size scan must be pending before its cell shows the pending icon (meta columns and the directory size column), so fast work does not flash it. `0` shows the icon immediately; `-1` never shows it (cells stay blank until the value arrives); values below `-1` reset to `800`. The folder icon change while a scan is pending is not delayed. |
+| `tree_restore_timeout_ms` | int | `1500` | In tree view, how long navigating into a directory waits (measured from the start of the load, so the directory's own listing time counts) for its remembered expanded folders before showing the listing. Folders fetched in time stay expanded; the rest collapse and a "Slow filesystem, reverted to collapsed state" message appears. Only navigation is capped: refreshing the current directory keeps its tree. Non-positive values reset to `1500`. |
 
 Each `[[panels.execute_rules]]` entry has a `when` array and a `background` flag:
 

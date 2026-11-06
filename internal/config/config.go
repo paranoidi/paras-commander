@@ -146,6 +146,10 @@ type PanelsConfig struct {
 	// cell shows the pending marker: -1 never shows it, 0 shows it immediately, N > 0 shows it
 	// after N ms. Values below -1 reset to DefaultPendingMarkerDelayMS in Validate.
 	PendingMarkerDelayMS int `toml:"pending_marker_delay_ms"`
+	// TreeRestoreTimeoutMS caps (from the start of the load) how long navigating into a directory
+	// waits for its remembered expanded tree folders; folders that miss it collapse. Non-positive
+	// values reset to DefaultTreeRestoreTimeoutMS in Validate.
+	TreeRestoreTimeoutMS int `toml:"tree_restore_timeout_ms"`
 }
 
 // ExecuteRule is one [[panels.execute_rules]] entry (see PanelsConfig.ExecuteRules).
@@ -706,6 +710,7 @@ func Default() Config {
 			RunExecutablesOnEnter: true,
 			ShellPatterns:         true,
 			PendingMarkerDelayMS:  DefaultPendingMarkerDelayMS,
+			TreeRestoreTimeoutMS:  DefaultTreeRestoreTimeoutMS,
 			ExecuteRules: []ExecuteRule{
 				{When: []string{"f *.AppImage", "f *.appimage"}, Background: true},
 			},
@@ -1178,6 +1183,9 @@ func (c *Config) validateGeneral(builtin *Config) {
 	}
 	if c.Panels.PendingMarkerDelayMS < -1 {
 		c.Panels.PendingMarkerDelayMS = DefaultPendingMarkerDelayMS
+	}
+	if c.Panels.TreeRestoreTimeoutMS <= 0 {
+		c.Panels.TreeRestoreTimeoutMS = DefaultTreeRestoreTimeoutMS
 	}
 	if c.Panels.RefreshIntervalMS > 0 {
 		if c.Panels.RefreshIntervalMS < RefreshIntervalMinMS {
