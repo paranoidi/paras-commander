@@ -65,7 +65,7 @@ func (h *Handler) HandleDifferences(p DifferencesPayload) {
 	case p.Err != nil:
 		h.host.SetErrorMessage(differencesTitle, p.Err)
 	case len(p.Diffs) == 0:
-		h.host.SetTransientMessage("No differences under "+name, ui.MessageUrgencyInfo)
+		h.host.SetTransientMessage("No differences", ui.MessageUrgencySuccess)
 	default:
 		items := make([]dialog.PathPickerItem, len(p.Diffs))
 		for i, d := range p.Diffs {

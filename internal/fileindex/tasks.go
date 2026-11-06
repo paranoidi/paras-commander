@@ -364,8 +364,9 @@ var (
 // not in the index, which does not fail the job; context.Canceled when it was canceled).
 func (x *Index) DifferencesTask(root string, done func([]Difference, error)) *jobs.Task {
 	return &jobs.Task{
-		Title: "fileindex differences",
-		Lease: DifferencesLease,
+		Title:             "fileindex differences",
+		Lease:             DifferencesLease,
+		ReportsOwnOutcome: true,
 		Run: func(ctx context.Context, r jobs.TaskReporter) error {
 			out, err := x.differences(ctx, r, root)
 			done(out, err)

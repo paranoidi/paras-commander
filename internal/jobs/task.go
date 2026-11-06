@@ -22,6 +22,9 @@ type Task struct {
 	Run func(ctx context.Context, r TaskReporter) error
 	// Steps names the task's stages in order (nil = no list); TaskProgress.Step indexes it.
 	Steps []string
+	// ReportsOwnOutcome marks a task that shows its own result: the job queue's "Job started" and
+	// "Job completed" toasts are omitted (failure and cancel toasts still show).
+	ReportsOwnOutcome bool
 }
 
 // TaskProgress is a task's progress: the same fields a transfer reports. TotalFiles 0 means

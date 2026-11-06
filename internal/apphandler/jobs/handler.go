@@ -1358,14 +1358,24 @@ func (h *Handler) reloadJobPanels(dest, sources bool) {
 func (h *Handler) updateJobMessage(ev jobs.Event) {
 	switch ev.Type {
 	case jobs.EventStarted:
-		h.host.SetTransientMessage("Job started", ui.MessageUrgencyInfo)
+		if !h.reportsOwnOutcome(ev.JobID) {
+			h.host.SetTransientMessage("Job started", ui.MessageUrgencyInfo)
+		}
 	case jobs.EventCompleted:
-		h.host.SetTransientMessage("Job completed", ui.MessageUrgencySuccess)
+		if !h.reportsOwnOutcome(ev.JobID) {
+			h.host.SetTransientMessage("Job completed", ui.MessageUrgencySuccess)
+		}
 	case jobs.EventFailed:
 		h.host.SetJobFailedTransientMessage(ev.Err, ev.Error)
 	case jobs.EventCanceled:
 		h.host.SetTransientMessage("Job canceled", ui.MessageUrgencyInfo)
 	}
+}
+
+// reportsOwnOutcome reports whether job id is a task that shows its own result (Task.ReportsOwnOutcome).
+func (h *Handler) reportsOwnOutcome(id string) bool {
+	job := h.state.Job(id)
+	return job != nil && job.Task != nil && job.Task.ReportsOwnOutcome
 }
 
 func (h *Handler) commitJob(job *jobs.Job) {

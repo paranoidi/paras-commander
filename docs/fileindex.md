@@ -393,6 +393,6 @@ highlighted (the real directory, or the index view when the report was started
 there). The report looks at the whole subtree, hidden files included, so it explains
 a `differs` icon the panel does not: it uses the same check as the icon. A record
 the scan rules would skip but that is still on disk (below an excluded directory,
-or in a directory pc cannot read) is not a difference. "No differences under NAME"
+or in a directory pc cannot read) is not a difference. "No differences"
 and "NAME is not in the index" are shown as messages instead of a picker.
 

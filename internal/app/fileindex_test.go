@@ -1180,8 +1180,22 @@ func TestFileIndexReportDifferences(t *testing.T) {
 	rescan(t, a, dir)
 	a.dispatch(keymap.ActionFileIndexReportDifferences)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
-		return strings.HasPrefix(a.model.Message, "No differences under")
+		return a.model.Message == "No differences"
 	})
+	// The job's own terminal event must not replace the result with "Job completed".
+	// Applying the events (PollEvents) is what finishes the job in the state.
+	for deadline := time.Now().Add(3 * time.Second); ; time.Sleep(time.Millisecond) {
+		a.jobsCtrl.PollEvents()
+		if j := a.jobState.AllJobs(); len(j) > 0 && j[len(j)-1].Status.IsFinished() {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("timeout waiting for the differences job to finish")
+		}
+	}
+	if a.model.Message != "No differences" || a.model.MessageUrgency != ui.MessageUrgencySuccess {
+		t.Fatalf("message = %q urgency %v, want No differences / success", a.model.Message, a.model.MessageUrgency)
+	}
 
 	if err := os.Remove(filepath.Join(dir, "meadow.txt")); err != nil {
 		t.Fatal(err)
