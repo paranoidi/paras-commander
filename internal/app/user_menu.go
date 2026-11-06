@@ -265,7 +265,7 @@ func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 	argv := built.Argv
 	macros := cmdmacro.MacroDisplayValues(entry.Command, macroCtx)
 
-	workDir := active.CursorDir().String()
+	workDir := entry.WorkDir(active).String()
 	switch {
 	case entry.Dialog:
 		clearConsumedSelection(entry.Command, active, other)
@@ -336,14 +336,15 @@ func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active, other 
 		notifyLabel = "User menu"
 	}
 	a.commandsCtrl.StartRunForEachBatch(commandsctrl.RunForEachBatchSpec{
-		Kind:        ui.CommandRunKindRunForEach,
-		Entries:     append([]localfs.Entry(nil), src.Entries...),
-		AllowFiles:  allowFiles,
-		AllowDirs:   allowDirs,
-		PoolName:    strings.TrimSpace(entry.Pool),
-		Background:  entry.Background,
-		PTY:         entry.PTY,
-		NotifyLabel: notifyLabel,
+		Kind:         ui.CommandRunKindRunForEach,
+		Entries:      append([]localfs.Entry(nil), src.Entries...),
+		AllowFiles:   allowFiles,
+		AllowDirs:    allowDirs,
+		PoolName:     strings.TrimSpace(entry.Pool),
+		Background:   entry.Background,
+		PTY:          entry.PTY,
+		PanelWorkDir: entry.CwdPanel(),
+		NotifyLabel:  notifyLabel,
 		BuildItem: func(ent localfs.Entry) (commandsctrl.RunForEachBuiltItem, error) {
 			return commandsctrl.BuildRunForEachItem(cmdTemplate, ent, active, other, entry.Shell, true)
 		},

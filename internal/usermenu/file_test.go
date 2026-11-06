@@ -733,3 +733,39 @@ func TestDecodeKeepOpenErrors(t *testing.T) {
 		}
 	}
 }
+
+func TestDecodeCwd(t *testing.T) {
+	cases := map[string]string{
+		"":                  CwdCursor,
+		`cwd = "cursor"`:    CwdCursor,
+		`cwd = "panel"`:     CwdPanel,
+		`cwd = " Panel "`:   CwdPanel,
+		`cwd = "CURSOR"`:    CwdCursor,
+		`run_for_each = []`: CwdCursor,
+	}
+	for field, want := range cases {
+		mf, err := Decode([]byte("[a]\ntitle = \"Alpha\"\ncommand = \"make\"\n" + field + "\n"))
+		if err != nil {
+			t.Fatalf("%q: %v", field, err)
+		}
+		if got := mf.Entries[0].Cwd; got != want {
+			t.Errorf("%q: Cwd = %q, want %q", field, got, want)
+		}
+		if got := mf.Entries[0].CwdPanel(); got != (want == CwdPanel) {
+			t.Errorf("%q: CwdPanel() = %v", field, got)
+		}
+	}
+}
+
+func TestDecodeCwdErrors(t *testing.T) {
+	cases := map[string]string{
+		"unknown value": "[a]\ntitle = \"Alpha\"\ncommand = \"make\"\ncwd = \"root\"\n",
+		"wrong type":    "[a]\ntitle = \"Alpha\"\ncommand = \"make\"\ncwd = true\n",
+		"submenu":       "[a]\ntitle = \"Alpha\"\ncwd = \"panel\"\n\n[a.b]\ntitle = \"Bravo\"\ncommand = \"true\"\n",
+	}
+	for name, src := range cases {
+		if _, err := Decode([]byte(src)); err == nil {
+			t.Errorf("%s: want error", name)
+		}
+	}
+}

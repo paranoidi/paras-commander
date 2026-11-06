@@ -59,6 +59,15 @@ A `menu.toml` in the active directory (name from `local_names`, default `menu.to
 
 A user menu command runs in the directory holding the highlighted row, the same directory `%d` expands to. In a flat listing that is the panel directory; in a tree layout, a highlighted row inside an expanded subdirectory runs the command in that subdirectory, and a highlighted directory row runs it in the directory that contains it. A `run_for_each` entry runs each item in the directory holding that item's row. The `menu.toml` lookup still uses the panel directory.
 
+Set `cwd = "panel"` on an entry to run it in the panel's own directory instead, wherever the cursor is in an expanded tree (`cwd = "cursor"` is the default). It applies to every mode, including `run_for_each`, where every item then runs in the panel directory. Macros do not change: `%d` is still the highlighted row's directory, and `%f` / `%t` stay absolute paths, so they point at the right files under either setting. A project menu whose commands are relative to the project root:
+
+```toml
+[build]
+title = "Make"
+command = "make"
+cwd = "panel"
+```
+
 ### Local panels only
 
 User menu entries and Run for each run on local panels only. They are refused with a warning, before anything runs and with the selection left as it is, when the active panel is an SFTP or file index (`fileindex://`) panel ("User commands run on local panels only"), or when the highlighted row or any tagged row is only in the index (a [ghost row](fileindex.md#browsing-with-fileindex): "Only in the index: name"). The `..` row and an empty panel are not refused. A menu that stays open (`keep_open`) shows the warning instead of its "Ran" toast.
@@ -76,12 +85,13 @@ User menu entries and Run for each run on local panels only. They are refused wi
 | `pty = true` | With `run_for_each`: run each item on a pseudo-TTY |
 | `pool = "name"` | Waits for a slot in a [worker pool](#worker-pools) |
 | `keep_open = true` | Keeps the menu open after launching (needs `background`, `detach` or `interactive`) |
+| `cwd = "panel"` | Runs in the panel directory instead of the highlighted row's directory (`"cursor"`, the default); see [Working directory](#working-directory) |
 
 Other fields: `title` (required), `command` (required unless the table is a submenu), `key` (single activation letter, otherwise derived from the title), `default = true`, `toast` (message after success), `shell = true` (force `sh -c`), `when` (visibility), `shell_patterns`, `dialog_width` and `dialog_height` (`"80%"` or a number). `interactive` cannot be combined with `detach`, `background`, `dialog` or `run_for_each`.
 
 `when` takes the same predicate language as [Predicates](predicates.md): a bare pattern such as `"*.png"` matches the highlighted file name, and a list means "any of".
 
-Entries are uniquely named TOML tables in the order you write them. A table that contains child tables instead of `command` is a submenu, nested as deep as you like. Load errors (unknown field, bad `when`, `run_for_each` without `%f`, unknown `pool`) are shown as a critical message.
+Entries are uniquely named TOML tables in the order you write them. A table that contains child tables instead of `command` is a submenu, nested as deep as you like. Load errors (unknown field, bad `when`, `cwd` other than `cursor` / `panel`, `run_for_each` without `%f`, unknown `pool`) are shown as a critical message.
 
 ```toml
 [shell_here]

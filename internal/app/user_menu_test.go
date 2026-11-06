@@ -1074,6 +1074,88 @@ func TestUserMenuRunForEachFlatUsesPanelDirectory(t *testing.T) {
 	assertFileExists(t, filepath.Join(root, "stamp"), true)
 }
 
+func TestUserMenuTreeCwdPanelRunsInPanelRoot(t *testing.T) {
+	for _, mode := range []string{"", "dialog = true\n", "background = true\n"} {
+		t.Run(strings.TrimSpace(mode), func(t *testing.T) {
+			app, root, sub := userMenuTreeFixture(t, "[touch]\nkey = \"t\"\ntitle = \"Touch\"\ncommand = \"touch ember\"\ncwd = \"panel\"\n"+mode)
+			selectEntryByName(t, app, "ember.txt")
+
+			runUserMenuKey(app, 't')
+			waitCommandsDone(t, app)
+
+			assertFileExists(t, filepath.Join(root, "ember"), true)
+			assertFileExists(t, filepath.Join(sub, "ember"), false)
+		})
+	}
+}
+
+func TestUserMenuTreeCwdPanelInteractiveAndDetach(t *testing.T) {
+	for _, mode := range []string{"interactive", "detach"} {
+		t.Run(mode, func(t *testing.T) {
+			app, root, _ := userMenuTreeFixture(t, "[run]\nkey = \"g\"\ntitle = \"Run\"\ncommand = \"lazygit\"\ncwd = \"panel\"\n"+mode+" = true\n")
+			var gotDir string
+			prevI, prevD := userMenuInteractiveRunner, userMenuDetachRunner
+			userMenuInteractiveRunner = func(_ context.Context, _ []string, dir string) error {
+				gotDir = dir
+				return nil
+			}
+			userMenuDetachRunner = func(_ []string, dir string) error {
+				gotDir = dir
+				return nil
+			}
+			t.Cleanup(func() { userMenuInteractiveRunner, userMenuDetachRunner = prevI, prevD })
+			selectEntryByName(t, app, "ember.txt")
+
+			runUserMenuKey(app, 'g')
+
+			if gotDir != root {
+				t.Fatalf("dir = %q, want %q", gotDir, root)
+			}
+		})
+	}
+}
+
+// Macros ignore cwd: %f is the absolute path of the cursor row and %d its directory, even
+// though the command runs in the panel root.
+func TestUserMenuTreeCwdPanelMacrosStayAbsolute(t *testing.T) {
+	app, root, sub := userMenuTreeFixture(t, "[show]\nkey = \"s\"\ntitle = \"Show\"\ncommand = \"echo %f %d > where\"\ncwd = \"panel\"\n")
+	selectEntryByName(t, app, "ember.txt")
+
+	runUserMenuKey(app, 's')
+	waitCommandsDone(t, app)
+
+	b, err := os.ReadFile(filepath.Join(root, "where"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := filepath.Join(sub, "ember.txt") + " " + sub + "\n"; string(b) != want {
+		t.Fatalf("where = %q, want %q", b, want)
+	}
+}
+
+func TestUserMenuRunForEachTreeCwdPanelRunsInPanelRoot(t *testing.T) {
+	app, root, sub := userMenuTreeFixture(t, "[each]\nkey = \"e\"\ntitle = \"Each\"\ncommand = \"touch stamp && echo %f >> seen\"\nrun_for_each = [\"files\"]\ncwd = \"panel\"\n")
+	p := &app.model.Primary
+	nested := filepath.Join(sub, "ember.txt")
+	p.SelectedPaths = map[string]bool{
+		filepath.Join(root, "lantern.txt"): true,
+		nested:                             true,
+	}
+
+	runUserMenuKey(app, 'e')
+	waitCommandsDone(t, app)
+
+	assertFileExists(t, filepath.Join(root, "stamp"), true)
+	assertFileExists(t, filepath.Join(sub, "stamp"), false)
+	b, err := os.ReadFile(filepath.Join(root, "seen"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(b), nested) {
+		t.Fatalf("seen = %q, want it to hold %q", b, nested)
+	}
+}
+
 // ghostOverlay makes dir listings gain one index-only (ghost) file called name in every
 // directory whose base name is inDir ("" for any), like the fileindex overlay of a browse-with panel.
 func ghostOverlay(name, inDir string) panel.IndexOverlayFunc {

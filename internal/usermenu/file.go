@@ -13,6 +13,8 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/paranoidi/paras-commander/internal/cmdmacro"
 	"github.com/paranoidi/paras-commander/internal/entrymatch"
+	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // reservedShellPatternsKey is the one scalar root key; every other root key is an entry table.
@@ -37,6 +39,7 @@ var menuEntryKeys = map[string]struct{}{
 	"dialog":         {},
 	"dialog_width":   {},
 	"dialog_height":  {},
+	"cwd":            {},
 }
 
 // boolField decodes a TOML boolean, tracking whether it was set.
@@ -85,7 +88,29 @@ type MenuEntry struct {
 	Dialog        bool
 	DialogWidth   string
 	DialogHeight  string
-	Entries       []MenuEntry
+	// Cwd is CwdCursor (also what an absent field loads as) or CwdPanel; see WorkDir.
+	Cwd     string
+	Entries []MenuEntry
+}
+
+// Values of the cwd entry field.
+const (
+	CwdCursor = "cursor"
+	CwdPanel  = "panel"
+)
+
+// CwdPanel reports whether the entry runs in the panel directory instead of the directory
+// holding the cursor row.
+func (e MenuEntry) CwdPanel() bool {
+	return e.Cwd == CwdPanel
+}
+
+// WorkDir is the directory a non-run_for_each launch of e uses on panel p.
+func (e MenuEntry) WorkDir(p *panel.State) pathloc.Path {
+	if e.CwdPanel() {
+		return p.Path
+	}
+	return p.CursorDir()
 }
 
 // IsSubmenu reports whether e is a submenu container (has nested child entries) rather
@@ -165,6 +190,7 @@ type menuEntry struct {
 	Dialog        *boolField `toml:"dialog"`
 	DialogWidth   *dimField  `toml:"dialog_width"`
 	DialogHeight  *dimField  `toml:"dialog_height"`
+	Cwd           string     `toml:"cwd"`
 }
 
 // LoadFile reads and validates menu.toml from path.
@@ -448,6 +474,9 @@ func validateSubmenuMutualExclusion(path string, raw menuEntry) error {
 	if raw.PTY != nil && raw.PTY.Set && raw.PTY.Value {
 		return entryError(path, "pty "+suffix)
 	}
+	if strings.TrimSpace(raw.Cwd) != "" {
+		return entryError(path, "cwd "+suffix)
+	}
 	return nil
 }
 
@@ -594,6 +623,15 @@ func decodeLeafEntry(path, title string, raw menuEntry, entryShellPatterns bool)
 		return MenuEntry{}, err
 	}
 
+	cwd := strings.ToLower(strings.TrimSpace(raw.Cwd))
+	switch cwd {
+	case "":
+		cwd = CwdCursor
+	case CwdCursor, CwdPanel:
+	default:
+		return MenuEntry{}, entryError(path, fmt.Sprintf("cwd: invalid value %q (want cursor/panel)", raw.Cwd))
+	}
+
 	keepOpen := raw.KeepOpen != nil && raw.KeepOpen.Set && raw.KeepOpen.Value
 	if keepOpen {
 		if modes.dialog {
@@ -628,6 +666,7 @@ func decodeLeafEntry(path, title string, raw menuEntry, entryShellPatterns bool)
 		Dialog:        modes.dialog,
 		DialogWidth:   dialogWidth,
 		DialogHeight:  dialogHeight,
+		Cwd:           cwd,
 	}, nil
 }
 

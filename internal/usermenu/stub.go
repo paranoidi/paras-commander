@@ -33,7 +33,7 @@ const MenuStubTOML = `# User function menu
 # A table becomes a submenu once it has its own nested [parent.child] tables
 # instead of a command — submenus can nest arbitrarily deep. A submenu table
 # cannot also set command / run_for_each / pool / toast / interactive /
-# detach / background / keep_open / dialog (mutually exclusive with being a container).
+# detach / background / keep_open / dialog / pty / cwd (mutually exclusive with being a container).
 # key=/default= uniqueness is scoped per menu level, so a key can be reused
 # across sibling submenus but not twice within the same level. A duplicate
 # key= within one level is warned about when the menu is opened; the later
@@ -95,6 +95,14 @@ const MenuStubTOML = `# User function menu
 #
 # shell           bool     optional   default: false
 #   Force sh -c even without shell operators (>> | && …).
+#
+# cwd             string   optional   default: "cursor"   values: "cursor" | "panel"
+#   Directory the command runs in. "cursor": the directory holding the
+#   highlighted row (a subfolder when the cursor is inside an expanded tree).
+#   "panel": the panel's own directory, wherever the cursor is; use it for
+#   project commands relative to the root (make, ./scripts/x). Applies to
+#   every mode, including run_for_each. Macros are unaffected: %d is still the
+#   highlighted row's directory and %f / %t are absolute paths.
 #
 # keep_open       bool     optional   default: false
 #   Keep the menu open at the same level after launching, to fire several

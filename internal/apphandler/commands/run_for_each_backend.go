@@ -35,6 +35,10 @@ type RunForEachBatchSpec struct {
 	// the directory holding the entry's panel row.
 	PerEntryWorkDir bool
 
+	// PanelWorkDir runs every entry in the panel directory instead of the directory holding
+	// the entry's row (user-menu cwd = "panel"). Ignored with PerEntryWorkDir.
+	PanelWorkDir bool
+
 	// PoolName optionally gates each invocation through the work pool registry.
 	PoolName string
 
@@ -74,7 +78,11 @@ func (h *Handler) StartRunForEachBatch(spec RunForEachBatchSpec) {
 	// resolved here because the batch goroutine must not read panel state.
 	rowDirs := make([]string, len(spec.Entries))
 	for i, ent := range spec.Entries {
-		rowDirs[i] = active.EntryDir(ent).String()
+		if spec.PanelWorkDir {
+			rowDirs[i] = active.Path.String()
+		} else {
+			rowDirs[i] = active.EntryDir(ent).String()
+		}
 	}
 
 	entries := make([]ui.CommandRunEntry, len(spec.Entries))
