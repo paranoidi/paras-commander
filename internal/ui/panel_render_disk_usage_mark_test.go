@@ -24,6 +24,7 @@ func (p fixedSizeDiskPainter) ByteSize(path string) (int64, bool) {
 func (fixedSizeDiskPainter) FileCount(string) (int64, bool) { return 0, false }
 
 func (fixedSizeDiskPainter) PendingForPanel(string, int) bool { return false }
+func (fixedSizeDiskPainter) SizePendingDue(string, int) bool  { return false }
 
 func (fixedSizeDiskPainter) DiskScanBusy() bool { return false }
 

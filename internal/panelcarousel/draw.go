@@ -242,7 +242,7 @@ func drawCarouselColumn(cp carouselColumnParams) {
 		if p.DiskUsage.Active {
 			diskSrc = p.DiskUsage.Source
 		}
-		sizePending := diskSrc != nil && entry.Type == localfs.EntryDirectory && diskSrc.PendingForPanel(entry.Path, p.DiskUsage.PanelID)
+		sizePending := diskSrc != nil && entry.Type == localfs.EntryDirectory && diskSrc.SizePendingDue(entry.Path, p.DiskUsage.PanelID)
 		text := formatBriefRow(entry, col.Width, p.ShowIcons, showSize, rowSuffix, p.Styles, diskSrc, reserve, metaW, metaText, sizePending)
 		var spans []primitive.Span
 		if c.Active && (p.Center.Filter.Active || p.Center.Filter.Editing) {

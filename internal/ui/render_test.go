@@ -211,6 +211,7 @@ func (m testDiskUsageMap) ByteSize(absPath string) (int64, bool) {
 func (testDiskUsageMap) FileCount(string) (int64, bool) { return 0, false }
 
 func (testDiskUsageMap) PendingForPanel(string, int) bool { return false }
+func (testDiskUsageMap) SizePendingDue(string, int) bool  { return false }
 
 func (testDiskUsageMap) DiskScanBusy() bool { return false }
 

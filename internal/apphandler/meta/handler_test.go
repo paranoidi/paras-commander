@@ -1167,7 +1167,7 @@ func pendingRevealHandler(t *testing.T, delayMS int) (*Handler, string, string) 
 		{Name: "willow.txt", Path: willow, Type: localfs.EntryFile},
 	})
 	cfg := config.Default()
-	cfg.Meta.PendingMarkerDelayMS = delayMS
+	cfg.Panels.PendingMarkerDelayMS = delayMS
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatal(err)

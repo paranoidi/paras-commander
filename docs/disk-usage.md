@@ -16,7 +16,7 @@ Both are rebindable in `keybindings.toml`.
 
 ## Behaviour
 
-A scan walks the listed directory and each directory directly in it. While it runs, the menu bar spinner is active, rows show a working icon, and the bars grow. Sizes are shown in the size column and as a bar relative to the largest entry. When the scan finishes a toast reports it.
+A scan walks the listed directory and each directory directly in it. While it runs, the menu bar spinner is active, the scanned folders change their icon, and the bars grow. A directory whose size is still pending shows the working icon in the size column, but only once its scan has waited longer than `[panels].pending_marker_delay_ms` (default 800 ms, see [config.md](config.md#panels)), so quick scans do not flash it; the folder icon change is not delayed. Sizes are shown in the size column and as a bar relative to the largest entry. When the scan finishes a toast reports it.
 
 The scan scope is global: bars appear on whichever panel is inside the scanned directory or one of its children, and disappear when you navigate elsewhere (they return when you come back). Once the scan finishes, the scanned directory's own total is known too, so going up to its parent shows that directory's size in the size column. That total includes hidden entries even when the panel hides them. `C-M-d` clears the data, the bars and any size-based ordering on both panels.
 

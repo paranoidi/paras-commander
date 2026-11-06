@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/fschange"
@@ -22,6 +23,9 @@ type scanJob struct {
 	// origin, when set, is the directory childAbs lists: its unlisted children are walked too,
 	// and its own total is cached once every child is.
 	origin string
+	// enqueuedAt is when the job was queued; SizePendingDue measures the pending marker delay
+	// from it. Zero (a job built outside the queue paths) reads as due.
+	enqueuedAt time.Time
 }
 
 // anyPanel is the sourcePanel of a refresh scan: it is pending in every panel.
@@ -112,6 +116,10 @@ type Engine struct {
 	// without sweeping the whole cache.
 	sizedKeys map[string]struct{}
 
+	// pendingMarkerDelayMS is [panels].pending_marker_delay_ms (SetPendingMarkerDelayMS). Atomic
+	// because queueRefresh arms the reveal from applyLoop, not the UI goroutine.
+	pendingMarkerDelayMS atomic.Int64
+
 	// fsWalk configures adaptive concurrent subdirectory walks in WalkFolder.
 	fsWalk fswalk.Params
 
@@ -153,6 +161,7 @@ func NewWithAdaptiveIO(cfg config.AdaptiveIOConfig) *Engine {
 		applyWake:        make(chan struct{}, 1),
 		fsWalk:           cfg.Params(),
 	}
+	e.pendingMarkerDelayMS.Store(config.DefaultPendingMarkerDelayMS)
 	// Start at 1 so a caller's zero-value "last checked version" never matches a live engine's
 	// version, forcing that caller's first check to actually run.
 	e.cacheVersion.Store(1)
@@ -280,54 +289,102 @@ func pathIsOrUnder(child, root string) bool {
 	return strings.HasPrefix(c, r+string(filepath.Separator))
 }
 
+// isOrUnderClean is pathIsOrUnder for two paths that are already CleanKey'd, without the
+// per-call cleaning and concatenation (the size column calls it for every root on every repaint).
+func isOrUnderClean(c, r string) bool {
+	return c == r || (len(c) > len(r) && c[len(r)] == filepath.Separator && strings.HasPrefix(c, r))
+}
+
+// cleanKeys returns a CleanKey'd copy of paths, so queued jobs hold the keys the walk caches
+// under and pendingSince matches them without cleaning.
+func cleanKeys(paths []string) []string {
+	out := make([]string, len(paths))
+	for i, raw := range paths {
+		out[i] = CleanKey(raw)
+	}
+	return out
+}
+
 // PendingForPanel reports whether childAbs should show the disk-scan folder tint for the given
 // panel (ui.PrimaryPanel=0, ui.SecondaryPanel=1): queued for that panel, walking for that panel, or
 // under such a root. Scans started from another panel do not affect this panel's tint.
 func (e *Engine) PendingForPanel(childAbs string, panelID int) bool {
+	_, ok := e.pendingSince(childAbs, panelID)
+	return ok
+}
+
+// SetPendingMarkerDelayMS sets how long a scan must be pending before SizePendingDue reports it:
+// -1 never, 0 immediately, N > 0 after N ms. Safe at any time (config reload).
+func (e *Engine) SetPendingMarkerDelayMS(ms int) {
+	if e != nil {
+		e.pendingMarkerDelayMS.Store(int64(ms))
+	}
+}
+
+// SizePendingDue reports whether absPath's size column should show the pending marker for the
+// panel: PendingForPanel, and the matching job has been waiting at least the marker delay. The
+// folder tint is not delayed (PendingForPanel).
+func (e *Engine) SizePendingDue(absPath string, panelID int) bool {
 	if e == nil {
 		return false
+	}
+	ms := e.pendingMarkerDelayMS.Load()
+	if ms < 0 {
+		return false
+	}
+	// A cached size is what the row shows; skip the scan lookup (one per row per repaint).
+	if _, cached := e.Size(absPath); cached {
+		return false
+	}
+	since, ok := e.pendingSince(absPath, panelID)
+	return ok && time.Since(since) >= time.Duration(ms)*time.Millisecond
+}
+
+// pendingSince is PendingForPanel plus the enqueue time of the job that makes childAbs pending.
+func (e *Engine) pendingSince(childAbs string, panelID int) (time.Time, bool) {
+	if e == nil {
+		return time.Time{}, false
 	}
 	c := CleanKey(childAbs)
 
 	e.mu.RLock()
 	for r, pan := range e.activeWalkRoots {
-		if forPanel(pan, panelID) && pathIsOrUnder(c, r) {
+		if forPanel(pan, panelID) && isOrUnderClean(c, r) {
 			e.mu.RUnlock()
-			return true
+			// The walk root belongs to the current job; take its time under jobMu, not mu.
+			e.jobMu.Lock()
+			defer e.jobMu.Unlock()
+			return e.curJob.enqueuedAt, true
 		}
 	}
 	e.mu.RUnlock()
 
 	e.jobMu.Lock()
+	defer e.jobMu.Unlock()
 	for _, j := range e.queue {
 		if !forPanel(j.sourcePanel, panelID) {
 			continue
 		}
 		if j.origin != "" && c == j.origin {
-			e.jobMu.Unlock()
-			return true
+			return j.enqueuedAt, true
 		}
-		for _, raw := range j.childAbs {
-			if pathIsOrUnder(c, CleanKey(raw)) {
-				e.jobMu.Unlock()
-				return true
+		for _, r := range j.childAbs { // clean: see cleanKeys
+			if isOrUnderClean(c, r) {
+				return j.enqueuedAt, true
 			}
 		}
 	}
 	if e.curJobRoots != nil && forPanel(e.curJobSourcePanel, panelID) {
 		if e.curJobOrigin != "" && c == e.curJobOrigin {
-			e.jobMu.Unlock()
-			return true
+			return e.curJob.enqueuedAt, true
 		}
 		for r := range e.curJobRoots {
-			if pathIsOrUnder(c, r) {
-				e.jobMu.Unlock()
-				return true
+			if isOrUnderClean(c, r) {
+				return e.curJob.enqueuedAt, true
 			}
 		}
 	}
-	e.jobMu.Unlock()
-	return false
+	return time.Time{}, false
 }
 
 func (e *Engine) finishCurJobRoot(abs string) {
@@ -585,11 +642,22 @@ func (e *Engine) enqueue(job scanJob) {
 	if e == nil {
 		return
 	}
-	job.childAbs = append([]string(nil), job.childAbs...)
+	job.childAbs = cleanKeys(job.childAbs)
+	job.enqueuedAt = time.Now()
 	e.jobMu.Lock()
 	e.queue = append([]scanJob{job}, e.queue...)
 	e.jobCond.Signal()
 	e.jobMu.Unlock()
+	e.armPendingReveal()
+}
+
+// armPendingReveal pokes Updates once the pending marker delay has passed, so the spinner-driven
+// poll repaints the size column even when the walk delivers no cache update meanwhile. A stale
+// fire costs one repaint.
+func (e *Engine) armPendingReveal() {
+	if d := time.Duration(e.pendingMarkerDelayMS.Load()) * time.Millisecond; d > 0 {
+		time.AfterFunc(d, e.poke)
+	}
 }
 
 // StartPriorityScan is StartScanFromListing for scans the user is actively waiting on (e.g. the
@@ -600,7 +668,7 @@ func (e *Engine) StartPriorityScan(childAbs []string, shouldIgnore ShouldIgnoreF
 	if e == nil {
 		return
 	}
-	jobs := []scanJob{{childAbs: append([]string(nil), childAbs...), ignore: shouldIgnore, sourcePanel: sourcePanel, listingVolGate: volGate}}
+	jobs := []scanJob{{childAbs: cleanKeys(childAbs), ignore: shouldIgnore, sourcePanel: sourcePanel, listingVolGate: volGate, enqueuedAt: time.Now()}}
 	var cancel context.CancelFunc
 	e.jobMu.Lock()
 	if len(e.curJobRoots) > 0 {
@@ -623,6 +691,7 @@ func (e *Engine) StartPriorityScan(childAbs []string, shouldIgnore ShouldIgnoreF
 	if cancel != nil {
 		cancel()
 	}
+	e.armPendingReveal()
 }
 
 func (e *Engine) runPlanner(ctx context.Context, sess uint64, childAbs []string, shouldIgnore ShouldIgnoreFolder, sourcePanel int, origin string) {

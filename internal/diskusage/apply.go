@@ -2,6 +2,7 @@ package diskusage
 
 import (
 	"path/filepath"
+	"time"
 
 	"github.com/paranoidi/paras-commander/internal/fschange"
 )
@@ -156,14 +157,16 @@ func (e *Engine) queueRefresh(paths []string) {
 	add := make([]scanJob, 0, len(paths))
 	for _, p := range paths {
 		add = append(add, scanJob{
-			childAbs:       []string{p},
+			childAbs:       []string{CleanKey(p)},
 			ignore:         e.refreshIgnore,
 			sourcePanel:    anyPanel,
 			listingVolGate: ListingVolumeGate{Enabled: !e.refreshDescend, FromRoot: true},
+			enqueuedAt:     time.Now(),
 		})
 	}
 	e.queue = append(add, e.queue...)
 	e.jobCond.Signal()
+	e.armPendingReveal()
 }
 
 // createdLocked counts a new path, or a file overwritten in place, into its cached ancestors. A

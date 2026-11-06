@@ -717,3 +717,161 @@ func TestStartScanFromDirectoryCachesOriginTotal(t *testing.T) {
 		t.Fatalf("origin file count = %d, want 3", got)
 	}
 }
+
+// holdEngine returns an engine whose worker blocks in the planner until the returned func runs.
+func holdEngine(t *testing.T) (*Engine, func()) {
+	t.Helper()
+	unblock := make(chan struct{})
+	e := New()
+	e.runPlannerHook = func(_ uint64, _ []string, _ ShouldIgnoreFolder, _ int) { <-unblock }
+	var once sync.Once
+	release := func() { once.Do(func() { close(unblock) }) }
+	t.Cleanup(release)
+	return e, release
+}
+
+func TestSizePendingDueWaitsForMarkerDelay(t *testing.T) {
+	t.Parallel()
+	e, _ := holdEngine(t)
+	e.SetPendingMarkerDelayMS(int(time.Hour / time.Millisecond))
+	e.StartScanFromListing([]string{"/orchard/plum"}, nil, 0, ListingVolumeGate{})
+	waitUntil(t, func() bool { return e.PendingForPanel("/orchard/plum", 0) }, 2*time.Second, "job should be pending")
+	if e.SizePendingDue("/orchard/plum", 0) {
+		t.Fatal("marker must not be due before the delay")
+	}
+	// Shortening the delay is what elapsing it looks like to the reader.
+	e.SetPendingMarkerDelayMS(1)
+	waitUntil(t, func() bool { return e.SizePendingDue("/orchard/plum", 0) }, 2*time.Second, "marker due after delay")
+	if e.SizePendingDue("/orchard/plum", 1) || e.SizePendingDue("/elsewhere", 0) {
+		t.Fatal("due must follow PendingForPanel's panel and path matching")
+	}
+}
+
+func TestSizePendingDueNeverAndImmediate(t *testing.T) {
+	t.Parallel()
+	e, _ := holdEngine(t)
+	e.StartScanFromListing([]string{"/orchard/fig"}, nil, 0, ListingVolumeGate{})
+	waitUntil(t, func() bool { return e.PendingForPanel("/orchard/fig", 0) }, 2*time.Second, "job should be pending")
+
+	e.SetPendingMarkerDelayMS(-1)
+	if e.SizePendingDue("/orchard/fig", 0) || !e.PendingForPanel("/orchard/fig", 0) {
+		t.Fatal("-1: never due, tint still pending")
+	}
+	e.SetPendingMarkerDelayMS(0)
+	if !e.SizePendingDue("/orchard/fig", 0) {
+		t.Fatal("0: due immediately")
+	}
+}
+
+func TestSizePendingDueUsesOwnJobEnqueueTime(t *testing.T) {
+	t.Parallel()
+	e, _ := holdEngine(t)
+	e.SetPendingMarkerDelayMS(int(10 * time.Minute / time.Millisecond))
+	e.StartScanFromListing([]string{"/orchard/pear"}, nil, 0, ListingVolumeGate{})
+	waitUntil(t, func() bool { return e.PendingForPanel("/orchard/pear", 0) }, 2*time.Second, "first job running")
+	waitUntil(t, func() bool { e.jobMu.Lock(); defer e.jobMu.Unlock(); return e.curJobRoots != nil }, 2*time.Second, "worker holds first job")
+	e.StartScanFromListing([]string{"/orchard/lime"}, nil, 0, ListingVolumeGate{})
+
+	// Age the running job only; the one queued behind it is fresh.
+	e.jobMu.Lock()
+	e.curJob.enqueuedAt = time.Now().Add(-time.Hour)
+	e.jobMu.Unlock()
+
+	if !e.SizePendingDue("/orchard/pear", 0) {
+		t.Fatal("old running job should be due")
+	}
+	if e.SizePendingDue("/orchard/lime", 0) {
+		t.Fatal("queued job is judged by its own enqueue time")
+	}
+	if !e.PendingForPanel("/orchard/lime", 0) {
+		t.Fatal("queued job still tints at once")
+	}
+}
+
+func TestPendingRevealPokesUpdatesAfterDelay(t *testing.T) {
+	t.Parallel()
+	e, _ := holdEngine(t)
+	e.SetPendingMarkerDelayMS(20)
+	drainUpdates(e)
+	e.StartScanFromListing([]string{"/orchard/lemon"}, nil, 0, ListingVolumeGate{})
+	select {
+	case <-e.Updates():
+	case <-time.After(5 * time.Second):
+		t.Fatal("no Updates poke after the marker delay")
+	}
+}
+
+func TestNoPendingRevealTimerWhenNeverOrImmediate(t *testing.T) {
+	t.Parallel()
+	for _, ms := range []int{-1, 0} {
+		e, _ := holdEngine(t)
+		e.SetPendingMarkerDelayMS(ms)
+		drainUpdates(e)
+		e.StartScanFromListing([]string{"/orchard/apricot"}, nil, 0, ListingVolumeGate{})
+		select {
+		case <-e.Updates():
+			t.Fatalf("delay %d: unexpected Updates poke", ms)
+		case <-time.After(150 * time.Millisecond):
+		}
+	}
+}
+
+func drainUpdates(e *Engine) {
+	for {
+		select {
+		case <-e.Updates():
+		default:
+			return
+		}
+	}
+}
+
+func TestIsOrUnderCleanMatchesPathIsOrUnder(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct{ c, r string }{
+		{"/a/b", "/a/b"},
+		{"/a/b/c", "/a/b"},
+		{"/a/bc", "/a/b"},
+		{"/a", "/a/b"},
+		{"/", "/"},
+		{"/a", "/"},
+		{"/a/b/c/d/e/f", "/a/b/c"},
+		{"/a/b/c", "/a/b/c/d/e"},
+		{"fileindex://a/b", "fileindex://a"},
+		{"fileindex://ab", "fileindex://a"},
+		{"/z", "/a/b"},
+	} {
+		if got, want := isOrUnderClean(tc.c, tc.r), pathIsOrUnder(tc.c, tc.r); got != want {
+			t.Fatalf("isOrUnderClean(%q, %q) = %v, pathIsOrUnder = %v", tc.c, tc.r, got, want)
+		}
+	}
+	if isOrUnderClean("/a", "/") {
+		t.Fatal("nothing is strictly under the root /, as pathIsOrUnder")
+	}
+}
+
+func TestSizePendingDueSkipsCachedSize(t *testing.T) {
+	t.Parallel()
+	e, _ := holdEngine(t)
+	e.SetPendingMarkerDelayMS(0)
+	e.StartScanFromListing([]string{"/orchard/cherry"}, nil, 0, ListingVolumeGate{})
+	waitUntil(t, func() bool { return e.SizePendingDue("/orchard/cherry", 0) }, 2*time.Second, "uncached path is due")
+	e.SetSize("/orchard/cherry", 3, 1024)
+	if e.SizePendingDue("/orchard/cherry", 0) {
+		t.Fatal("a cached size must not show the marker")
+	}
+	if !e.PendingForPanel("/orchard/cherry", 0) {
+		t.Fatal("the tint must stay pending")
+	}
+}
+
+func TestQueuedRootsAreStoredClean(t *testing.T) {
+	t.Parallel()
+	e, _ := holdEngine(t)
+	e.StartScanFromListing([]string{"/orchard/a"}, nil, 0, ListingVolumeGate{})
+	waitUntil(t, func() bool { e.jobMu.Lock(); defer e.jobMu.Unlock(); return e.curJobRoots != nil }, 2*time.Second, "worker holds first job")
+	e.StartScanFromListing([]string{"/orchard/dirty//plum/", "/orchard/x/../fig"}, nil, 0, ListingVolumeGate{})
+	if !e.PendingForPanel("/orchard/dirty/plum/leaf", 0) || !e.PendingForPanel("/orchard/fig", 0) {
+		t.Fatal("unclean queued roots must still match")
+	}
+}

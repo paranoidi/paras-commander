@@ -26,6 +26,9 @@ type DiskUsagePainter interface {
 	// PendingForPanel is true when absPath should use the disk-scan folder tint for this panel
 	// (PrimaryPanel/SecondaryPanel): queued, walking, or under such a root for that panel only.
 	PendingForPanel(absPath string, panelID int) bool
+	// SizePendingDue is PendingForPanel held back until the scan has been pending for
+	// [panels].pending_marker_delay_ms; only the size column's pending marker uses it.
+	SizePendingDue(absPath string, panelID int) bool
 	// DiskScanBusy is true while a disk usage scan is queued or walking the filesystem.
 	DiskScanBusy() bool
 	// DiskScanExcluded is true when a directory would not be descended into by disk-usage traversal for this listing (godu + listing-volume gate). Stat's absPath — background classification only; paint and UI-goroutine classification must use IsKnownExcluded / diskUsagePaintExcluded.

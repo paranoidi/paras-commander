@@ -21,6 +21,7 @@ func (p panicStatDiskPainter) ByteSize(path string) (int64, bool) {
 }
 func (panicStatDiskPainter) FileCount(string) (int64, bool)   { return 0, false }
 func (panicStatDiskPainter) PendingForPanel(string, int) bool { return false }
+func (panicStatDiskPainter) SizePendingDue(string, int) bool  { return false }
 func (panicStatDiskPainter) DiskScanBusy() bool               { return false }
 func (panicStatDiskPainter) DiskScanExcluded(string, bool, uint64, bool, func(string) bool) bool {
 	panic("DiskScanExcluded must not run during paint/classification")

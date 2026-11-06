@@ -17,6 +17,7 @@ type panicDiskScanPainter struct{}
 func (panicDiskScanPainter) ByteSize(string) (int64, bool)    { return 0, false }
 func (panicDiskScanPainter) FileCount(string) (int64, bool)   { return 0, false }
 func (panicDiskScanPainter) PendingForPanel(string, int) bool { return false }
+func (panicDiskScanPainter) SizePendingDue(string, int) bool  { return false }
 func (panicDiskScanPainter) DiskScanBusy() bool               { return false }
 func (panicDiskScanPainter) DiskScanExcluded(string, bool, uint64, bool, func(string) bool) bool {
 	panic("DiskScanExcluded must not run when disk-usage metering is off")
@@ -32,7 +33,8 @@ func (cacheOnlyDiskScanPainter) FileCount(string) (int64, bool) { return 0, fals
 func (cacheOnlyDiskScanPainter) PendingForPanel(string, int) bool {
 	return false
 }
-func (cacheOnlyDiskScanPainter) DiskScanBusy() bool { return false }
+func (cacheOnlyDiskScanPainter) SizePendingDue(string, int) bool { return false }
+func (cacheOnlyDiskScanPainter) DiskScanBusy() bool              { return false }
 func (cacheOnlyDiskScanPainter) DiskScanExcluded(string, bool, uint64, bool, func(string) bool) bool {
 	panic("DiskScanExcluded must not run during paint")
 }
@@ -145,4 +147,59 @@ func screenHasFolderIcon(screen tcell.SimulationScreen, rect Rect, icon string) 
 		}
 	}
 	return false
+}
+
+// pendingDiskScanPainter reports one fixed scan state for every path.
+type pendingDiskScanPainter struct {
+	cacheOnlyDiskScanPainter
+	pending, due bool
+}
+
+func (p pendingDiskScanPainter) PendingForPanel(string, int) bool { return p.pending }
+func (p pendingDiskScanPainter) SizePendingDue(string, int) bool  { return p.due }
+
+// TestDrawPanelSizeMarkerFollowsSizePendingDue pins that the size column's pending marker waits
+// for SizePendingDue while the folder tint follows PendingForPanel at once.
+func TestDrawPanelSizeMarkerFollowsSizePendingDue(t *testing.T) {
+	t.Parallel()
+	styles := theme.Default()
+	for _, tc := range []struct {
+		name       string
+		due        bool
+		wantMarker bool
+	}{{"pending-not-due", false, false}, {"pending-due", true, true}} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			for _, carousel := range []bool{false, true} {
+				screen := tcell.NewSimulationScreen("UTF-8")
+				if err := screen.Init(); err != nil {
+					t.Fatalf("Init: %v", err)
+				}
+				t.Cleanup(screen.Fini)
+				screen.SetSize(100, 16)
+				state := panel.State{
+					Path: pathloc.MustParse("/mnt/pumpkin"),
+					Entries: []localfs.Entry{
+						{Name: "walnut", Path: "/mnt/pumpkin/walnut", Type: localfs.EntryDirectory},
+					},
+					CarouselMode: carousel,
+				}
+				rect := Rect{X: 0, Y: 0, Width: 100, Height: 16}
+				drawPanel(screen, rect, state,
+					PanelStyleConfig{Styles: styles},
+					PanelContext{PanelID: PrimaryPanel, FileListActive: true, ActivePanel: PrimaryPanel, SyncDriverPanelID: -1, QuickViewDriverPanelID: -1},
+					PanelDisplayConfig{
+						ShowIcons: true, ShowDiskUsage: true,
+						Painter:               pendingDiskScanPainter{pending: true, due: tc.due},
+						ScrollbarShowInactive: true, CarouselLayout: panelcarousel.DefaultLayout(),
+					})
+				if !screenHasFolderIcon(screen, rect, styles.FolderIcon(theme.FolderIconScanning)) {
+					t.Fatalf("carousel=%v: folder tint must show while pending, due or not", carousel)
+				}
+				if got := screenHasFolderIcon(screen, rect, styles.IconMetaRunning()); got != tc.wantMarker {
+					t.Fatalf("carousel=%v: size marker shown = %v, want %v", carousel, got, tc.wantMarker)
+				}
+			}
+		})
+	}
 }

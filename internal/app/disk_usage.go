@@ -21,8 +21,9 @@ func listingVolumeGateForScan(p *panel.State, descendIntoMountPoints bool) disku
 }
 
 // applyDiskUsageConfig hands the engine the ignore rule and mount-point setting for the refresh
-// scans it starts on its own for dirty paths.
+// scans it starts on its own for dirty paths, and the pending marker delay for size cells.
 func (a *App) applyDiskUsageConfig() {
+	a.disk.engine.SetPendingMarkerDelayMS(a.config.Panels.PendingMarkerDelayMS)
 	a.disk.engine.SetRefreshIgnore(a.disk.ignore, a.config.DiskUsage.DescendIntoMountPoints)
 }
 

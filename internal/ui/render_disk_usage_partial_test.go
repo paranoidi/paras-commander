@@ -25,6 +25,7 @@ func (p partialDiskUsagePainter) ByteSize(path string) (int64, bool) {
 
 func (partialDiskUsagePainter) FileCount(string) (int64, bool)   { return 0, false }
 func (partialDiskUsagePainter) PendingForPanel(string, int) bool { return false }
+func (partialDiskUsagePainter) SizePendingDue(string, int) bool  { return false }
 func (partialDiskUsagePainter) DiskScanBusy() bool               { return true }
 func (partialDiskUsagePainter) DiskScanExcluded(string, bool, uint64, bool, func(string) bool) bool {
 	return false
@@ -328,6 +329,30 @@ func TestPaintDiskUsageBrowserPanelsOnlyRejectsNonBrowser(t *testing.T) {
 	model := Model{ViewMode: ViewJobs}
 	if PaintDiskUsageBrowserPanelsOnly(screen, layout, model, theme.Default()) {
 		t.Fatal("expected false for non-browser view")
+	}
+}
+
+// TestPaintDiskUsageBrowserPanelsOnlyDeclinesWithoutPanelInScope pins that a scan outside the
+// Disk Usage view (nothing in scope) is not "painted" by the spinner alone: the caller must fall
+// back to a full render, which repaints cells such as the size column's pending marker.
+func TestPaintDiskUsageBrowserPanelsOnlyDeclinesWithoutPanelInScope(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(80, 24)
+	layout := CalculateLayoutWithOrientation(80, 24, true, PanelPaneSplit{}, SplitHorizontal, 0, 0)
+	model := Model{
+		ViewMode:               ViewBrowser,
+		Primary:                panel.State{Path: pathloc.MustParse("/scan/root")},
+		Secondary:              panel.State{Path: pathloc.MustParse("/elsewhere")},
+		DiskUsage:              partialDiskUsagePainter{},
+		MenuBarActivitySpinner: true,
+	}
+	if PaintDiskUsageBrowserPanelsOnly(screen, layout, model, theme.Default()) {
+		t.Fatal("expected false with no panel in disk-usage scope, spinner visible or not")
 	}
 }
 

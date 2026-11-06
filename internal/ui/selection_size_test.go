@@ -63,6 +63,7 @@ func (s stubSelectionSizePainter) FileCount(absPath string) (int64, bool) {
 }
 
 func (stubSelectionSizePainter) PendingForPanel(string, int) bool { return false }
+func (stubSelectionSizePainter) SizePendingDue(string, int) bool  { return false }
 
 func (stubSelectionSizePainter) DiskScanBusy() bool { return false }
 

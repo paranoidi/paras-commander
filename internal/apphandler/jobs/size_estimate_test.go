@@ -26,6 +26,7 @@ type sizeOnlyPainter map[string]int64
 func (p sizeOnlyPainter) ByteSize(path string) (int64, bool) { n, ok := p[path]; return n, ok }
 func (sizeOnlyPainter) FileCount(string) (int64, bool)       { return 0, false }
 func (sizeOnlyPainter) PendingForPanel(string, int) bool     { return false }
+func (sizeOnlyPainter) SizePendingDue(string, int) bool      { return false }
 func (sizeOnlyPainter) DiskScanBusy() bool                   { return false }
 func (sizeOnlyPainter) DiskScanExcluded(string, bool, uint64, bool, func(string) bool) bool {
 	return false

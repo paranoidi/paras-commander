@@ -10,6 +10,8 @@ import (
 type DiskUsageSource interface {
 	ByteSize(absPath string) (n int64, ok bool)
 	PendingForPanel(absPath string, panelID int) bool
+	// SizePendingDue is PendingForPanel after the pending marker delay (size column only).
+	SizePendingDue(absPath string, panelID int) bool
 	// IsKnownExcluded is the paint-path exclusion check (cache only; no Stat).
 	IsKnownExcluded(absPath string) bool
 }

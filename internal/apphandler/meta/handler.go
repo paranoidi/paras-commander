@@ -799,7 +799,7 @@ func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.
 		cols[i].Pending = runningMarker
 	}
 
-	if delay := h.config.Meta.PendingMarkerDelayMS; wasIdle && delay != 0 && h.pendingCount(cols) > 0 {
+	if delay := h.config.Panels.PendingMarkerDelayMS; wasIdle && delay != 0 && h.pendingCount(cols) > 0 {
 		for i := range cols {
 			cols[i].PendingHidden = true
 		}

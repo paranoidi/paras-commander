@@ -97,6 +97,7 @@ File panel browsing, sorting, and listing.
 | `run_executables_on_enter` | bool | `true` | Run executable files directly when pressing Enter on them. |
 | `execute_rules` | array of tables | see below | Per-pattern rules choosing background vs. foreground mode for Enter-executed files — see below. |
 | `shell_patterns` | bool | `true` | Selects glob matching (`filepath.Match`, `true`, default) vs. regexp matching (`false`) for every `execute_rules` rule's `f`/`d` predicates. |
+| `pending_marker_delay_ms` | int | `800` | How long a meta command or a directory-size scan must be pending before its cell shows the pending icon (meta columns and the directory size column), so fast work does not flash it. `0` shows the icon immediately; `-1` never shows it (cells stay blank until the value arrives); values below `-1` reset to `800`. The folder icon change while a scan is pending is not delayed. |
 
 Each `[[panels.execute_rules]]` entry has a `when` array and a `background` flag:
 
@@ -467,7 +468,6 @@ Meta column command definitions (custom computed panel columns).
 | `file` | string | `""` | Path to the global `meta.toml`. Empty uses `<config dir>/meta.toml`. |
 | `local_names` | array of strings | `["meta.toml"]` | Basenames probed in the active panel directory (for a per-directory meta file) before falling back to the global file. |
 | `default_entry_workers` | int | `2` | Number of concurrent background workers used per meta column entry that doesn't specify its own worker count (clamped 1–64). |
-| `pending_marker_delay_ms` | int | `800` | How long a meta command must run before its cell shows the pending icon, so fast commands do not flash it. `0` shows the icon immediately; `-1` never shows it (cells stay blank until the value arrives); values below `-1` reset to `800`. |
 
 A `meta.toml` `[[entry]]` can set `sort_on_activation` (bool, default `false`) to switch the panel's sort to that column when the entry is newly activated from the meta picker, and `sort_reverse` (bool, default `false`, ignored without `sort_on_activation`) to reverse that sort. Re-OKing the picker with the column already active does not re-apply or override a sort you changed manually afterward.
 

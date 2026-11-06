@@ -142,6 +142,10 @@ type PanelsConfig struct {
 	// ShellPatterns selects filepath.Match (true) vs regexp (false) for every ExecuteRules
 	// rule's f/d predicates.
 	ShellPatterns bool `toml:"shell_patterns"`
+	// PendingMarkerDelayMS is how long (ms) a meta command or directory scan must run before its
+	// cell shows the pending marker: -1 never shows it, 0 shows it immediately, N > 0 shows it
+	// after N ms. Values below -1 reset to DefaultPendingMarkerDelayMS in Validate.
+	PendingMarkerDelayMS int `toml:"pending_marker_delay_ms"`
 }
 
 // ExecuteRule is one [[panels.execute_rules]] entry (see PanelsConfig.ExecuteRules).
@@ -283,10 +287,6 @@ type MetaConfig struct {
 	// entry when the entry does not specify its own workers value in meta.toml.
 	// Minimum 1 after Validate. Default DefaultMetaEntryWorkers.
 	DefaultEntryWorkers int `toml:"default_entry_workers"`
-	// PendingMarkerDelayMS is how long (ms) a meta command must run before its cell shows the
-	// pending marker: -1 never shows it, 0 shows it immediately, N > 0 shows it after N ms.
-	// Values below -1 reset to DefaultMetaPendingMarkerDelayMS in Validate.
-	PendingMarkerDelayMS int `toml:"pending_marker_delay_ms"`
 }
 
 // HistoryConfig controls the directory History dialog.
@@ -705,6 +705,7 @@ func Default() Config {
 			OpenFilesExternally:   true,
 			RunExecutablesOnEnter: true,
 			ShellPatterns:         true,
+			PendingMarkerDelayMS:  DefaultPendingMarkerDelayMS,
 			ExecuteRules: []ExecuteRule{
 				{When: []string{"f *.AppImage", "f *.appimage"}, Background: true},
 			},
@@ -883,8 +884,6 @@ func Default() Config {
 			File:                "",
 			LocalNames:          []string{DefaultMetaFileName},
 			DefaultEntryWorkers: DefaultMetaEntryWorkers,
-
-			PendingMarkerDelayMS: DefaultMetaPendingMarkerDelayMS,
 		},
 		Pools: PoolsConfig{
 			File: "",
@@ -1176,6 +1175,9 @@ func (c *Config) validateGeneral(builtin *Config) {
 	}
 	if c.Panels.RefreshIntervalMS < 0 {
 		c.Panels.RefreshIntervalMS = DefaultRefreshIntervalMS
+	}
+	if c.Panels.PendingMarkerDelayMS < -1 {
+		c.Panels.PendingMarkerDelayMS = DefaultPendingMarkerDelayMS
 	}
 	if c.Panels.RefreshIntervalMS > 0 {
 		if c.Panels.RefreshIntervalMS < RefreshIntervalMinMS {
@@ -1623,9 +1625,6 @@ func (c *Config) validateMeta(builtin *Config) {
 	}
 	if c.Meta.DefaultEntryWorkers < 1 {
 		c.Meta.DefaultEntryWorkers = builtin.Meta.DefaultEntryWorkers
-	}
-	if c.Meta.PendingMarkerDelayMS < -1 {
-		c.Meta.PendingMarkerDelayMS = builtin.Meta.PendingMarkerDelayMS
 	}
 	const metaWorkersMax = 64
 	if c.Meta.DefaultEntryWorkers > metaWorkersMax {

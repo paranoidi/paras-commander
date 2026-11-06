@@ -72,7 +72,7 @@ type Handler struct {
 	// the last render flush; HandleRenderFlush re-sorts those panels once, coalesced with the
 	// same 16ms debounce as the repaint itself.
 	resortPending [2]bool
-	// pendingReveal fires once per busy period after [meta].pending_marker_delay_ms and posts
+	// pendingReveal fires once per busy period after [panels].pending_marker_delay_ms and posts
 	// PendingRevealPayload; HandlePendingReveal then shows the markers (clears PendingHidden).
 	pendingReveal [2]sched.Debouncer
 	// cache stores computed meta results by [cmdName][absPath] for entries with cache = true.

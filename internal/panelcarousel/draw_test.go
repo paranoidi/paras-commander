@@ -402,6 +402,7 @@ func (f fakeDiskUsageSource) ByteSize(absPath string) (int64, bool) {
 }
 
 func (fakeDiskUsageSource) PendingForPanel(string, int) bool { return false }
+func (fakeDiskUsageSource) SizePendingDue(string, int) bool  { return false }
 func (fakeDiskUsageSource) IsKnownExcluded(string) bool      { return false }
 
 // TestDiskUsageBarStopsBeforeSizeColumn is the carousel-view regression companion to
@@ -635,6 +636,60 @@ func TestTruncatedNamesKeepSeparatorBeforeNextColumn(t *testing.T) {
 		}
 		if last := rowText(screen, col.X+col.Width-1, col.Y, 1); last != " " {
 			t.Fatalf("col %d: last cell before next column is %q, want blank separator", i, last)
+		}
+	}
+}
+
+type pendingDiskUsageSource struct {
+	fakeDiskUsageSource
+	due bool
+}
+
+func (pendingDiskUsageSource) PendingForPanel(string, int) bool { return true }
+func (p pendingDiskUsageSource) SizePendingDue(string, int) bool {
+	return p.due
+}
+
+// TestSizeColumnPendingMarkerWaitsForSizePendingDue pins that a carousel row paints the size
+// column's pending marker only once the source reports it due, even while the scan is pending.
+func TestSizeColumnPendingMarkerWaitsForSizePendingDue(t *testing.T) {
+	t.Parallel()
+	styles := theme.Default()
+	want, _ := utf8.DecodeRuneInString(styles.IconMetaRunning())
+	for _, due := range []bool{false, true} {
+		screen := tcell.NewSimulationScreen("UTF-8")
+		if err := screen.Init(); err != nil {
+			t.Fatalf("Init: %v", err)
+		}
+		t.Cleanup(screen.Fini)
+		const width, height = 80, 10
+		screen.SetSize(width, height)
+		center := panel.State{
+			Path:    pathloc.MustParse("/vol"),
+			Entries: []localfs.Entry{{Name: "quince", Path: "/vol/quince", Type: localfs.EntryDirectory}},
+		}
+		DrawBody(screen, BodyParams{
+			Frame:               geom.Rect{X: 0, Y: 0, Width: width, Height: height},
+			Center:              center,
+			Styles:              styles,
+			FileListActive:      true,
+			HeaderStyle:         styles.PanelActiveHeader,
+			HeaderCarouselStyle: styles.PanelActiveHeaderCarousel,
+			SurfaceStyle:        styles.PanelActiveSurface,
+			Layout:              DefaultLayout(),
+			DiskUsage:           DiskUsage{Active: true, Source: pendingDiskUsageSource{due: due}},
+		})
+		found := false
+		for y := 0; y < height; y++ {
+			for x := 0; x < width; x++ {
+				ch, _, _ := screen.Get(x, y)
+				if r, _ := utf8.DecodeRuneInString(ch); r == want {
+					found = true
+				}
+			}
+		}
+		if found != due {
+			t.Fatalf("due=%v: size marker shown = %v", due, found)
 		}
 	}
 }

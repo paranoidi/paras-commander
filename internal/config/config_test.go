@@ -1131,31 +1131,31 @@ func TestFileIndexBrowserScanMaxDepth(t *testing.T) {
 	}
 }
 
-func TestMetaPendingMarkerDelayMS(t *testing.T) {
-	if got := Default().Meta.PendingMarkerDelayMS; got != DefaultMetaPendingMarkerDelayMS {
+func TestPendingMarkerDelayMS(t *testing.T) {
+	if got := Default().Panels.PendingMarkerDelayMS; got != DefaultPendingMarkerDelayMS {
 		t.Fatalf("default PendingMarkerDelayMS = %d, want 800", got)
 	}
-	for v, want := range map[int]int{-5: DefaultMetaPendingMarkerDelayMS, -2: DefaultMetaPendingMarkerDelayMS, -1: -1, 0: 0, 250: 250} {
+	for v, want := range map[int]int{-5: DefaultPendingMarkerDelayMS, -2: DefaultPendingMarkerDelayMS, -1: -1, 0: 0, 250: 250} {
 		cfg := Default()
-		cfg.Meta.PendingMarkerDelayMS = v
+		cfg.Panels.PendingMarkerDelayMS = v
 		if err := cfg.Validate(); err != nil {
 			t.Fatalf("Validate(%d): %v", v, err)
 		}
-		if cfg.Meta.PendingMarkerDelayMS != want {
-			t.Fatalf("Validate(%d) -> %d, want %d", v, cfg.Meta.PendingMarkerDelayMS, want)
+		if cfg.Panels.PendingMarkerDelayMS != want {
+			t.Fatalf("Validate(%d) -> %d, want %d", v, cfg.Panels.PendingMarkerDelayMS, want)
 		}
 	}
-	if DefaultMetaPendingMarkerDelayMS != 800 {
-		t.Fatalf("DefaultMetaPendingMarkerDelayMS = %d, want 800", DefaultMetaPendingMarkerDelayMS)
+	if DefaultPendingMarkerDelayMS != 800 {
+		t.Fatalf("DefaultPendingMarkerDelayMS = %d, want 800", DefaultPendingMarkerDelayMS)
 	}
 	// An absent key keeps the default; an explicit 0 is honoured.
-	cfg, err := LoadFromPaths(Paths{ConfigFile: writeConfig(t, "[meta]\nlocal_names = [\"meta.toml\"]\n")})
-	if err != nil || cfg.Meta.PendingMarkerDelayMS != DefaultMetaPendingMarkerDelayMS {
-		t.Fatalf("absent key: delay=%d err=%v", cfg.Meta.PendingMarkerDelayMS, err)
+	cfg, err := LoadFromPaths(Paths{ConfigFile: writeConfig(t, "[panels]\nshow_hidden = true\n")})
+	if err != nil || cfg.Panels.PendingMarkerDelayMS != DefaultPendingMarkerDelayMS {
+		t.Fatalf("absent key: delay=%d err=%v", cfg.Panels.PendingMarkerDelayMS, err)
 	}
-	cfg, err = LoadFromPaths(Paths{ConfigFile: writeConfig(t, "[meta]\npending_marker_delay_ms = 0\n")})
-	if err != nil || cfg.Meta.PendingMarkerDelayMS != 0 {
-		t.Fatalf("explicit 0: delay=%d err=%v", cfg.Meta.PendingMarkerDelayMS, err)
+	cfg, err = LoadFromPaths(Paths{ConfigFile: writeConfig(t, "[panels]\npending_marker_delay_ms = 0\n")})
+	if err != nil || cfg.Panels.PendingMarkerDelayMS != 0 {
+		t.Fatalf("explicit 0: delay=%d err=%v", cfg.Panels.PendingMarkerDelayMS, err)
 	}
 	var buffer bytes.Buffer
 	if err := EncodeDefaultStub(&buffer); err != nil {

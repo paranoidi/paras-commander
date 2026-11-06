@@ -9,7 +9,9 @@ import (
 // PaintDiskUsageBrowserPanelsOnly repaints file-list panels in disk-usage scan scope and
 // the menu-bar activity spinner without a full terminal repaint. layout must match the
 // current terminal size (same rules as Render). Returns false when the caller should
-// fall back to ui.Render (non-browser view or terminal too small).
+// fall back to ui.Render: non-browser view, terminal too small, or no panel in scan scope
+// (a scan outside the Disk Usage view still changes list cells such as the size column's
+// pending marker, which only a full render repaints; Render draws the spinner itself).
 func PaintDiskUsageBrowserPanelsOnly(screen tcell.Screen, layout Layout, model Model, styles theme.Theme) bool {
 	if model.ViewMode != ViewBrowser {
 		return false
@@ -18,11 +20,11 @@ func PaintDiskUsageBrowserPanelsOnly(screen tcell.Screen, layout Layout, model M
 		return false
 	}
 
-	painted := paintBrowserPanelsInScope(screen, layout, model, styles, model.showPanelDiskUsage)
-	if DrawMenuBarSpinnerOnly(screen, layout, model, styles) {
-		painted = true
+	if !paintBrowserPanelsInScope(screen, layout, model, styles, model.showPanelDiskUsage) {
+		return false
 	}
-	return painted
+	DrawMenuBarSpinnerOnly(screen, layout, model, styles)
+	return true
 }
 
 // paintBrowserPanelsInScope redraws twin-panel file lists (and visible selected strips)

@@ -511,7 +511,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 			rowSuffix.OtherMatchCursor = rowSuffix.OtherMatch && entry.Name == display.OtherMatchCursorName
 		}
 		rowOpts.Suffix = rowSuffix
-		rowOpts.SizePending = entry.Type == localfs.EntryDirectory && display.Painter != nil && display.Painter.PendingForPanel(entry.Path, ctx.PanelID)
+		rowOpts.SizePending = entry.Type == localfs.EntryDirectory && display.Painter != nil && display.Painter.SizePendingDue(entry.Path, ctx.PanelID)
 		text = formatEntry(entry, effTextWidth, rowOpts, panelStyle.Styles, display.Painter, metaText)
 		nameWidth = effNameWidth
 		listTextWidth = effTextWidth
@@ -1137,7 +1137,9 @@ type panelRowOpts struct {
 	NameOnly  bool
 	ShowGit   bool
 	// SizePending is true when the row's directory size is still being calculated (queued or
-	// walking) and has no cached value yet, so the size column shows the meta.running icon.
+	// walking), has no cached value yet and the scan has waited out
+	// [panels].pending_marker_delay_ms (SizePendingDue), so the size column shows the
+	// meta.running icon; the folder tint is not delayed.
 	SizePending bool
 }
 
