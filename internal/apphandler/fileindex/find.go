@@ -257,9 +257,9 @@ func (h *Handler) runFindAction(id string) bool {
 	case keymap.ActionFindSelectAll:
 		h.mark(st.Results...)
 	case keymap.ActionOpenInPrimary:
-		h.openCursorIn(ui.PrimaryPanel)
+		h.openCursorIn(h.model.FirstSlotPanel())
 	case keymap.ActionOpenInSecondary:
-		h.openCursorIn(ui.SecondaryPanel)
+		h.openCursorIn(h.model.SecondSlotPanel())
 	case keymap.ActionFindSelectGroup:
 		h.host.OpenGroupSelectDialog(findctrl.GroupSelectModeSelect)
 	case keymap.ActionFindUnselectGroup:

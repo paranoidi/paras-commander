@@ -219,10 +219,10 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 				h.ViewSelected()
 				return
 			case keymap.ActionOpenInPrimary:
-				h.OpenSelected(ui.PrimaryPanel)
+				h.OpenSelected(h.model.FirstSlotPanel())
 				return
 			case keymap.ActionOpenInSecondary:
-				h.OpenSelected(ui.SecondaryPanel)
+				h.OpenSelected(h.model.SecondSlotPanel())
 				return
 			case keymap.ActionPinRemove:
 				h.RemoveSelected()

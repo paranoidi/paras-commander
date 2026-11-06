@@ -1293,7 +1293,7 @@ func DefaultActionSpecs() []ActionSpec {
 		{
 			ID:           ActionOpenInPrimary,
 			LeaderKey:    "l",
-			Title:        "Open in primary panel",
+			Title:        "Open in left/top panel",
 			Section:      "Panels",
 			Views:        HelpDedup,
 			DefaultKeys:  nil, // overlays: DefaultOpenInPanelKeys
@@ -1303,7 +1303,7 @@ func DefaultActionSpecs() []ActionSpec {
 		{
 			ID:           ActionOpenInSecondary,
 			LeaderKey:    "o",
-			Title:        "Open in secondary panel",
+			Title:        "Open in right/bottom panel",
 			Section:      "Panels",
 			Views:        HelpDedup,
 			DefaultKeys:  nil, // overlays: DefaultOpenInPanelKeys

@@ -160,7 +160,7 @@ func (a *App) handleDedupPanelKey(action string, event *tcell.EventKey) bool {
 		}
 	case keymap.ActionOpenInPrimary, keymap.ActionOpenInSecondary:
 		if e, ok := p.CurrentEntry(); ok {
-			a.dedupCtrl.OpenInPanel(openInPanelID(action), e.Path, e.ResolvesToDir())
+			a.dedupCtrl.OpenInPanel(a.openInPanelID(action), e.Path, e.ResolvesToDir())
 		}
 	case keymap.ActionFileView:
 		if e, ok := p.CurrentEntry(); ok && !e.ResolvesToDir() {

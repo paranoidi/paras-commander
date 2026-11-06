@@ -245,7 +245,7 @@ The picker's list works like Find's, with the same keys (`keybindings.toml`,
 |---|---|---|
 | `panel.select-toggle` | `Insert` | Mark the file and move down; OK then adds the marked files to the active panel's selection instead of jumping |
 | `panel.pin-toggle` | `Alt+Insert` | Pin or unpin the file |
-| `ui.open-primary` / `ui.open-secondary` | `Shift+Left` / `Shift+Right` | Show the file in the left / right panel, keeping the picker open |
+| `ui.open-primary` / `ui.open-secondary` | `Shift+Left` / `Shift+Right` | Show the file in the left/top / right/bottom panel, keeping the picker open |
 | `find.view` | `F3` | View the file; closing the viewer returns to the picker |
 | `find.edit` | `F4` | Edit the file, keeping the picker open |
 

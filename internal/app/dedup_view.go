@@ -209,7 +209,7 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 		return true
 	case keymap.ActionOpenInPrimary, keymap.ActionOpenInSecondary:
 		if path, isDir, ok := a.dedupCtrl.PaneTarget(a.model.DedupView.FocusCopies); ok {
-			a.dedupCtrl.OpenInPanel(openInPanelID(actionID), path, isDir)
+			a.dedupCtrl.OpenInPanel(a.openInPanelID(actionID), path, isDir)
 		}
 		return true
 	case keymap.ActionDedupCompare:
@@ -270,11 +270,12 @@ func (a *App) dedupOpenInExternalBrowser() {
 	a.openDirInExternalBrowser(path)
 }
 
-func openInPanelID(actionID string) int {
+// openInPanelID maps ui.open-primary / ui.open-secondary to the panel drawn in that visual slot.
+func (a *App) openInPanelID(actionID string) int {
 	if actionID == keymap.ActionOpenInSecondary {
-		return ui.SecondaryPanel
+		return a.model.SecondSlotPanel()
 	}
-	return ui.PrimaryPanel
+	return a.model.FirstSlotPanel()
 }
 
 func dedupViewFooterKeys(global, dedup *keymap.Map, treeDirs bool) []menu.FunctionKey {

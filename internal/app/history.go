@@ -328,10 +328,10 @@ func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {
 				a.toggleHistoryDialogBothPanels()
 				return
 			case keymap.ActionOpenInPrimary:
-				a.openHistorySelectionInPanel(ui.PrimaryPanel)
+				a.openHistorySelectionInPanel(a.model.FirstSlotPanel())
 				return
 			case keymap.ActionOpenInSecondary:
-				a.openHistorySelectionInPanel(ui.SecondaryPanel)
+				a.openHistorySelectionInPanel(a.model.SecondSlotPanel())
 				return
 			}
 		}

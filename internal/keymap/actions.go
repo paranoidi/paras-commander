@@ -346,7 +346,8 @@ const (
 	ActionDestinationActivePanel   = "ui.destination-active"
 	ActionDestinationInactivePanel = "ui.destination-inactive"
 
-	// ActionOpenInPrimary / ActionOpenInSecondary point a panel at the highlighted result in the
+	// ActionOpenInPrimary / ActionOpenInSecondary point the panel drawn in the first (left/top) or
+	// second (right/bottom) visual slot, whichever panel that is, at the highlighted result in the
 	// find and pin dialogs and the dedup view. Default chords: DefaultOpenInPanelKeys.
 	ActionOpenInPrimary   = "ui.open-primary"
 	ActionOpenInSecondary = "ui.open-secondary"

@@ -38,9 +38,9 @@ func (h *Handler) TryBookmarkDialogShortcut(ev *tcell.EventKey) bool {
 	case keymap.ActionBookmarkDelete:
 		return h.deleteSelectedBookmark()
 	case keymap.ActionOpenInPrimary:
-		return h.openSelectedBookmarkInPanel(ui.PrimaryPanel)
+		return h.openSelectedBookmarkInPanel(h.model.FirstSlotPanel())
 	case keymap.ActionOpenInSecondary:
-		return h.openSelectedBookmarkInPanel(ui.SecondaryPanel)
+		return h.openSelectedBookmarkInPanel(h.model.SecondSlotPanel())
 	default:
 		return false
 	}

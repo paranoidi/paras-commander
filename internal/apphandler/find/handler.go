@@ -902,19 +902,11 @@ func (h *Handler) NavigateFindCursor() {
 	h.CloseDialog()
 }
 
-// OpenSelectedInPrimary points the primary (left) panel at the selected result,
-// leaving the find dialog open.
-func (h *Handler) OpenSelectedInPrimary() {
-	if name, ok := h.navigateFindEntryToPanel(ui.PrimaryPanel); ok {
-		host.ReportOpenedInPanel(h.host, name, ui.PrimaryPanel)
-	}
-}
-
-// OpenSelectedInSecondary points the secondary (right) panel at the selected
-// result, leaving the find dialog open.
-func (h *Handler) OpenSelectedInSecondary() {
-	if name, ok := h.navigateFindEntryToPanel(ui.SecondaryPanel); ok {
-		host.ReportOpenedInPanel(h.host, name, ui.SecondaryPanel)
+// OpenSelectedInPanel points panelID at the selected result, leaving the find
+// dialog open.
+func (h *Handler) OpenSelectedInPanel(panelID int) {
+	if name, ok := h.navigateFindEntryToPanel(panelID); ok {
+		host.ReportOpenedInPanel(h.host, name, panelID)
 	}
 }
 
@@ -1405,9 +1397,9 @@ func (h *Handler) RunAction(id string) bool {
 	case keymap.ActionFindResetAdvanced:
 		h.ResetAdvanced()
 	case keymap.ActionOpenInPrimary:
-		h.OpenSelectedInPrimary()
+		h.OpenSelectedInPanel(h.model.FirstSlotPanel())
 	case keymap.ActionOpenInSecondary:
-		h.OpenSelectedInSecondary()
+		h.OpenSelectedInPanel(h.model.SecondSlotPanel())
 	default:
 		return false
 	}

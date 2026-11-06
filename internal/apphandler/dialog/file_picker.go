@@ -39,10 +39,10 @@ func (h *Handler) TryFilePickerShortcut(ev *tcell.EventKey) bool {
 			h.editFilePickerCursor()
 			return true
 		case keymap.ActionOpenInPrimary:
-			h.openFilePickerCursorIn(ui.PrimaryPanel)
+			h.openFilePickerCursorIn(h.model.FirstSlotPanel())
 			return true
 		case keymap.ActionOpenInSecondary:
-			h.openFilePickerCursorIn(ui.SecondaryPanel)
+			h.openFilePickerCursorIn(h.model.SecondSlotPanel())
 			return true
 		}
 	}

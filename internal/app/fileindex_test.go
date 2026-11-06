@@ -1796,6 +1796,35 @@ func TestFileIndexCopiesPickerMarksAddToSelection(t *testing.T) {
 	}
 }
 
+// ui.open-primary / ui.open-secondary target the visual slot, so a swapped layout must send
+// Shift+Right to Primary (drawn second) and Shift+Left to Secondary (drawn first).
+func TestFileIndexCopiesPickerOpenInSlotFollowsSwap(t *testing.T) {
+	for _, swap := range []bool{false, true} {
+		for _, right := range []bool{false, true} {
+			a, screen, dir := copiesApp(t)
+			a.model.SwapPanes = swap
+			target := filepath.Join(dir, "meadow")
+			// Expected identity is spelled out per case, not derived from the helper.
+			wantPanel, otherPanel := &a.model.Primary, &a.model.Secondary
+			if right != swap {
+				wantPanel, otherPanel = &a.model.Secondary, &a.model.Primary
+			}
+			otherBefore := otherPanel.PathString()
+			openCopiesPicker(t, a, screen)
+			key := tcell.KeyLeft
+			if right {
+				key = tcell.KeyRight
+			}
+			a.handleKey(tcell.NewEventKey(key, 0, tcell.ModShift))
+			drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return wantPanel.PathString() == target })
+			if wantPanel.PathString() != target || otherPanel.PathString() != otherBefore || !a.model.PathPicker.Open {
+				t.Fatalf("swap=%v right=%v: want=%q other=%q (was %q) open=%v, want target %q",
+					swap, right, wantPanel.PathString(), otherPanel.PathString(), otherBefore, a.model.PathPicker.Open, target)
+			}
+		}
+	}
+}
+
 func TestFileIndexCopiesPickerSpaceIsFilterText(t *testing.T) {
 	a, screen, _ := copiesApp(t)
 	openCopiesPicker(t, a, screen)

@@ -391,6 +391,25 @@ func (m *Model) FindParkedOn(panelID int) bool {
 		(m.IndexFindDialog.Parked && m.IndexFindDialog.PanelID == panelID)
 }
 
+// FirstSlotPanel is the panel identity drawn in the first visual slot (left/top); SecondSlotPanel
+// the one in the second (right/bottom). ui.open-primary and ui.open-secondary target these slots.
+// ponytail: reads the user's swap preference, not App.effectiveSwapPanes, so a carousel quick view
+// that forces its own order is not followed; give handlers the effective value if that matters.
+func (m *Model) FirstSlotPanel() int {
+	if m.SwapPanes {
+		return SecondaryPanel
+	}
+	return PrimaryPanel
+}
+
+// SecondSlotPanel is the panel identity drawn in the second visual slot (right/bottom).
+func (m *Model) SecondSlotPanel() int {
+	if m.SwapPanes {
+		return PrimaryPanel
+	}
+	return SecondaryPanel
+}
+
 // SyncDriverPanelID returns the PrimaryPanel/SecondaryPanel id that drives latched panel sync,
 // or -1 when sync is disabled. The result is intended for renderers that need a sentinel
 // they can compare against the panel they are about to draw.
