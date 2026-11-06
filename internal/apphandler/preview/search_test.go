@@ -166,7 +166,7 @@ func TestSearchNavKeysWhileEditing(t *testing.T) {
 	}
 }
 
-func TestSearchNavKeysAfterAccept(t *testing.T) {
+func TestSearchNavKeysDoNotJumpAfterAccept(t *testing.T) {
 	h := newSearchNavHandler(t)
 	h.startFilePreviewSearch()
 	h.applyFilePreviewSearchFieldEdit(dialog.FileDialogField{Value: "needle"})
@@ -174,13 +174,14 @@ func TestSearchNavKeysAfterAccept(t *testing.T) {
 	if h.model.FullscreenFilePreview.Search.Editing {
 		t.Fatal("Enter should accept the search")
 	}
+	cur := h.searchCurrent()
+	scroll := h.model.FullscreenFilePreview.Scroll
 	h.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	if got := h.searchCurrent(); got != 1 {
-		t.Fatalf("after Down: Current = %d, want 1", got)
+	if got := h.searchCurrent(); got != cur {
+		t.Fatalf("Current = %d, want unchanged %d", got, cur)
 	}
-	h.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
-	if got := h.searchCurrent(); got != 0 {
-		t.Fatalf("after Up: Current = %d, want 0", got)
+	if got := h.model.FullscreenFilePreview.Scroll; got != scroll+1 {
+		t.Fatalf("Scroll = %d, want %d", got, scroll+1)
 	}
 }
 

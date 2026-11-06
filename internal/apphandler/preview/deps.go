@@ -29,7 +29,7 @@ type Deps struct {
 	// other scrolling-query editing owned by this handler.
 	KeysDialogInput *keymap.Map
 	// KeysFilePreviewSearch is the [preview_search] overlay: match-jump chords consulted only while
-	// the fullscreen preview search has matches. Nil means no binding.
+	// the fullscreen preview search query is being typed. Nil means no binding.
 	KeysFilePreviewSearch *keymap.Map
 	// Mu is the App's shared async-model-mutation lock (guards FilePreview/CarouselFilePreview/
 	// FullscreenFilePreview and other model fields written from background goroutines). render()

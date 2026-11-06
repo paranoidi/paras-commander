@@ -34,7 +34,7 @@ func AllowedInFilePreviewOverlay(actionID string) bool {
 }
 
 // DefaultFilePreviewSearchOverlayKeys holds built-in chords for [preview_search]: match-jump
-// chords consulted only while a fullscreen-preview search has matches. They are a separate table
+// chords consulted only while a fullscreen-preview search query is being typed. They are a separate table
 // from [preview] because that overlay is consulted before the global map and would shadow the
 // plain scroll/page chords when no search is active.
 func DefaultFilePreviewSearchOverlayKeys() map[string][]string {

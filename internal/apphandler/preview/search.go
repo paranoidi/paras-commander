@@ -98,9 +98,9 @@ func (h *Handler) filePreviewSearchNav(dir int) bool {
 	return true
 }
 
-// handleFilePreviewSearchNavKey jumps between matches for [preview_search] chords. It reports
-// false when the key isn't bound there or the search has no matches, so those chords keep their
-// normal meaning (scrolling, or line editing while typing).
+// handleFilePreviewSearchNavKey jumps between matches for [preview_search] chords while the query
+// is being typed. It reports false when the key isn't bound there or the query has no matches, so
+// the key falls through to line editing in the search field.
 func (h *Handler) handleFilePreviewSearchNavKey(event *tcell.EventKey) bool {
 	id, _ := h.keysFilePreviewSearch.Lookup(event)
 	switch id {
