@@ -262,7 +262,7 @@ func (s *State) expandSubtreeOneLevel(nodes []treeflat.Node[TreeEntry], depth in
 			continue
 		}
 		if !s.TreeExpanded[n.ID] {
-			if err := s.setTreeNodeExpanded(n.ID, depth, true, true); err != nil {
+			if err := s.expandTreeNode(n.ID, n, depth, true); err != nil {
 				return err
 			}
 			continue
@@ -676,7 +676,7 @@ func (s *State) expandAllTreeDirsAtDepth(nodes []treeflat.Node[TreeEntry], depth
 			continue
 		}
 		if depth == targetDepth {
-			if err := s.setTreeNodeExpanded(n.ID, depth, true, true); err != nil {
+			if err := s.expandTreeNode(n.ID, n, depth, true); err != nil {
 				return err
 			}
 			continue
@@ -715,57 +715,80 @@ func (s *State) expandAllTreeDirsAtDepth(nodes []treeflat.Node[TreeEntry], depth
 // ApplyTreeChildLoad clears the intent and Children stays nil, so pressing expand again just
 // re-enters this function and dispatches a new fetch — no separate retry state machine needed.
 func (s *State) setTreeNodeExpanded(id string, depth int, expand bool, quiet bool) error {
+	if !expand {
+		s.markTreeExpandIntent(id, false)
+		return nil
+	}
+	var node *treeflat.Node[TreeEntry]
+	if depth < maxTreeExpandDepth {
+		node = findTreeNode(s.TreeRoots, id)
+	}
+	return s.expandTreeNode(id, node, depth, quiet)
+}
+
+// markTreeExpandIntent records the expand/collapse intent for id and bumps TreeExpandGen.
+func (s *State) markTreeExpandIntent(id string, expand bool) {
 	if s.TreeExpanded == nil {
 		s.TreeExpanded = make(map[string]bool)
 	}
-	if expand && depth < maxTreeExpandDepth {
-		if node := findTreeNode(s.TreeRoots, id); node != nil && node.Children == nil {
-			if r, ok := s.treePrefetch[id]; ok {
-				if r.Err != nil {
-					node.Value.LoadErr = r.Err
-					return r.Err
-				}
-				node.Value.LoadErr = nil
-				s.attachTreeChildren(node, r.Entries)
-				s.TreeExpanded[id] = expand
-				s.TreeExpandGen++
-				return nil
-			}
-			if node.Value.Loading {
-				// Already loading; don't dispatch a second concurrent fetch, the result expands it.
-				s.TreeExpanded[id] = true
-				s.TreeExpandGen++
-				return nil
-			}
-			node.Value.Loading = true
-			if s.ScheduleTreeChildLoad != nil {
-				loc, err := pathloc.Parse(id)
-				if err != nil {
-					node.Value.Loading = false
-					return err
-				}
-				if s.ScheduleTreeChildLoad(TreeChildLoadRequest{DirID: id, Loc: loc}) {
-					s.TreeExpanded[id] = true
-					s.TreeExpandGen++
-					if quiet {
-						s.treeExpandQuiet++
-						return nil
-					}
-					s.rebuildTreeRows() // show the loading icon now; the children land on async apply
-					return nil
-				}
-			}
-			entries, err := s.loadTreeChildren(id)
-			node.Value.Loading = false
-			if err != nil {
-				node.Value.LoadErr = err
-				return err
+	s.TreeExpanded[id] = expand
+	s.TreeExpandGen++
+}
+
+// expandTreeNode is the expand half of setTreeNodeExpanded for callers that already hold node (the
+// node with ID id, or nil when it is unknown): it skips the tree search. node must point into the
+// current TreeRoots/Children slices; the caller must not have replaced the slice holding it. Past
+// maxTreeExpandDepth, or with a nil node, it only records the intent and loads nothing.
+func (s *State) expandTreeNode(id string, node *treeflat.Node[TreeEntry], depth int, quiet bool) error {
+	if s.TreeExpanded == nil {
+		s.TreeExpanded = make(map[string]bool)
+	}
+	if depth < maxTreeExpandDepth && node != nil && node.Children == nil {
+		if r, ok := s.treePrefetch[id]; ok {
+			if r.Err != nil {
+				node.Value.LoadErr = r.Err
+				return r.Err
 			}
 			node.Value.LoadErr = nil
-			s.attachTreeChildren(node, entries)
+			s.attachTreeChildren(node, r.Entries)
+			s.TreeExpanded[id] = true
+			s.TreeExpandGen++
+			return nil
 		}
+		if node.Value.Loading {
+			// Already loading; don't dispatch a second concurrent fetch, the result expands it.
+			s.TreeExpanded[id] = true
+			s.TreeExpandGen++
+			return nil
+		}
+		node.Value.Loading = true
+		if s.ScheduleTreeChildLoad != nil {
+			loc, err := pathloc.Parse(id)
+			if err != nil {
+				node.Value.Loading = false
+				return err
+			}
+			if s.ScheduleTreeChildLoad(TreeChildLoadRequest{DirID: id, Loc: loc}) {
+				s.TreeExpanded[id] = true
+				s.TreeExpandGen++
+				if quiet {
+					s.treeExpandQuiet++
+					return nil
+				}
+				s.rebuildTreeRows() // show the loading icon now; the children land on async apply
+				return nil
+			}
+		}
+		entries, err := s.loadTreeChildren(id)
+		node.Value.Loading = false
+		if err != nil {
+			node.Value.LoadErr = err
+			return err
+		}
+		node.Value.LoadErr = nil
+		s.attachTreeChildren(node, entries)
 	}
-	s.TreeExpanded[id] = expand
+	s.TreeExpanded[id] = true
 	s.TreeExpandGen++
 	return nil
 }
@@ -819,7 +842,7 @@ func (s *State) restoreTreeExpansionsIn(nodes []treeflat.Node[TreeEntry], depth 
 		if node.Children == nil {
 			// Quiet during an ExpandAllTreeFully cascade, so the next level waits for every
 			// restored load (finishTreeChildLoadApply) instead of firing on the first one.
-			if err := s.setTreeNodeExpanded(node.ID, depth, true, s.treeExpandAllAuto); err != nil {
+			if err := s.expandTreeNode(node.ID, node, depth, s.treeExpandAllAuto); err != nil {
 				delete(s.TreeExpanded, node.ID)
 				s.TreeExpandGen++
 				continue

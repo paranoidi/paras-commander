@@ -296,3 +296,29 @@ func TestApplyListingPrefetchedCollapseMissingIgnoresFetchErrors(t *testing.T) {
 		t.Fatalf("reverted = %d err = %v, want a fetch error not counted as a miss", reverted, err)
 	}
 }
+
+func TestSetTreeNodeExpandedDepthCapAndUnknownIDOnlyRecordIntent(t *testing.T) {
+	root, meadow, _ := prefetchTestTree(t)
+	s, err := New(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.SetListLayout(ListLayoutTree, 10)
+	s.ScheduleTreeChildLoad = func(TreeChildLoadRequest) bool {
+		t.Error("ScheduleTreeChildLoad called")
+		return true
+	}
+	if err := s.setTreeNodeExpanded(meadow, maxTreeExpandDepth, true, false); err != nil {
+		t.Fatal(err)
+	}
+	unknown := filepath.Join(root, "orchard")
+	if err := s.setTreeNodeExpanded(unknown, 0, true, false); err != nil {
+		t.Fatal(err)
+	}
+	if !s.TreeExpanded[meadow] || !s.TreeExpanded[unknown] {
+		t.Fatalf("intent not recorded: %v", s.TreeExpanded)
+	}
+	if n := findTreeNode(s.TreeRoots, meadow); n == nil || n.Children != nil || n.Value.Loading {
+		t.Fatalf("depth-capped node was loaded: %+v", n)
+	}
+}
