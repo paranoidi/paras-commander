@@ -88,3 +88,36 @@ func TestExpandableIDs(t *testing.T) {
 		t.Fatalf("ExpandableIDs = %v, want %v", got, want)
 	}
 }
+
+func TestFlattenPresizedExactly(t *testing.T) {
+	roots := []Node[string]{
+		{ID: "meadow", Children: []Node[string]{
+			{ID: "meadow/lantern"},
+			{ID: "meadow/pebble", Children: []Node[string]{
+				{ID: "meadow/pebble/orchid"},
+				{ID: "meadow/pebble/walnut"},
+			}},
+		}},
+		{ID: "harbor", Children: []Node[string]{{ID: "harbor/violin"}}},
+		{ID: "ember"},
+	}
+	collapsedHarbor := func(id string) bool { return id != "harbor" }
+	for name, fn := range map[string]func(string) bool{"nil predicate": nil, "collapsed": collapsedHarbor} {
+		out := Flatten(roots, fn)
+		if cap(out) != len(out) {
+			t.Fatalf("%s: cap = %d, len = %d, want presize to match the walk", name, cap(out), len(out))
+		}
+	}
+	if got, want := ids(Flatten(roots, collapsedHarbor)), []string{"meadow", "meadow/lantern", "meadow/pebble", "meadow/pebble/orchid", "meadow/pebble/walnut", "harbor", "ember"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("rows = %v, want %v", got, want)
+	}
+}
+
+func TestFlattenEmptyStaysNil(t *testing.T) {
+	if got := Flatten[string](nil, nil); got != nil {
+		t.Fatalf("Flatten(nil) = %#v, want nil", got)
+	}
+	if got := Flatten([]Node[string]{}, nil); got != nil {
+		t.Fatalf("Flatten(empty) = %#v, want nil", got)
+	}
+}

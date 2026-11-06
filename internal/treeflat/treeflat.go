@@ -32,14 +32,33 @@ type Row[T any] struct {
 // collapsed-set (default expanded) or an expanded-set (default collapsed)
 // behind the predicate. A nil predicate expands everything.
 func Flatten[T any](roots []Node[T], expanded func(id string) bool) []Row[T] {
-	var out []Row[T]
+	isOpen := func(n *Node[T]) bool {
+		return len(n.Children) > 0 && (expanded == nil || expanded(n.ID))
+	}
+	// Count first so the output is allocated once; a 50k-row list otherwise
+	// regrows (and discards) several copies per rebuild.
+	var count func(nodes []Node[T]) int
+	count = func(nodes []Node[T]) int {
+		c := len(nodes)
+		for i := range nodes {
+			if isOpen(&nodes[i]) {
+				c += count(nodes[i].Children)
+			}
+		}
+		return c
+	}
+	total := count(roots)
+	if total == 0 {
+		return nil
+	}
+	out := make([]Row[T], 0, total)
 	var walk func(nodes []Node[T], depth int, parentContinues []bool)
 	walk = func(nodes []Node[T], depth int, parentContinues []bool) {
 		for i := range nodes {
 			n := &nodes[i]
 			last := i == len(nodes)-1
 			hasKids := len(n.Children) > 0
-			open := hasKids && (expanded == nil || expanded(n.ID))
+			open := isOpen(n)
 			continues := append([]bool(nil), parentContinues...)
 			out = append(out, Row[T]{
 				ID:              n.ID,
