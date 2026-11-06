@@ -2,8 +2,8 @@ package keymap
 
 import "testing"
 
-func TestHelpDialogOverlayDefaultF1Legend(t *testing.T) {
-	if got := DefaultHelpDialogOverlayKeys()[ActionHelpLegend]; len(got) != 1 || got[0] != "F1" {
+func TestHelpDialogOverlayDefaultF3Legend(t *testing.T) {
+	if got := DefaultHelpDialogOverlayKeys()[ActionHelpLegend]; len(got) != 1 || got[0] != "F3" {
 		t.Fatalf("default = %v", got)
 	}
 	if !AllowedInHelpDialogOverlay(ActionHelpLegend) {

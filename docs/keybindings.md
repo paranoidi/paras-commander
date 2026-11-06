@@ -70,6 +70,6 @@ Terminals do not deliver every combination. Known traps: `C-h` arrives as Backsp
 
 ## Related
 
-- Press `F1` in any view for the bindings that apply there; `F2` inside help lists text-input editing keys and `F1` inside help opens the icon legend.
+- Press `F1` in any view for the bindings that apply there; `F2` inside help lists text-input editing keys and `F3` inside help opens the icon legend.
 - [Shortcuts](shortcuts.md) for the design of the default scheme and dialog keys.
 - [Menus](menus.md) for leader-menu letters.

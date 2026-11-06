@@ -22,7 +22,7 @@ Press `F1` or `?` (`app.show-help`) in any view to list the key bindings for tha
 - Up/Down, PgUp/PgDn, Home/End move through rows.
 - `Enter` runs the highlighted action, as if you pressed its key.
 - `F2` (`help.text-edit-keys`, `[dialog.help]`) switches to the text-input editing keys; `F2` again returns.
-- `F1` (`help.legend`, `[dialog.help]`) opens the icon legend, one icon per line; `F1` or `Esc` closes it.
-- `Esc` closes help. In text fields a literal `?` is typed, not treated as help.
+- `F3` (`help.legend`, `[dialog.help]`) opens the icon legend, one icon per line; `F1` or `Esc` closes it.
+- `F1` or `Esc` closes help. In text fields a literal `?` is typed, not treated as help.
 
 See [Keybindings](keybindings.md) for changing the keys.

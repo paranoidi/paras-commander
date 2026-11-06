@@ -4,7 +4,7 @@ package keymap
 func DefaultHelpDialogOverlayKeys() map[string][]string {
 	return map[string][]string{
 		ActionHelpTextEditKeys: {"F2"},
-		ActionHelpLegend:       {"F1"},
+		ActionHelpLegend:       {"F3"},
 	}
 }
 
