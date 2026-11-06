@@ -651,6 +651,28 @@ func TestResolveColorUsesPalette(t *testing.T) {
 	}
 }
 
+func TestPreviewSearchIconStyle(t *testing.T) {
+	row := tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlue)
+	if got := (Theme{}).PreviewSearchIconStyle(row); got != row {
+		t.Errorf("PreviewSearchIconStyle without the key = %v, want the row style", got)
+	}
+	th := Theme{PreviewSearchIcon: tcell.StyleDefault.Foreground(tcell.ColorTeal).Background(tcell.ColorRed)}
+	fg, bg, _ := th.PreviewSearchIconStyle(row).Decompose()
+	if fg != tcell.ColorTeal || bg != tcell.ColorBlue {
+		t.Errorf("PreviewSearchIconStyle = (%v, %v), want teal on the row's blue (key bg ignored)", fg, bg)
+	}
+	styles, err := parse(testTheme(t, "custom", nil, nil))
+	if err != nil {
+		t.Fatalf("parse() error = %v", err)
+	}
+	if styles.PreviewSearchIcon != (tcell.Style{}) {
+		t.Errorf("PreviewSearchIcon = %v, want zero for a theme without the key", styles.PreviewSearchIcon)
+	}
+	if Default().PreviewSearchIcon == (tcell.Style{}) {
+		t.Error("default theme should define preview.search_icon")
+	}
+}
+
 func TestTooltipStylesFallBackWhenThemeOmitsThem(t *testing.T) {
 	styles, err := parse(testTheme(t, "custom", nil, nil))
 	if err != nil {

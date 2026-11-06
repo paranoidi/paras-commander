@@ -24,13 +24,21 @@ func drawFilePreviewSearchBar(screen tcell.Screen, rect Rect, field dialog.FileD
 	for col := rect.X; col < rect.X+rect.Width; col++ {
 		screen.SetContent(col, rect.Y, ' ', nil, rowStyle)
 	}
-	labelW := min(runewidth.StringWidth(filePreviewSearchLabel), rect.Width)
-	labelStyle := rowStyle
-	if !noMatch {
+	// Icons on: the find dialog's leading search icon plus a gap cell; off: the "search: " text.
+	label, labelStyle := filePreviewSearchLabel, rowStyle
+	labelW := runewidth.StringWidth(label)
+	if styles.UseNerdfontIcons {
+		label = styles.IconSearchIcon()
+		labelW = dialog.LeadingIconCols(label)
+		if !noMatch {
+			labelStyle = styles.PreviewSearchIconStyle(rowStyle)
+		}
+	} else if !noMatch {
 		_, rowBG, _ := rowStyle.Decompose()
 		labelStyle = styles.DialogText.Background(rowBG)
 	}
-	primitive.TextOverlay(screen, rect.X, rect.Y, labelW, filePreviewSearchLabel, labelStyle)
+	labelW = min(labelW, rect.Width)
+	primitive.TextOverlay(screen, rect.X, rect.Y, labelW, label, labelStyle)
 	inputX := rect.X + labelW
 	inputW := rect.Width - labelW
 	if inputW <= 0 {

@@ -243,6 +243,9 @@ highlight.cursor = { fg = "red", bold = true }
 input = { fg = "bright_yellow", bold = true }
 input.nomatch = { fg = "bright_red", bold = true }
 
+[preview]                    # F3 fullscreen preview
+search_icon = { fg = "cyan" }   # foreground of the search bar's leading icon ([icons.search] icon); bg ignored
+
 [dialog]                     # dialog chrome
 frame = { fg = "white" }
 surface = { fg = "white", bg = "bright_black" }

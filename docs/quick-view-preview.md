@@ -36,7 +36,7 @@ The preview takes the whole screen (no menu bar; the filename is the top row). B
 | `C-d` / `C-u` | Half page |
 | `C-f` / `C-b` | Full page |
 | `g` / `G` | Start / end |
-| `/` | Search (case-insensitive, literal); Enter accepts, Esc cancels; match locations are marked on the scrollbar |
+| `/` | Search (case-insensitive, literal); Enter accepts, Esc cancels; match locations are marked on the scrollbar; the search bar starts with the search icon, or the text `search:` when Nerd Font icons are off |
 | `n` / `N` | Next / previous match; stops at the last / first match with a warning |
 | `Down` / `Up`, `C-j` / `C-k` | Next / previous match, only while typing the query and when it has matches (so `C-k` jumps instead of killing the line); after Enter use `n` / `N`, and the arrows scroll and `C-j` / `C-k` page as usual; rebind in `[preview_search]` |
 | `F5` | Re-read the file from disk, keeping scroll and search |

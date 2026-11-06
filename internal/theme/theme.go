@@ -311,6 +311,9 @@ type Theme struct {
 	// tooltip.info, foreground only; fallback dialog.accent).
 	TooltipText tcell.Style
 	TooltipInfo tcell.Style
+	// PreviewSearchIcon is the F3 preview search bar's leading icon (optional preview.search_icon,
+	// foreground only); zero when the theme omits it.
+	PreviewSearchIcon tcell.Style
 
 	LeaderMenuSurface  tcell.Style
 	LeaderMenuGroup    tcell.Style
@@ -436,6 +439,17 @@ func (t Theme) DialogInputPair(focused bool) (base, placeholder tcell.Style) {
 		return t.DialogInputActive, t.DialogInputActivePlaceholder
 	}
 	return t.DialogInputInactive, t.DialogInputInactivePlaceholder
+}
+
+// PreviewSearchIconStyle is the F3 preview search bar's leading icon: row with its foreground
+// replaced by the preview.search_icon foreground (a bg in the key is ignored). Returns row
+// unchanged when the theme omits the key.
+func (t Theme) PreviewSearchIconStyle(row tcell.Style) tcell.Style {
+	if t.PreviewSearchIcon == (tcell.Style{}) {
+		return row
+	}
+	fg, _, _ := t.PreviewSearchIcon.Decompose()
+	return row.Foreground(fg)
 }
 
 // TooltipInfoStyle is the tooltip's info icon: the tooltip.info foreground on the tooltip box.
@@ -1249,7 +1263,7 @@ var optionalStyleKeys = func() []string {
 	keys = append(keys, "menu.speed.cap", "menu.speed.text", "menu.status.separator", "message.sweep", "message.success", "footer.hover", "footer.hover.active", "jobs.row.hover", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
 		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "dialog.text_select", "dialog.accent_alt", "panel.empty", "panel.scrollbar.match",
 		"jobs.operations.success", "jobs.operations.failed", "jobs.operations.skipped", "jobs.progress.completed.fill", "panel.row.mark.job.removing",
-		"tooltip.text", "tooltip.info")
+		"tooltip.text", "tooltip.info", "preview.search_icon")
 	keys = append(keys, fileIndexStateStyleKeys()...)
 	keys = append(keys, "panel.meta.warn", "panel.meta.critical")
 	return keys
@@ -1258,7 +1272,7 @@ var optionalStyleKeys = func() []string {
 var optionalStyleKeySet = makeStyleKeySet(optionalStyleKeys)
 
 // styleSectionRoots are top-level TOML tables for semantic styles (keys inside omit this prefix).
-var styleSectionRoots = []string{"menu", "panel", "dialog", "jobs", "message", "footer", "fuzzy", "terminal", "leader_menu", "compare", "status", "tooltip"}
+var styleSectionRoots = []string{"menu", "panel", "dialog", "jobs", "message", "footer", "fuzzy", "terminal", "leader_menu", "compare", "status", "tooltip", "preview"}
 
 var styleSectionRootSet = makeStyleKeySet(styleSectionRoots)
 
@@ -1620,6 +1634,11 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, err
 	}
 
+	previewSearchIcon, err := optionalStyle(specs, palette, "preview.search_icon", tcell.Style{})
+	if err != nil {
+		return Theme{}, err
+	}
+
 	jobsRowHover, err := optionalStyle(specs, palette, "jobs.row.hover", tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorGray))
 	if err != nil {
 		return Theme{}, err
@@ -1912,6 +1931,7 @@ func parse(data []byte) (Theme, error) {
 		DialogCompletionMatchSelected:  styles["dialog.completion.match.selected"],
 		TooltipText:                    tooltipText,
 		TooltipInfo:                    tooltipInfo,
+		PreviewSearchIcon:              previewSearchIcon,
 
 		LeaderMenuSurface:  styles["leader_menu.surface"],
 		LeaderMenuGroup:    styles["leader_menu.group"],

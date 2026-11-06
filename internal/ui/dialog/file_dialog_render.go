@@ -278,6 +278,12 @@ func DrawInputField(screen tcell.Screen, x, y, width int, field FileDialogField,
 	drawInputField(screen, x, y, width, field, focused, styles)
 }
 
+// LeadingIconCols is how many cells an input's leading icon takes before its text: the icon and
+// one gap cell, or 0 without an icon.
+func LeadingIconCols(icon string) int {
+	return draw.LeadingIconCols(icon)
+}
+
 func renameToolOptionLabels(state FileDialogState) []string {
 	if state.RenamePhase == RenamePhaseSanitize {
 		return []string{`Replace "." with space`, `Replace "_" with space`}

@@ -46,6 +46,7 @@ A style is a table with `fg`, `bg` and flags such as `bold`; colors are palette 
 | `[panel.*]` | Active, inactive and blocked (dimmed under dialogs) panel chrome; rows, marks, folder icons, git status, fileindex states (`[panel.fileindex]`, glyphs in `[icons.fileindex_state]`), [meta column alerts](meta-columns.md#alert-colors) (`[panel.meta]`), scrollbar, disk usage |
 | `[menu.*]` | Menu bar, pulldowns, status commands (`menu.status`, `menu.status.separator`), job strip, progress bar, speed pill |
 | `[dialog.*]` | Dialog frame, buttons, inputs, options, progress |
+| `[preview]` | F3 fullscreen preview: `search_icon` (optional, foreground only), the search bar's leading icon |
 | `[jobs.*]`, `[compare]`, `terminal.text` | Jobs view, compare view, embedded terminal |
 | `[icons.*]` | Glyphs |
 
