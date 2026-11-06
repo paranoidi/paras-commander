@@ -63,8 +63,7 @@ type Index struct {
 	// Apply's queue (follow.go): batches waiting for the one goroutine that applies them.
 	applyMu      sync.Mutex
 	applyPending [][]fschange.Change
-	applyRunning bool
-	applyDone    chan struct{} // closed when the running drain ends
+	applyDone    chan struct{} // set while a drain runs, closed when it ends
 
 	// writeMu serializes pc's own index writes: Apply's drain and the backend's Rename and Remove.
 	writeMu sync.Mutex

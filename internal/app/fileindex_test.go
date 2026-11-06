@@ -1167,17 +1167,10 @@ func TestFileIndexNormalLocalPanelDeleteLeavesIndexAlone(t *testing.T) {
 	}
 }
 
-// quietReporter is a jobs.TaskReporter that drops everything.
-type quietReporter struct{}
-
-func (quietReporter) Progress(jobs.TaskProgress) {}
-func (quietReporter) Warn(string)                {}
-func (quietReporter) FinishSource(int)           {}
-
 // rescan records dir's files with their real size and mtime (the fixture records "now").
 func rescan(t *testing.T, a *App, dir string) {
 	t.Helper()
-	if err := a.fileIndex.ScanTask([]string{dir}).Run(context.Background(), quietReporter{}); err != nil {
+	if err := a.fileIndex.ScanTask([]string{dir}).Run(context.Background(), nopTaskReporter{}); err != nil {
 		t.Fatal(err)
 	}
 }

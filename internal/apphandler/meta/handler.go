@@ -18,7 +18,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
 	"github.com/paranoidi/paras-commander/internal/panel"
-	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
@@ -422,12 +421,7 @@ func (h *Handler) ActivateSelection() {
 	entries := append([]dialog.MetaEntry(nil), st.Entries...)
 	h.CloseDialog()
 
-	var activeNames []string
-	for i, on := range checked {
-		if on && i < len(entries) {
-			activeNames = append(activeNames, entries[i].Name)
-		}
-	}
+	activeNames := checkedNames(entries, checked)
 
 	h.autoColumns[panelID] = false
 	if len(activeNames) == 0 {
@@ -528,7 +522,7 @@ func (h *Handler) HandlePanelDirChanged(panelID int) {
 	if p == nil {
 		return
 	}
-	inIndex := p.Path.Scheme() == pathloc.SchemeFileIndex || p.WithIndex
+	inIndex := p.ShowsIndex()
 	entered := inIndex && !h.inIndexView[panelID]
 	left := !inIndex && h.inIndexView[panelID]
 	h.inIndexView[panelID] = inIndex

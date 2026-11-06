@@ -24,7 +24,7 @@ func OnDisk(loc pathloc.Path) pathloc.Path {
 	if err != nil {
 		return loc
 	}
-	if _, err := os.Lstat(host); err != nil && notThere(err) {
+	if _, err := os.Lstat(host); notThere(err) {
 		return loc
 	}
 	return local

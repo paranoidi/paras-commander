@@ -361,8 +361,7 @@ func (h *Handler) confirmTransfer() {
 	for i, src := range sources {
 		srcLocs[i] = pathloc.MustParse(src)
 	}
-	// fileindex:// paths name real files: compare as the job will see them.
-	nSelf := ops.SelfTargetCount(pathloc.Locals(srcLocs), destLoc.Local(), flat)
+	nSelf := ops.SelfTargetCount(srcLocs, destLoc, flat)
 	h.finishTransferEnqueue(st, nSelf, false, false)
 }
 

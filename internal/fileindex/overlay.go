@@ -6,7 +6,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"syscall"
 
@@ -196,9 +195,8 @@ func driftWalk(ctx context.Context, d *db.DB, rules scan.Rules, root string, max
 			want[e.Path] = db.Recorded{Size: e.Size, Mtime: e.Mtime}
 		}
 	}
-	seen := make(map[string]bool, len(want))
 	stopped := false
-	visit := func(p string) bool {
+	visit := func(p string, fi fs.FileInfo) bool {
 		if ctx.Err() != nil {
 			return false
 		}
@@ -210,18 +208,18 @@ func driftWalk(ctx context.Context, d *db.DB, rules scan.Rules, root string, max
 			stopped = !yield(Difference{Path: p, State: DiffNew})
 			return !stopped
 		}
-		seen[p] = true
+		delete(want, p) // what stays in want is what the walk did not reach
 		// size and mtime only, as a file row's changed status; an unhashed file is pending work, not
-		// drift. A file that cannot be stat'ed counts as seen.
-		if fi, err := os.Stat(p); err == nil && !rec.Same(fi.Size(), fi.ModTime()) {
+		// drift.
+		if !rec.Same(fi.Size(), fi.ModTime()) {
 			stopped = !yield(Difference{Path: p, State: DiffChanged})
 			return !stopped
 		}
 		return true
 	}
 	if maxDepth == 0 {
-		for p := range rules.Walk(root) {
-			if !visit(p) {
+		for p, fi := range rules.WalkDirs(root, nil) {
+			if !visit(p, fi) {
 				break
 			}
 		}
@@ -234,16 +232,9 @@ func driftWalk(ctx context.Context, d *db.DB, rules scan.Rules, root string, max
 	if stopped {
 		return deeper, nil
 	}
-	unseen := make([]string, 0, len(want)-len(seen))
 	for p := range want {
-		if !seen[p] {
-			unseen = append(unseen, p)
-		}
-	}
-	slices.Sort(unseen)
-	for i, p := range unseen {
-		if i%256 == 0 && ctx.Err() != nil {
-			return false, ctx.Err()
+		if err := ctx.Err(); err != nil {
+			return false, err
 		}
 		if gone(p) && !yield(Difference{Path: p, State: DiffMissing}) {
 			break
@@ -271,7 +262,7 @@ func dirDepth(root, file string) int {
 // walkToDepth yields the files rules include in root and its directories down to maxDepth
 // levels (the file filters of scan.Rules.Walk), stopping when yield returns false. It reports
 // whether it skipped a directory below the limit.
-func walkToDepth(rules scan.Rules, root string, maxDepth int, yield func(string) bool) (deeper bool) {
+func walkToDepth(rules scan.Rules, root string, maxDepth int, yield func(string, fs.FileInfo) bool) (deeper bool) {
 	visited := map[scan.DirKey]bool{}
 	if fi, err := os.Stat(root); err == nil {
 		if k, ok := scan.KeyOf(fi); ok {
@@ -302,7 +293,7 @@ func walkToDepth(rules scan.Rules, root string, maxDepth int, yield func(string)
 			if !rules.IncludeFile(e.Name()) {
 				continue
 			}
-			if fi, err := os.Stat(p); err == nil && fi.Mode().IsRegular() && !yield(p) {
+			if fi, err := os.Stat(p); err == nil && fi.Mode().IsRegular() && !yield(p, fi) {
 				return false
 			}
 		}
