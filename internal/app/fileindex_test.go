@@ -1501,3 +1501,158 @@ func TestFileIndexReportDifferencesCanceledShowsNothing(t *testing.T) {
 		t.Fatalf("a canceled report showed something: picker %v, message %q", a.model.PathPicker.Open, a.model.Message)
 	}
 }
+
+// openCopiesPicker opens the other-copies picker for harbor.txt (one copy, in meadow/).
+func openCopiesPicker(t *testing.T, a *App, screen tcell.SimulationScreen) {
+	t.Helper()
+	cursorTo(t, a, "harbor.txt")
+	a.dispatch(keymap.ActionFileIndexCopies)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.PathPicker.Open })
+}
+
+func TestFileIndexCopiesPickerMarksAddToSelection(t *testing.T) {
+	for _, onIndex := range []bool{false, true} {
+		a, screen, dir := copiesApp(t)
+		copyPath := filepath.Join(dir, "meadow", "harbor.txt")
+		want := copyPath
+		if onIndex {
+			openIndexPanel(t, a, screen, dir)
+			want = "fileindex://" + copyPath
+		}
+		openCopiesPicker(t, a, screen)
+		a.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
+		if !a.model.PathPicker.Marked[copyPath] {
+			t.Fatalf("onIndex=%v: Insert did not mark: %v", onIndex, a.model.PathPicker.Marked)
+		}
+		a.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+		if a.model.PathPicker.Open || !a.activePanel().SelectedPaths[want] || a.model.Message != "Added 1 to selection" {
+			t.Fatalf("onIndex=%v: open=%v selected=%v message=%q", onIndex, a.model.PathPicker.Open, a.activePanel().SelectedPaths, a.model.Message)
+		}
+		if a.activePanel().PathString() == filepath.Dir(want) {
+			t.Fatalf("onIndex=%v: applying marks must not jump to the copy", onIndex)
+		}
+	}
+}
+
+func TestFileIndexCopiesPickerSpaceIsFilterText(t *testing.T) {
+	a, screen, _ := copiesApp(t)
+	openCopiesPicker(t, a, screen)
+	a.handleKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
+	if st := a.model.PathPicker; len(st.Marked) != 0 || st.Query != " " {
+		t.Fatalf("space: marked=%v query=%q", st.Marked, st.Query)
+	}
+}
+
+func TestFileIndexCopiesPickerPins(t *testing.T) {
+	for _, onIndex := range []bool{false, true} {
+		a, screen, dir := copiesApp(t)
+		want := filepath.Join(dir, "meadow", "harbor.txt")
+		if onIndex {
+			openIndexPanel(t, a, screen, dir)
+			want = "fileindex://" + want
+		}
+		openCopiesPicker(t, a, screen)
+		a.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModAlt))
+		if !a.model.PathPicker.Open || len(a.model.PinnedItems) != 1 || a.model.PinnedItems[0].Path != want || a.model.PinnedItems[0].IsDir {
+			t.Fatalf("onIndex=%v: open=%v pins=%+v, want %s", onIndex, a.model.PathPicker.Open, a.model.PinnedItems, want)
+		}
+		list := dialog.PathPickerView(a.model.PathPicker, dialog.Layout{Width: 120, Height: 40}, a.styles, a.model.PanelScrollbar, func(path string) dialog.RowMarks {
+			return dialog.RowMarks{Pinned: path == want}
+		})
+		found := false
+		for _, g := range list.Groups {
+			for _, col := range g.Columns {
+				for _, it := range col {
+					if it.ID == dialog.PathPickerList && len(it.Rows) == 1 && it.Rows[0].Marks.Pinned {
+						found = true
+					}
+				}
+			}
+		}
+		if !found {
+			t.Fatalf("onIndex=%v: row mark not resolved by %s", onIndex, want)
+		}
+	}
+}
+
+func TestFileIndexCopiesPickerOpensInEitherPanel(t *testing.T) {
+	a, screen, dir := copiesApp(t)
+	wantDir := filepath.Join(dir, "meadow")
+	openCopiesPicker(t, a, screen)
+	active := a.model.ActivePanel
+	for _, tc := range []struct {
+		key     tcell.ModMask
+		arrow   tcell.Key
+		panelID int
+	}{
+		{tcell.ModShift, tcell.KeyLeft, ui.PrimaryPanel},
+		{tcell.ModShift, tcell.KeyRight, ui.SecondaryPanel},
+	} {
+		a.handleKey(tcell.NewEventKey(tc.arrow, 0, tc.key))
+		drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+			p := a.panelByID(tc.panelID)
+			e, ok := p.CurrentEntry()
+			return p.PathString() == wantDir && !p.ListingPending && ok && e.Name == "harbor.txt"
+		})
+		if !a.model.PathPicker.Open || a.model.ActivePanel != active {
+			t.Fatalf("panel %d: picker open=%v, active panel %d, want %d", tc.panelID, a.model.PathPicker.Open, a.model.ActivePanel, active)
+		}
+	}
+}
+
+func TestFileIndexCopiesPickerViewReturnsToPicker(t *testing.T) {
+	a, screen, _ := copiesApp(t)
+	openCopiesPicker(t, a, screen)
+	a.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
+	a.handleKey(tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone))
+	if a.model.PathPicker.Open || !a.model.FullscreenFilePreview.Open {
+		t.Fatalf("picker open=%v, viewer open=%v", a.model.PathPicker.Open, a.model.FullscreenFilePreview.Open)
+	}
+	a.handleKey(tcell.NewEventKey(tcell.KeyEscape, 0, tcell.ModNone))
+	if st := a.model.PathPicker; !st.Open || a.model.FullscreenFilePreview.Open || len(st.Marked) != 1 {
+		t.Fatalf("after viewer: picker %+v, viewer open=%v", st, a.model.FullscreenFilePreview.Open)
+	}
+}
+
+func TestFileIndexCopiesPickerEditOpensEditor(t *testing.T) {
+	a, screen, dir := copiesApp(t)
+	var edited string
+	a.runExternalEditor = func(_ context.Context, path string, _ bool) error {
+		edited = path
+		return nil
+	}
+	openCopiesPicker(t, a, screen)
+	a.handleKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
+	if want := filepath.Join(dir, "meadow", "harbor.txt"); edited != want || !a.model.PathPicker.Open {
+		t.Fatalf("edited %q, want %q; picker open=%v", edited, want, a.model.PathPicker.Open)
+	}
+}
+
+func TestFilePickerRefusesViewAndEditOfMissingFile(t *testing.T) {
+	a, _, dir := copiesApp(t)
+	a.dialogCtrl.OpenFilePicker("Differences", []dialog.PathPickerItem{
+		{Source: "missing", Path: filepath.Join(dir, "gone.txt"), PathMissing: true},
+	}, false)
+	a.handleKey(tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone))
+	if !a.model.PathPicker.Open || a.model.FullscreenFilePreview.Open || a.model.Message != "View: file is missing" {
+		t.Fatalf("view: picker=%v viewer=%v message=%q", a.model.PathPicker.Open, a.model.FullscreenFilePreview.Open, a.model.Message)
+	}
+	a.handleKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
+	if a.model.Message != "Edit: file is missing" {
+		t.Fatalf("edit: message=%q", a.model.Message)
+	}
+}
+
+func TestFilePickerFooterAdvertisesActions(t *testing.T) {
+	a, screen, _ := copiesApp(t)
+	openCopiesPicker(t, a, screen)
+	hints := map[string]string{}
+	for _, k := range a.pathPickerMetaFooterKeys() {
+		hints[k.Hint] = k.KeyLabel
+	}
+	for _, hint := range []string{"View", "Edit", "Open ◄", "Open ►"} {
+		if hints[hint] == "" {
+			t.Errorf("footer misses %q: %v", hint, hints)
+		}
+	}
+}

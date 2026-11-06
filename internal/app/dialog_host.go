@@ -68,6 +68,8 @@ func (h dialogHost) OpenFileInExternalEditor(path string) error {
 	return h.app.openFileInExternalEditor(path)
 }
 
+func (h dialogHost) EditFile(path string) { h.app.editFileAt(path) }
+
 func (h dialogHost) HandlePathPickerScrollingQueryKey(ev *tcell.EventKey) bool {
 	return h.app.handleScrollingQueryKey(ev, true, h.app.pathPickerScrollingQuery())
 }

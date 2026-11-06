@@ -1,7 +1,11 @@
 package dialog
 
 import (
+	"fmt"
+	"path/filepath"
+
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
@@ -34,6 +38,10 @@ func pathPickerWidth(layoutWidth int) int { return min(78, layoutWidth-4) }
 // changes), its fuzzy highlights mapped onto the columns, the missing-path variant and the
 // pinned / job marks rowMarks resolves.
 func pathPickerList(state PathPickerState, listRows, rowWidth int, rowMarks RowMarksFunc) dlg.Item {
+	if rowMarks != nil && state.IndexPanel { // pinned from an index panel, by fileindex:// path
+		hostMarks := rowMarks
+		rowMarks = func(path string) RowMarks { return hostMarks(pathloc.FileIndexPrefix + path) }
+	}
 	marksW := pathPickerRowMarksWidth(state.Items, rowMarks)
 	sourceW, nameW, pathW := pathPickerColumnWidths(state.Items, max(rowWidth-marksW, 1))
 	list := dlg.Item{
@@ -52,7 +60,7 @@ func pathPickerList(state PathPickerState, listRows, rowWidth int, rowMarks RowM
 				ranges = state.MatchRanges[ent]
 			}
 			text, spans := pathPickerRowContent(item, ranges, sourceW, nameW, pathW, tcell.StyleDefault)
-			row = dlg.ListRow{Text: text, Missing: item.PathMissing}
+			row = dlg.ListRow{Text: text, Missing: item.PathMissing, Marked: state.Marked[filepath.Clean(item.Path)]}
 			for _, sp := range spans {
 				row.Match = append(row.Match, search.Range{Start: sp.Start, End: sp.End})
 			}
@@ -92,6 +100,10 @@ func pathPickerFrame(state PathPickerState, layout Layout, styles theme.Theme, s
 		CompletionSuffix: state.Completion.GhostSuffix(state.Query),
 		Invalid:          state.QueryPathInvalid && !state.QueryPathCheckPending,
 	}
+	label := ""
+	if n := len(state.Marked); n > 0 {
+		label = fmt.Sprintf("%d selected", n)
+	}
 	buttons := dlg.OKCancelButtons()
 	if state.Purpose == PathPickerPurposeNavigate {
 		buttons = buttons[1:]
@@ -103,7 +115,7 @@ func pathPickerFrame(state PathPickerState, layout Layout, styles theme.Theme, s
 			filter, {Kind: dlg.KindSeparator},
 			{ID: PathPickerList, Kind: dlg.KindList, Height: pickerListHeight(layout.Height), MinHeight: pickerMinListRows},
 		}}}},
-		Buttons: buttons,
+		Buttons: buttons, ButtonsLabel: label,
 	}
 }
 

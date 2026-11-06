@@ -22,7 +22,8 @@ const (
 	// PathPickerPurposeApplyFileDialogField writes the path into FileDialog.Fields[FileFieldIndex].Value.
 	PathPickerPurposeApplyFileDialogField
 	// PathPickerPurposeNavigateFile shows the active panel the selected file in its directory
-	// (fileindex.other-copies); the items are file paths.
+	// (fileindex.other-copies, the differences report); the items are file paths, which can be
+	// marked (PathPickerState.Marked), viewed, edited, pinned and opened in either panel.
 	PathPickerPurposeNavigateFile
 )
 
@@ -79,6 +80,9 @@ type PathPickerState struct {
 	// IndexPanel makes PathPickerPurposeNavigateFile open fileindex:// paths (the panel it was
 	// started from was one) instead of local ones.
 	IndexPanel bool
+	// Marked holds the host paths marked in a PathPickerPurposeNavigateFile picker (added to the
+	// active panel's selection on OK).
+	Marked map[string]bool
 }
 
 // FilterFocused reports whether the query input (and with it the list) holds focus.

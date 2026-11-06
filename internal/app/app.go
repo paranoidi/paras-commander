@@ -822,6 +822,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		KeysTransferDialog:   keys.TransferDialog,
 		KeysFlattenDialog:    keys.FlattenDialog,
 		KeysBookmarkDialog:   keys.BookmarkDialog,
+		KeysFindDialog:       keys.FindDialog,
 		KeysMassRenameDialog: keys.MassRenameDialog,
 		KeysRunForEachDialog: keys.RunForEachDialog,
 		ConfigDir:            resolvedPaths.ConfigDir,

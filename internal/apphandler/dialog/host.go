@@ -82,4 +82,6 @@ type Host interface {
 
 	// PinTogglePath pins/unpins path in the app-owned pin list and shows a status message.
 	PinTogglePath(name, path string, isDir bool)
+	// EditFile opens path in the external editor; failures show as a status message.
+	EditFile(path string)
 }

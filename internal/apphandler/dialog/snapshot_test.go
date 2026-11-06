@@ -331,3 +331,4 @@ func assertQueuedDeletePath(t *testing.T, state *jobs.State, want, notWant strin
 }
 
 func (f *identityTestHost) PinTogglePath(string, string, bool) {}
+func (f *identityTestHost) EditFile(string)                    {}

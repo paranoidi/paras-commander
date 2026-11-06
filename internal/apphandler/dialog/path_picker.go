@@ -113,6 +113,10 @@ func (h *Handler) PathPickerView() dlg.Spec {
 
 func (h *Handler) activatePathPickerSelection() {
 	st := &h.model.PathPicker
+	if st.Purpose == dialog.PathPickerPurposeNavigateFile && len(st.Marked) > 0 {
+		h.applyFilePickerMarks()
+		return
+	}
 	if len(st.Ranked) == 0 || st.Selected < 0 || st.Selected >= len(st.Ranked) {
 		return
 	}
@@ -161,7 +165,7 @@ func (h *Handler) activatePathPickerSelection() {
 		f.PrefillPending = false
 		h.ClosePathPicker()
 	case dialog.PathPickerPurposeNavigateFile:
-		if h.showFileInPanel(path, st.IndexPanel) {
+		if h.showFileInPanel(h.model.ActivePanel, path, st.IndexPanel) {
 			h.ClosePathPicker()
 		}
 	default:
@@ -169,22 +173,19 @@ func (h *Handler) activatePathPickerSelection() {
 	}
 }
 
-// showFileInPanel navigates the active panel to the directory of the host path file with the
-// file highlighted, as a fileindex:// path when indexPanel, else a local one (falling back to
-// the index's view when the real directory is gone). Errors are shown; it reports success.
-func (h *Handler) showFileInPanel(file string, indexPanel bool) bool {
+// showFileInPanel navigates panelID to the directory of the host path file with the file
+// highlighted, as a fileindex:// path when indexPanel, else a local one (falling back to the
+// index's view when the real directory is gone). Errors are shown; it reports success.
+func (h *Handler) showFileInPanel(panelID int, file string, indexPanel bool) bool {
 	dir, base := filepath.Dir(file), filepath.Base(file)
-	loc, err := pathloc.File(dir)
-	if indexPanel {
-		loc, err = pathloc.FileIndex(dir)
-	}
+	loc, err := filePanelPath(dir, indexPanel)
 	if err == nil {
-		err = h.host.NavigatePanelToPath(h.model.ActivePanel, loc.String(), base)
+		err = h.host.NavigatePanelToPath(panelID, loc.String(), base)
 	}
 	if err != nil && !indexPanel {
 		// ponytail: the real directory is gone, so show it as the index remembers it
 		if loc, ferr := pathloc.FileIndex(dir); ferr == nil {
-			err = h.host.NavigatePanelToPath(h.model.ActivePanel, loc.String(), base)
+			err = h.host.NavigatePanelToPath(panelID, loc.String(), base)
 		}
 	}
 	if err != nil {
@@ -192,13 +193,13 @@ func (h *Handler) showFileInPanel(file string, indexPanel bool) bool {
 		return false
 	}
 	h.host.CloseJobsView() // a picker reopened from the jobs view lands in the browser
-	h.host.ActivePanel().EnsureCursorVisible(h.host.ActiveViewportRows())
+	h.host.PanelByID(panelID).EnsureCursorVisible(h.host.PanelViewportRows(panelID))
 	return true
 }
 
 // OpenFilePicker opens the path picker over items, whose Path is a host file path (other copies,
 // the differences report); confirming one shows it in the active panel, as a fileindex:// path
-// when indexPanel.
+// when indexPanel, or adds the marked rows to that panel's selection (TryFilePickerShortcut).
 func (h *Handler) OpenFilePicker(title string, items []dialog.PathPickerItem, indexPanel bool) {
 	if h.host.InQuickFilterUI() {
 		h.host.ActivePanel().CancelFilter(h.host.ActiveViewportRows())
@@ -213,7 +214,7 @@ func (h *Handler) OpenFilePicker(title string, items []dialog.PathPickerItem, in
 // HandlePathPickerKey routes a key event for the open fuzzy path/history picker.
 func (h *Handler) HandlePathPickerKey(event *tcell.EventKey) {
 	st := &h.model.PathPicker
-	if h.TryBookmarkDialogShortcut(event) {
+	if h.TryBookmarkDialogShortcut(event) || h.TryFilePickerShortcut(event) {
 		return
 	}
 	if st.FilterFocused() {

@@ -325,3 +325,4 @@ func waitBookmarkIOPayload(t *testing.T, screen tcell.SimulationScreen) Bookmark
 }
 
 func (f *bookmarkTestHost) PinTogglePath(string, string, bool) {}
+func (f *bookmarkTestHost) EditFile(string)                    {}

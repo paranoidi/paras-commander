@@ -723,3 +723,4 @@ func TestMassRenameHistoryEntryDoesNotBecomePreselection(t *testing.T) {
 }
 
 func (f *fakeMassRenamePatternHost) PinTogglePath(string, string, bool) {}
+func (f *fakeMassRenamePatternHost) EditFile(string)                    {}

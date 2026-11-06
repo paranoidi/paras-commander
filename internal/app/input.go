@@ -290,6 +290,9 @@ func (a *App) pathPickerMetaFooterKeys() []menu.FunctionKey {
 	if a.dialogCtrl.BookmarkDialogOpenInPanelFooterEligible() {
 		rest = append(openInPanelFooterKeys(a.keys.BookmarkDialog), rest...)
 	}
+	if a.model.PathPicker.Open && a.model.PathPicker.Purpose == dialog.PathPickerPurposeNavigateFile {
+		rest = append(append(findViewEditFooterKeys(a.keys.FindDialog), openInPanelFooterKeys(a.keys.FindDialog)...), rest...)
+	}
 	return footerWithEscClose(rest)
 }
 
@@ -493,17 +496,25 @@ func openInPanelFooterKeys(keys *keymap.Map) []menu.FunctionKey {
 	return out
 }
 
-func findDialogMarkingFooterKeys(keys *keymap.Map) []menu.FunctionKey {
+// findViewEditFooterKeys is the one source of the find.view / find.edit footer hints (Find, Find in
+// index and the file-list picker).
+func findViewEditFooterKeys(keys *keymap.Map) []menu.FunctionKey {
 	var out []menu.FunctionKey
-	if lbl := keys.MenuBindingLabel(keymap.ActionFindSelectParentDirs); lbl != "" {
-		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Parent dirs"})
-	}
 	if lbl := keys.MenuBindingLabel(keymap.ActionFindView); lbl != "" {
 		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "View"})
 	}
 	if lbl := keys.MenuBindingLabel(keymap.ActionFindEdit); lbl != "" {
 		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Edit"})
 	}
+	return out
+}
+
+func findDialogMarkingFooterKeys(keys *keymap.Map) []menu.FunctionKey {
+	var out []menu.FunctionKey
+	if lbl := keys.MenuBindingLabel(keymap.ActionFindSelectParentDirs); lbl != "" {
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Parent dirs"})
+	}
+	out = append(out, findViewEditFooterKeys(keys)...)
 	out = appendSelectFooterKey(out, keys, keymap.ActionFindSelectAll, keymap.ActionFindUnselectAll, "Select all")
 	return appendSelectFooterKey(out, keys, keymap.ActionFindSelectGroup, keymap.ActionFindUnselectGroup, "Select group")
 }

@@ -247,6 +247,20 @@ highlighted. Pick from a local panel and the real directory opens (the index vie
 the directory is gone from disk); from an index view the copy opens in the index
 view. It works on local and index panels, on files only.
 
+The picker's list works like Find's, with the same keys (`keybindings.toml`,
+`[dialog.find]` and `[main]`):
+
+| Action | Key | Effect |
+|---|---|---|
+| `panel.select-toggle` | `Insert` | Mark the file and move down; OK then adds the marked files to the active panel's selection instead of jumping |
+| `panel.pin-toggle` | `Alt+Insert` | Pin or unpin the file |
+| `ui.open-primary` / `ui.open-secondary` | `Shift+Left` / `Shift+Right` | Show the file in the left / right panel, keeping the picker open |
+| `find.view` | `F3` | View the file; closing the viewer returns to the picker |
+| `find.edit` | `F4` | Edit the file, keeping the picker open |
+
+[Report differences](#report-differences) uses the same picker and keys; view and
+edit refuse a file that is missing from disk.
+
 - Copies are files with the same content hash. JPEGs differing only in metadata
   count as copies, as in the Copies column below.
 - A file that is only partly hashed (a [fast scan](#scan-and-prune) hashed its

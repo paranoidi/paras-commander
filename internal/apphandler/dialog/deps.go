@@ -85,6 +85,9 @@ type Deps struct {
 	// KeysBookmarkDialog is the [dialog.bookmark] keymap overlay, consulted while the
 	// bookmarks path picker is open (delete fzf-marks entry and open-in-panel chords).
 	KeysBookmarkDialog *keymap.Map
+	// KeysFindDialog is the [dialog.find] keymap overlay, whose view, edit and open-in-panel
+	// chords the file-list path picker shares.
+	KeysFindDialog *keymap.Map
 	// KeysMassRenameDialog is the [dialog.mass_rename] keymap overlay, consulted while the
 	// main mass-rename dialog is open (save/load/delete pattern chords).
 	KeysMassRenameDialog *keymap.Map
@@ -160,18 +163,21 @@ type Handler struct {
 	keysTransferDialog   *keymap.Map
 	keysFlattenDialog    *keymap.Map
 	keysBookmarkDialog   *keymap.Map
+	keysFindDialog       *keymap.Map
 	keysMassRenameDialog *keymap.Map
 	keysRunForEachDialog *keymap.Map
 	configDir            string
 	jobs                 *jobsctrl.Handler
 	commands             *commandsctrl.Handler
 	preview              *previewctrl.Handler
-	dedup                *dedupctrl.Handler
-	diskUsage            *diskusage.Engine
-	diskUsageIgnore      diskusage.ShouldIgnoreFolder
-	indexSink            fschange.Sink
-	promptElevate        ops.PermissionWaitFunc
-	getenv               func(string) string // nil: bookmarks fall back to os.Getenv
+	// filePickerHiddenForView: the file-list picker is hidden behind the fullscreen viewer it opened.
+	filePickerHiddenForView bool
+	dedup                   *dedupctrl.Handler
+	diskUsage               *diskusage.Engine
+	diskUsageIgnore         diskusage.ShouldIgnoreFolder
+	indexSink               fschange.Sink
+	promptElevate           ops.PermissionWaitFunc
+	getenv                  func(string) string // nil: bookmarks fall back to os.Getenv
 
 	// deleteDialogScanFP is the last enqueued directory set fingerprint for the delete
 	// confirmation dialog.
@@ -255,6 +261,7 @@ func New(d Deps) *Handler {
 		keysTransferDialog:   d.KeysTransferDialog,
 		keysFlattenDialog:    d.KeysFlattenDialog,
 		keysBookmarkDialog:   d.KeysBookmarkDialog,
+		keysFindDialog:       d.KeysFindDialog,
 		keysMassRenameDialog: d.KeysMassRenameDialog,
 		keysRunForEachDialog: d.KeysRunForEachDialog,
 		configDir:            d.ConfigDir,
