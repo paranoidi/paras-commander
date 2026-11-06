@@ -293,6 +293,10 @@ type State struct {
 	// ListingEpoch instead), so a caller can notice changes to the expanded set in O(1); collapsing
 	// flips an entry to false without changing len(TreeExpanded).
 	TreeExpandGen uint64
+	// TreeChildrenGen increments each time attachTreeChildren installs a node's children (async
+	// apply, synchronous load, prefetch). Meta runs compare it to learn that new tree rows exist
+	// without walking the tree on every event.
+	TreeChildrenGen uint64
 	// treeRows caches the last treeflat.Flatten(TreeRoots, ...) output.
 	treeRows []treeflat.Row[TreeEntry]
 	// treeCursorID tracks the node ID the cursor should reattach to after a tree rebuild

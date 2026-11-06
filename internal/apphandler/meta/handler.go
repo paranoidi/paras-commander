@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -296,10 +297,24 @@ func (h *Handler) ReconcileForPanel(panelID int) {
 	if p == nil {
 		return
 	}
-	var missing []localfs.Entry
-	for _, e := range p.Entries {
-		if _, ok := cols[0].Results[e.Path]; !ok {
-			missing = append(missing, e)
+	groups := []dirEntries{{dir: p.PathString(), entries: p.Entries}}
+	// LoadedTreeChildren allocates, so the tree is walked only when children were attached or the
+	// run changed since the last walk.
+	mark := treeWalkMark{children: p.TreeChildrenGen, run: h.runGen[panelID]}
+	if h.treeWalked[panelID] != mark {
+		h.treeWalked[panelID] = mark
+		groups = append(groups, treeDirEntries(p)...)
+	}
+	var missing []dirEntries
+	for _, g := range groups {
+		var es []localfs.Entry
+		for _, e := range g.entries {
+			if _, ok := cols[0].Results[e.Path]; !ok {
+				es = append(es, e)
+			}
+		}
+		if len(es) > 0 {
+			missing = append(missing, dirEntries{dir: g.dir, entries: es})
 		}
 	}
 	if len(missing) == 0 {
@@ -310,7 +325,18 @@ func (h *Handler) ReconcileForPanel(panelID int) {
 		h.startAsyncLoad(panelID, h.activeEntries[panelID])
 		return
 	}
-	h.dispatch(r.ctx, panelID, r.defs, cols, missing, p.PathString())
+	h.dispatch(r.ctx, panelID, r.defs, cols, missing)
+}
+
+// treeDirEntries returns one group per loaded tree node (dir is the node ID, the child listing's
+// directory); nil outside tree layout.
+func treeDirEntries(p *panel.State) []dirEntries {
+	children := p.LoadedTreeChildren()
+	var out []dirEntries
+	for _, id := range slices.Sorted(maps.Keys(children)) {
+		out = append(out, dirEntries{dir: id, entries: children[id]})
+	}
+	return out
 }
 
 // OpenFileEditor opens the meta.toml at path in an external editor, clears the session
@@ -685,40 +711,45 @@ func (h *Handler) scheduleRenderDebounced() {
 // runForPanel runs meta commands for every active entry on panelID using worker pools.
 func (h *Handler) runForPanel(panelID int, cmdDefs []metacmds.MetaEntry, cols []ui.MetaColumnState) {
 	panel := h.host.PanelByID(panelID)
-	entries := append([]localfs.Entry(nil), panel.Entries...)
-	dir := panel.PathString()
+	groups := append([]dirEntries{{dir: panel.PathString(), entries: append([]localfs.Entry(nil), panel.Entries...)}}, treeDirEntries(panel)...)
 
 	h.stopRun(panelID)
 	ctx, cancel := context.WithCancel(context.Background())
 	h.run[panelID] = &metaRun{ctx: ctx, cancel: cancel, defs: cmdDefs}
 	h.runGen[panelID]++
+	// This run covers every loaded tree child, so ReconcileForPanel need not walk the tree again.
+	h.treeWalked[panelID] = treeWalkMark{children: panel.TreeChildrenGen, run: h.runGen[panelID]}
 
 	for i := range cols {
-		cols[i].Results = make(map[string]string, len(entries))
+		cols[i].Results = make(map[string]string, len(groups[0].entries))
 		cols[i].PendingCount = 0
 	}
 	h.model.MetaResults[panelID] = cols
-	h.dispatch(ctx, panelID, cmdDefs, cols, entries, dir)
+	h.dispatch(ctx, panelID, cmdDefs, cols, groups)
 }
 
-// dispatch marks entries pending in cols (pre-filling cached values) and runs cmdDefs for them
-// in the background under ctx and the panel's current run generation.
-func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.MetaEntry, cols []ui.MetaColumnState, entries []localfs.Entry, dir string) {
+// dispatch marks the groups' entries pending in cols (pre-filling cached values) and runs cmdDefs
+// for them in the background under ctx and the panel's current run generation.
+func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.MetaEntry, cols []ui.MetaColumnState, groups []dirEntries) {
 	gen := h.runGen[panelID]
 	runningMarker := h.host.IconMetaRunning()
 
 	for i, cmdDef := range cmdDefs {
 		results := cols[i].Results
-		for _, e := range entries {
-			results[e.Path] = ""
+		for _, g := range groups {
+			for _, e := range g.entries {
+				results[e.Path] = ""
+			}
 		}
 		if cmdDef.Cache {
 			h.cacheMu.RLock()
 			if h.cache != nil {
 				if cmdCache := h.cache[cmdDef.Name]; cmdCache != nil {
-					for _, e := range entries {
-						if v, ok := cmdCache[e.Path]; ok {
-							results[e.Path] = v
+					for _, g := range groups {
+						for _, e := range g.entries {
+							if v, ok := cmdCache[e.Path]; ok {
+								results[e.Path] = v
+							}
 						}
 					}
 				}
@@ -726,14 +757,16 @@ func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.
 			h.cacheMu.RUnlock()
 		}
 
-		for _, e := range entries {
-			if cmdDef.Provider == nil {
-				if _, ok := h.entryCmd(cmdDef, e, dir); !ok {
-					continue
+		for _, g := range groups {
+			for _, e := range g.entries {
+				if cmdDef.Provider == nil {
+					if _, ok := h.entryCmd(cmdDef, e, g.dir); !ok {
+						continue
+					}
 				}
+				results[e.Path] = runningMarker
+				cols[i].PendingCount++
 			}
-			results[e.Path] = runningMarker
-			cols[i].PendingCount++
 		}
 		cols[i].Pending = runningMarker
 	}
@@ -756,7 +789,7 @@ func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
-					h.runProvider(ctx, panelID, gen, cmdDef.Provider, entries, dir)
+					h.runProvider(ctx, panelID, gen, cmdDef.Provider, groups)
 				}()
 				continue
 			}
@@ -766,12 +799,14 @@ func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.
 			}
 
 			var items []dispatchItem
-			for _, e := range entries {
-				cmd, ok := h.entryCmd(cmdDef, e, dir)
-				if !ok {
-					continue
+			for _, g := range groups {
+				for _, e := range g.entries {
+					cmd, ok := h.entryCmd(cmdDef, e, g.dir)
+					if !ok {
+						continue
+					}
+					items = append(items, dispatchItem{entry: e, dir: g.dir, cmd: cmd})
 				}
-				items = append(items, dispatchItem{entry: e, cmd: cmd})
 			}
 
 			sem := make(chan struct{}, workers)
@@ -788,7 +823,7 @@ func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.
 				go func() {
 					defer wg.Done()
 					defer func() { <-sem }()
-					out, err := runCommand(ctx, item.cmd, item.entry.Path, dir)
+					out, err := runCommand(ctx, item.cmd, item.entry.Path, item.dir)
 					if err != nil {
 						if ctx.Err() != nil {
 							return
@@ -823,22 +858,28 @@ func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.
 	}()
 }
 
-// runProvider calls a Go column provider once for entries and posts every entry's value in ONE
-// WakePayload (Values; missing entries get ""), so a large listing cannot flood the event queue
-// and drop wakes that would leave pending markers stuck.
-// A provider error is reported once (ExecFailedPayload) and leaves the cells empty.
-func (h *Handler) runProvider(ctx context.Context, panelID int, gen uint64, p *metacmds.Provider, entries []localfs.Entry, dir string) {
-	vals, err := p.Values(ctx, dir, entries)
-	if ctx.Err() != nil {
-		return
-	}
-	if err != nil {
-		_ = h.screen.PostEvent(tcell.NewEventInterrupt(ExecFailedPayload{PanelID: panelID, Gen: gen, Provider: p.Name, Stderr: err.Error()}))
-		vals = nil
-	}
-	batch := make(map[string]string, len(entries))
-	for _, e := range entries {
-		batch[e.Path] = vals[e.Path]
+// runProvider calls a Go column provider once per group directory and posts every entry's value in
+// ONE WakePayload (Values; missing entries get ""), so a large listing or a wide tree expand
+// cannot flood the event queue and drop wakes that would leave pending markers stuck.
+// A provider error is reported once (ExecFailedPayload) and leaves that directory's cells empty.
+func (h *Handler) runProvider(ctx context.Context, panelID int, gen uint64, p *metacmds.Provider, groups []dirEntries) {
+	batch := make(map[string]string)
+	reported := false
+	for _, g := range groups {
+		vals, err := p.Values(ctx, g.dir, g.entries)
+		if ctx.Err() != nil {
+			return
+		}
+		if err != nil {
+			if !reported {
+				reported = true
+				_ = h.screen.PostEvent(tcell.NewEventInterrupt(ExecFailedPayload{PanelID: panelID, Gen: gen, Provider: p.Name, Stderr: err.Error()}))
+			}
+			vals = nil
+		}
+		for _, e := range g.entries {
+			batch[e.Path] = vals[e.Path]
+		}
 	}
 	_ = h.screen.PostEvent(tcell.NewEventInterrupt(WakePayload{PanelID: panelID, EntryName: p.Name, Values: batch, Gen: gen}))
 }

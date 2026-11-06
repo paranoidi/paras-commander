@@ -3,8 +3,11 @@ package meta
 import (
 	"context"
 	"errors"
+	"os"
 	"path/filepath"
+	"slices"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -18,8 +21,8 @@ import (
 )
 
 // pumpWakes applies posted meta wakes like Run's interrupt switch until the panel's columns have
-// nothing pending.
-func pumpWakes(t *testing.T, screen tcell.Screen, h *Handler, panelID int) {
+// nothing pending. It returns how many WakePayload and ExecFailedPayload events it applied.
+func pumpWakes(t *testing.T, screen tcell.Screen, h *Handler, panelID int) (wakes, fails int) {
 	t.Helper()
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
@@ -28,19 +31,22 @@ func pumpWakes(t *testing.T, screen tcell.Screen, h *Handler, panelID int) {
 			pending += c.PendingCount
 		}
 		if pending == 0 {
-			return
+			return wakes, fails
 		}
 		ev := screen.PollEvent()
 		if in, ok := ev.(*tcell.EventInterrupt); ok {
 			switch d := in.Data().(type) {
 			case WakePayload:
+				wakes++
 				h.HandleWake(d)
 			case ExecFailedPayload:
+				fails++
 				h.HandleExecFailed(d)
 			}
 		}
 	}
 	t.Fatal("provider results never resolved")
+	return wakes, fails
 }
 
 func providerFixture(t *testing.T, p *metacmds.Provider) (tcell.Screen, *Handler, *panel.State, []localfs.Entry) {
@@ -170,5 +176,186 @@ func TestWithProvidersKeepsProvidersWithoutMetaFile(t *testing.T) {
 	}
 	if got := entriesFromFile(metacmds.WithProviders(nil, []*metacmds.Provider{p})); len(got) != 1 || got[0].Name != "lantern.tags" {
 		t.Fatalf("picker entries without meta.toml = %+v", got)
+	}
+}
+
+// treeFixture returns a handler over a tree-layout panel rooted at a directory holding the
+// sub-directories orchard and meadow, each with files. Nothing is expanded yet.
+func treeFixture(t *testing.T, defs ...*metacmds.Provider) (tcell.Screen, *Handler, *panel.State, string) {
+	t.Helper()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(screen.Fini)
+	root := t.TempDir()
+	for _, f := range []string{"orchard/willow.txt", "orchard/birch.txt", "meadow/clover.txt"} {
+		if err := os.MkdirAll(filepath.Join(root, filepath.Dir(f)), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(root, f), []byte("x"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	pan := &panel.State{}
+	if err := pan.Load(root); err != nil {
+		t.Fatal(err)
+	}
+	if !pan.SetListLayout(panel.ListLayoutTree, 20) {
+		t.Fatal("SetListLayout(Tree) = false")
+	}
+	fh := &fakeHost{panels: [2]*panel.State{pan}}
+	h := New(Deps{Host: fh, Screen: screen, Model: &ui.Model{}, Config: config.Default(), Providers: defs})
+	return screen, h, pan, root
+}
+
+// dirRecorder is a provider that records the directories it is asked about and answers
+// "<dir base>:<entry name>" for every entry, failing for directories named in fail.
+type dirRecorder struct {
+	mu   sync.Mutex
+	dirs []string
+	fail map[string]bool
+}
+
+func (r *dirRecorder) provider() *metacmds.Provider {
+	return &metacmds.Provider{Name: "lantern.tags", Column: "Tags", Values: func(_ context.Context, dir string, entries []localfs.Entry) (map[string]string, error) {
+		r.mu.Lock()
+		r.dirs = append(r.dirs, dir)
+		r.mu.Unlock()
+		if r.fail[filepath.Base(dir)] {
+			return nil, errors.New("index unavailable")
+		}
+		out := map[string]string{}
+		for _, e := range entries {
+			out[e.Path] = filepath.Base(dir) + ":" + e.Name
+		}
+		return out, nil
+	}}
+}
+
+func (r *dirRecorder) seen() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	out := append([]string(nil), r.dirs...)
+	slices.Sort(out)
+	return out
+}
+
+func providerDefs(h *Handler) []metacmds.MetaEntry {
+	return metacmds.SortEntriesForDisplay([]string{"lantern.tags"}, metacmds.WithProviders(nil, h.providers))
+}
+
+func TestRunForPanel_providerCoversExpandedTreeChildren(t *testing.T) {
+	rec := &dirRecorder{}
+	screen, h, pan, root := treeFixture(t, rec.provider())
+	if err := pan.ExpandAllTreeShallow(20); err != nil {
+		t.Fatal(err)
+	}
+
+	h.runForPanel(0, providerDefs(h), []ui.MetaColumnState{{EntryName: "lantern.tags"}})
+	wakes, fails := pumpWakes(t, screen, h, 0)
+
+	want := []string{root, filepath.Join(root, "meadow"), filepath.Join(root, "orchard")}
+	if got := rec.seen(); !slices.Equal(got, want) {
+		t.Fatalf("provider dirs = %v, want %v (root plus each tree child's own directory)", got, want)
+	}
+	if wakes != 1 || fails != 0 {
+		t.Fatalf("wakes = %d, fails = %d; want one batched wake across all directories", wakes, fails)
+	}
+	res := h.model.MetaResults[0][0].Results
+	for path, v := range map[string]string{
+		filepath.Join(root, "orchard"):               filepath.Base(root) + ":orchard",
+		filepath.Join(root, "orchard", "willow.txt"): "orchard:willow.txt",
+		filepath.Join(root, "orchard", "birch.txt"):  "orchard:birch.txt",
+		filepath.Join(root, "meadow", "clover.txt"):  "meadow:clover.txt",
+	} {
+		if res[path] != v {
+			t.Fatalf("Results[%s] = %q, want %q", path, res[path], v)
+		}
+	}
+}
+
+func TestRunForPanel_providerErrorInOneTreeDirectoryKeepsOthers(t *testing.T) {
+	rec := &dirRecorder{fail: map[string]bool{"orchard": true}}
+	screen, h, pan, root := treeFixture(t, rec.provider())
+	if err := pan.ExpandAllTreeShallow(20); err != nil {
+		t.Fatal(err)
+	}
+	h.runForPanel(0, providerDefs(h), []ui.MetaColumnState{{EntryName: "lantern.tags"}})
+	wakes, fails := pumpWakes(t, screen, h, 0)
+	if wakes != 1 || fails != 1 {
+		t.Fatalf("wakes = %d, fails = %d; want one wake and one failure report", wakes, fails)
+	}
+	res := h.model.MetaResults[0][0].Results
+	if v := res[filepath.Join(root, "orchard", "willow.txt")]; v != "" {
+		t.Fatalf("failed directory cell = %q, want empty", v)
+	}
+	if v := res[filepath.Join(root, "meadow", "clover.txt")]; v != "meadow:clover.txt" {
+		t.Fatalf("other directory cell = %q, want its value", v)
+	}
+}
+
+func TestReconcileForPanel_dispatchesNewTreeChildrenIntoRun(t *testing.T) {
+	rec := &dirRecorder{}
+	screen, h, pan, root := treeFixture(t, rec.provider())
+	h.runForPanel(0, providerDefs(h), []ui.MetaColumnState{{EntryName: "lantern.tags"}})
+	pumpWakes(t, screen, h, 0)
+	h.ReconcileForPanel(0) // nothing new: no dispatch
+	if got := rec.seen(); len(got) != 1 {
+		t.Fatalf("provider dirs = %v, want only the root run", got)
+	}
+	gen := h.runGen[0]
+
+	if err := pan.ExpandAllTreeShallow(20); err != nil {
+		t.Fatal(err)
+	}
+	h.ReconcileForPanel(0)
+	pumpWakes(t, screen, h, 0)
+
+	if h.runGen[0] != gen || h.loadPending[0] {
+		t.Fatal("reconcile restarted the run instead of dispatching into it")
+	}
+	want := []string{root, filepath.Join(root, "meadow"), filepath.Join(root, "orchard")}
+	if got := rec.seen(); !slices.Equal(got, want) {
+		t.Fatalf("provider dirs = %v, want %v (root once, then only the new children)", got, want)
+	}
+	res := h.model.MetaResults[0][0].Results
+	if v := res[filepath.Join(root, "orchard", "birch.txt")]; v != "orchard:birch.txt" {
+		t.Fatalf("new child = %q, want its value", v)
+	}
+
+	// Already-covered rows are left alone by later events.
+	res[filepath.Join(root, "orchard", "birch.txt")] = "kept"
+	h.ReconcileForPanel(0)
+	if got := rec.seen(); len(got) != 3 || res[filepath.Join(root, "orchard", "birch.txt")] != "kept" {
+		t.Fatalf("existing rows re-dispatched: dirs = %v", got)
+	}
+}
+
+func TestRunForPanel_shellColumnRunsInTreeChildDirectory(t *testing.T) {
+	screen, h, pan, root := treeFixture(t)
+	if err := pan.ExpandAllTreeShallow(20); err != nil {
+		t.Fatal(err)
+	}
+	defs := []metacmds.MetaEntry{{Name: "where", File: "pwd -P", Dirs: "pwd -P", Workers: 1}}
+	h.runForPanel(0, defs, []ui.MetaColumnState{{EntryName: "where"}})
+	pumpWakes(t, screen, h, 0)
+
+	res := h.model.MetaResults[0][0].Results
+	real := func(p string) string {
+		r, err := filepath.EvalSymlinks(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return r
+	}
+	for path, wantDir := range map[string]string{
+		filepath.Join(root, "orchard"):               root,
+		filepath.Join(root, "orchard", "willow.txt"): filepath.Join(root, "orchard"),
+		filepath.Join(root, "meadow", "clover.txt"):  filepath.Join(root, "meadow"),
+	} {
+		if got := res[path]; got != real(wantDir) {
+			t.Fatalf("Results[%s] = %q, want cwd %q", path, got, real(wantDir))
+		}
 	}
 }

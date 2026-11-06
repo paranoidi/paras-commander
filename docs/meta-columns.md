@@ -53,7 +53,7 @@ Up to 8 columns can be active per panel, ordered by `order` then name. Output is
 
 A failing command leaves the cell empty and shows one warning toast per run, not one per file.
 
-`C-y` (`panel.refresh`) drops the cache and recomputes all active columns for that panel. Changing directory runs the active columns for the new listing.
+`C-y` (`panel.refresh`) drops the cache and recomputes all active columns for that panel. Changing directory runs the active columns for the new listing. In [tree view](panels.md#tree-view) the columns also fill in for expanded directories: each directory's rows are computed as they load, with the command running in that directory.
 
 ## Sorting and filtering
 

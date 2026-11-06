@@ -57,6 +57,9 @@ type Handler struct {
 	// runGen is a monotonically increasing generation counter per panel for meta runs.
 	// Workers carry the generation; stale (cancelled) results are discarded by the wake handler.
 	runGen [2]uint64
+	// treeWalked is the (TreeChildrenGen, runGen) pair at which ReconcileForPanel last walked the
+	// panel's loaded tree children (or a run covered them), gating the allocating walk.
+	treeWalked [2]treeWalkMark
 	// loadGen is a monotonically increasing generation counter per panel for async meta file loads.
 	// Stale loads (navigated away before load finished) are discarded by the wake handler.
 	loadGen [2]uint64
@@ -142,11 +145,22 @@ type runFailure struct {
 func (e *runFailure) Error() string { return e.err.Error() }
 func (e *runFailure) Unwrap() error { return e.err }
 
-// dispatchItem holds a single entry selected for meta command execution.
+// dispatchItem holds a single entry selected for meta command execution, with the directory it
+// is listed in.
 type dispatchItem struct {
 	entry localfs.Entry
+	dir   string
 	cmd   string
 }
+
+// dirEntries is a listing directory and its entries: the panel root, or one loaded tree node.
+type dirEntries struct {
+	dir     string
+	entries []localfs.Entry
+}
+
+// treeWalkMark is the panel.State.TreeChildrenGen and the meta run generation of a tree walk.
+type treeWalkMark struct{ children, run uint64 }
 
 // metaRun is one in-flight meta run for a panel: its context, cancel func and resolved command defs.
 type metaRun struct {
