@@ -360,6 +360,43 @@ func TestFileIndexTagEditorArrowsLeaveTheGrid(t *testing.T) {
 	}
 }
 
+func TestFileIndexTagEditorPlainLettersOutsideTheGrid(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	seedTags(t, a, dir, []string{"orchid"}, "harbor.txt")
+	cursorTo(t, a, "harbor.txt")
+	open := func() *dialog.IndexTagsDialogState {
+		t.Helper()
+		a.dispatch(keymap.ActionFileIndexTags)
+		waitTagPrompt(t, a, screen)
+		st := &a.model.IndexTagsDialog
+		a.handleKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)) // the grid
+		return st
+	}
+
+	st := open()
+	typeTags(a, "o") // a jump in the grid, not OK
+	if !st.Open || st.JumpQuery != "o" {
+		t.Fatalf("open %v, jump text %q", st.Open, st.JumpQuery)
+	}
+	a.handleKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)) // Recursive
+	typeTags(a, "r")
+	if st.Focus != dialog.IndexTagsRecursive || !st.Recursive {
+		t.Fatalf("focus %q, recursive %v", st.Focus, st.Recursive)
+	}
+	typeTags(a, "c")
+	if st.Open {
+		t.Fatal("c on Recursive should press Cancel")
+	}
+
+	st = open()
+	a.handleKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)) // Recursive
+	a.handleKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)) // the buttons
+	typeTags(a, "o")
+	if st.Open {
+		t.Fatal("o on the buttons should press OK")
+	}
+}
+
 func TestFileIndexTagEditorCancelDiscards(t *testing.T) {
 	a, screen, dir, _ := fileIndexApp(t)
 	cursorTo(t, a, "harbor.txt")

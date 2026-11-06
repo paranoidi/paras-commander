@@ -23,7 +23,7 @@ const (
 
 // IndexTagsDialogView is the tag editor's widget spec, fitted to layout: the new-tags input, the
 // checkbox grid of every tag under a separator that shows the jump text, the Recursive checkbox
-// and OK / Cancel. AltOnly keeps plain letters for type-to-jump in the grid.
+// and OK / Cancel. AltOnly holds only while the grid has focus, where plain letters are type-to-jump.
 func IndexTagsDialogView(st *IndexTagsDialogState, layout Layout, styles theme.Theme) dlg.Spec {
 	items := []dlg.Item{
 		{Kind: dlg.KindLabel, Label: "New tags (comma or space separated):"},
@@ -41,7 +41,7 @@ func IndexTagsDialogView(st *IndexTagsDialogState, layout Layout, styles theme.T
 	)
 	spec := dlg.Spec{
 		Title: "Tags", Width: indexTagsWidth(st, styles), MinWidth: indexTagsMinWidth,
-		MaxHeight: listDialogMaxHeight(layout.Height), Unclamped: true, AltOnly: true,
+		MaxHeight: listDialogMaxHeight(layout.Height), Unclamped: true, AltOnly: st.Focus == IndexTagsGrid,
 		MarkerWidth: dlg.MarkerWidth(styles),
 		Groups:      []dlg.Group{{Columns: [][]dlg.Item{items}}},
 		Buttons:     dlg.OKCancelButtons(),
