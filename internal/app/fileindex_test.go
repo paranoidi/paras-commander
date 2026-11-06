@@ -1357,18 +1357,64 @@ func TestFileIndexReportDifferencesAlwaysShowsEmptyAndErrors(t *testing.T) {
 	}
 }
 
+// waitingReport holds the differences lease with a blocker task, requests a report and waits until
+// its job is queued behind the blocker. It returns the report's task and job id.
+func waitingReport(t *testing.T, a *App, screen tcell.SimulationScreen) (*jobs.Task, string) {
+	t.Helper()
+	started, release := make(chan struct{}), make(chan struct{})
+	t.Cleanup(func() { close(release) })
+	a.jobsCtrl.AddTaskJob(&jobs.Task{Title: "blocker", Lease: fi.DifferencesLease, Run: func(ctx context.Context, _ jobs.TaskReporter) error {
+		close(started)
+		select {
+		case <-release:
+		case <-ctx.Done():
+		}
+		return nil
+	}}, nil)
+	<-started
+	a.dispatch(keymap.ActionFileIndexReportDifferences)
+	var task *jobs.Task
+	var id string
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		for _, j := range a.jobState.AllJobs() {
+			if j.Task != nil && j.Task.Title == "fileindex differences" {
+				task, id = j.Task, j.ID
+			}
+		}
+		return task != nil
+	})
+	return task, id
+}
+
 func TestFileIndexDifferencesQueuedToast(t *testing.T) {
-	a, _, dir, _ := fileIndexApp(t)
+	a, screen, dir, _ := fileIndexApp(t)
+	task, _ := waitingReport(t, a, screen)
 	resolved := new(bool)
-	a.fileindexCtrl.HandleDifferencesQueued(fileindexctrl.DifferencesQueuedPayload{Resolved: resolved})
+	a.model.Message = ""
+	a.fileindexCtrl.HandleDifferencesQueued(fileindexctrl.DifferencesQueuedPayload{Resolved: resolved, Task: task})
 	if a.model.Message != "fileindex differences queued" || a.model.MessageUrgency != ui.MessageUrgencyInfo {
 		t.Fatalf("message = %q urgency %v, want the queued toast / info", a.model.Message, a.model.MessageUrgency)
 	}
 	// A fast result resolves the report: the timer firing after it leaves its message alone.
 	a.fileindexCtrl.HandleDifferences(fileindexctrl.DifferencesPayload{PanelID: a.model.ActivePanel, Root: dir, Started: time.Now(), Resolved: resolved})
-	a.fileindexCtrl.HandleDifferencesQueued(fileindexctrl.DifferencesQueuedPayload{Resolved: resolved})
+	a.fileindexCtrl.HandleDifferencesQueued(fileindexctrl.DifferencesQueuedPayload{Resolved: resolved, Task: task})
 	if a.model.Message != "No differences" {
 		t.Fatalf("message = %q, want No differences", a.model.Message)
+	}
+}
+
+// A report canceled while it waits for the lease never runs, so nothing resolves it: the timer
+// must not toast "queued" for a job that is gone.
+func TestFileIndexDifferencesQueuedToastSkipsCanceledJob(t *testing.T) {
+	a, screen, _, _ := fileIndexApp(t)
+	task, id := waitingReport(t, a, screen)
+	if !a.jobState.CancelJob(id) {
+		t.Fatal("cancel found no job")
+	}
+	a.model.Message = ""
+	a.fileindexCtrl.HandleDifferencesQueued(fileindexctrl.DifferencesQueuedPayload{Resolved: new(bool), Task: task})
+	if a.model.Message != "" {
+		t.Fatalf("message = %q, want none for a canceled report", a.model.Message)
 	}
 }
 

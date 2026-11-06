@@ -38,6 +38,8 @@ type Host interface {
 
 	// AddTaskJob queues a task job (scan, prune) working on sources.
 	AddTaskJob(task *jobs.Task, sources []pathloc.Path)
+	// TaskUnfinished reports whether a job running task exists and has not finished.
+	TaskUnfinished(task *jobs.Task) bool
 	// SyncJobsList refreshes the jobs list mirror (a task's results can change after its job ended).
 	SyncJobsList()
 	// RefreshMetaColumns re-runs both panels' meta columns, so the tags column shows an edit.

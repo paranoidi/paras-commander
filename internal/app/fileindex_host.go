@@ -30,6 +30,16 @@ func (h fileindexHost) AddTaskJob(task *jobs.Task, sources []pathloc.Path) {
 	h.app.jobsCtrl.AddTaskJob(task, sources)
 }
 
+// TaskUnfinished reports whether a job running task exists and has not finished.
+func (h fileindexHost) TaskUnfinished(task *jobs.Task) bool {
+	for _, j := range h.app.jobState.AllJobs() {
+		if j.Task == task {
+			return !j.Status.IsFinished()
+		}
+	}
+	return false
+}
+
 func (h fileindexHost) ToggleFileIndexMenu() { h.app.toggleFileIndexMenu() }
 
 func (h fileindexHost) ReloadPanel(panelID int) {

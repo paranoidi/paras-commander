@@ -38,6 +38,7 @@ type DifferencesPayload struct {
 // DifferencesQueuedPayload fires config.DifferencesFastWindow after a report was requested.
 type DifferencesQueuedPayload struct {
 	Resolved *bool // set once the report's result has been handled
+	Task     *jobs.Task
 }
 
 // ReportDifferences queues the task listing where the files under the cursor directory (else the
@@ -67,12 +68,13 @@ func (h *Handler) ReportDifferences() {
 			Started: started, Task: task, Resolved: resolved})
 	})
 	h.addTask(task, []string{root})
-	time.AfterFunc(config.DifferencesFastWindow, func() { h.post(DifferencesQueuedPayload{Resolved: resolved}) })
+	time.AfterFunc(config.DifferencesFastWindow, func() { h.post(DifferencesQueuedPayload{Resolved: resolved, Task: task}) })
 }
 
-// HandleDifferencesQueued tells the user the report is still running, unless its result is in.
+// HandleDifferencesQueued tells the user the report is still pending, unless its result is in or
+// its job ended without one (canceled while it waited for the lease).
 func (h *Handler) HandleDifferencesQueued(p DifferencesQueuedPayload) {
-	if !*p.Resolved {
+	if !*p.Resolved && h.host.TaskUnfinished(p.Task) {
 		h.host.SetTransientMessage(differencesTaskTitle+" queued", ui.MessageUrgencyInfo)
 	}
 }
