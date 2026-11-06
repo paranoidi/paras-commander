@@ -159,21 +159,13 @@ In an index view:
 
 - **View and copy** read the real file, so copying out of the index works when
   the file is still on disk.
-- **Rename**, **move** and **flatten** act on the real files and directories
-  the entries name, and the index follows: the records move with them. An
-  entry that is gone from disk is only a record: renaming it changes the index
-  alone, and moving it fails because there is nothing to move. A rename is
-  refused when the new name exists on disk, even as a file the index does not
-  list. The rename dialog says it renames on disk and in the fileindex.
-- **Delete** deletes the entry, or a directory with everything in it, from disk,
-  including files the index does not list (`node_modules`, for example), and
-  removes the records. An entry that is gone from disk loses its record only.
-  The delete dialog says so.
-- **Copy and move into the index view** put the files in the real directory the
-  view names. A move of indexed files carries their records along; anything
-  that comes from outside the index shows in the view only after a scan
-  (`fileindex.scan`) has recorded it.
-- **New directories and symlinks** are refused: nothing there to create them in.
+- **Rename** and **move** inside the index record that the entry moved. They
+  do not touch the disk. The rename dialog says so.
+- **Delete** removes the entry, or a directory and everything under it, from
+  the index only: files on disk stay. The delete dialog says so.
+- **New directories, symlinks, copies into the index, flatten, extracting
+  into the index, and moves out of it** are refused: the index is read-only
+  for new content, and a flatten there would reach only the files it lists.
 - **Edit**, **run** (Enter on an executable), **drop to shell**, **send paths
   to shell** and the **terminal panel** work on the real files and
   directories the entries name. Edits change the real file; the index picks
@@ -284,7 +276,7 @@ says "No copies outside" the directory. It works on local and `fileindex://` pan
 root itself has nothing outside it.
 
 - Deleting from this view works as in Find duplicates: mark copies, confirm, and the delete
-  job removes them and their index entries. Refresh, and the refresh after hashing potential
+  job deletes the files from disk and removes their index entries. Refresh, and the refresh after hashing potential
   duplicates, keep the view in this mode.
 - Folder duplicates are not offered: only files with a copy elsewhere are listed, so a folder
   cannot be judged to match another as a whole.
@@ -375,17 +367,21 @@ icon as soon as its files are committed.
 ## Operations and the index
 
 The index follows the renames, moves and deletes that pc makes on disk, when
-the operation was started from a panel that shows the index: a
-[Browse-with](#browsing-with-fileindex) panel or a `fileindex://` panel, or when
-it names a `fileindex://` path. The same operations started from an ordinary
-local panel leave the index alone; a deleted file then shows as a ghost row until
-a prune. Undoing a job that followed the index follows it too.
+the operation was started from a [Browse-with](#browsing-with-fileindex) panel.
+The same operations started from an ordinary local panel leave the index alone;
+a deleted file then shows as a ghost row until a prune. Undoing a job that
+followed the index follows it too. An index view (`fileindex://`) is the other
+way round: its operations change the index and never the disk.
 
 Following moves or removes records that already exist. It never adds any: new
-files, copies and extracted files (also the ones a copy into a `fileindex://`
-panel puts on disk) wait for the next scan. A file moved by copy and delete (across
+files, copies and extracted files wait for the next scan. A file moved by copy and delete (across
 file systems) loses its tags, because its record is removed rather than moved.
 Panels showing the index refresh when the records change.
+
+The [Find duplicates](find-duplicates.md) and Copies outside views are the
+exception: deleting there removes the file from disk and its record from the
+index, whichever panel the view was opened from. A file that is already gone
+from disk only loses its record.
 
 ## Report differences
 

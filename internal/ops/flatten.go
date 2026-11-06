@@ -42,15 +42,20 @@ func ValidateFlattenSource(p *panel.State) ([]pathloc.Path, error) {
 	return roots, nil
 }
 
-// ValidateFlattenTarget rejects an empty root list, an invalid destination, and a destination
-// inside one of the roots.
+// ValidateFlattenTarget rejects an empty root list, an invalid destination, a fileindex:// root or
+// destination (the index lists indexed files only, so a flatten there would be partial), and a
+// destination inside one of the roots.
 func ValidateFlattenTarget(roots []pathloc.Path, dest pathloc.Path) error {
-	roots, dest = pathloc.Locals(roots), dest.Local() // as the job will see them
 	if len(roots) == 0 {
 		return &Error{Op: "flatten", Text: "no directories to flatten"}
 	}
 	if dest.IsZero() {
 		return &Error{Op: "flatten", Text: "invalid destination"}
+	}
+	for _, p := range append([]pathloc.Path{dest}, roots...) {
+		if p.Scheme() == pathloc.SchemeFileIndex {
+			return &Error{Op: "flatten", Text: FlattenIndexRefusal}
+		}
 	}
 	for _, root := range roots {
 		if destStrictlyUnderRoot(dest, root) {
@@ -73,9 +78,6 @@ func ValidateFlattenTarget(roots []pathloc.Path, dest pathloc.Path) error {
 // nothing remains in it, roots included.
 func ExecuteFlatten(ctx context.Context, roots []pathloc.Path, dest pathloc.Path, recursive, removeEmpty bool, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
 	if err := ValidateFlattenTarget(roots, dest); err != nil {
-		return 0, 0, err
-	}
-	if err := requireNoIndexPaths(roots, dest); err != nil {
 		return 0, 0, err
 	}
 	destIsDir, err := destinationIsDir(ctx, dest)
@@ -172,8 +174,7 @@ func (w *flattenWalk) walk(ctx context.Context, dir pathloc.Path) error {
 func removeDirIfEmpty(ctx context.Context, be fsbackend.Backend, dir pathloc.Path, op string) (bool, error) {
 	if dir.Scheme() == pathloc.SchemeFileIndex {
 		// The index backend's Remove drops the directory's whole index tree whatever is on disk,
-		// and its listing hides unindexed files: never decide "empty" from it. Callers translate
-		// fileindex:// paths to disk paths first (OnDisk).
+		// and its listing hides unindexed files: never decide "empty" from it.
 		return false, nil
 	}
 	removeErr := be.Remove(ctx, dir)
@@ -283,9 +284,10 @@ func freeFlattenTemp(ctx context.Context, be fsbackend.Backend, final pathloc.Pa
 	}
 }
 
-// RemoveEmptyDirsUnder removes empty directories under each root (depth-first), including roots when empty.
+// RemoveEmptyDirsUnder removes empty directories under each root (depth-first), including roots when
+// empty. fileindex:// roots are skipped: cleanup never decides from the index what is empty on disk.
 func RemoveEmptyDirsUnder(ctx context.Context, roots []pathloc.Path) error {
-	for _, root := range onDiskRoots(roots) {
+	for _, root := range skipIndexPaths(roots) {
 		if err := removeEmptyDirsPostOrder(ctx, root); err != nil {
 			return err
 		}
@@ -396,7 +398,7 @@ func dirHasOnlyDotEntries(entries []fsbackend.Entry) bool {
 func DanglingDirsAfter(ctx context.Context, sources []pathloc.Path) ([]pathloc.Path, error) {
 	candidates := make(map[string]bool)
 	var order []pathloc.Path
-	for _, parent := range onDiskRoots(uniqueParentDirs(sources)) {
+	for _, parent := range skipIndexPaths(uniqueParentDirs(sources)) {
 		if err := climbDanglingChain(ctx, parent, candidates, &order); err != nil {
 			return nil, err
 		}
@@ -408,6 +410,17 @@ func DanglingDirsAfter(ctx context.Context, sources []pathloc.Path) ([]pathloc.P
 		}
 	}
 	return out, nil
+}
+
+// skipIndexPaths drops fileindex:// paths, which cleanup never translates or walks.
+func skipIndexPaths(paths []pathloc.Path) []pathloc.Path {
+	out := make([]pathloc.Path, 0, len(paths))
+	for _, p := range paths {
+		if p.Scheme() != pathloc.SchemeFileIndex {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 // uniqueParentDirs returns each path's parent directory, first-seen order, deduplicated.
@@ -462,16 +475,4 @@ func climbDanglingChain(ctx context.Context, dir pathloc.Path, candidates map[st
 		}
 		dir = parent
 	}
-}
-
-// requireNoIndexPaths refuses fileindex:// paths: the flatten walk lists through the backend,
-// which shows indexed files only, so it would leave unindexed files behind. Callers translate to
-// disk paths first (pathloc.Path.Local).
-func requireNoIndexPaths(roots []pathloc.Path, dest pathloc.Path) error {
-	for _, p := range append([]pathloc.Path{dest}, roots...) {
-		if p.Scheme() == pathloc.SchemeFileIndex {
-			return &Error{Op: "flatten", Text: "fileindex:// paths must be translated to disk paths first"}
-		}
-	}
-	return nil
 }

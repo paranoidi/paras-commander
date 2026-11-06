@@ -172,8 +172,8 @@ func TestFileIndexSchemeRenameFastPath(t *testing.T) {
 	}
 }
 
-// The tests below use real directories: a fileindex:// path counts as on disk only when its host
-// path exists.
+// The tests below use real directories: a fileindex:// path is the index's, and the disk beside it
+// must stay as it is.
 
 type recordSink struct {
 	mu  sync.Mutex
@@ -195,7 +195,7 @@ func indexLoc(t *testing.T, host string) string {
 	return loc.String()
 }
 
-func TestFileIndexDeleteOfEntryOnDiskActsOnDisk(t *testing.T) {
+func TestFileIndexDeleteOfEntryOnDiskLeavesDiskAlone(t *testing.T) {
 	root := t.TempDir()
 	file := filepath.Join(root, "harbor.txt")
 	writeTestFile(t, file, "anchor")
@@ -207,54 +207,36 @@ func TestFileIndexDeleteOfEntryOnDiskActsOnDisk(t *testing.T) {
 	if err != nil || done != 1 {
 		t.Fatalf("delete = %d, %v", done, err)
 	}
-	if exists(file) {
-		t.Fatal("the file is still on disk")
+	if !exists(file) {
+		t.Fatal("the file was removed from disk")
 	}
-	if len(m.removed) != 0 || len(m.treeRemoved) != 0 {
-		t.Fatalf("the index backend was used (%v, %v); the disk delete reports to the sink instead", m.removed, m.treeRemoved)
+	if len(m.removed) != 1 || m.files[indexLoc(t, file)] {
+		t.Fatalf("backend removes %v, records %v; want the record removed", m.removed, m.files)
 	}
-	if len(sink.got) != 1 || sink.got[0].Kind != fschange.Removed || sink.got[0].Path != file {
-		t.Fatalf("reported %+v, want one Removed change for the disk path", sink.got)
-	}
-}
-
-func TestFileIndexDeleteOfEntryGoneFromDiskIsIndexOnly(t *testing.T) {
-	root := t.TempDir()
-	gone := filepath.Join(root, "bramble.txt")
-	m := newMemIndex([]string{indexLoc(t, root)}, []string{indexLoc(t, gone)})
-	useMemIndex(t, m)
-	sink := &recordSink{}
-	ctx := fschange.WithSink(context.Background(), sink)
-	if done, _, err := ExecuteDeletePaths(ctx, []string{indexLoc(t, gone)}, nil, nil, nil); err != nil || done != 1 {
-		t.Fatalf("delete = %d, %v", done, err)
-	}
-	if len(m.removed) != 1 || len(sink.got) != 0 {
-		t.Fatalf("backend removes %v, reported %+v; want the record removed through the backend only", m.removed, sink.got)
+	if len(sink.got) != 0 {
+		t.Fatalf("reported %+v; a backend change is not a disk change", sink.got)
 	}
 }
 
-func TestFileIndexDeleteOfDirectoryRemovesUnindexedFilesToo(t *testing.T) {
+func TestFileIndexDeleteOfDirectoryRemovesIndexTreeOnly(t *testing.T) {
 	root := t.TempDir()
 	dir := filepath.Join(root, "lantern")
 	indexed := filepath.Join(dir, "meadow.txt")
-	unindexed := filepath.Join(dir, "node_modules", "pebble.txt")
 	writeTestFile(t, indexed, "clover")
-	writeTestFile(t, unindexed, "gravel")
-	// The fake index lists the one indexed file only, as the real backend does.
 	m := newMemIndex([]string{indexLoc(t, root), indexLoc(t, dir)}, []string{indexLoc(t, indexed)})
 	useMemIndex(t, m)
 	if _, _, err := ExecuteDeletePaths(context.Background(), []string{indexLoc(t, dir)}, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
-	if exists(dir) {
-		t.Fatalf("the directory survived (indexed file there: %v, unindexed: %v)", exists(indexed), exists(unindexed))
+	if !exists(indexed) {
+		t.Fatal("the directory was removed from disk")
 	}
-	if len(m.treeRemoved) != 0 {
-		t.Fatalf("the index backend removed trees %v; the disk delete must do it", m.treeRemoved)
+	if len(m.treeRemoved) != 1 || m.files[indexLoc(t, indexed)] {
+		t.Fatalf("tree removes %v, records %v; want the index tree removed", m.treeRemoved, m.files)
 	}
 }
 
-func TestFileIndexRenameOnDisk(t *testing.T) {
+func TestFileIndexRenameMovesTheRecordOnly(t *testing.T) {
 	root := t.TempDir()
 	oldP, newP := filepath.Join(root, "harbor.txt"), filepath.Join(root, "anchor.txt")
 	writeTestFile(t, oldP, "rope")
@@ -265,78 +247,40 @@ func TestFileIndexRenameOnDisk(t *testing.T) {
 	if err := ExecuteRename(fschange.WithSink(context.Background(), sink), plan); err != nil {
 		t.Fatal(err)
 	}
-	if exists(oldP) || !exists(newP) {
-		t.Fatalf("on disk: old %v, new %v; want renamed", exists(oldP), exists(newP))
-	}
-	if m.files[indexLoc(t, newP)] {
-		t.Fatal("the index backend was renamed; the disk rename reports to the sink instead")
-	}
-	if len(sink.got) != 1 || sink.got[0].Kind != fschange.Renamed || sink.got[0].From != oldP || sink.got[0].Path != newP {
-		t.Fatalf("reported %+v, want one Renamed change on the disk paths", sink.got)
-	}
-}
-
-func TestFileIndexRenameOfEntryGoneFromDiskIsIndexOnly(t *testing.T) {
-	root := t.TempDir()
-	oldP, newP := filepath.Join(root, "harbor.txt"), filepath.Join(root, "anchor.txt")
-	m := newMemIndex([]string{indexLoc(t, root)}, []string{indexLoc(t, oldP)})
-	useMemIndex(t, m)
-	plan := RenamePlan{SourcePath: indexLoc(t, oldP), NewName: "anchor.txt", NewPath: indexLoc(t, newP)}
-	if err := ExecuteRename(context.Background(), plan); err != nil {
-		t.Fatal(err)
-	}
 	if !m.files[indexLoc(t, newP)] || m.files[indexLoc(t, oldP)] {
 		t.Fatalf("index records %v, want the record renamed", m.files)
 	}
-	if exists(newP) {
-		t.Fatal("a rename of a record must not create a file")
+	if !exists(oldP) || exists(newP) {
+		t.Fatalf("on disk: old %v, new %v; want untouched", exists(oldP), exists(newP))
+	}
+	if len(sink.got) != 0 {
+		t.Fatalf("reported %+v; a backend change is not a disk change", sink.got)
 	}
 }
 
-func TestFileIndexRenameOntoUnindexedFileOnDiskIsRefused(t *testing.T) {
-	root := t.TempDir()
-	oldP, newP := filepath.Join(root, "harbor.txt"), filepath.Join(root, "anchor.txt")
-	writeTestFile(t, oldP, "rope")
-	writeTestFile(t, newP, "chain") // on disk, not in the index: rename(2) would replace it silently
-	m := newMemIndex([]string{indexLoc(t, root)}, []string{indexLoc(t, oldP)})
-	useMemIndex(t, m)
-	plan := RenamePlan{SourcePath: indexLoc(t, oldP), NewName: "anchor.txt", NewPath: indexLoc(t, newP)}
-	if err := ExecuteRename(context.Background(), plan); err == nil {
-		t.Fatal("renaming onto an existing file succeeded")
-	}
-	if body, _ := os.ReadFile(newP); string(body) != "chain" || !exists(oldP) {
-		t.Fatalf("the files changed: target %q, source present %v", body, exists(oldP))
-	}
-}
-
-func TestFileIndexParentCleanupNeverTouchesTheIndexBackend(t *testing.T) {
+func TestFileIndexCleanupSkipsFileIndexPaths(t *testing.T) {
 	root := t.TempDir()
 	parent := filepath.Join(root, "orchard")
-	writeTestFile(t, filepath.Join(parent, "node_modules", "pebble.txt"), "gravel") // unindexed content
 	emptyKid := filepath.Join(parent, "empty")
 	if err := os.MkdirAll(emptyKid, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	gone := indexLoc(t, filepath.Join(parent, "harbor.txt")) // the deleted source, gone from disk
+	gone := pathloc.MustParse(indexLoc(t, filepath.Join(parent, "harbor.txt")))
 	// The index lists the parent as empty, so listing-based cleanup would remove it.
 	m := newMemIndex([]string{indexLoc(t, root), indexLoc(t, parent)}, nil)
 	useMemIndex(t, m)
-	sources := []pathloc.Path{pathloc.MustParse(gone)}
-	if err := RemoveEmptyDirsUnder(context.Background(), []pathloc.Path{sources[0].Parent()}); err != nil {
+	if err := RemoveEmptyDirsUnder(context.Background(), []pathloc.Path{gone.Parent()}); err != nil {
 		t.Fatal(err)
 	}
-	if !exists(filepath.Join(parent, "node_modules", "pebble.txt")) {
-		t.Fatal("cleanup removed unindexed content")
+	dirs, err := DanglingDirsAfter(context.Background(), []pathloc.Path{gone})
+	if err != nil || len(dirs) != 0 {
+		t.Fatalf("dangling = %v, %v; want none", dirs, err)
 	}
-	if exists(emptyKid) {
-		t.Fatal("cleanup left an empty directory on disk")
+	if !exists(emptyKid) {
+		t.Fatal("cleanup removed a directory from disk")
 	}
 	if len(m.removed) != 0 || len(m.treeRemoved) != 0 {
 		t.Fatalf("cleanup used the index backend: %v %v", m.removed, m.treeRemoved)
-	}
-	dirs, err := DanglingDirsAfter(context.Background(), sources)
-	if err != nil || len(dirs) != 0 {
-		t.Fatalf("dangling = %v, %v; want none (the parent still holds files)", dirs, err)
 	}
 }
 
@@ -348,8 +292,41 @@ func TestFileIndexPathsAreNeverEmptyDirsOrFlattened(t *testing.T) {
 	if removed, err := removeDirIfEmpty(context.Background(), be, loc, "test"); removed || err != nil || len(m.treeRemoved)+len(m.removed) != 0 {
 		t.Fatalf("removeDirIfEmpty on the index = %v, %v, backend removes %v %v", removed, err, m.removed, m.treeRemoved)
 	}
-	_, _, err := ExecuteFlatten(context.Background(), []pathloc.Path{loc}, pathloc.MustParse("/meadow"), true, true, Options{}, ProgressEmitThrottle{}, nil, nil, nil)
-	if err == nil {
-		t.Fatal("flatten of a fileindex:// root must be refused")
+	local := pathloc.MustParse("/meadow")
+	for name, c := range map[string]struct {
+		roots []pathloc.Path
+		dest  pathloc.Path
+	}{
+		"root": {[]pathloc.Path{loc}, local},
+		"dest": {[]pathloc.Path{pathloc.MustParse("/orchard")}, loc},
+	} {
+		err := ValidateFlattenTarget(c.roots, c.dest)
+		var opsErr *Error
+		if !errors.As(err, &opsErr) || opsErr.Text != FlattenIndexRefusal {
+			t.Fatalf("%s: validate = %v, want the fileindex refusal", name, err)
+		}
+		if _, _, err := ExecuteFlatten(context.Background(), c.roots, c.dest, true, true, Options{}, ProgressEmitThrottle{}, nil, nil, nil); err == nil {
+			t.Fatalf("%s: flatten of a fileindex:// path must be refused", name)
+		}
+	}
+	if err := ValidateFlattenTarget([]pathloc.Path{loc}, pathloc.Path{}); err == nil || strings.Contains(err.Error(), "fileindex") {
+		t.Fatalf("a zero destination is reported as such, got %v", err)
+	}
+}
+
+func TestOnDiskPathsTranslatesOnlyFilesThatExist(t *testing.T) {
+	root := t.TempDir()
+	here, gone := filepath.Join(root, "harbor.txt"), filepath.Join(root, "bramble.txt")
+	writeTestFile(t, here, "anchor")
+	local := pathloc.MustParse("/meadow/pebble.txt")
+	got := OnDiskPaths([]pathloc.Path{pathloc.MustParse(indexLoc(t, here)), pathloc.MustParse(indexLoc(t, gone)), local})
+	if got[0].String() != pathloc.MustParse(here).String() {
+		t.Fatalf("a file on disk = %q, want its disk path", got[0])
+	}
+	if got[1].String() != indexLoc(t, gone) {
+		t.Fatalf("a file gone from disk = %q, want the fileindex:// path kept", got[1])
+	}
+	if !got[2].Equal(local) {
+		t.Fatalf("a local path = %q, want it unchanged", got[2])
 	}
 }

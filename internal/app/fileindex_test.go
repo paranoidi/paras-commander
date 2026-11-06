@@ -20,6 +20,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -1049,9 +1050,9 @@ func openIndexPanel(t *testing.T, a *App, screen tcell.SimulationScreen, dir str
 	})
 }
 
-func TestFileIndexPanelDeleteActsOnDiskAndIndexAndRefreshes(t *testing.T) {
+func TestFileIndexPanelDeleteChangesIndexOnlyAndRefreshes(t *testing.T) {
 	a, screen, dir, _ := fileIndexApp(t)
-	// A file the index does not know sits in the directory: deleting the directory takes it too.
+	// A file the index does not know sits in the directory; the disk is not touched at all.
 	sub := filepath.Join(dir, "lantern")
 	if err := os.MkdirAll(filepath.Join(sub, "node_modules"), 0o755); err != nil {
 		t.Fatal(err)
@@ -1072,7 +1073,7 @@ func TestFileIndexPanelDeleteActsOnDiskAndIndexAndRefreshes(t *testing.T) {
 	openIndexPanel(t, a, screen, dir)
 	cursorTo(t, a, "lantern")
 	dispatchFileOp(t, a, keymap.ActionFileDelete)
-	if !a.model.FileDialog.Open || !strings.Contains(a.model.FileDialog.Note, "Deletes from disk and the fileindex") {
+	if !a.model.FileDialog.Open || !strings.Contains(a.model.FileDialog.Note, "Removes from the fileindex only") {
 		t.Fatalf("delete dialog = open %v, note %q", a.model.FileDialog.Open, a.model.FileDialog.Note)
 	}
 	a.dialogCtrl.ExecuteDelete()
@@ -1083,20 +1084,24 @@ func TestFileIndexPanelDeleteActsOnDiskAndIndexAndRefreshes(t *testing.T) {
 	drainInterruptEventsUntil(t, a, screen, 5*time.Second, func() bool {
 		_, indexed, _ := d.FileInfo(filepath.Join(sub, "lamp.txt"))
 		_, listed := entryStatus(a, "lantern")
-		_, onDisk := os.Stat(sub)
-		return !indexed && !listed && onDisk != nil
+		return !indexed && !listed
 	})
 	if _, found, _ := db.DirByPath(d, sub); found {
 		t.Fatal("the directory record survived")
 	}
+	for _, f := range []string{"lamp.txt", "node_modules/pebble.txt"} {
+		if _, err := os.Stat(filepath.Join(sub, f)); err != nil {
+			t.Fatalf("a browse delete touched the disk: %v", err)
+		}
+	}
 }
 
-func TestFileIndexPanelRenameActsOnDiskAndIndex(t *testing.T) {
+func TestFileIndexPanelRenameChangesIndexOnly(t *testing.T) {
 	a, screen, dir, _ := fileIndexApp(t)
 	openIndexPanel(t, a, screen, dir)
 	cursorTo(t, a, "harbor.txt")
 	dispatchFileOp(t, a, keymap.ActionFileRename)
-	if !strings.Contains(a.model.FileDialog.Note, "Renames on disk and in the fileindex") {
+	if !strings.Contains(a.model.FileDialog.Note, "Renames in the fileindex only") {
 		t.Fatalf("rename note = %q", a.model.FileDialog.Note)
 	}
 	a.model.FileDialog.Fields[0].Value = "anchor.txt"
@@ -1111,12 +1116,51 @@ func TestFileIndexPanelRenameActsOnDiskAndIndex(t *testing.T) {
 		_, listed := entryStatus(a, "anchor.txt")
 		return !oldIndexed && newIndexed && listed
 	})
-	if _, err := os.Stat(filepath.Join(dir, "anchor.txt")); err != nil {
-		t.Fatalf("the file was not renamed on disk: %v", err)
+	if _, err := os.Stat(filepath.Join(dir, "harbor.txt")); err != nil {
+		t.Fatalf("a browse rename touched the disk: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "anchor.txt")); err == nil {
+		t.Fatal("a browse rename created a file on disk")
 	}
 }
 
-func TestFileIndexPanelMoveCarriesFileOnDiskAndIndex(t *testing.T) {
+func TestFileIndexPanelMoveInsideIndexChangesRecordsOnly(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	other := filepath.Join(dir, "meadow")
+	if err := os.MkdirAll(other, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	idx, err := a.fileIndex.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := strings.Repeat("c", 32)
+	if _, err := idx.CommitScanBatch([]db.ScannedFile{{Dir: other, Name: "clover.txt", Size: 1, Mtime: time.Now(), MD5: sum, SHA256: sum + sum}}); err != nil {
+		t.Fatal(err)
+	}
+	openIndexPanel(t, a, screen, dir)
+	cursorTo(t, a, "harbor.txt")
+	a.dialogCtrl.ActivateMoveAction()
+	if !a.model.TransferDialog.Open {
+		t.Fatalf("move dialog did not open: %q", a.model.Message)
+	}
+	a.model.TransferDialog.Destination.Value = "fileindex://" + other
+	a.dialogCtrl.TransferDialogOK()
+	drainInterruptEventsUntil(t, a, screen, 5*time.Second, func() bool {
+		_, oldIndexed, _ := idx.FileInfo(filepath.Join(dir, "harbor.txt"))
+		_, newIndexed, _ := idx.FileInfo(filepath.Join(other, "harbor.txt"))
+		_, listed := entryStatus(a, "harbor.txt")
+		return !oldIndexed && newIndexed && !listed
+	})
+	if _, err := os.Stat(filepath.Join(dir, "harbor.txt")); err != nil {
+		t.Fatalf("a browse move touched the disk: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(other, "harbor.txt")); err == nil {
+		t.Fatal("a browse move put a file on disk")
+	}
+}
+
+func TestFileIndexPanelMoveOutIsRefused(t *testing.T) {
 	a, screen, dir, _ := fileIndexApp(t)
 	other := filepath.Join(dir, "meadow")
 	if err := os.MkdirAll(other, 0o755); err != nil {
@@ -1124,26 +1168,38 @@ func TestFileIndexPanelMoveCarriesFileOnDiskAndIndex(t *testing.T) {
 	}
 	openIndexPanel(t, a, screen, dir)
 	cursorTo(t, a, "harbor.txt")
-	// The move dialog opened on a fileindex:// panel works end to end.
 	a.dialogCtrl.ActivateMoveAction()
-	if !a.model.TransferDialog.Open {
-		t.Fatalf("move dialog did not open: %q", a.model.Message)
-	}
 	a.model.TransferDialog.Destination.Value = other
 	a.dialogCtrl.TransferDialogOK()
+	if a.model.Message != ops.IndexMoveOutRefusal {
+		t.Fatalf("message = %q, want the move-out refusal", a.model.Message)
+	}
+	if n := len(a.jobState.AllJobs()); n != 0 {
+		t.Fatalf("%d jobs queued, want none", n)
+	}
+}
+
+// A dedup delete of fileindex:// paths acts on the disk and the index, unlike a delete on a
+// fileindex:// panel; a file already gone from disk only loses its record.
+func TestFileIndexDedupDeleteRemovesFileAndRecord(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
 	d, err := a.fileIndex.DB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	drainInterruptEventsUntil(t, a, screen, 5*time.Second, func() bool {
-		_, oldIndexed, _ := d.FileInfo(filepath.Join(dir, "harbor.txt"))
-		_, newIndexed, _ := d.FileInfo(filepath.Join(other, "harbor.txt"))
-		_, listed := entryStatus(a, "harbor.txt")
-		return !oldIndexed && newIndexed && !listed
-	})
-	if _, err := os.Stat(filepath.Join(other, "harbor.txt")); err != nil {
-		t.Fatalf("the file did not move on disk: %v", err)
+	if err := os.Remove(filepath.Join(dir, "meadow.txt")); err != nil {
+		t.Fatal(err)
 	}
+	dedupHost{appShellHost: appShellHost{app: a}}.EnqueueDeleteJob([]string{
+		pathloc.FileIndexPrefix + filepath.Join(dir, "harbor.txt"),
+		pathloc.FileIndexPrefix + filepath.Join(dir, "meadow.txt"),
+	}, false)
+	drainInterruptEventsUntil(t, a, screen, 5*time.Second, func() bool {
+		_, harbor, _ := d.FileInfo(filepath.Join(dir, "harbor.txt"))
+		_, meadow, _ := d.FileInfo(filepath.Join(dir, "meadow.txt"))
+		_, onDisk := os.Stat(filepath.Join(dir, "harbor.txt"))
+		return !harbor && !meadow && onDisk != nil
+	})
 }
 
 func TestFileIndexNormalLocalPanelDeleteLeavesIndexAlone(t *testing.T) {

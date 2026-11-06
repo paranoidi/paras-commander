@@ -730,9 +730,15 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 				CurrentPath: path,
 			})
 		}
-		doneFiles, doneBytes, err = ops.ExecuteDeletePaths(tc.ctx, pathloc.Strings(job.Sources), deleteProgress, job.RecordOperation, job.StartSource)
+		sources := job.Sources
+		if job.DeleteOnDisk {
+			// A fileindex:// source still on disk is deleted there; one gone keeps its fileindex://
+			// path, so only its record goes and cleanup skips its parent.
+			sources = ops.OnDiskPaths(sources)
+		}
+		doneFiles, doneBytes, err = ops.ExecuteDeletePaths(tc.ctx, pathloc.Strings(sources), deleteProgress, job.RecordOperation, job.StartSource)
 		if err == nil && job.DeleteRemoveEmptyDirs {
-			if cleanErr := ops.RemoveEmptyDirsUnder(tc.ctx, uniqueParents(job.Sources)); cleanErr != nil {
+			if cleanErr := ops.RemoveEmptyDirsUnder(tc.ctx, uniqueParents(sources)); cleanErr != nil {
 				err = cleanErr
 			}
 		}

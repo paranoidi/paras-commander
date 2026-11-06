@@ -1,6 +1,6 @@
 # fileindex:// operations translate to the disk, and a gated sink makes the index follow
 
-Status: accepted.
+Status: accepted, partly superseded by [0027](0027-fileindex-browse-is-index-only.md): a `fileindex://` panel is index-only again, so the translation of `fileindex://` paths to disk paths applies to the Find duplicates delete only. The sink, `Index.Apply`, the drift walk and Browse-with behaviour stand.
 
 An operation on a `fileindex://` path acts on the real file; the index follows through an `fschange` sink, for operations started from a panel that shows the index. The fileindex backend stays an index-only store for records whose file is gone.
 

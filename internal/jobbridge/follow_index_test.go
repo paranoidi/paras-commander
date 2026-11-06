@@ -4,10 +4,15 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"sync"
 	"testing"
+	"time"
 
+	"github.com/paranoidi/fileindex/db"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/fileindex"
 	"github.com/paranoidi/paras-commander/internal/fschange"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -85,12 +90,15 @@ func TestFollowingJobWorksWithoutDiskUsageSink(t *testing.T) {
 	}
 }
 
-func TestDeleteOfIndexPathsCleansEmptyParentsOnDiskOnly(t *testing.T) {
+// indexedFile writes harbor.txt under dir/orchard (next to an unindexed node_modules/pebble.txt),
+// records it in a fresh index registered behind fileindex://, and returns its disk path, its
+// fileindex:// path and the index.
+func indexedFile(t *testing.T) (file, parent string, src pathloc.Path, idx *fileindex.Index) {
+	t.Helper()
 	dir := t.TempDir()
-	parent := filepath.Join(dir, "orchard")
-	file := filepath.Join(parent, "harbor.txt")
-	keep := filepath.Join(parent, "node_modules", "pebble.txt") // not in the index
-	for _, p := range []string{file, keep} {
+	parent = filepath.Join(dir, "orchard")
+	file = filepath.Join(parent, "harbor.txt")
+	for _, p := range []string{file, filepath.Join(parent, "node_modules", "pebble.txt")} {
 		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -98,24 +106,94 @@ func TestDeleteOfIndexPathsCleansEmptyParentsOnDiskOnly(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	src, err := pathloc.FileIndex(file)
+	dbPath := filepath.Join(t.TempDir(), "index.sqlite")
+	d, err := db.Open(dbPath)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := d.Init(); err != nil {
+		t.Fatal(err)
+	}
+	sum := strings.Repeat("a", 32)
+	if _, err := d.CommitScanBatch([]db.ScannedFile{{Dir: parent, Name: "harbor.txt", Size: 1, Mtime: time.Now(), MD5: sum, SHA256: sum + sum}}); err != nil {
+		t.Fatal(err)
+	}
+	_ = d.Close()
+	idx = fileindex.New(config.FileIndexConfig{Database: dbPath})
+	t.Cleanup(func() { _ = idx.Close() })
+	if err := fileindex.Register(idx); err != nil {
+		t.Fatal(err)
+	}
+	if src, err = pathloc.FileIndex(file); err != nil {
+		t.Fatal(err)
+	}
+	return file, parent, src, idx
+}
+
+func TestDeleteOfIndexPathsOnDiskCleansEmptyParentsOnDiskOnly(t *testing.T) {
+	file, parent, src, _ := indexedFile(t)
+	emptyKid := filepath.Join(parent, "empty")
+	if err := os.Mkdir(emptyKid, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	index := &changeLog{}
 	runJob(t, &jobs.Job{
-		ID: jobs.NewJobID(), Type: jobs.TypeDelete, Status: jobs.StatusRunning, FollowIndex: true,
+		ID: jobs.NewJobID(), Type: jobs.TypeDelete, Status: jobs.StatusRunning, FollowIndex: true, DeleteOnDisk: true,
 		DeleteRemoveEmptyDirs: true, Sources: []pathloc.Path{src},
 	}, nil, index)
 	if _, err := os.Stat(file); err == nil {
 		t.Fatal("the file is still on disk")
 	}
-	if _, err := os.Stat(keep); err != nil {
+	if _, err := os.Stat(filepath.Join(parent, "node_modules", "pebble.txt")); err != nil {
 		t.Fatalf("the cleanup removed unindexed content: %v", err)
 	}
-	for _, p := range index.paths() {
-		if p == parent {
-			t.Fatalf("the non-empty parent was reported removed: %v", index.paths())
-		}
+	if _, err := os.Stat(emptyKid); err == nil {
+		t.Fatal("the cleanup left an empty directory beside the deleted file")
+	}
+	if got := index.paths(); !slices.Contains(got, file) {
+		t.Fatalf("index sink got %v, want the deleted file's disk path", got)
+	}
+}
+
+func TestDeleteOfIndexPathsWithoutDeleteOnDiskLeavesDiskAlone(t *testing.T) {
+	file, parent, src, idx := indexedFile(t)
+	index := &changeLog{}
+	runJob(t, &jobs.Job{
+		ID: jobs.NewJobID(), Type: jobs.TypeDelete, Status: jobs.StatusRunning, FollowIndex: true,
+		DeleteRemoveEmptyDirs: true, Sources: []pathloc.Path{src},
+	}, nil, index)
+	if _, err := os.Stat(file); err != nil {
+		t.Fatalf("the file left the disk: %v", err)
+	}
+	if got := index.paths(); len(got) != 0 {
+		t.Fatalf("index sink got %v; the backend changes the index itself", got)
+	}
+	d, err := idx.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, found, _ := d.FileInfo(file); found {
+		t.Fatal("the record is still in the index")
+	}
+	if _, err := os.Stat(parent); err != nil {
+		t.Fatalf("cleanup removed a directory: %v", err)
+	}
+}
+
+func TestDeleteOnDiskOfFileGoneFromDiskRemovesRecordOnly(t *testing.T) {
+	file, _, src, idx := indexedFile(t)
+	if err := os.Remove(file); err != nil {
+		t.Fatal(err)
+	}
+	runJob(t, &jobs.Job{
+		ID: jobs.NewJobID(), Type: jobs.TypeDelete, Status: jobs.StatusRunning, FollowIndex: true, DeleteOnDisk: true,
+		DeleteRemoveEmptyDirs: true, Sources: []pathloc.Path{src},
+	}, nil, &changeLog{})
+	d, err := idx.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, found, _ := d.FileInfo(file); found {
+		t.Fatal("the record of a file gone from disk is still in the index")
 	}
 }

@@ -123,7 +123,9 @@ func (s *State) ShowsIndex() bool {
 // FollowsIndex reports whether a file operation keeps the fileindex in step with the disk: it was
 // started from a panel browsing with fileindex or showing the index (fileindex:// path; p may be
 // nil), or it names a fileindex:// path. Operations started from an ordinary local panel leave
-// the index alone. A pure string check, safe on the UI goroutine.
+// the index alone. Only changes made on the disk reach the index this way (a Browse-with panel's
+// local paths, a dedup delete of fileindex:// files on disk); a fileindex:// path handled by the
+// index backend changes the index itself. A pure string check, safe on the UI goroutine.
 func FollowsIndex(p *State, paths ...pathloc.Path) bool {
 	if p != nil && p.ShowsIndex() {
 		return true

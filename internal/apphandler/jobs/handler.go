@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"slices"
@@ -1445,12 +1446,14 @@ func (h *Handler) enqueueTransferJob(opts transferEnqueueOpts) {
 		h.host.OpenTransferDialogSelfCopyRename(opts.kind, absDest, sources[0])
 		return
 	}
-	h.AddTransferJob(TransferJobRequest{
+	if !h.AddTransferJob(TransferJobRequest{
 		Type:     opts.jobType,
 		Sources:  sources,
 		Dest:     dest,
 		Preserve: jobs.TransferPreserveFromConfig(h.config.Operations.PreservePermissions, h.config.Operations.PreserveTimestamps, h.config.Operations.DereferenceSymlinks),
-	})
+	}) {
+		return // refused (shown)
+	}
 	h.host.ActivePanel().ClearSelection()
 	h.host.SetTransientMessage(fmt.Sprintf("%s queued (%d %s)", opts.toastVerb, len(sources), jobbridge.Plural(len(sources), "file", "files")), ui.MessageUrgencyInfo)
 }
@@ -1472,19 +1475,23 @@ func (h *Handler) EnqueueMoveJob() {
 	})
 }
 
-// AddTransferJob enqueues a copy or move job after scanning.
-func (h *Handler) AddTransferJob(req TransferJobRequest) {
+// AddTransferJob enqueues a copy or move job after scanning. It reports false, after showing why,
+// when no job was queued.
+func (h *Handler) AddTransferJob(req TransferJobRequest) bool {
 	srcLocs, err := pathloc.ParseAll(req.Sources)
 	if err != nil {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
-		return
+		return false
 	}
 	destLoc, err := pathloc.Parse(req.Dest)
 	if err != nil {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
-		return
+		return false
 	}
-	srcLocs, destLoc, follow := h.diskJobPaths(srcLocs, destLoc)
+	if msg := indexTransferRefusal(req.Type, srcLocs, destLoc); msg != "" {
+		h.host.SetTransientMessage(msg, ui.MessageUrgencyWarn)
+		return false
+	}
 	job := &jobs.Job{
 		ID:                  jobs.NewJobID(),
 		Type:                req.Type,
@@ -1492,7 +1499,7 @@ func (h *Handler) AddTransferJob(req TransferJobRequest) {
 		Sources:             srcLocs,
 		Destination:         destLoc,
 		DestIsDir:           ops.DestinationIsDirAtEnqueue(destLoc),
-		FollowIndex:         follow,
+		FollowIndex:         h.followIndex(srcLocs...) || h.followIndex(destLoc),
 		PausedAfterScan:     req.StartPaused,
 		PreservePermissions: req.Preserve.PreservePermissions,
 		PreserveTimestamps:  req.Preserve.PreserveTimestamps,
@@ -1507,21 +1514,32 @@ func (h *Handler) AddTransferJob(req TransferJobRequest) {
 	job.PromptDanglingDirs = req.Type == jobs.TypeMove && !job.RemoveDanglingDirs && h.config.Operations.RemoveDanglingDirs
 	h.applySizeEstimate(job, req.Sources)
 	h.commitJob(job)
+	return true
+}
+
+// indexTransferRefusal explains why a transfer touching a fileindex:// location (browse mode, which
+// changes the index only) cannot be queued, or "": the index is read-only for copies into it, a
+// copy inside it would have no writable index to land in, and a move across its boundary would
+// copy the file and then remove only its index entry. Copying out of it and moving inside it
+// are fine.
+func indexTransferRefusal(t jobs.Type, sources []pathloc.Path, dest pathloc.Path) string {
+	destIndex := dest.Scheme() == pathloc.SchemeFileIndex
+	for _, src := range sources {
+		srcIndex := src.Scheme() == pathloc.SchemeFileIndex
+		switch {
+		case destIndex && (!srcIndex || t == jobs.TypeCopy):
+			return ops.IndexReadOnlyRefusal
+		case srcIndex && !destIndex && t != jobs.TypeCopy:
+			return ops.IndexMoveOutRefusal
+		}
+	}
+	return ""
 }
 
 // followIndex reports whether a job started now keeps the fileindex in step (panel.FollowsIndex
 // for the active panel and the job's paths).
 func (h *Handler) followIndex(paths ...pathloc.Path) bool {
 	return panel.FollowsIndex(h.host.ActivePanel(), paths...)
-}
-
-// diskJobPaths returns a transfer or flatten job's paths on disk and whether the job follows the
-// fileindex. A fileindex:// path names a real file: the job works on the disk (the backend lists
-// indexed files only), and the index follows through the fschange sink. The gate needs the paths
-// as given, so it runs before they are translated.
-func (h *Handler) diskJobPaths(srcs []pathloc.Path, dest pathloc.Path) ([]pathloc.Path, pathloc.Path, bool) {
-	follow := h.followIndex(srcs...) || h.followIndex(dest)
-	return pathloc.Locals(srcs), dest.Local(), follow
 }
 
 // applySizeEstimate seeds a copy or move job's byte total from what the active panel already
@@ -1555,13 +1573,25 @@ func (h *Handler) applySizeEstimate(job *jobs.Job, sources []string) {
 	}
 }
 
-// EnqueueDeleteJob queues a delete job. promptDangling requests the post-completion
+// EnqueueDeleteJob queues a delete job. A fileindex:// source is removed from the index only.
+// promptDangling requests the post-completion
 // "remove directories left empty" prompt for browser-initiated deletes; callers with
 // their own empty-dirs confirm (dedup) or that are themselves the dangling-dirs
 // cleanup pass false to avoid double-prompting. The [operations].remove_dangling_directories
 // gate is applied here, the single place that decides the job field — callers only
 // say whether they want prompting at all.
 func (h *Handler) EnqueueDeleteJob(sources []string, removeEmptyDirs, promptDangling bool) {
+	h.enqueueDeleteJob(sources, removeEmptyDirs, promptDangling, false)
+}
+
+// EnqueueDedupDeleteJob queues the dedup view's delete: fileindex:// sources still on disk are
+// deleted there (and their records follow), those already gone only lose their record
+// (Job.DeleteOnDisk). The view has its own empty-dirs confirm, so there is no dangling prompt.
+func (h *Handler) EnqueueDedupDeleteJob(sources []string, removeEmptyDirs bool) {
+	h.enqueueDeleteJob(sources, removeEmptyDirs, false, true)
+}
+
+func (h *Handler) enqueueDeleteJob(sources []string, removeEmptyDirs, promptDangling, onDisk bool) {
 	srcLocs, err := pathloc.ParseAll(sources)
 	if err != nil {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue delete: %v", err), ui.MessageUrgencyError)
@@ -1575,6 +1605,7 @@ func (h *Handler) EnqueueDeleteJob(sources []string, removeEmptyDirs, promptDang
 		TotalFiles:            len(sources),
 		DeleteRemoveEmptyDirs: removeEmptyDirs,
 		FollowIndex:           h.followIndex(srcLocs...),
+		DeleteOnDisk:          onDisk,
 		PromptDanglingDirs:    promptDangling && h.config.Operations.RemoveDanglingDirs,
 	}
 	h.commitJob(job)
@@ -1592,6 +1623,9 @@ func (h *Handler) EnqueueExtractJob(sources []string, dest string) {
 		return
 	}
 	// An extract only creates files, which the index learns of on the next scan: no FollowIndex.
+	// A fileindex:// source names the archive on disk, which the job only reads; a fileindex://
+	// destination is refused by the dialog.
+	srcLocs = pathloc.Locals(srcLocs)
 	job := &jobs.Job{
 		ID:          jobs.NewJobID(),
 		Type:        jobs.TypeExtract,
@@ -1616,7 +1650,15 @@ func (h *Handler) AddFlattenJob(req FlattenJobRequest) {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
 		return
 	}
-	srcLocs, destLoc, follow := h.diskJobPaths(srcLocs, destLoc)
+	if err := ops.ValidateFlattenTarget(srcLocs, destLoc); err != nil {
+		var opsErr *ops.Error
+		if errors.As(err, &opsErr) {
+			h.host.SetTransientMessage(opsErr.Text, ui.MessageUrgencyWarn)
+		} else {
+			h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyWarn)
+		}
+		return
+	}
 	job := &jobs.Job{
 		ID:                 jobs.NewJobID(),
 		Type:               jobs.TypeFlatten,
@@ -1624,7 +1666,7 @@ func (h *Handler) AddFlattenJob(req FlattenJobRequest) {
 		Sources:            srcLocs,
 		Destination:        destLoc,
 		DestIsDir:          ops.DestinationIsDirAtEnqueue(destLoc),
-		FollowIndex:        follow,
+		FollowIndex:        h.followIndex(srcLocs...) || h.followIndex(destLoc),
 		FlattenRemoveEmpty: req.RemoveEmpty,
 		FlattenRecursive:   req.Recursive,
 	}

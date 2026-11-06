@@ -12,12 +12,15 @@ import (
 
 // AddTransferJob enqueues a copy/move job through Deps.Jobs, then optionally arms
 // focus-other-panel-after-transfer when the destination is the inactive panel's cwd.
-func (h *Handler) AddTransferJob(jobType jobs.Type, sources []string, dest string, startPaused bool, preserve jobs.TransferPreserve) {
+func (h *Handler) AddTransferJob(jobType jobs.Type, sources []string, dest string, startPaused bool, preserve jobs.TransferPreserve) bool {
 	destIsDir := h.destIsDirForEnqueue(dest)
-	h.jobs.AddTransferJob(jobsctrl.TransferJobRequest{
+	if !h.jobs.AddTransferJob(jobsctrl.TransferJobRequest{
 		Type: jobType, Sources: sources, Dest: dest, StartPaused: startPaused, Preserve: preserve,
-	})
+	}) {
+		return false
+	}
 	h.maybeScheduleTransferOtherPanelFocus(jobType, sources, dest, preserve, destIsDir)
+	return true
 }
 
 // TransferPreserveFromConfig reads the live copy-preserve settings (permissions/timestamps)
@@ -96,7 +99,9 @@ func (h *Handler) executeDuplicate() {
 	listDir := p.PathString()
 	panelID := h.model.ActivePanel
 	h.CloseFileDialog()
-	h.AddTransferJob(jobs.TypeCopy, []string{plan.SourcePath}, plan.DestPath, false, h.TransferPreserveFromConfig())
+	if !h.AddTransferJob(jobs.TypeCopy, []string{plan.SourcePath}, plan.DestPath, false, h.TransferPreserveFromConfig()) {
+		return // refused (shown)
+	}
 	if focusAfter {
 		// The copy is only queued above, not yet on disk, so it can't be tied to a specific
 		// reload (unlike rename/mkdir's RefreshBothPanelsWithFocus); this polls instead, via

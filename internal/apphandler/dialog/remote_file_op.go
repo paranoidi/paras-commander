@@ -210,8 +210,7 @@ func (h *Handler) startRemoteTransferProbe(st transferProbeApply) {
 	for i, src := range st.sources {
 		srcLocs[i] = pathloc.MustParse(src)
 	}
-	// fileindex:// paths name real files: probe them as the job will see them.
-	srcLocs, destLoc := pathloc.Locals(srcLocs), st.destLoc.Local()
+	destLoc := st.destLoc
 	flat := st.flat
 	go func() {
 		nSelf, destIsDir := remoteSelfTargetAndDestDir(backend, srcLocs, destLoc, flat)
@@ -420,7 +419,9 @@ func (h *Handler) finishTransferEnqueue(st transferProbeApply, nSelf int, destIs
 		h.setEnqueueDestIsDir(destIsDir)
 	}
 	sourcesCopy := append([]string(nil), st.sources...)
-	h.AddTransferJob(st.jobType, sourcesCopy, st.dest, st.startPaused, st.preserve)
+	if !h.AddTransferJob(st.jobType, sourcesCopy, st.dest, st.startPaused, st.preserve) {
+		return // refused (shown); the dialog stays open so the destination can change
+	}
 	h.host.ActivePanel().ClearSelection()
 	h.CloseTransferDialog()
 	h.setTransferQueuedMessage(st.jobType, st.startPaused)

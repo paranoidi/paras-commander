@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -41,8 +42,11 @@ func TestExtractQueuedMessageDoesNotCallExistingUnsupportedTool(t *testing.T) {
 	}
 }
 
-// An extract on a fileindex:// panel plans and queues on the disk paths those paths name.
-func TestExecuteExtractTranslatesIndexPaths(t *testing.T) {
+// indexExtract opens the extract dialog over an indexed gzip archive (as a fileindex:// source)
+// with dest as destination, runs OK and returns the queued jobs, the archive's disk path and the
+// messages shown.
+func indexExtract(t *testing.T, dest func(destDir string) string) ([]jobs.Job, string, *identityTestHost) {
+	t.Helper()
 	if archive.ProbeToolchain().Gzip == "" {
 		t.Skip("gzip not in PATH")
 	}
@@ -50,10 +54,6 @@ func TestExecuteExtractTranslatesIndexPaths(t *testing.T) {
 	archivePath := filepath.Join(srcDir, "meadow.gz")
 	writeGzipFile(t, archivePath, "incoming-thicket")
 	srcLoc, err := pathloc.FileIndex(archivePath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	destLoc, err := pathloc.FileIndex(destDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,18 +81,39 @@ func TestExecuteExtractTranslatesIndexPaths(t *testing.T) {
 	h.model.FileDialog = uidialog.FileDialogState{
 		Open:           true,
 		DialogType:     uidialog.FileDialogExtract,
-		Fields:         []uidialog.FileDialogField{{Label: "Destination", Value: destLoc.String()}},
+		Fields:         []uidialog.FileDialogField{{Label: "Destination", Value: dest(destDir)}},
 		ExtractSources: []string{srcLoc.String()},
 	}
-
 	h.ExecuteExtract()
+	return jobState.Snapshot(), archivePath, host
+}
 
-	snap := jobState.Snapshot()
+// Extracting an indexed archive to a real directory reads the archive from disk.
+func TestExecuteExtractReadsIndexedArchiveFromDisk(t *testing.T) {
+	var destDir string
+	snap, archivePath, _ := indexExtract(t, func(d string) string { destDir = d; return d })
 	if len(snap) != 1 {
 		t.Fatalf("jobs = %d, want 1", len(snap))
 	}
 	if j := snap[0]; j.Sources[0].String() != archivePath || j.Destination.String() != destDir || j.FollowIndex {
 		t.Fatalf("job = %s -> %s, follow %v; want disk paths and no follow", j.Sources[0], j.Destination, j.FollowIndex)
+	}
+}
+
+// The index is read-only: an extract into it is refused and keeps the dialog open.
+func TestExecuteExtractRefusesIndexDestination(t *testing.T) {
+	snap, _, host := indexExtract(t, func(d string) string {
+		loc, err := pathloc.FileIndex(d)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return loc.String()
+	})
+	if len(snap) != 0 {
+		t.Fatalf("jobs = %d, want none", len(snap))
+	}
+	if !slices.Contains(host.messages, ops.IndexReadOnlyRefusal) || !host.model.FileDialog.Open {
+		t.Fatalf("messages %q, dialog open %v; want the refusal and the dialog kept", host.messages, host.model.FileDialog.Open)
 	}
 }
 

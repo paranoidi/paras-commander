@@ -166,8 +166,7 @@ func (h *Handler) applyCopyDefaults(st *dialog.TransferDialogState) {
 	st.PreservePermissions = cfg.Operations.PreservePermissions
 	st.PreserveTimestamps = cfg.Operations.PreserveTimestamps
 	st.DereferenceSymlinks = cfg.Operations.DereferenceSymlinks
-	_, onHost := h.host.ActivePanel().Path.HostPath() // a fileindex:// panel names real files
-	st.SourceIsRemote = !onHost
+	st.SourceIsRemote = !h.host.ActivePanel().Path.IsLocal()
 }
 
 // transferViewContext is what dialog.TransferView needs besides the state: the screen layout, the
@@ -419,7 +418,9 @@ func (h *Handler) confirmTransferSelfCopyRename(sources []string, startPaused bo
 		DereferenceSymlinks: d.DereferenceSymlinks,
 	}
 	h.applyTransferAdvanced(&preserve)
-	h.AddTransferJob(jobType, sourcesCopy, finalDest, startPaused, preserve)
+	if !h.AddTransferJob(jobType, sourcesCopy, finalDest, startPaused, preserve) {
+		return // refused (shown); the dialog stays open
+	}
 	h.host.ActivePanel().ClearSelection()
 	h.CloseTransferDialog()
 	h.setTransferQueuedMessage(jobType, startPaused)

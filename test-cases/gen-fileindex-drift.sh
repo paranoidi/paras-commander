@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds a tree and an isolated fileindex database for manually checking the directory state
-# icon, fileindex.report-differences, and operations that keep the disk and the index in step.
+# icon, fileindex.report-differences, and operations on the disk and the index.
 #
 # Usage: test-cases/gen-fileindex-drift.sh [dir]     (default: fi-testdata/ in the worktree root)
 #
@@ -26,7 +26,10 @@
 #   deep                     unchecked; the report still finds the difference
 #   ops-delete, ops-rename, ops-move, ops-flatten
 #                            indexed; each holds non-indexed files (excluded names) to try
-#                            operations from a Browse-with and a fileindex:// panel
+#                            operations from a Browse-with and a fileindex:// panel. Browse-with
+#                            acts on the disk and the index follows; a fileindex:// panel
+#                            (fileindex.browse) changes the index only and leaves the disk alone;
+#                            flatten is refused there. Deleting in Find duplicates acts on both.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -103,8 +106,8 @@ write unreadable/vault/tunnel.md 'dark tunnel'
 write deep/gravel.md 'loose gravel'
 write deep/one/two/three/four/five/cobalt.md 'cobalt shard'
 
-# ops-*: an indexed file or two, plus files the index never lists (excluded names), which must
-# travel with their directory.
+# ops-*: an indexed file or two, plus files the index never lists (excluded names), which a
+# Browse-with operation carries with their directory and a fileindex:// operation never touches.
 write ops-delete/victim/candle.md 'tall candle'
 write ops-delete/victim/node_modules/pepper/index.js 'module.exports = 2'
 write ops-delete/victim/.cache/mirror.bin 'mirror'
@@ -113,7 +116,7 @@ write ops-delete/single.md 'lone file'
 write ops-rename/folder/basket.md 'woven basket'
 write ops-rename/folder/node_modules/thistle/index.js 'module.exports = 3'
 write ops-rename/whistle.md 'tin whistle'
-write ops-rename/Thumbs.db 'not indexed: renaming onto it must be refused from fileindex://'
+write ops-rename/Thumbs.db 'not indexed: stays on disk through a rename in a fileindex:// panel'
 
 write ops-move/source/bucket.md 'iron bucket'
 write ops-move/source/node_modules/clover/index.js 'module.exports = 4'

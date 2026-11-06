@@ -74,8 +74,12 @@ func (h *Handler) ExecuteExtract() {
 		h.host.SetTransientMessage("Invalid source path", ui.MessageUrgencyWarn)
 		return
 	}
-	// fileindex:// paths name real files and directories; the planner and the job work on disk paths.
-	dest = destLoc.Local().String()
+	if destLoc.Scheme() == pathloc.SchemeFileIndex {
+		h.host.SetTransientMessage(ops.IndexReadOnlyRefusal, ui.MessageUrgencyWarn)
+		return
+	}
+	dest = destLoc.String()
+	// An indexed archive is read from the disk: the planner and the job work on disk paths.
 	sources = pathloc.Strings(pathloc.Locals(srcLocs))
 	if h.useRemoteFileOp(dest) {
 		h.startRemoteExtractProbe(sources, dest)
