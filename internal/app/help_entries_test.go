@@ -243,6 +243,16 @@ func TestHelpF3OpensIconLegendAndF1Closes(t *testing.T) {
 	}
 }
 
+func TestHelpF3TogglesIconLegend(t *testing.T) {
+	a := newHelpEntriesApp(t)
+	a.handleKey(tcell.NewEventKey(tcell.KeyF1, 0, tcell.ModNone))
+	a.handleKey(tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone))
+	a.handleKey(tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone))
+	if a.model.HelpView.Open || a.model.IconLegendDialog.Open {
+		t.Fatalf("second F3: help %v legend %v", a.model.HelpView.Open, a.model.IconLegendDialog.Open)
+	}
+}
+
 func TestIconLegendFromTextEditPageAndF2(t *testing.T) {
 	a := newHelpEntriesApp(t)
 	a.handleKey(tcell.NewEventKey(tcell.KeyF1, 0, tcell.ModNone))

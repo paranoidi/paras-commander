@@ -633,11 +633,16 @@ func (a *App) handleGlobalKeyIntercepts(event *tcell.EventKey, resolvedAction st
 		return true, false, false
 	}
 
-	// The one dispatch point of help.legend: from the open help dialog, whatever key it is bound to.
-	// Runs before app.show-help, so a chord bound to both opens the legend.
-	if a.model.HelpView.Open && a.keys.HelpDialog != nil {
+	// The one dispatch point of help.legend: from the open help dialog or the open legend, whatever
+	// key it is bound to. Opening the legend closes help, so the legend itself must be admitted here.
+	// Runs before app.show-help, so a chord bound to both toggles the legend.
+	if (a.model.HelpView.Open || a.model.IconLegendDialog.Open) && a.keys.HelpDialog != nil {
 		if id, ok := a.keys.HelpDialog.Lookup(event); ok && id == keymap.ActionHelpLegend {
-			a.openIconLegendDialog()
+			if a.model.IconLegendDialog.Open {
+				a.closeIconLegendDialog()
+			} else {
+				a.openIconLegendDialog()
+			}
 			a.render()
 			return true, false, true
 		}
