@@ -26,11 +26,7 @@ func pumpWakes(t *testing.T, screen tcell.Screen, h *Handler, panelID int) (wake
 	t.Helper()
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
-		pending := 0
-		for _, c := range h.model.MetaResults[panelID] {
-			pending += c.PendingCount
-		}
-		if pending == 0 {
+		if pendingCount(h.model.MetaResults[panelID]) == 0 {
 			return wakes, fails
 		}
 		ev := screen.PollEvent()

@@ -199,38 +199,44 @@ func (a *App) copyToClipboard(actionID string) {
 	case keymap.ActionClipboardCopyGitFilePath, keymap.ActionClipboardCopyGitDirPath:
 		// Targets can live in different folders (tree layout, selection across folders), so each
 		// is made relative to the work tree holding it; targets outside any repository are skipped.
-		targets := paths
-		if actionID == keymap.ActionClipboardCopyGitDirPath {
-			targets = make([]string, 0, len(paths))
-			for _, p := range paths {
-				targets = append(targets, filepath.Dir(p))
-			}
-			if len(targets) == 0 {
-				targets = []string{dirPath}
-			}
-		}
-		rel := make([]string, 0, len(targets))
-		seen := make(map[string]struct{}, len(targets))
-		for _, t := range targets {
-			lookup := t
-			if actionID == keymap.ActionClipboardCopyGitFilePath {
-				lookup = filepath.Dir(t)
-			}
-			root := gitignore.ValidWorkTreeRoot(lookup)
+		dirAction := actionID == keymap.ActionClipboardCopyGitDirPath
+		rel := make([]string, 0, len(paths))
+		seen := make(map[string]struct{}, len(paths))
+		inWorkTree := false // some target's directory is inside a work tree
+		// add makes target relative to the work tree holding dir.
+		add := func(dir, target string) {
+			root := gitignore.ValidWorkTreeRoot(dir)
 			if root == "" {
-				continue
+				return
 			}
-			r, err := filepath.Rel(root, t)
+			inWorkTree = true
+			r, err := filepath.Rel(root, target)
 			if err != nil {
-				continue
+				return
 			}
 			if _, dup := seen[r]; dup {
-				continue
+				return
 			}
 			seen[r] = struct{}{}
 			rel = append(rel, r)
 		}
-		if len(rel) == 0 && !gitAvailable(paths, dirPath) {
+		for _, p := range paths {
+			dir := filepath.Dir(p)
+			if dirAction {
+				add(dir, dir)
+			} else {
+				add(dir, p)
+			}
+		}
+		if len(paths) == 0 {
+			// No targets: the cursor directory (the file-path action has nothing to make relative).
+			if dirAction {
+				add(dirPath, dirPath)
+			} else {
+				inWorkTree = gitignore.ValidWorkTreeRoot(dirPath) != ""
+			}
+		}
+		if len(rel) == 0 && !inWorkTree {
 			a.setTransientMessage("Copy: not in a git repository", ui.MessageUrgencyWarn)
 			return
 		}

@@ -345,7 +345,7 @@ func matchEntryTypes(ent *localfs.Entry, types string, ctx *Context) (bool, erro
 			if ctx.Row != nil {
 				// tagged predicate N/A in row mode
 			} else if ctx.Active != nil {
-				acc = acc || len(ctx.Active.CommandTags()) > 0
+				acc = acc || ctx.Active.HasCommandTags()
 			}
 		default:
 			// ignore unknown letters

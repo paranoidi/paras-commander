@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/testutil"
 )
 
 func touchTreeFile(t *testing.T, p string) {
@@ -13,9 +14,7 @@ func touchTreeFile(t *testing.T, p string) {
 	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	testutil.WriteFile(t, p)
 }
 
 // treeLoadHarness records ScheduleTreeChildLoad requests and plays the app: CancelTreeChildLoads

@@ -78,10 +78,7 @@ func TestNavigateToSameDirKeepsCursorEntry(t *testing.T) {
 	})
 	t.Run("cursor file deleted moves to the next neighbour", func(t *testing.T) {
 		s := newState(t, "damson")
-		if err := os.Remove(filepath.Join(root, "damson")); err != nil {
-			t.Fatal(err)
-		}
-		t.Cleanup(func() { _ = os.WriteFile(filepath.Join(root, "damson"), []byte("x"), 0o644) })
+		removeUntilCleanup(t, "damson")
 		if err := s.NavigateTo(root, "", 10); err != nil {
 			t.Fatal(err)
 		}

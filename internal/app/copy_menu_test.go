@@ -338,11 +338,7 @@ func testCopyMenuTreeGitApp(t *testing.T) (*App, string) {
 	if p.ListLayout != panel.ListLayoutTree || p.VisibleEntryCount() != 3 {
 		t.Fatalf("tree layout=%v rows=%d, want tree with orchard expanded", p.ListLayout, p.VisibleEntryCount())
 	}
-	for i := 0; i < p.VisibleEntryCount(); i++ {
-		if e, _, ok := p.VisibleEntry(i); ok && e.Name == "ember.txt" {
-			p.Cursor = i
-		}
-	}
+	selectEntryByName(t, app, "ember.txt")
 	return app, root
 }
 

@@ -25,8 +25,8 @@ func (h *Handler) OpenRunForEachDialog() {
 	active := h.host.ActivePanel()
 	other := h.host.InactivePanel()
 	// Resolving the source of a remote panel may do I/O: refuse it first.
-	if msg := runForEachRefusal("", nil, active, other); msg != "" {
-		h.host.SetTransientMessage(msg, ui.MessageUrgencyWarn)
+	if !active.Path.IsLocal() {
+		h.host.SetTransientMessage(usermenu.LocalOnlyRefusal, ui.MessageUrgencyWarn)
 		return
 	}
 	src, err := ops.ResolveSource(active)
@@ -178,6 +178,7 @@ func validateRunForEachCommand(cmdLine string, entries []localfs.Entry, active, 
 func runForEachRefusal(cmdLine string, entries []localfs.Entry, active, other *panel.State) string {
 	return usermenu.CommandRefusal(usermenu.Launch{
 		Command:        cmdLine,
-		RunForEachRows: func() []localfs.Entry { return entries },
+		RunForEach:     true,
+		RunForEachRows: entries,
 	}, active, other)
 }

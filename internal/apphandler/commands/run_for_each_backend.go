@@ -12,6 +12,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/cmdmacro"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/subshell"
 	"github.com/paranoidi/paras-commander/internal/textutil"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -57,6 +58,24 @@ type RunForEachBatchSpec struct {
 	BuildItem runForEachItemBuilder
 }
 
+// runForEachWorkDirs is the working directory of each of spec.Entries: its own path with
+// PerEntryWorkDir (which wins), the panel directory with PanelWorkDir, else the directory holding
+// the entry's row (the panel directory in flat layout).
+func runForEachWorkDirs(spec RunForEachBatchSpec, active *panel.State) []string {
+	dirs := make([]string, len(spec.Entries))
+	for i, ent := range spec.Entries {
+		switch {
+		case spec.PerEntryWorkDir:
+			dirs[i] = textutil.AbsPathClean(ent.Path)
+		case spec.PanelWorkDir:
+			dirs[i] = active.Path.String()
+		default:
+			dirs[i] = active.EntryDir(ent).String()
+		}
+	}
+	return dirs
+}
+
 // StartRunForEachBatch enqueues Commands-view rows for spec.Entries and runs them in the
 // background in submission order: sequentially without a pool; with a pool, up to its
 // max_parallel at a time (PTY batches always run sequentially).
@@ -74,16 +93,8 @@ func (h *Handler) StartRunForEachBatch(spec RunForEachBatchSpec) {
 	active := h.host.ActivePanel()
 	active.ClearSelection()
 
-	// Each entry runs in the directory holding its row (the panel directory in flat layout);
-	// resolved here because the batch goroutine must not read panel state.
-	rowDirs := make([]string, len(spec.Entries))
-	for i, ent := range spec.Entries {
-		if spec.PanelWorkDir {
-			rowDirs[i] = active.Path.String()
-		} else {
-			rowDirs[i] = active.EntryDir(ent).String()
-		}
-	}
+	// Resolved here because the batch goroutine must not read panel state.
+	rowDirs := runForEachWorkDirs(spec, active)
 
 	entries := make([]ui.CommandRunEntry, len(spec.Entries))
 	for i := range spec.Entries {
@@ -266,9 +277,6 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 			}
 
 			workDir := rowDirs[i]
-			if spec.PerEntryWorkDir {
-				workDir = abs
-			}
 			var res cmdrun.RunResult
 			if spec.PTY {
 				// Stays Pending while the PTY starts; name the row now so it isn't blank.

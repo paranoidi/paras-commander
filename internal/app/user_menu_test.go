@@ -46,6 +46,17 @@ func testUserMenuAppConfig(t *testing.T, dir, cfgDir string, cfg config.Config) 
 	return app
 }
 
+// stubDetach replaces the detached-process runner for the test; a nil fn accepts every launch.
+func stubDetach(t *testing.T, fn func(argv []string, workDir string) error) {
+	t.Helper()
+	if fn == nil {
+		fn = func([]string, string) error { return nil }
+	}
+	prev := userMenuDetachRunner
+	userMenuDetachRunner = fn
+	t.Cleanup(func() { userMenuDetachRunner = prev })
+}
+
 func TestOpenUserMenuCreatesStubWhenMissing(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
@@ -422,13 +433,11 @@ detach = true
 	var gotArgv []string
 	var gotDir string
 	wantDir := dir
-	prev := userMenuDetachRunner
-	userMenuDetachRunner = func(argv []string, workDir string) error {
+	stubDetach(t, func(argv []string, workDir string) error {
 		gotArgv = append([]string(nil), argv...)
 		gotDir = workDir
 		return nil
-	}
-	t.Cleanup(func() { userMenuDetachRunner = prev })
+	})
 
 	app.openUserMenu()
 	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'p', tcell.ModNone))
@@ -836,9 +845,7 @@ func TestUserMenuKeepOpenStaysOpenWithToast(t *testing.T) {
 			"\n[r]\nkey = \"r\"\ntitle = \"Ridge\"\ncommand = \"true\"\ndetach = true\n")
 		app := testUserMenuApp(t, dir, cfgDir)
 		app.styles.UseNerdfontIcons = tc.nerd
-		prev := userMenuDetachRunner
-		userMenuDetachRunner = func([]string, string) error { return nil }
-		t.Cleanup(func() { userMenuDetachRunner = prev })
+		stubDetach(t, nil)
 
 		app.openUserMenu()
 		app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'q', tcell.ModNone))
@@ -901,9 +908,7 @@ func TestUserMenuClearsOnlyConsumedSelection(t *testing.T) {
 			tag(&app.model.Primary, dir)
 			tag(&app.model.Secondary, app.model.Secondary.PathString())
 
-			prev := userMenuDetachRunner
-			userMenuDetachRunner = func([]string, string) error { return nil }
-			t.Cleanup(func() { userMenuDetachRunner = prev })
+			stubDetach(t, nil)
 
 			app.openUserMenu()
 			app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModNone))
@@ -1232,9 +1237,7 @@ func TestUserMenuRefusesGhostKeepOpenWithoutRanToast(t *testing.T) {
 func TestUserMenuRefusesGhostCursorWithTagsAndKeepsTags(t *testing.T) {
 	app, dir := userMenuGhostApp(t, "echo %t %f", "detach = true\n")
 	ran := false
-	prev := userMenuDetachRunner
-	userMenuDetachRunner = func([]string, string) error { ran = true; return nil }
-	t.Cleanup(func() { userMenuDetachRunner = prev })
+	stubDetach(t, func([]string, string) error { ran = true; return nil })
 	app.model.Primary.SelectedPaths = map[string]bool{
 		filepath.Join(dir, "harbor.txt"):                            true,
 		pathloc.FileIndexPrefix + filepath.Join(dir, "phantom.txt"): true,
@@ -1254,9 +1257,7 @@ func TestUserMenuRefusesGhostCursorWithTagsAndKeepsTags(t *testing.T) {
 func TestUserMenuRefusesPercentTWithTaggedGhost(t *testing.T) {
 	app, dir := userMenuGhostApp(t, "echo %t", "detach = true\n")
 	ran := false
-	prev := userMenuDetachRunner
-	userMenuDetachRunner = func([]string, string) error { ran = true; return nil }
-	t.Cleanup(func() { userMenuDetachRunner = prev })
+	stubDetach(t, func([]string, string) error { ran = true; return nil })
 	selectEntryByName(t, app, "harbor.txt")
 	tags := map[string]bool{
 		filepath.Join(dir, "harbor.txt"):                            true,
@@ -1279,9 +1280,7 @@ func TestUserMenuRefusesPercentTWithTaggedGhost(t *testing.T) {
 func TestUserMenuPercentTRealTagsGhostCursorRuns(t *testing.T) {
 	app, dir := userMenuGhostApp(t, "echo %t", "detach = true\n")
 	var gotArgv []string
-	prev := userMenuDetachRunner
-	userMenuDetachRunner = func(argv []string, _ string) error { gotArgv = argv; return nil }
-	t.Cleanup(func() { userMenuDetachRunner = prev })
+	stubDetach(t, func(argv []string, _ string) error { gotArgv = argv; return nil })
 	app.model.Primary.SelectedPaths = map[string]bool{filepath.Join(dir, "harbor.txt"): true}
 
 	runUserMenuKey(app, 'r')
@@ -1294,9 +1293,7 @@ func TestUserMenuPercentTRealTagsGhostCursorRuns(t *testing.T) {
 func TestUserMenuNoPercentTLeavesTaggedGhostAlone(t *testing.T) {
 	app, dir := userMenuGhostApp(t, "touch x", "detach = true\n")
 	ran := false
-	prev := userMenuDetachRunner
-	userMenuDetachRunner = func([]string, string) error { ran = true; return nil }
-	t.Cleanup(func() { userMenuDetachRunner = prev })
+	stubDetach(t, func([]string, string) error { ran = true; return nil })
 	selectEntryByName(t, app, "harbor.txt")
 	tags := map[string]bool{
 		filepath.Join(dir, "harbor.txt"):                            true,
@@ -1317,9 +1314,7 @@ func TestUserMenuNoPercentTLeavesTaggedGhostAlone(t *testing.T) {
 func TestUserMenuGhostCursorRunsCommandWithoutMacros(t *testing.T) {
 	app, _ := userMenuGhostApp(t, "touch x", "detach = true\n")
 	var gotDir string
-	prev := userMenuDetachRunner
-	userMenuDetachRunner = func(_ []string, dir string) error { gotDir = dir; return nil }
-	t.Cleanup(func() { userMenuDetachRunner = prev })
+	stubDetach(t, func(_ []string, dir string) error { gotDir = dir; return nil })
 
 	runUserMenuKey(app, 'r')
 
@@ -1338,11 +1333,7 @@ func TestUserMenuRefusesGhostOnOtherPanel(t *testing.T) {
 		t.Fatal(err)
 	}
 	selectEntryByName(t, app, "harbor.txt")
-	for i := 0; i < other.VisibleEntryCount(); i++ {
-		if e, _, ok := other.VisibleEntry(i); ok && e.Name == "phantom.txt" {
-			other.Cursor = i
-		}
-	}
+	other.SelectVisibleEntry("phantom.txt")
 
 	runUserMenuKey(app, 'r')
 
@@ -1368,9 +1359,7 @@ func TestUserMenuRunForEachRefusesGhost(t *testing.T) {
 func TestUserMenuRunsRealRowOnBrowseWithPanel(t *testing.T) {
 	app, _ := userMenuGhostApp(t, "echo %f", "detach = true\n")
 	var gotDir string
-	prev := userMenuDetachRunner
-	userMenuDetachRunner = func(_ []string, dir string) error { gotDir = dir; return nil }
-	t.Cleanup(func() { userMenuDetachRunner = prev })
+	stubDetach(t, func(_ []string, dir string) error { gotDir = dir; return nil })
 	selectEntryByName(t, app, "harbor.txt")
 
 	runUserMenuKey(app, 'r')
@@ -1384,9 +1373,7 @@ func TestUserMenuRefusesNonLocalPanels(t *testing.T) {
 	for _, path := range []string{"sftp://paras@example.invalid/srv", pathloc.FileIndexPrefix + "/srv/orchard"} {
 		app, _ := userMenuGhostApp(t, "echo %d", "detach = true\n")
 		ran := false
-		prev := userMenuDetachRunner
-		userMenuDetachRunner = func([]string, string) error { ran = true; return nil }
-		t.Cleanup(func() { userMenuDetachRunner = prev })
+		stubDetach(t, func([]string, string) error { ran = true; return nil })
 		app.model.Primary.Path = pathloc.MustParse(path)
 
 		runUserMenuKey(app, 'r')
@@ -1482,11 +1469,7 @@ func TestRunForEachDialogRefusesGhostOnOtherPanelOnceTyped(t *testing.T) {
 	if err := other.Load(dir); err != nil {
 		t.Fatal(err)
 	}
-	for i := 0; i < other.VisibleEntryCount(); i++ {
-		if e, _, ok := other.VisibleEntry(i); ok && e.Name == "phantom.txt" {
-			other.Cursor = i
-		}
-	}
+	other.SelectVisibleEntry("phantom.txt")
 	selectEntryByName(t, app, "harbor.txt")
 	app.commandsCtrl.OpenRunForEachDialog()
 	if !app.model.FileDialog.Open {

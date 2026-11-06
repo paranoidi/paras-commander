@@ -735,24 +735,21 @@ func TestDecodeKeepOpenErrors(t *testing.T) {
 }
 
 func TestDecodeCwd(t *testing.T) {
-	cases := map[string]string{
-		"":                  CwdCursor,
-		`cwd = "cursor"`:    CwdCursor,
-		`cwd = "panel"`:     CwdPanel,
-		`cwd = " Panel "`:   CwdPanel,
-		`cwd = "CURSOR"`:    CwdCursor,
-		`run_for_each = []`: CwdCursor,
+	cases := map[string]bool{
+		"":                  false,
+		`cwd = "cursor"`:    false,
+		`cwd = "panel"`:     true,
+		`cwd = " Panel "`:   true,
+		`cwd = "CURSOR"`:    false,
+		`run_for_each = []`: false,
 	}
 	for field, want := range cases {
 		mf, err := Decode([]byte("[a]\ntitle = \"Alpha\"\ncommand = \"make\"\n" + field + "\n"))
 		if err != nil {
 			t.Fatalf("%q: %v", field, err)
 		}
-		if got := mf.Entries[0].Cwd; got != want {
-			t.Errorf("%q: Cwd = %q, want %q", field, got, want)
-		}
-		if got := mf.Entries[0].CwdPanel(); got != (want == CwdPanel) {
-			t.Errorf("%q: CwdPanel() = %v", field, got)
+		if got := mf.Entries[0].CwdPanel; got != want {
+			t.Errorf("%q: CwdPanel = %v, want %v", field, got, want)
 		}
 	}
 }

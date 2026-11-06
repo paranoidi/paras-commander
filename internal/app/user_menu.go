@@ -229,12 +229,15 @@ func userMenuLeaderMenuItems(entries []usermenu.MenuEntry, styles theme.Theme) [
 func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 	active := a.activePanel()
 	other := a.inactivePanel()
-	launch := usermenu.Launch{Command: entry.Command, CwdPanel: entry.CwdPanel()}
+	launch := usermenu.Launch{Command: entry.Command, CwdPanel: entry.CwdPanel}
+	var src ops.Source
+	var srcErr error
 	if len(entry.RunForEach) > 0 {
-		launch.RunForEachRows = func() []localfs.Entry {
-			src, _ := ops.ResolveSource(active) // an error is reported by executeUserMenuRunForEach
-			return src.Entries
+		launch.RunForEach = true
+		if active.Path.IsLocal() { // a remote panel is refused below, before resolving
+			src, srcErr = ops.ResolveSource(active)
 		}
+		launch.RunForEachRows = src.Entries
 	}
 	if msg := usermenu.CommandRefusal(launch, active, other); msg != "" {
 		a.setTransientMessage(msg, ui.MessageUrgencyWarn)
@@ -248,7 +251,7 @@ func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 		entry.Toast = prefix + " " + backgroundRunTitle(entry.Title)
 	}
 	if len(entry.RunForEach) > 0 {
-		if a.executeUserMenuRunForEach(entry, active, other) && entry.KeepOpen {
+		if a.executeUserMenuRunForEach(entry, active, other, src, srcErr) && entry.KeepOpen {
 			a.setTransientMessage(entry.Toast, ui.MessageUrgencyInfo)
 		}
 		return
@@ -315,11 +318,11 @@ func clearConsumedSelection(cmd string, active, other *panel.State) {
 	}
 }
 
-// executeUserMenuRunForEach reports whether the batch was started.
-func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active, other *panel.State) bool {
-	src, err := ops.ResolveSource(active)
-	if err != nil {
-		a.setErrorMessage("User menu", err)
+// executeUserMenuRunForEach reports whether the batch was started. src and srcErr are the
+// resolved source of active (ops.ResolveSource).
+func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active, other *panel.State, src ops.Source, srcErr error) bool {
+	if srcErr != nil {
+		a.setErrorMessage("User menu", srcErr)
 		return false
 	}
 	if len(src.Entries) == 0 {
@@ -350,7 +353,7 @@ func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active, other 
 		PoolName:     strings.TrimSpace(entry.Pool),
 		Background:   entry.Background,
 		PTY:          entry.PTY,
-		PanelWorkDir: entry.CwdPanel(),
+		PanelWorkDir: entry.CwdPanel,
 		NotifyLabel:  notifyLabel,
 		BuildItem: func(ent localfs.Entry) (commandsctrl.RunForEachBuiltItem, error) {
 			return commandsctrl.BuildRunForEachItem(cmdTemplate, ent, active, other, entry.Shell, true)

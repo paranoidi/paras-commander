@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -13,13 +14,14 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/pools"
 	"github.com/paranoidi/paras-commander/internal/textutil"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/workpool"
 )
 
-func TestRunForEachUnifiedBatchPerEntryWorkDir(t *testing.T) {
+func TestRunForEachUnifiedBatchRunsEachEntryInItsGivenWorkDir(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init: %v", err)
@@ -41,14 +43,13 @@ func TestRunForEachUnifiedBatchPerEntryWorkDir(t *testing.T) {
 	}
 
 	spec := RunForEachBatchSpec{
-		Entries:         entries,
-		AllowDirs:       true,
-		PerEntryWorkDir: true,
+		Entries:   entries,
+		AllowDirs: true,
 		BuildItem: func(localfs.Entry) (RunForEachBuiltItem, error) {
 			return RunForEachBuiltItem{Argv: []string{"pwd"}, UserLine: "pwd"}, nil
 		},
 	}
-	h.runForEachUnifiedBatch(context.Background(), 0, spec, sameDirs(len(spec.Entries), "/should-not-be-used"))
+	h.runForEachUnifiedBatch(context.Background(), 0, spec, []string{dirA, dirB})
 
 	for i, ent := range entries {
 		got := strings.TrimSpace(h.model.CommandsList[i].Stdout)
@@ -56,6 +57,38 @@ func TestRunForEachUnifiedBatchPerEntryWorkDir(t *testing.T) {
 		if got != want {
 			t.Fatalf("entry %d: cwd = %q, want %q (err=%q)", i, got, want, h.model.CommandsList[i].ErrorMsg)
 		}
+	}
+}
+
+func TestRunForEachWorkDirs(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	flat := localfs.Entry{Name: "lantern", Path: filepath.Join(root, "lantern"), Type: localfs.EntryDirectory}
+	nested := localfs.Entry{Name: "thistle", Path: filepath.Join(meadow, "thistle"), Type: localfs.EntryDirectory}
+
+	flatPanel := panel.State{Path: pathloc.FileMust(root)}
+	treePanel := panel.State{Path: pathloc.FileMust(root), ListLayout: panel.ListLayoutTree}
+
+	tests := []struct {
+		name   string
+		spec   RunForEachBatchSpec
+		active *panel.State
+		want   []string
+	}{
+		{"per entry", RunForEachBatchSpec{PerEntryWorkDir: true}, &flatPanel, []string{flat.Path, nested.Path}},
+		{"panel directory", RunForEachBatchSpec{PanelWorkDir: true}, &treePanel, []string{root, root}},
+		{"per entry wins over panel directory", RunForEachBatchSpec{PerEntryWorkDir: true, PanelWorkDir: true}, &treePanel, []string{flat.Path, nested.Path}},
+		{"row directory in a flat layout", RunForEachBatchSpec{}, &flatPanel, []string{root, root}},
+		{"row directory in a tree layout", RunForEachBatchSpec{}, &treePanel, []string{root, meadow}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.spec.Entries = []localfs.Entry{flat, nested}
+			got := runForEachWorkDirs(tc.spec, tc.active)
+			if !slices.Equal(got, tc.want) {
+				t.Fatalf("work dirs = %q, want %q", got, tc.want)
+			}
+		})
 	}
 }
 

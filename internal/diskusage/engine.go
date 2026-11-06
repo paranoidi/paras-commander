@@ -24,7 +24,7 @@ type scanJob struct {
 	// and its own total is cached once every child is.
 	origin string
 	// enqueuedAt is when the job was queued; SizePendingDue measures the pending marker delay
-	// from it. Zero (a job built outside the queue paths) reads as due.
+	// from it.
 	enqueuedAt time.Time
 }
 
@@ -181,7 +181,7 @@ func (e *Engine) workerLoop() {
 		e.queue = e.queue[1:]
 		roots := make(map[string]struct{}, len(job.childAbs))
 		for _, raw := range job.childAbs {
-			roots[CleanKey(raw)] = struct{}{}
+			roots[raw] = struct{}{}
 		}
 		e.curJobRoots = roots
 		e.curJobSourcePanel = job.sourcePanel
@@ -281,12 +281,7 @@ func (e *Engine) DiskScanBusy() bool {
 
 // pathIsOrUnder reports whether child is root or a strict descendant of root (path segments).
 func pathIsOrUnder(child, root string) bool {
-	r := CleanKey(root)
-	c := CleanKey(child)
-	if c == r {
-		return true
-	}
-	return strings.HasPrefix(c, r+string(filepath.Separator))
+	return isOrUnderClean(CleanKey(child), CleanKey(root))
 }
 
 // isOrUnderClean is pathIsOrUnder for two paths that are already CleanKey'd, without the
@@ -642,21 +637,38 @@ func (e *Engine) enqueue(job scanJob) {
 	if e == nil {
 		return
 	}
-	job.childAbs = cleanKeys(job.childAbs)
-	job.enqueuedAt = time.Now()
 	e.jobMu.Lock()
-	e.queue = append([]scanJob{job}, e.queue...)
-	e.jobCond.Signal()
+	e.pushFrontLocked(job)
 	e.jobMu.Unlock()
+}
+
+// pushFrontLocked queues jobs, in order, ahead of everything queued. Their roots are cleaned and
+// a job without an enqueue time is stamped now (a requeued job keeps its own). It wakes the
+// worker and arms the pending marker reveal once for the push. Caller holds jobMu.
+func (e *Engine) pushFrontLocked(jobs ...scanJob) {
+	now := time.Now()
+	for i := range jobs {
+		jobs[i].childAbs = cleanKeys(jobs[i].childAbs)
+		if jobs[i].enqueuedAt.IsZero() {
+			jobs[i].enqueuedAt = now
+		}
+	}
+	e.queue = append(jobs, e.queue...)
+	e.jobCond.Signal()
 	e.armPendingReveal()
 }
 
 // armPendingReveal pokes Updates once the pending marker delay has passed, so the spinner-driven
-// poll repaints the size column even when the walk delivers no cache update meanwhile. A stale
-// fire costs one repaint.
+// poll repaints the size column even when the walk delivers no cache update meanwhile. A fire
+// after the scan has finished is skipped; each push arms its own timer because a later job needs
+// its own reveal.
 func (e *Engine) armPendingReveal() {
 	if d := time.Duration(e.pendingMarkerDelayMS.Load()) * time.Millisecond; d > 0 {
-		time.AfterFunc(d, e.poke)
+		time.AfterFunc(d, func() {
+			if e.DiskScanBusy() {
+				e.poke()
+			}
+		})
 	}
 }
 
@@ -668,14 +680,14 @@ func (e *Engine) StartPriorityScan(childAbs []string, shouldIgnore ShouldIgnoreF
 	if e == nil {
 		return
 	}
-	jobs := []scanJob{{childAbs: cleanKeys(childAbs), ignore: shouldIgnore, sourcePanel: sourcePanel, listingVolGate: volGate, enqueuedAt: time.Now()}}
+	jobs := []scanJob{{childAbs: childAbs, ignore: shouldIgnore, sourcePanel: sourcePanel, listingVolGate: volGate}}
 	var cancel context.CancelFunc
 	e.jobMu.Lock()
 	if len(e.curJobRoots) > 0 {
 		rest := e.curJob
 		rest.childAbs = nil
 		for _, raw := range e.curJob.childAbs {
-			if _, ok := e.curJobRoots[CleanKey(raw)]; ok {
+			if _, ok := e.curJobRoots[raw]; ok {
 				rest.childAbs = append(rest.childAbs, raw)
 			}
 		}
@@ -685,13 +697,11 @@ func (e *Engine) StartPriorityScan(childAbs []string, shouldIgnore ShouldIgnoreF
 		e.gen.Add(1)
 		cancel = e.sessionCancel
 	}
-	e.queue = append(jobs, e.queue...)
-	e.jobCond.Signal()
+	e.pushFrontLocked(jobs...)
 	e.jobMu.Unlock()
 	if cancel != nil {
 		cancel()
 	}
-	e.armPendingReveal()
 }
 
 func (e *Engine) runPlanner(ctx context.Context, sess uint64, childAbs []string, shouldIgnore ShouldIgnoreFolder, sourcePanel int, origin string) {

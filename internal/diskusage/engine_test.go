@@ -826,27 +826,27 @@ func drainUpdates(e *Engine) {
 	}
 }
 
-func TestIsOrUnderCleanMatchesPathIsOrUnder(t *testing.T) {
+func TestIsOrUnderClean(t *testing.T) {
 	t.Parallel()
-	for _, tc := range []struct{ c, r string }{
-		{"/a/b", "/a/b"},
-		{"/a/b/c", "/a/b"},
-		{"/a/bc", "/a/b"},
-		{"/a", "/a/b"},
-		{"/", "/"},
-		{"/a", "/"},
-		{"/a/b/c/d/e/f", "/a/b/c"},
-		{"/a/b/c", "/a/b/c/d/e"},
-		{"fileindex://a/b", "fileindex://a"},
-		{"fileindex://ab", "fileindex://a"},
-		{"/z", "/a/b"},
+	for _, tc := range []struct {
+		c, r string
+		want bool
+	}{
+		{"/a/b", "/a/b", true},
+		{"/a/b/c", "/a/b", true},
+		{"/a/bc", "/a/b", false},
+		{"/a", "/a/b", false},
+		{"/", "/", true},
+		{"/a", "/", false}, // nothing is strictly under the root /
+		{"/a/b/c/d/e/f", "/a/b/c", true},
+		{"/a/b/c", "/a/b/c/d/e", false},
+		{"fileindex://a/b", "fileindex://a", true},
+		{"fileindex://ab", "fileindex://a", false},
+		{"/z", "/a/b", false},
 	} {
-		if got, want := isOrUnderClean(tc.c, tc.r), pathIsOrUnder(tc.c, tc.r); got != want {
-			t.Fatalf("isOrUnderClean(%q, %q) = %v, pathIsOrUnder = %v", tc.c, tc.r, got, want)
+		if got := isOrUnderClean(tc.c, tc.r); got != tc.want {
+			t.Fatalf("isOrUnderClean(%q, %q) = %v, want %v", tc.c, tc.r, got, tc.want)
 		}
-	}
-	if isOrUnderClean("/a", "/") {
-		t.Fatal("nothing is strictly under the root /, as pathIsOrUnder")
 	}
 }
 

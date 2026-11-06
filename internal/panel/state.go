@@ -1232,12 +1232,12 @@ func clampScrollKeepingCursorVisible(preferredScroll, cursor, viewportRows, entr
 	return scroll
 }
 
-// firstSurvivingNameAfterCursor returns the name of the cursor entry if it is still present in
+// survivingNameFromCursor returns the name of the cursor entry if it is still present in
 // fresh, otherwise of the first entry below it (in the current visible order) that is, or ""
 // when none is. Used on a same-directory reload so the highlight stays on its entry, and a
 // deleted cursor entry hands it to its next neighbour rather than to whatever now sits at the
 // old row index.
-func (s *State) firstSurvivingNameAfterCursor(fresh []localfs.Entry) string {
+func (s *State) survivingNameFromCursor(fresh []localfs.Entry) string {
 	names := make(map[string]struct{}, len(fresh))
 	for i := range fresh {
 		names[fresh[i].Name] = struct{}{}
@@ -1555,7 +1555,7 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 			indexFallback = priorCursor
 		}
 		if !treeReselect {
-			nextSurvivor = s.firstSurvivingNameAfterCursor(localEntries)
+			nextSurvivor = s.survivingNameFromCursor(localEntries)
 		}
 	}
 	var newlyAppeared []string

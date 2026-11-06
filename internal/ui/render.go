@@ -417,10 +417,7 @@ func (m *Model) FirstSlotPanel() int {
 
 // SecondSlotPanel is the panel identity drawn in the second visual slot (right/bottom).
 func (m *Model) SecondSlotPanel() int {
-	if m.SwapPanes {
-		return PrimaryPanel
-	}
-	return SecondaryPanel
+	return PrimaryPanel + SecondaryPanel - m.FirstSlotPanel()
 }
 
 // SyncDriverPanelID returns the PrimaryPanel/SecondaryPanel id that drives latched panel sync,

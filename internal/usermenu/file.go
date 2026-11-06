@@ -88,26 +88,15 @@ type MenuEntry struct {
 	Dialog        bool
 	DialogWidth   string
 	DialogHeight  string
-	// Cwd is CwdCursor (also what an absent field loads as) or CwdPanel; see WorkDir.
-	Cwd     string
-	Entries []MenuEntry
-}
-
-// Values of the cwd entry field.
-const (
-	CwdCursor = "cursor"
-	CwdPanel  = "panel"
-)
-
-// CwdPanel reports whether the entry runs in the panel directory instead of the directory
-// holding the cursor row.
-func (e MenuEntry) CwdPanel() bool {
-	return e.Cwd == CwdPanel
+	// CwdPanel is set by cwd = "panel": the entry runs in the panel directory instead of the
+	// directory holding the cursor row (the default, also what an absent field loads as).
+	CwdPanel bool
+	Entries  []MenuEntry
 }
 
 // WorkDir is the directory a non-run_for_each launch of e uses on panel p.
 func (e MenuEntry) WorkDir(p *panel.State) pathloc.Path {
-	if e.CwdPanel() {
+	if e.CwdPanel {
 		return p.Path
 	}
 	return p.CursorDir()
@@ -623,11 +612,11 @@ func decodeLeafEntry(path, title string, raw menuEntry, entryShellPatterns bool)
 		return MenuEntry{}, err
 	}
 
-	cwd := strings.ToLower(strings.TrimSpace(raw.Cwd))
-	switch cwd {
-	case "":
-		cwd = CwdCursor
-	case CwdCursor, CwdPanel:
+	var cwdPanel bool
+	switch strings.ToLower(strings.TrimSpace(raw.Cwd)) {
+	case "", "cursor":
+	case "panel":
+		cwdPanel = true
 	default:
 		return MenuEntry{}, entryError(path, fmt.Sprintf("cwd: invalid value %q (want cursor/panel)", raw.Cwd))
 	}
@@ -666,7 +655,7 @@ func decodeLeafEntry(path, title string, raw menuEntry, entryShellPatterns bool)
 		Dialog:        modes.dialog,
 		DialogWidth:   dialogWidth,
 		DialogHeight:  dialogHeight,
-		Cwd:           cwd,
+		CwdPanel:      cwdPanel,
 	}, nil
 }
 

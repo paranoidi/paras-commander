@@ -271,14 +271,11 @@ func (a *App) activateMenuSelection(def menu.Definition, item menu.Item) bool {
 
 // visualPanelScope maps Left/Right pulldown scope to the panel identity in that visual slot.
 func (a *App) visualPanelScope(scope int) int {
-	if !a.model.SwapPanes {
-		return scope
-	}
 	switch scope {
 	case menu.PanelScopePrimary:
-		return menu.PanelScopeSecondary
+		return a.model.FirstSlotPanel()
 	case menu.PanelScopeSecondary:
-		return menu.PanelScopePrimary
+		return a.model.SecondSlotPanel()
 	default:
 		return scope
 	}

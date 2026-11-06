@@ -55,39 +55,51 @@ func (s *State) SelectedEntries(skipMissing bool, resolve func(path string) (loc
 // index panel) belongs when its host path is there, and stays a fileindex:// value, so callers
 // can refuse it. Tags elsewhere (another directory) are not included. The order is unspecified.
 func (s *State) CommandTags() []string {
-	root := filepath.Clean(s.PathString())
-	tree := s.ListLayout == ListLayoutTree
-	// indexRoot is the host directory a fileindex:// tag is compared with.
-	indexRoot := ""
-	if s.Path.IsLocal() {
-		indexRoot = root
-	} else if host, err := pathloc.IndexHostPath(s.Path); err == nil {
-		indexRoot = host
-	}
+	isTag := s.commandTagTest()
 	var out []string
 	for p, on := range s.SelectedPaths {
-		if !on {
-			continue
-		}
-		if strings.HasPrefix(p, pathloc.FileIndexPrefix) {
-			loc, err := pathloc.Parse(p)
-			if err != nil {
-				continue
-			}
-			host, err := pathloc.IndexHostPath(loc)
-			if err == nil && indexRoot != "" && (filepath.Dir(host) == indexRoot || tree && underDir(indexRoot, host)) {
-				out = append(out, p)
-			}
-			continue
-		}
-		if filepath.Clean(filepath.Dir(p)) == root || tree && underDir(root, p) {
+		if on && isTag(p) {
 			out = append(out, p)
 		}
 	}
 	return out
 }
 
-func underDir(dir, p string) bool {
-	rel, err := filepath.Rel(dir, p)
-	return err == nil && rel != "." && rel != ".." && !strings.HasPrefix(rel, "../")
+// HasCommandTags reports whether CommandTags would be non-empty, stopping at the first tag.
+func (s *State) HasCommandTags() bool {
+	if len(s.SelectedPaths) == 0 {
+		return false
+	}
+	isTag := s.commandTagTest()
+	for p, on := range s.SelectedPaths {
+		if on && isTag(p) {
+			return true
+		}
+	}
+	return false
+}
+
+// commandTagTest returns the membership test CommandTags and HasCommandTags share, for a path
+// that is selected.
+func (s *State) commandTagTest() func(p string) bool {
+	root := s.PathString()
+	tree := s.ListLayout == ListLayoutTree
+	// inScope reports whether path sits directly in root, or in a tree layout under it. The direct
+	// test cleans both sides alike, which keeps sftp:// roots and paths comparable.
+	inScope := func(root, path string) bool {
+		return filepath.Clean(filepath.Dir(path)) == filepath.Clean(root) || tree && IsStrictPathDescendant(root, path)
+	}
+	// indexRoot is the host directory a fileindex:// tag is compared with.
+	indexRoot, _ := s.Path.HostPath()
+	return func(p string) bool {
+		if !strings.HasPrefix(p, pathloc.FileIndexPrefix) {
+			return inScope(root, p)
+		}
+		loc, err := pathloc.Parse(p)
+		if err != nil || indexRoot == "" {
+			return false
+		}
+		host, ok := loc.HostPath()
+		return ok && inScope(indexRoot, host)
+	}
 }

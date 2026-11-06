@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"iter"
 	"maps"
 	"path/filepath"
 	"slices"
@@ -61,7 +62,7 @@ func (h *Handler) HandleWake(d WakePayload) {
 		if p := h.host.PanelByID(d.PanelID); p != nil && p.Sort.Mode == panel.SortMeta && p.Sort.MetaColumn == d.EntryName {
 			h.resortPending[d.PanelID] = true
 		}
-		if h.pendingCount(h.model.MetaResults[d.PanelID]) == 0 {
+		if pendingCount(h.model.MetaResults[d.PanelID]) == 0 {
 			h.pendingReveal[d.PanelID].Stop()
 		}
 	}
@@ -303,10 +304,9 @@ func (h *Handler) ReconcileForPanel(panelID int) {
 	}
 	groups := []dirEntries{{dir: p.PathString(), entries: p.Entries}}
 	// LoadedTreeChildren allocates, so the tree is walked only when children were attached or the
-	// run changed since the last walk.
-	mark := treeWalkMark{children: p.TreeChildrenGen, run: h.runGen[panelID]}
-	if h.treeWalked[panelID] != mark {
-		h.treeWalked[panelID] = mark
+	// tree children were attached since the last walk (a run's walk is stamped by runForPanel).
+	if h.treeWalked[panelID] != p.TreeChildrenGen {
+		h.treeWalked[panelID] = p.TreeChildrenGen
 		groups = append(groups, treeDirEntries(p)...)
 	}
 	var missing []dirEntries
@@ -701,7 +701,7 @@ func (h *Handler) ColumnResolved(panelID int) bool {
 }
 
 // pendingCount is the number of dispatched cells still running across cols.
-func (h *Handler) pendingCount(cols []ui.MetaColumnState) int {
+func pendingCount(cols []ui.MetaColumnState) int {
 	n := 0
 	for _, c := range cols {
 		n += c.PendingCount
@@ -743,12 +743,11 @@ func (h *Handler) runForPanel(panelID int, cmdDefs []metacmds.MetaEntry, cols []
 	h.run[panelID] = &metaRun{ctx: ctx, cancel: cancel, defs: cmdDefs}
 	h.runGen[panelID]++
 	// This run covers every loaded tree child, so ReconcileForPanel need not walk the tree again.
-	h.treeWalked[panelID] = treeWalkMark{children: panel.TreeChildrenGen, run: h.runGen[panelID]}
+	h.treeWalked[panelID] = panel.TreeChildrenGen
 
 	for i := range cols {
 		cols[i].Results = make(map[string]string, len(groups[0].entries))
 		cols[i].PendingCount = 0
-		cols[i].ResultsGen++
 	}
 	h.model.MetaResults[panelID] = cols
 	h.dispatch(ctx, panelID, cmdDefs, cols, groups)
@@ -762,47 +761,38 @@ func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.
 
 	// Only a dispatch into an idle panel starts the hide/reveal cycle. A later dispatch (e.g.
 	// ReconcileForPanel adding rows) must neither postpone the reveal nor re-hide revealed columns.
-	wasIdle := h.pendingCount(cols) == 0
+	wasIdle := pendingCount(cols) == 0
 
 	for i, cmdDef := range cmdDefs {
 		results := cols[i].Results
-		for _, g := range groups {
-			for _, e := range g.entries {
-				results[e.Path] = ""
-			}
+		for e := range entriesIn(groups) {
+			results[e.Path] = ""
 		}
 		if cmdDef.Cache {
 			h.cacheMu.RLock()
-			if h.cache != nil {
-				if cmdCache := h.cache[cmdDef.Name]; cmdCache != nil {
-					for _, g := range groups {
-						for _, e := range g.entries {
-							if v, ok := cmdCache[e.Path]; ok {
-								results[e.Path] = v
-							}
-						}
-					}
+			cmdCache := h.cache[cmdDef.Name] // nil when nothing is cached yet
+			for e := range entriesIn(groups) {
+				if v, ok := cmdCache[e.Path]; ok {
+					results[e.Path] = v
 				}
 			}
 			h.cacheMu.RUnlock()
 		}
 
-		for _, g := range groups {
-			for _, e := range g.entries {
-				if cmdDef.Provider == nil {
-					if _, ok := h.entryCmd(cmdDef, e, g.dir); !ok {
-						continue
-					}
+		for e, dir := range entriesIn(groups) {
+			if cmdDef.Provider == nil {
+				if _, ok := h.entryCmd(cmdDef, e, dir); !ok {
+					continue
 				}
-				results[e.Path] = runningMarker
-				cols[i].PendingCount++
 			}
+			results[e.Path] = runningMarker
+			cols[i].PendingCount++
 		}
 		cols[i].Pending = runningMarker
 		cols[i].ResultsGen++
 	}
 
-	if delay := h.config.Panels.PendingMarkerDelayMS; wasIdle && delay != 0 && h.pendingCount(cols) > 0 {
+	if delay := h.config.Panels.PendingMarkerDelayMS; wasIdle && delay != 0 && pendingCount(cols) > 0 {
 		for i := range cols {
 			cols[i].PendingHidden = true
 		}
@@ -844,14 +834,12 @@ func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.
 			}
 
 			var items []dispatchItem
-			for _, g := range groups {
-				for _, e := range g.entries {
-					cmd, ok := h.entryCmd(cmdDef, e, g.dir)
-					if !ok {
-						continue
-					}
-					items = append(items, dispatchItem{entry: e, dir: g.dir, cmd: cmd})
+			for e, dir := range entriesIn(groups) {
+				cmd, ok := h.entryCmd(cmdDef, e, dir)
+				if !ok {
+					continue
 				}
+				items = append(items, dispatchItem{entry: e, dir: dir, cmd: cmd})
 			}
 
 			sem := make(chan struct{}, workers)
@@ -903,12 +891,29 @@ func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.
 	}()
 }
 
+// entriesIn yields every entry of groups with the directory it is listed in.
+func entriesIn(groups []dirEntries) iter.Seq2[localfs.Entry, string] {
+	return func(yield func(localfs.Entry, string) bool) {
+		for _, g := range groups {
+			for _, e := range g.entries {
+				if !yield(e, g.dir) {
+					return
+				}
+			}
+		}
+	}
+}
+
 // runProvider calls a Go column provider once per group directory and posts every entry's value in
 // ONE WakePayload (Values; missing entries get ""), so a large listing or a wide tree expand
 // cannot flood the event queue and drop wakes that would leave pending markers stuck.
 // A provider error is reported once (ExecFailedPayload) and leaves that directory's cells empty.
 func (h *Handler) runProvider(ctx context.Context, panelID int, gen uint64, p *metacmds.Provider, groups []dirEntries) {
-	batch := make(map[string]string)
+	n := 0
+	for _, g := range groups {
+		n += len(g.entries)
+	}
+	batch := make(map[string]string, n)
 	reported := false
 	for _, g := range groups {
 		vals, err := p.Values(ctx, g.dir, g.entries)

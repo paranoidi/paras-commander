@@ -38,20 +38,18 @@ func TestCommandRefusalFlat(t *testing.T) {
 		return s
 	}
 
-	rows := func(s *panel.State) func() []localfs.Entry {
-		return func() []localfs.Entry {
-			if len(s.SelectedPaths) == 0 {
-				e, _ := s.CurrentEntry()
-				return []localfs.Entry{e}
-			}
-			var out []localfs.Entry
-			for _, e := range s.Entries {
-				if s.SelectedPaths[e.Path] {
-					out = append(out, e)
-				}
-			}
-			return out
+	rows := func(s *panel.State) []localfs.Entry {
+		if len(s.SelectedPaths) == 0 {
+			e, _ := s.CurrentEntry()
+			return []localfs.Entry{e}
 		}
+		var out []localfs.Entry
+		for _, e := range s.Entries {
+			if s.SelectedPaths[e.Path] {
+				out = append(out, e)
+			}
+		}
+		return out
 	}
 
 	const (
@@ -104,7 +102,7 @@ func TestCommandRefusalFlat(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			l := Launch{Command: tc.cmd, CwdPanel: tc.cwdPanel}
 			if tc.runForEach {
-				l.RunForEachRows = rows(tc.active)
+				l.RunForEach, l.RunForEachRows = true, rows(tc.active)
 			}
 			if got := CommandRefusal(l, tc.active, tc.other); got != tc.want {
 				t.Fatalf("CommandRefusal = %q, want %q", got, tc.want)

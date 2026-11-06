@@ -1,9 +1,7 @@
 package usermenu
 
 import (
-	"path/filepath"
 	"slices"
-	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/cmdmacro"
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -19,10 +17,11 @@ const LocalOnlyRefusal = "User commands run on local panels only"
 type Launch struct {
 	Command  string
 	CwdPanel bool // the entry runs in the panel directory instead of the cursor row's directory
-	// RunForEachRows is set for a run_for_each entry and the Run-for-each dialog: the rows the
-	// command runs on (ops.ResolveSource: the tags, or the cursor row when nothing is tagged).
-	// Called only once the active panel is known to be local.
-	RunForEachRows func() []localfs.Entry
+	// RunForEach is set for a run_for_each entry and the Run-for-each dialog; RunForEachRows are
+	// then the rows the command runs on (ops.ResolveSource: the tags, or the cursor row when
+	// nothing is tagged). A caller resolves them only once the active panel is known to be local.
+	RunForEach     bool
+	RunForEachRows []localfs.Entry
 }
 
 // CommandRefusal is the message for refusing the launch of l from the active panel, or "" when it
@@ -43,8 +42,8 @@ func CommandRefusal(l Launch, active, other *panel.State) string {
 	uses := func(letter byte) bool { return cmdmacro.CommandRequiresMacro(l.Command, letter) }
 	var values []string // every value the command would read; the fileindex:// ones are refused
 	localOnly := false  // refused with no row to name
-	if l.RunForEachRows != nil {
-		for _, e := range l.RunForEachRows() {
+	if l.RunForEach {
+		for _, e := range l.RunForEachRows {
 			values = append(values, e.Path)
 		}
 	} else if uses('f') && ctx.Active.HasCurrent {
@@ -53,11 +52,9 @@ func CommandRefusal(l Launch, active, other *panel.State) string {
 	if uses('t') {
 		values = append(values, ctx.Active.TaggedInDir...)
 	}
-	if uses('d') || l.RunForEachRows == nil && !l.CwdPanel {
-		// Only a tree row can sit in a directory of another scheme: the folder of a ghost row.
-		if !active.CursorDir().IsLocal() {
-			localOnly = localOnly || !addCursorValue(&values, active)
-		}
+	if (uses('d') || !l.RunForEach && !l.CwdPanel) && !active.CursorDir().IsLocal() {
+		// On a local panel only a ghost row (a fileindex:// path in a tree) sits in another scheme.
+		values = append(values, ctx.Active.CurrentName)
 	}
 	if o := ctx.Other; o != nil {
 		if uses('F') && o.HasCurrent {
@@ -69,17 +66,14 @@ func CommandRefusal(l Launch, active, other *panel.State) string {
 	}
 	if uses('D') && other != nil && other.CursorDir().Scheme() == pathloc.SchemeFileIndex {
 		// An index panel's own directory is no row's fault; a ghost row in a local tree is.
-		if !other.Path.IsLocal() || !addCursorValue(&values, other) {
+		if !other.Path.IsLocal() {
 			localOnly = true
+		} else {
+			values = append(values, ctx.Other.CurrentName)
 		}
 	}
 
-	var names []string
-	for _, v := range values {
-		if strings.HasPrefix(v, pathloc.FileIndexPrefix) {
-			names = append(names, filepath.Base(v))
-		}
-	}
+	names := active.GhostSources(values...)
 	slices.Sort(names) // the message lists each name once, sorted
 	if msg := panel.GhostRefusal(slices.Compact(names)); msg != "" {
 		return msg
@@ -88,15 +82,4 @@ func CommandRefusal(l Launch, active, other *panel.State) string {
 		return LocalOnlyRefusal
 	}
 	return ""
-}
-
-// addCursorValue appends p's cursor row path to values when it is a fileindex:// path (a ghost
-// row), reporting whether it did.
-func addCursorValue(values *[]string, p *panel.State) bool {
-	e, ok := p.CurrentEntry()
-	if !ok || !strings.HasPrefix(e.Path, pathloc.FileIndexPrefix) {
-		return false
-	}
-	*values = append(*values, e.Path)
-	return true
 }
