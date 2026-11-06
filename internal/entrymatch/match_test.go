@@ -1,6 +1,8 @@
 package entrymatch
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -52,5 +54,55 @@ func TestValidateWhenExprs(t *testing.T) {
 	}
 	if err := ValidateWhenExprs([]string{`f [`}, false); err == nil {
 		t.Fatal("expected invalid regex error")
+	}
+}
+
+func TestEvalWhenDirUsesCursorDirInTree(t *testing.T) {
+	root := t.TempDir()
+	orchard := filepath.Join(root, "orchard")
+	if err := os.Mkdir(orchard, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(orchard, "ember.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	newTree := func() *panel.State {
+		ps, err := panel.New(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !ps.SetListLayout(panel.ListLayoutTree, 10) {
+			t.Fatal("SetListLayout(Tree) = false")
+		}
+		if err := ps.ToggleTreeExpand(10); err != nil { // cursor starts on orchard
+			t.Fatal(err)
+		}
+		return &ps
+	}
+	active, other := newTree(), newTree()
+	for i := 0; i < active.VisibleEntryCount(); i++ {
+		if e, _, ok := active.VisibleEntry(i); ok && e.Name == "ember.txt" {
+			active.Cursor = i
+			other.Cursor = i
+		}
+	}
+	if got := active.CursorDir().String(); got != orchard {
+		t.Fatalf("CursorDir = %q, want %q", got, orchard)
+	}
+	ctx := &Context{Active: active, Other: other, ShellPatterns: true}
+	for _, expr := range []string{"d " + orchard, "D " + orchard} {
+		if ok, err := EvalWhen(expr, ctx); err != nil || !ok {
+			t.Fatalf("%q = %v %v, want true", expr, ok, err)
+		}
+	}
+	for _, expr := range []string{"d " + root, "D " + root} {
+		if ok, err := EvalWhen(expr, ctx); err != nil || ok {
+			t.Fatalf("%q = %v %v, want false", expr, ok, err)
+		}
+	}
+	// Empty panel falls back to the panel path.
+	empty := &panel.State{Path: pathloc.MustParse(root)}
+	if ok, err := EvalWhen("d "+root, &Context{Active: empty, ShellPatterns: true}); err != nil || !ok {
+		t.Fatalf("empty panel d = %v %v", ok, err)
 	}
 }

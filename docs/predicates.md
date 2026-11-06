@@ -209,11 +209,11 @@ The user menu evaluates `when` against the cursor instead of a single row, which
 | Predicate | Matches |
 |---|---|
 | `F <pattern>` | the name under the cursor in the **other** panel |
-| `D <pattern>` | the other panel's directory |
+| `D <pattern>` | the directory holding the other panel's cursor row |
 | `T <letters>` | the type of the other panel's cursor entry |
 | `t t` | the active panel has tagged (selected) entries |
 
-`d` here is the active panel's directory. In meta, preview and execute rules, `F`/`D`/`T` are
+`d` here is the directory holding the active panel's cursor row (in an expanded tree that is the subfolder the row is in; in the flat layout it is the panel directory). In meta, preview and execute rules, `F`/`D`/`T` are
 always false and `t t` never matches.
 
 ```toml

@@ -265,7 +265,7 @@ func matchDirPattern(ctx *Context, pattern string) (bool, error) {
 	if ctx.Row != nil {
 		dir = filepath.Clean(ctx.PanelDir)
 	} else if ctx.Active != nil {
-		dir = filepath.Clean(ctx.Active.PathString())
+		dir = filepath.Clean(ctx.Active.CursorDir().String())
 	} else {
 		return false, nil
 	}
@@ -276,7 +276,7 @@ func matchDirPatternOther(ctx *Context, pattern string) (bool, error) {
 	if ctx.Other == nil {
 		return false, nil
 	}
-	dir := filepath.Clean(ctx.Other.PathString())
+	dir := filepath.Clean(ctx.Other.CursorDir().String())
 	return matchPattern(dir, pattern, ctx.ShellPatterns)
 }
 
