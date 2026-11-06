@@ -190,7 +190,6 @@ func (a *App) snapshotModelForBrowserPaint() ui.Model {
 	model.CursorNameHintPinOutPrimary = &a.model.Primary.CursorNameHintPinned
 	model.CursorNameHintPinOutSecondary = &a.model.Secondary.CursorNameHintPinned
 	model.HideInactivePanel = a.model.HideInactivePanel || a.carouselAutohideInactivePanel()
-	model.SwapPanes = a.effectiveSwapPanes()
 	// Match ui.Model.renderSubFocus: suppress panel/strip focus while the terminal owns input.
 	if model.TerminalPanel.Visible && model.TerminalPanel.Focused {
 		model.ActiveSubFocus = -1
@@ -358,7 +357,6 @@ func (a *App) render() {
 	modelSnapshot.CursorNameHintPinOutPrimary = &a.model.Primary.CursorNameHintPinned
 	modelSnapshot.CursorNameHintPinOutSecondary = &a.model.Secondary.CursorNameHintPinned
 	modelSnapshot.HideInactivePanel = a.model.HideInactivePanel || a.carouselAutohideInactivePanel()
-	modelSnapshot.SwapPanes = a.effectiveSwapPanes()
 	a.overlays = ui.Render(a.screen, modelSnapshot, a.styles)
 	a.syncTerminalPanelCursor()
 	a.emitScreenAfterFullRender()
@@ -562,7 +560,7 @@ func (a *App) panelPaneSplit(width int, filePreviewOpen bool) ui.PanelPaneSplit 
 		ActivePercent:     activePct,
 		InactivePercent:   inactivePct,
 		HideInactivePanel: ui.LayoutHideInactivePanel(a.model.ViewMode, a.model.HideInactivePanel || a.carouselAutohideInactivePanel()),
-		SwapPanes:         a.model.ViewMode == ui.ViewBrowser && a.effectiveSwapPanes(),
+		SwapPanes:         a.model.ViewMode == ui.ViewBrowser && a.model.EffectiveSwapPanes(),
 	}
 }
 
@@ -582,29 +580,16 @@ func (a *App) carouselAutohideInactivePanel() bool {
 	return a.carouselAutohideWanted() && !a.carouselAutohideOverride
 }
 
-// carouselQuickViewForcesRightPreview reports whether quick view is driven from a carousel panel
-// whose inactive twin autohide would otherwise hide; the preview then always takes the second
-// (right/bottom) slot.
-func (a *App) carouselQuickViewForcesRightPreview() bool {
-	if !a.model.QuickViewEnabled || !a.config.Carousel.AutohideInactivePanel || a.carouselAutohideOverride {
-		return false
-	}
-	switch a.model.QuickViewPanel {
-	case ui.PrimaryPanel:
-		return a.model.Primary.CarouselMode
-	case ui.SecondaryPanel:
-		return a.model.Secondary.CarouselMode
-	}
-	return false
+// setCarouselAutohideOverride writes carouselAutohideOverride and republishes the ordering flag.
+func (a *App) setCarouselAutohideOverride(v bool) {
+	a.carouselAutohideOverride = v
+	a.syncCarouselQuickViewOrdering()
 }
 
-// effectiveSwapPanes is the user's swap preference, except that a carousel quick-view driver is
-// placed first so the preview lands in the second slot.
-func (a *App) effectiveSwapPanes() bool {
-	if a.carouselQuickViewForcesRightPreview() {
-		return a.model.QuickViewPanel == ui.SecondaryPanel
-	}
-	return a.model.SwapPanes
+// syncCarouselQuickViewOrdering publishes the config and override half of the forced quick-view
+// order to Model.CarouselQuickViewOrdering. Call it after any change to either input.
+func (a *App) syncCarouselQuickViewOrdering() {
+	a.model.CarouselQuickViewOrdering = a.config.Carousel.AutohideInactivePanel && !a.carouselAutohideOverride
 }
 
 func (a *App) layoutForTerminalSize(width, height int) ui.Layout {

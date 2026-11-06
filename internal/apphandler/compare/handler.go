@@ -101,7 +101,8 @@ func (h *Handler) Open() {
 	}
 	// The left compare column is the panel drawn on the left in the main view.
 	left, right := &h.model.Primary, &h.model.Secondary
-	if h.model.SwapPanes {
+	swap := h.model.EffectiveSwapPanes()
+	if swap {
 		left, right = right, left
 	}
 	volGate := diskusage.ListingVolumeGate{}
@@ -112,7 +113,7 @@ func (h *Handler) Open() {
 			Valid:   left.ListingDeviceValid,
 		}
 	}
-	h.open(left.Path, right.Path, left.ShowHidden, volGate, h.model.SwapPanes, nil)
+	h.open(left.Path, right.Path, left.ShowHidden, volGate, swap, nil)
 }
 
 // OpenPaths opens compare on two arbitrary local roots (the dedup entry point).

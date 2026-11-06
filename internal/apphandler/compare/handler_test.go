@@ -291,3 +291,30 @@ func TestOpenWithSwappedPanesPutsVisualLeftPanelFirst(t *testing.T) {
 		t.Fatalf("after refresh left root = %q, want %q", got, dirs[1])
 	}
 }
+
+// A carousel quick view that forces its order draws the driver first; Compare's left column
+// follows the drawing, not the swap preference.
+func TestOpenWithForcedQuickViewOrderPutsDrawnLeftPanelFirst(t *testing.T) {
+	dirs := []string{t.TempDir(), t.TempDir()}
+	model := &ui.Model{
+		Primary:                   panelStateAt(pathloc.MustParse(dirs[0])),
+		Secondary:                 panelStateAt(pathloc.MustParse(dirs[1])),
+		CarouselQuickViewOrdering: true,
+		QuickViewEnabled:          true,
+		QuickViewPanel:            ui.SecondaryPanel,
+	}
+	model.Secondary.CarouselMode = true
+	h := New(Deps{Host: compareHandlerHost{}, Model: model})
+	h.Open()
+	defer h.Close()
+
+	if got := h.openedPrimary.String(); got != dirs[1] {
+		t.Fatalf("compare left root = %q, want the forced-first (secondary) panel %q", got, dirs[1])
+	}
+	if got := model.CompareView.PanelID(false); got != ui.SecondaryPanel {
+		t.Fatalf("left column panel = %d, want Secondary", got)
+	}
+	if model.SwapPanes {
+		t.Fatal("Open wrote the swap preference")
+	}
+}

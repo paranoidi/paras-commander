@@ -43,7 +43,7 @@ func TestCarouselQuickViewPreviewTakesRightSlot(t *testing.T) {
 	if lay.Secondary.X >= lay.Primary.X {
 		t.Fatalf("Secondary.X=%d Primary.X=%d want carousel driver on the left", lay.Secondary.X, lay.Primary.X)
 	}
-	app.carouselAutohideOverride = true
+	app.setCarouselAutohideOverride(true)
 	lay = app.layoutForTerminalSize(120, 30)
 	if lay.Primary.X >= lay.Secondary.X {
 		t.Fatalf("Primary.X=%d Secondary.X=%d want no swap with override", lay.Primary.X, lay.Secondary.X)
@@ -57,7 +57,7 @@ func TestToggleHideInactiveWhileQuickViewUsesCarouselSlot(t *testing.T) {
 	app.model.ActivePanel = ui.SecondaryPanel
 	app.model.QuickViewEnabled = true
 	app.model.QuickViewPanel = ui.SecondaryPanel
-	if !app.carouselQuickViewForcesRightPreview() {
+	if !app.model.QuickViewForcesSlotOrder() {
 		t.Fatal("quick view should force right preview when carousel autohide is active")
 	}
 	app.toggleHideInactivePanel()

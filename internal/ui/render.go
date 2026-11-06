@@ -126,8 +126,14 @@ type Model struct {
 	SplitOrientation SplitOrientation
 	// HideInactivePanel gives the active column full width and hides the inactive twin panel.
 	HideInactivePanel bool
-	// SwapPanes draws Secondary in the first visual slot (left/top) and Primary in the second.
+	// SwapPanes is the user's preference (panel.swap-panes): Secondary in the first visual slot
+	// (left/top), Primary in the second. It is not the drawn order while a carousel quick view
+	// forces its own; read EffectiveSwapPanes for what is drawn.
 	SwapPanes bool
+	// CarouselQuickViewOrdering is true while [carousel].autohide_inactive_panel is on and the
+	// hide-inactive-panel override is not set. Together with QuickViewEnabled, QuickViewPanel
+	// and the panels' CarouselMode it makes QuickViewForcesSlotOrder true.
+	CarouselQuickViewOrdering bool
 	// SyncFollowEnabled gates latched panel sync. When true, SyncFollowPanel
 	// (PrimaryPanel or SecondaryPanel) names the driver whose caret moves auto-load
 	// the highlighted directory into the inactive panel.
@@ -406,13 +412,37 @@ func (m *Model) FindParkedOn(panelID int) bool {
 
 // FirstSlotPanel is the panel identity drawn in the first visual slot (left/top); SecondSlotPanel
 // the one in the second (right/bottom). ui.open-primary and ui.open-secondary target these slots.
-// ponytail: reads the user's swap preference, not App.effectiveSwapPanes, so a carousel quick view
-// that forces its own order is not followed; give handlers the effective value if that matters.
 func (m *Model) FirstSlotPanel() int {
-	if m.SwapPanes {
+	if m.EffectiveSwapPanes() {
 		return SecondaryPanel
 	}
 	return PrimaryPanel
+}
+
+// QuickViewForcesSlotOrder reports whether quick view is driven from a carousel panel whose
+// inactive twin carousel autohide would otherwise hide; the preview then always takes the second
+// (right/bottom) slot, so the driver is drawn first.
+func (m *Model) QuickViewForcesSlotOrder() bool {
+	if !m.QuickViewEnabled || !m.CarouselQuickViewOrdering {
+		return false
+	}
+	switch m.QuickViewPanel {
+	case PrimaryPanel:
+		return m.Primary.CarouselMode
+	case SecondaryPanel:
+		return m.Secondary.CarouselMode
+	}
+	return false
+}
+
+// EffectiveSwapPanes reports whether Secondary is drawn in the first visual slot: the user's
+// SwapPanes preference, except that a forced quick-view order puts the driver first so the
+// preview lands in the second slot. Layout, slot lookups and Compare's left column use this.
+func (m *Model) EffectiveSwapPanes() bool {
+	if m.QuickViewForcesSlotOrder() {
+		return m.QuickViewPanel == SecondaryPanel
+	}
+	return m.SwapPanes
 }
 
 // SecondSlotPanel is the panel identity drawn in the second visual slot (right/bottom).
@@ -751,7 +781,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) (out RenderedO
 			ActivePercent:     model.PanelZoomActivePercent,
 			InactivePercent:   model.PanelZoomInactivePercent,
 			HideInactivePanel: LayoutHideInactivePanel(model.ViewMode, model.HideInactivePanel),
-			SwapPanes:         model.ViewMode == ViewBrowser && model.SwapPanes,
+			SwapPanes:         model.ViewMode == ViewBrowser && model.EffectiveSwapPanes(),
 		},
 		Orientation:    model.SplitOrientation,
 		TerminalRows:   terminalRows,

@@ -356,6 +356,7 @@ func (a *App) resetConfigToDefaults() {
 		return
 	}
 	a.config = cfg
+	a.syncCarouselQuickViewOrdering()
 	a.applyMouseConfig()
 	a.applyDiskUsageConfig()
 	a.setStyles(a.styles) // re-stamp the config-driven theme flags (icons, tooltips)
@@ -416,6 +417,7 @@ func (a *App) openConfigTOMLInEditor(path string) {
 		return
 	}
 	a.config = cfg
+	a.syncCarouselQuickViewOrdering()
 	a.applyMouseConfig()
 	a.applyDiskUsageConfig()
 	a.setStyles(a.styles) // re-stamp the config-driven theme flags (icons, tooltips)

@@ -706,6 +706,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		gitignoreCache: giCache,
 		gitStatusCache: gitstatus.NewCache(),
 	}
+	app.syncCarouselQuickViewOrdering()
 	// Live config: the settings dialog replaces app.config in place, so read it on every call.
 	app.model.Primary.FilterOptions = app.quickFilterOptions
 	app.model.Secondary.FilterOptions = app.quickFilterOptions
