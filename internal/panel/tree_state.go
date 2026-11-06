@@ -855,12 +855,50 @@ func (s *State) restoreTreeExpansionsIn(nodes []treeflat.Node[TreeEntry], depth 
 	}
 }
 
+// findTreeNode returns the node with the given id, or nil. IDs are entry paths, so it first
+// descends only into siblings whose ID is a path ancestor of id (O(depth x siblings)); when that
+// finds nothing it falls back to the full walk, because IDs are not always nested paths (a
+// fileindex:// ghost row sits under a local parent and its children may use another scheme).
+// Stateless on purpose: sorting moves nodes within their slices, so no stored pointer would last.
 func findTreeNode(nodes []treeflat.Node[TreeEntry], id string) *treeflat.Node[TreeEntry] {
+	if n := findTreeNodeGuided(nodes, id); n != nil {
+		return n
+	}
+	return findTreeNodeWalk(nodes, id)
+}
+
+// findTreeNodeGuided matches id exactly or descends into the sibling whose ID is a path ancestor.
+func findTreeNodeGuided(nodes []treeflat.Node[TreeEntry], id string) *treeflat.Node[TreeEntry] {
+	for i := range nodes {
+		n := &nodes[i]
+		if n.ID == id {
+			return n
+		}
+		if n.Children != nil && treeIDIsAncestor(n.ID, id) {
+			if found := findTreeNodeGuided(n.Children, id); found != nil {
+				return found
+			}
+		}
+	}
+	return nil
+}
+
+// treeIDIsAncestor reports whether id lies strictly under anc on a '/' boundary ("/a/bc" is not
+// under "/a/b"; anc may end in '/', as the root "/" does).
+func treeIDIsAncestor(anc, id string) bool {
+	if len(id) <= len(anc) || id[:len(anc)] != anc {
+		return false
+	}
+	return anc == "" || anc[len(anc)-1] == '/' || id[len(anc)] == '/'
+}
+
+// findTreeNodeWalk is the full depth-first search.
+func findTreeNodeWalk(nodes []treeflat.Node[TreeEntry], id string) *treeflat.Node[TreeEntry] {
 	for i := range nodes {
 		if nodes[i].ID == id {
 			return &nodes[i]
 		}
-		if found := findTreeNode(nodes[i].Children, id); found != nil {
+		if found := findTreeNodeWalk(nodes[i].Children, id); found != nil {
 			return found
 		}
 	}
