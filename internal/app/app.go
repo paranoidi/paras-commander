@@ -1318,6 +1318,11 @@ func (a *App) handleEarlyInterruptPayload(data any) (eventOutcome, bool) {
 		a.render()
 		return eventOutcome{pollDiskUsageAfter: true, didRender: true}, true
 	}
+	if p, ok := data.(metactrl.PendingRevealPayload); ok {
+		a.metaCtrl.HandlePendingReveal(p)
+		a.render()
+		return eventOutcome{pollDiskUsageAfter: true, didRender: true}, true
+	}
 	if p, ok := data.(historyOpenPayload); ok {
 		a.applyHistoryOpen(p)
 		a.render()

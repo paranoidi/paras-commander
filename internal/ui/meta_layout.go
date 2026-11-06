@@ -25,6 +25,8 @@ type MetaColumnLayout struct {
 	SortArrow rune
 	// Pending is the in-flight marker (MetaColumnState.Pending); rows showing it are centered.
 	Pending string
+	// PendingHidden mirrors MetaColumnState.PendingHidden: rows showing Pending paint blank.
+	PendingHidden bool
 }
 
 // LayoutMetaColumns formats each active meta column and returns layouts plus total terminal width
@@ -47,6 +49,8 @@ func LayoutMetaColumns(cols []MetaColumnState) (layouts []MetaColumnLayout, tota
 			RightAlign: rightAlign,
 			Numeric:    panel.MetaValuesNumeric(col.Results, col.Pending),
 			Pending:    col.Pending,
+
+			PendingHidden: col.PendingHidden,
 		}
 		if i > 0 {
 			totalWidth += 2
@@ -123,6 +127,10 @@ func MetaRowText(layouts []MetaColumnLayout, path string) string {
 			text = lay.Formatted[path]
 		}
 		if lay.Pending != "" && text == lay.Pending {
+			if lay.PendingHidden {
+				parts[i] = strings.Repeat(" ", lay.Width)
+				continue
+			}
 			parts[i] = centerMetaLine(text, lay.Width)
 			continue
 		}

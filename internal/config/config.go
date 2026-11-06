@@ -283,6 +283,10 @@ type MetaConfig struct {
 	// entry when the entry does not specify its own workers value in meta.toml.
 	// Minimum 1 after Validate. Default DefaultMetaEntryWorkers.
 	DefaultEntryWorkers int `toml:"default_entry_workers"`
+	// PendingMarkerDelayMS is how long (ms) a meta command must run before its cell shows the
+	// pending marker: -1 never shows it, 0 shows it immediately, N > 0 shows it after N ms.
+	// Values below -1 reset to DefaultMetaPendingMarkerDelayMS in Validate.
+	PendingMarkerDelayMS int `toml:"pending_marker_delay_ms"`
 }
 
 // HistoryConfig controls the directory History dialog.
@@ -879,6 +883,8 @@ func Default() Config {
 			File:                "",
 			LocalNames:          []string{DefaultMetaFileName},
 			DefaultEntryWorkers: DefaultMetaEntryWorkers,
+
+			PendingMarkerDelayMS: DefaultMetaPendingMarkerDelayMS,
 		},
 		Pools: PoolsConfig{
 			File: "",
@@ -1617,6 +1623,9 @@ func (c *Config) validateMeta(builtin *Config) {
 	}
 	if c.Meta.DefaultEntryWorkers < 1 {
 		c.Meta.DefaultEntryWorkers = builtin.Meta.DefaultEntryWorkers
+	}
+	if c.Meta.PendingMarkerDelayMS < -1 {
+		c.Meta.PendingMarkerDelayMS = builtin.Meta.PendingMarkerDelayMS
 	}
 	const metaWorkersMax = 64
 	if c.Meta.DefaultEntryWorkers > metaWorkersMax {

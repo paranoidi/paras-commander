@@ -1130,3 +1130,38 @@ func TestFileIndexBrowserScanMaxDepth(t *testing.T) {
 		t.Fatalf("value below -1 = %d, want it clamped to -1", cfg.FileIndex.BrowserScanMaxDepth)
 	}
 }
+
+func TestMetaPendingMarkerDelayMS(t *testing.T) {
+	if got := Default().Meta.PendingMarkerDelayMS; got != DefaultMetaPendingMarkerDelayMS {
+		t.Fatalf("default PendingMarkerDelayMS = %d, want 800", got)
+	}
+	for v, want := range map[int]int{-5: DefaultMetaPendingMarkerDelayMS, -2: DefaultMetaPendingMarkerDelayMS, -1: -1, 0: 0, 250: 250} {
+		cfg := Default()
+		cfg.Meta.PendingMarkerDelayMS = v
+		if err := cfg.Validate(); err != nil {
+			t.Fatalf("Validate(%d): %v", v, err)
+		}
+		if cfg.Meta.PendingMarkerDelayMS != want {
+			t.Fatalf("Validate(%d) -> %d, want %d", v, cfg.Meta.PendingMarkerDelayMS, want)
+		}
+	}
+	if DefaultMetaPendingMarkerDelayMS != 800 {
+		t.Fatalf("DefaultMetaPendingMarkerDelayMS = %d, want 800", DefaultMetaPendingMarkerDelayMS)
+	}
+	// An absent key keeps the default; an explicit 0 is honoured.
+	cfg, err := LoadFromPaths(Paths{ConfigFile: writeConfig(t, "[meta]\nlocal_names = [\"meta.toml\"]\n")})
+	if err != nil || cfg.Meta.PendingMarkerDelayMS != DefaultMetaPendingMarkerDelayMS {
+		t.Fatalf("absent key: delay=%d err=%v", cfg.Meta.PendingMarkerDelayMS, err)
+	}
+	cfg, err = LoadFromPaths(Paths{ConfigFile: writeConfig(t, "[meta]\npending_marker_delay_ms = 0\n")})
+	if err != nil || cfg.Meta.PendingMarkerDelayMS != 0 {
+		t.Fatalf("explicit 0: delay=%d err=%v", cfg.Meta.PendingMarkerDelayMS, err)
+	}
+	var buffer bytes.Buffer
+	if err := EncodeDefaultStub(&buffer); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buffer.String(), "pending_marker_delay_ms = 800") {
+		t.Fatal("default stub lacks pending_marker_delay_ms = 800")
+	}
+}

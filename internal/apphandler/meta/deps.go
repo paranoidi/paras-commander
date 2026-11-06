@@ -72,6 +72,9 @@ type Handler struct {
 	// the last render flush; HandleRenderFlush re-sorts those panels once, coalesced with the
 	// same 16ms debounce as the repaint itself.
 	resortPending [2]bool
+	// pendingReveal fires once per busy period after [meta].pending_marker_delay_ms and posts
+	// PendingRevealPayload; HandlePendingReveal then shows the markers (clears PendingHidden).
+	pendingReveal [2]sched.Debouncer
 	// cache stores computed meta results by [cmdName][absPath] for entries with cache = true.
 	// Nil until first caching write. Protected by cacheMu.
 	cache   map[string]map[string]string
@@ -109,6 +112,13 @@ type WakePayload struct {
 // RenderFlushPayload is posted by the debounced meta render timer to coalesce frequent
 // WakePayload renders into a single repaint (avoids one render per entry with large dirs).
 type RenderFlushPayload struct{}
+
+// PendingRevealPayload is posted by the pendingReveal timer when a meta command has been running
+// for the pending marker delay; Gen is the panel's run generation when the timer was armed.
+type PendingRevealPayload struct {
+	PanelID int
+	Gen     uint64
+}
 
 // LoadPayload carries the result of an async meta.toml resolve+load back to the UI goroutine.
 type LoadPayload struct {

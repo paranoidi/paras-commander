@@ -1155,3 +1155,109 @@ func TestHandleLoad_noFileKeepsPickedColumns(t *testing.T) {
 		t.Fatalf("activeEntries = %v results = %v, want picked columns kept", h.activeEntries[0], h.model.MetaResults[0])
 	}
 }
+
+// pendingRevealHandler builds a handler with one panel holding two files and the given delay.
+func pendingRevealHandler(t *testing.T, delayMS int) (*Handler, string, string) {
+	t.Helper()
+	dir := t.TempDir()
+	cedar := filepath.Join(dir, "cedar.txt")
+	willow := filepath.Join(dir, "willow.txt")
+	p := testPanel(t, dir, []localfs.Entry{
+		{Name: "cedar.txt", Path: cedar, Type: localfs.EntryFile},
+		{Name: "willow.txt", Path: willow, Type: localfs.EntryFile},
+	})
+	cfg := config.Default()
+	cfg.Meta.PendingMarkerDelayMS = delayMS
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(screen.Fini)
+	h := &Handler{screen: screen, host: &fakeHost{panels: [2]*panel.State{p}}, model: &ui.Model{}, config: cfg}
+	t.Cleanup(func() { h.stopRun(0) })
+	cmdDef := metacmds.MetaEntry{Name: "words", File: "sleep 30"}
+	h.runForPanel(0, []metacmds.MetaEntry{cmdDef}, []ui.MetaColumnState{{EntryName: "words"}})
+	return h, cedar, willow
+}
+
+func TestPendingReveal_dispatchHidesAndArmsThenRevealClears(t *testing.T) {
+	h, _, _ := pendingRevealHandler(t, 800)
+	col := h.model.MetaResults[0][0]
+	if !col.PendingHidden || col.PendingCount != 2 || !h.pendingReveal[0].Armed() {
+		t.Fatalf("hidden=%v count=%d armed=%v, want hidden, 2 pending, timer armed", col.PendingHidden, col.PendingCount, h.pendingReveal[0].Armed())
+	}
+	h.HandlePendingReveal(PendingRevealPayload{PanelID: 0, Gen: h.runGen[0]})
+	if h.model.MetaResults[0][0].PendingHidden {
+		t.Fatal("PendingHidden still set after reveal")
+	}
+}
+
+func TestPendingReveal_staleGenIgnored(t *testing.T) {
+	h, _, _ := pendingRevealHandler(t, 800)
+	h.HandlePendingReveal(PendingRevealPayload{PanelID: 0, Gen: h.runGen[0] - 1})
+	if !h.model.MetaResults[0][0].PendingHidden {
+		t.Fatal("stale reveal cleared PendingHidden")
+	}
+}
+
+func TestPendingReveal_zeroDelayNeverHides(t *testing.T) {
+	h, _, _ := pendingRevealHandler(t, 0)
+	if h.model.MetaResults[0][0].PendingHidden || h.pendingReveal[0].Armed() {
+		t.Fatal("delay 0 must show the marker at once with no timer")
+	}
+}
+
+func TestPendingReveal_negativeDelayStaysHidden(t *testing.T) {
+	h, _, _ := pendingRevealHandler(t, -1)
+	if !h.model.MetaResults[0][0].PendingHidden || h.pendingReveal[0].Armed() {
+		t.Fatal("delay -1 must hide the marker with no timer")
+	}
+	// A reconcile dispatch into the busy panel leaves it hidden and still arms nothing.
+	p := h.host.PanelByID(0)
+	extra := filepath.Join(p.PathString(), "maple.txt")
+	p.Entries = append(p.Entries, localfs.Entry{Name: "maple.txt", Path: extra, Type: localfs.EntryFile})
+	h.ReconcileForPanel(0)
+	col := h.model.MetaResults[0][0]
+	if col.PendingCount != 3 || !col.PendingHidden || h.pendingReveal[0].Armed() {
+		t.Fatalf("count=%d hidden=%v armed=%v, want 3, hidden, no timer", col.PendingCount, col.PendingHidden, h.pendingReveal[0].Armed())
+	}
+}
+
+func TestPendingReveal_busyDispatchDoesNotRehideRevealedColumn(t *testing.T) {
+	h, _, _ := pendingRevealHandler(t, 800)
+	h.HandlePendingReveal(PendingRevealPayload{PanelID: 0, Gen: h.runGen[0]})
+	p := h.host.PanelByID(0)
+	extra := filepath.Join(p.PathString(), "maple.txt")
+	p.Entries = append(p.Entries, localfs.Entry{Name: "maple.txt", Path: extra, Type: localfs.EntryFile})
+	h.ReconcileForPanel(0)
+	col := h.model.MetaResults[0][0]
+	if col.PendingCount != 3 || col.PendingHidden {
+		t.Fatalf("count=%d hidden=%v, want 3 pending and still revealed", col.PendingCount, col.PendingHidden)
+	}
+}
+
+func TestPendingReveal_idleReconcileRehidesAndRearms(t *testing.T) {
+	h, cedar, willow := pendingRevealHandler(t, 800)
+	h.HandlePendingReveal(PendingRevealPayload{PanelID: 0, Gen: h.runGen[0]})
+	gen := h.runGen[0]
+	h.HandleWake(WakePayload{PanelID: 0, EntryName: "words", Path: cedar, Value: "1", Gen: gen})
+	h.HandleWake(WakePayload{PanelID: 0, EntryName: "words", Path: willow, Value: "2", Gen: gen})
+	if h.pendingReveal[0].Armed() {
+		t.Fatal("timer still armed after every cell resolved")
+	}
+	p := h.host.PanelByID(0)
+	extra := filepath.Join(p.PathString(), "maple.txt")
+	p.Entries = append(p.Entries, localfs.Entry{Name: "maple.txt", Path: extra, Type: localfs.EntryFile})
+	h.ReconcileForPanel(0)
+	if !h.model.MetaResults[0][0].PendingHidden || !h.pendingReveal[0].Armed() {
+		t.Fatal("a new row on an idle panel must re-hide and re-arm")
+	}
+}
+
+func TestPendingReveal_stopRunInvalidatesTimer(t *testing.T) {
+	h, _, _ := pendingRevealHandler(t, 800)
+	h.stopRun(0)
+	if h.pendingReveal[0].Armed() {
+		t.Fatal("timer armed after stopRun")
+	}
+}

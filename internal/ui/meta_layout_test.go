@@ -291,3 +291,28 @@ func TestMetaColumnTitleNotClippedWhilePending(t *testing.T) {
 		t.Fatalf("pending row = %q, want centered %q", got, "  …  ")
 	}
 }
+
+func TestMetaRowText_pendingHiddenPaintsBlankAtSameWidth(t *testing.T) {
+	cols := []MetaColumnState{{
+		ColumnTitle: "Lines", Pending: "*",
+		Results: map[string]string{"/a": "*", "/b": "42"},
+	}}
+	layouts, _ := LayoutMetaColumns(cols)
+	visible := MetaRowText(layouts, "/a")
+	if !strings.Contains(visible, "*") {
+		t.Fatalf("visible marker row = %q, want the marker", visible)
+	}
+
+	cols[0].PendingHidden = true
+	layouts, _ = LayoutMetaColumns(cols)
+	hidden := MetaRowText(layouts, "/a")
+	if strings.TrimSpace(hidden) != "" || runewidth.StringWidth(hidden) != layouts[0].Width {
+		t.Fatalf("hidden marker row = %q, want %d blank cells", hidden, layouts[0].Width)
+	}
+	if runewidth.StringWidth(visible) != runewidth.StringWidth(hidden) {
+		t.Fatalf("width changed: visible %d, hidden %d", runewidth.StringWidth(visible), runewidth.StringWidth(hidden))
+	}
+	if got := MetaRowText(layouts, "/b"); !strings.Contains(got, "42") {
+		t.Fatalf("resolved cell = %q, want it still painted", got)
+	}
+}

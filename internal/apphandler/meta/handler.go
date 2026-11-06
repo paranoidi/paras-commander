@@ -61,6 +61,9 @@ func (h *Handler) HandleWake(d WakePayload) {
 		if p := h.host.PanelByID(d.PanelID); p != nil && p.Sort.Mode == panel.SortMeta && p.Sort.MetaColumn == d.EntryName {
 			h.resortPending[d.PanelID] = true
 		}
+		if h.pendingCount(h.model.MetaResults[d.PanelID]) == 0 {
+			h.pendingReveal[d.PanelID].Stop()
+		}
 	}
 	h.scheduleRenderDebounced()
 }
@@ -696,6 +699,27 @@ func (h *Handler) ColumnResolved(panelID int) bool {
 	return col.PendingCount == 0
 }
 
+// pendingCount is the number of dispatched cells still running across cols.
+func (h *Handler) pendingCount(cols []ui.MetaColumnState) int {
+	n := 0
+	for _, c := range cols {
+		n += c.PendingCount
+	}
+	return n
+}
+
+// HandlePendingReveal shows the pending markers of panelID once the reveal delay elapsed with
+// commands still running. Called from Run's interrupt switch for PendingRevealPayload.
+func (h *Handler) HandlePendingReveal(d PendingRevealPayload) {
+	if d.Gen != h.runGen[d.PanelID] {
+		return
+	}
+	cols := h.model.MetaResults[d.PanelID]
+	for i := range cols {
+		cols[i].PendingHidden = false
+	}
+}
+
 // scheduleRenderDebounced arms a short timer to coalesce rapid WakePayload events
 // (one per entry in large directories) into a single screen repaint at ~60 fps.
 func (h *Handler) scheduleRenderDebounced() {
@@ -734,6 +758,10 @@ func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.
 	gen := h.runGen[panelID]
 	runningMarker := h.host.IconMetaRunning()
 
+	// Only a dispatch into an idle panel starts the hide/reveal cycle. A later dispatch (e.g.
+	// ReconcileForPanel adding rows) must neither postpone the reveal nor re-hide revealed columns.
+	wasIdle := h.pendingCount(cols) == 0
+
 	for i, cmdDef := range cmdDefs {
 		results := cols[i].Results
 		for _, g := range groups {
@@ -769,6 +797,20 @@ func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.
 			}
 		}
 		cols[i].Pending = runningMarker
+	}
+
+	if delay := h.config.Meta.PendingMarkerDelayMS; wasIdle && delay != 0 && h.pendingCount(cols) > 0 {
+		for i := range cols {
+			cols[i].PendingHidden = true
+		}
+		if delay > 0 {
+			h.pendingReveal[panelID].Arm(time.Duration(delay)*time.Millisecond, func() {
+				if h.screen == nil {
+					return
+				}
+				_ = h.screen.PostEvent(tcell.NewEventInterrupt(PendingRevealPayload{PanelID: panelID, Gen: gen}))
+			})
+		}
 	}
 
 	// A run that dispatches nothing for the sorted column (every entry cached or filtered out
@@ -990,6 +1032,7 @@ func (h *Handler) CancelAll() {
 
 // stopRun cancels the in-flight meta run for panelID, if any, and clears it.
 func (h *Handler) stopRun(panelID int) {
+	h.pendingReveal[panelID].Invalidate()
 	if r := h.run[panelID]; r != nil {
 		r.cancel()
 		h.run[panelID] = nil

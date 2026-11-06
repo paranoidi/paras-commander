@@ -482,6 +482,11 @@ const (
 	// entry when the entry does not specify its own workers value in meta.toml.
 	DefaultMetaEntryWorkers = 2
 
+	// DefaultMetaPendingMarkerDelayMS is how long a meta command must run before its cell shows
+	// the pending marker; faster commands never flash it. -1 never shows the marker, 0 shows it
+	// immediately.
+	DefaultMetaPendingMarkerDelayMS = 800
+
 	// DefaultMetaMaxActiveColumns caps how many meta columns may be active per panel at once.
 	DefaultMetaMaxActiveColumns = 8
 

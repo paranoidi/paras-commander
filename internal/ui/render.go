@@ -70,6 +70,10 @@ type MetaColumnState struct {
 	// applyWakeResult decrements it as each one resolves) so ColumnResolved is an O(1) check
 	// instead of a full scan of Results on every call.
 	PendingCount int
+	// PendingHidden paints Pending cells blank until the meta handler's reveal timer clears it
+	// (or never, when the pending marker delay is -1). Results still hold the marker, so sort,
+	// filters and PendingCount are unaffected. The zero value shows the marker.
+	PendingHidden bool
 }
 
 // MetaColumnByName finds the column with the given EntryName in cols. Shared by every lookup
