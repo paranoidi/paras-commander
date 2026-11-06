@@ -37,8 +37,8 @@ The preview takes the whole screen (no menu bar; the filename is the top row). B
 | `C-f` / `C-b` | Full page |
 | `g` / `G` | Start / end |
 | `/` | Search (case-insensitive, literal); Enter accepts, Esc cancels; match locations are marked on the scrollbar |
-| `n` / `p` | Next / previous match (wraps) |
-| `Down` / `Up`, `C-j` / `C-k` | Next / previous match, only while typing the query and when it has matches (so `C-k` jumps instead of killing the line); after Enter use `n` / `p`, and the arrows scroll and `C-j` / `C-k` page as usual; rebind in `[preview_search]` |
+| `n` / `N` | Next / previous match (wraps) |
+| `Down` / `Up`, `C-j` / `C-k` | Next / previous match, only while typing the query and when it has matches (so `C-k` jumps instead of killing the line); after Enter use `n` / `N`, and the arrows scroll and `C-j` / `C-k` page as usual; rebind in `[preview_search]` |
 | `F5` | Re-read the file from disk, keeping scroll and search |
 | `F6` | Markdown: switch between rendered and raw source |
 | `F9` | Pick the syntax theme (live preview, Enter saves, Esc reverts) |

@@ -47,7 +47,7 @@ func (h *Handler) applyFilePreviewSearchFieldEdit(field dialog.FileDialogField) 
 
 // handleFilePreviewSearchTypingKey captures keystrokes while a preview search query is
 // being edited (Search.Editing). All runes, including ones that would otherwise be bound
-// to actions like "n"/"p", are literal query text here.
+// to actions like "n"/"N", are literal query text here.
 func (h *Handler) handleFilePreviewSearchTypingKey(event *tcell.EventKey) (quit bool) {
 	if h.handleFilePreviewSearchNavKey(event) {
 		return false

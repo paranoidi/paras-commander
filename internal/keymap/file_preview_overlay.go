@@ -12,7 +12,7 @@ func DefaultFilePreviewOverlayKeys() map[string][]string {
 		ActionPreviewReload:       {"F5"},
 		ActionPreviewSearchStart:  {"/"},
 		ActionPreviewSearchNext:   {"n"},
-		ActionPreviewSearchPrev:   {"p"},
+		ActionPreviewSearchPrev:   {"N"},
 		ActionPreviewClose:        {"q", "h"},
 		ActionPreviewScrollDown:   {"j"},
 		ActionPreviewScrollUp:     {"k"},

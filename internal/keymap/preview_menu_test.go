@@ -154,6 +154,9 @@ func TestFilePreviewOverlayVimNavigation(t *testing.T) {
 		{"C-f", tcell.NewEventKey(tcell.KeyCtrlF, 0, tcell.ModCtrl), ActionPreviewPageDown},
 		{"C-b", tcell.NewEventKey(tcell.KeyCtrlB, 0, tcell.ModCtrl), ActionPreviewPageUp},
 		{"C-d rune", rn('d', tcell.ModCtrl), ActionPreviewHalfPageDown},
+		{"n", rn('n', tcell.ModNone), ActionPreviewSearchNext},
+		{"N", rn('N', tcell.ModNone), ActionPreviewSearchPrev},
+		{"N shift", rn('N', tcell.ModShift), ActionPreviewSearchPrev},
 	}
 	for _, tc := range cases {
 		got, ok := b.FilePreview.Lookup(tc.ev)
@@ -161,7 +164,9 @@ func TestFilePreviewOverlayVimNavigation(t *testing.T) {
 			t.Errorf("%s: Lookup = (%q, %v), want %q", tc.name, got, ok, tc.want)
 		}
 	}
-	if id, ok := b.FilePreview.Lookup(rn('l', tcell.ModNone)); ok {
-		t.Errorf("l bound in preview overlay to %q, want unbound", id)
+	for _, r := range []rune{'l', 'p'} {
+		if id, ok := b.FilePreview.Lookup(rn(r, tcell.ModNone)); ok {
+			t.Errorf("%c bound in preview overlay to %q, want unbound", r, id)
+		}
 	}
 }
