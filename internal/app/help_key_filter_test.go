@@ -120,9 +120,41 @@ func TestHelpKeyFilterListsActionsWithoutHelpView(t *testing.T) {
 	if s := helpFilterSections(a)[keymap.ActionAppShowHelp]; s == "" || s == helpOtherContextsSection {
 		t.Fatalf("show-help section = %q", s)
 	}
+	assertHelpEnterWarns(t, a, "Help is not available in this view")
+}
+
+// assertHelpEnterWarns presses Enter on the selected entry and expects help to stay open with want.
+func assertHelpEnterWarns(t *testing.T, a *App, want string) {
+	t.Helper()
 	a.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if !a.model.HelpView.Open {
 		t.Fatal("Enter on an entry that cannot run closed help")
+	}
+	if a.model.Message != want || a.model.MessageUrgency != ui.MessageUrgencyWarn {
+		t.Fatalf("toast %q urgency %v, want warning %q", a.model.Message, a.model.MessageUrgency, want)
+	}
+}
+
+func TestHelpEnterOnOtherContextEntryWarns(t *testing.T) {
+	a := helpFilteredBy(t, ui.ViewBrowser, keyAltC)
+	st := &a.model.HelpView
+	st.Selected = slices.IndexFunc(st.Ranked, func(i int) bool { return st.Entries[i].ActionID == keymap.ActionDialogCancel })
+	assertHelpEnterWarns(t, a, st.Entries[st.Ranked[st.Selected]].Title+" is not available in this view")
+}
+
+func TestHelpEnterOnTextEditPageWarns(t *testing.T) {
+	a := newOpenHelpTextEdit(t)
+	st := &a.model.HelpView
+	assertHelpEnterWarns(t, a, st.Entries[st.Ranked[st.Selected]].Title+" is not available in this view")
+}
+
+func TestHelpKeyFilterFromTextEditPageRunsTheActiveAction(t *testing.T) {
+	a := newOpenHelpTextEdit(t)
+	a.handleKey(keyF4)
+	a.handleKey(tcell.NewEventKey(tcell.KeyF7, 0, tcell.ModNone))
+	a.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if a.model.HelpView.Open || !a.model.FileDialog.Open {
+		t.Fatalf("help %v file dialog %v", a.model.HelpView.Open, a.model.FileDialog.Open)
 	}
 }
 

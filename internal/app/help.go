@@ -711,8 +711,8 @@ func (a *App) handleHelpListKey(event *tcell.EventKey) bool {
 }
 
 // activateHelpSelection runs the selected entry's action and closes the dialog. It closes without
-// running anything when there are no results, and does nothing on the text-editing page or for an
-// entry that cannot run in the current view. Reports whether the app should quit.
+// running anything when there are no results. An entry that cannot run in the current view (text
+// editing keys, other contexts) leaves help open with a warning. Reports whether the app should quit.
 func (a *App) activateHelpSelection() bool {
 	st := &a.model.HelpView
 	if len(st.Ranked) == 0 {
@@ -724,11 +724,10 @@ func (a *App) activateHelpSelection() bool {
 		a.closeHelpDialog()
 		return false
 	}
-	if st.TextEdit {
-		return false
-	}
-	actionID := st.Entries[entIdx].ActionID
+	entry := st.Entries[entIdx]
+	actionID := entry.ActionID
 	if !helpkeys.ActionRunnableInView(a.model.ViewMode, actionID) {
+		a.setTransientMessage(entry.Title+" is not available in this view", ui.MessageUrgencyWarn)
 		return false
 	}
 	a.closeHelpDialog()

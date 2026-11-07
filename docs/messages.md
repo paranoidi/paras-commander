@@ -20,7 +20,7 @@ Press `F1` or `?` in any view to list the key bindings for that view. The list r
 
 - Type to filter. Matching is the same fuzzy search used elsewhere and looks at the keys, section, title and action name, with synonyms (for example "dotfiles" finds the hidden-files toggle). Section headers stay visible above their matches.
 - Up/Down, PgUp/PgDn, Home/End move through rows.
-- `Enter` runs the highlighted action, as if you pressed its key.
+- `Enter` runs the highlighted action, as if you pressed its key. An action that does not apply to the current view, such as a text-editing key, stays unrun and a warning says so.
 - `F4` (`[dialog.help]`) finds actions by keypress. A small dialog waits for one key, and help then shows only what that key does. Every key counts, including `Esc`, `F1` and `F10`, so nothing is run or closed by mistake. The action the key runs in the current view comes first, and anything it does in other views and dialogs is listed under *Other contexts*. `Esc` returns to the full list, and you can type to narrow the result. Single-letter keys inside menus are not included. To back out of the waiting dialog, click Cancel or press any key and then `Esc`.
 - `F2` (`[dialog.help]`) switches to the text-input editing keys; `F2` again returns.
 - `F3` (`[dialog.help]`) opens the icon legend, one icon per line; `F3`, `F1` or `Esc` closes it.
