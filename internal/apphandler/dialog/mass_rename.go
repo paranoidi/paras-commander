@@ -195,20 +195,19 @@ func (h *Handler) RecomputeMassRenamePreview() {
 	afterError := make([]bool, 0, len(rows))
 	for i, r := range rows {
 		matchBase := ops.MassRenameMatchBase(r, d.MassRenameIgnoreExt)
-		matchRanges := ops.MassRenameMatchRanges(matchBase, mode, find, caseFold, rx)
-		if len(matchRanges) > 0 {
+		if len(ops.MassRenameMatchRanges(matchBase, mode, find, caseFold, rx)) > 0 {
 			d.MassRenameMatchCount++
 		}
 		if d.MassRenameShowOnlyModified && r.OldBase == r.NewBase {
 			continue
 		}
-		removed, replaced := ops.MassRenameBeforePreviewHighlightRanges(matchRanges, replace)
+		removed, replaced, added := ops.MassRenamePreviewRanges(matchBase, mode, find, replace, caseFold, rx)
 		before = append(before, r.OldBase)
 		after = append(after, r.NewBase)
 		beforeRemoved = append(beforeRemoved, removed)
 		beforeReplaced = append(beforeReplaced, replaced)
 		beforeIgnored = append(beforeIgnored, ops.MassRenameIgnoredExtRange(r, d.MassRenameIgnoreExt))
-		afterAdded = append(afterAdded, ops.MassRenameReplacementRanges(matchBase, mode, find, replace, caseFold, rx))
+		afterAdded = append(afterAdded, added)
 		afterError = append(afterError, i < len(rowErrs) && rowErrs[i] != nil)
 	}
 	d.MassRenamePreviewBefore = before

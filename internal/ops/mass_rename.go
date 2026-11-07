@@ -309,39 +309,67 @@ func massRenameNormalizeRegexReplacement(template string) string {
 	return b.String()
 }
 
-// massRenamePadToken matches the zero-pad replacement token ${group:width}.
-var massRenamePadToken = regexp.MustCompile(`\$\{(\w+):(\d+)\}`)
+// massRenameTemplateToken matches the replacement tokens that produce one piece of output: $$,
+// ${group}, ${group:width} and $group (a name runs as far as regexp.Expand reads it). Other text
+// goes through regexp.Expand as is.
+var massRenameTemplateToken = regexp.MustCompile(`\$\$|\$\{(\w+)(?::(\d+))?\}|\$([\p{L}\p{Nd}_]+)`)
 
 // massRenamePadMaxWidth caps ${n:W} widths at the NAME_MAX filename limit.
 const massRenamePadMaxWidth = 255
 
-// massRenameExpand expands template for one match (loc from FindStringSubmatchIndex). It is the
-// single expansion point: Go's $n/${n} syntax plus ${n:W}, which left-pads group n with '0' to
-// W runes (n is a group number or name; an unmatched group counts as empty).
-func massRenameExpand(rx *regexp.Regexp, template, src string, loc []int) string {
+// massRenameSegment is one piece of an expanded template: text a capture group copied from the
+// byte range src[srcStart:srcEnd], or new text when srcStart is negative.
+type massRenameSegment struct {
+	text             string
+	srcStart, srcEnd int
+}
+
+// massRenameExpandSegments expands template for one match (loc from FindStringSubmatchIndex). It
+// is the single expansion point: Go's $n/${n} syntax plus ${n:W}, which left-pads group n with '0'
+// to W runes (n is a group number or name; an unmatched group counts as empty).
+func massRenameExpandSegments(rx *regexp.Regexp, template, src string, loc []int) []massRenameSegment {
 	template = massRenameNormalizeRegexReplacement(template)
-	var out []byte
-	last := 0
-	for _, m := range massRenamePadToken.FindAllStringSubmatchIndex(template, -1) {
-		out = rx.ExpandString(out, template[last:m[0]], src, loc)
-		last = m[1]
-		idx, err := strconv.Atoi(template[m[2]:m[3]])
-		if err != nil {
-			idx = rx.SubexpIndex(template[m[2]:m[3]])
+	var segs []massRenameSegment
+	literal := func(text string) {
+		if text != "" {
+			segs = append(segs, massRenameSegment{text: text, srcStart: -1, srcEnd: -1})
 		}
-		val := ""
-		if idx >= 0 && 2*idx+1 < len(loc) && loc[2*idx] >= 0 {
-			val = src[loc[2*idx]:loc[2*idx+1]]
-		}
-		// ponytail: width clamped to NAME_MAX; huge widths are never a valid filename anyway
-		w := min(massRenamePadMaxWidth, atoiClamped(template[m[4]:m[5]]))
-		if n := utf8.RuneCountInString(val); n < w {
-			out = append(out, strings.Repeat("0", w-n)...)
-		}
-		out = append(out, val...)
 	}
-	out = rx.ExpandString(out, template[last:], src, loc)
-	return string(out)
+	last := 0
+	for _, m := range massRenameTemplateToken.FindAllStringSubmatchIndex(template, -1) {
+		literal(string(rx.ExpandString(nil, template[last:m[0]], src, loc)))
+		last = m[1]
+		if template[m[0]:m[1]] == "$$" {
+			literal("$")
+			continue
+		}
+		name := ""
+		if m[2] >= 0 {
+			name = template[m[2]:m[3]]
+		} else {
+			name = template[m[6]:m[7]]
+		}
+		idx, err := strconv.Atoi(name)
+		if err != nil {
+			idx = rx.SubexpIndex(name)
+		}
+		seg := massRenameSegment{srcStart: -1, srcEnd: -1}
+		if idx >= 0 && 2*idx+1 < len(loc) && loc[2*idx] >= 0 {
+			seg = massRenameSegment{text: src[loc[2*idx]:loc[2*idx+1]], srcStart: loc[2*idx], srcEnd: loc[2*idx+1]}
+		}
+		if m[4] >= 0 {
+			// ponytail: width clamped to NAME_MAX; huge widths are never a valid filename anyway
+			w := min(massRenamePadMaxWidth, atoiClamped(template[m[4]:m[5]]))
+			if n := utf8.RuneCountInString(seg.text); n < w {
+				literal(strings.Repeat("0", w-n))
+			}
+		}
+		if seg.text != "" {
+			segs = append(segs, seg)
+		}
+	}
+	literal(string(rx.ExpandString(nil, template[last:], src, loc)))
+	return segs
 }
 
 // atoiClamped parses a digit string, saturating instead of failing on overflow.
@@ -358,7 +386,9 @@ func massRenameRegexReplace(rx *regexp.Regexp, oldBase, template string) string 
 	last := 0
 	for _, loc := range rx.FindAllStringSubmatchIndex(oldBase, -1) {
 		b.WriteString(oldBase[last:loc[0]])
-		b.WriteString(massRenameExpand(rx, template, oldBase, loc))
+		for _, seg := range massRenameExpandSegments(rx, template, oldBase, loc) {
+			b.WriteString(seg.text)
+		}
 		last = loc[1]
 	}
 	b.WriteString(oldBase[last:])
@@ -515,11 +545,30 @@ func massRenameSimpleFindMatches(oldBase, find string, caseFold bool) bool {
 	return strings.Contains(oldBase, find)
 }
 
-// MassRenameBeforePreviewHighlightRanges splits before-column preview highlights from find/regex
-// match ranges. When replace is empty, matches use before.removed (red); otherwise matches use
-// before.replaced (yellow). LCS diffs are not used here: deleted regions that share characters with
-// kept text (digits, spaces) can make LCS mark kept runes as removed.
-func MassRenameBeforePreviewHighlightRanges(matchRanges []search.Range, replace string) (removed, replaced []search.Range) {
+// MassRenamePreviewRanges returns the preview highlights for one basename as rune-index half-open
+// ranges: in oldBase, the text dropped with nothing in its place (removed) and the text swapped for
+// other text (replaced); in the new basename, the new text (added). Simple mode highlights every
+// match and its replacement whole. Regex mode leaves out what capture groups carry over. LCS diffs
+// are not used here: deleted regions that share characters with kept text (digits, spaces) can make
+// LCS mark kept runes as removed.
+func MassRenamePreviewRanges(oldBase string, mode MassRenameMode, find, replace string, caseFold bool, rx *regexp.Regexp) (removed, replaced, added []search.Range) {
+	switch mode {
+	case MassRenameModeSimple:
+		removed, replaced = massRenameBeforePreviewRanges(massRenameSimpleFindRanges(oldBase, find, caseFold), replace)
+		return removed, replaced, massRenameSimpleReplacementRanges(oldBase, find, replace, caseFold)
+	case MassRenameModeRegex:
+		if rx == nil {
+			return nil, nil, nil
+		}
+		return massRenameRegexPreviewRanges(oldBase, rx, replace)
+	default:
+		return nil, nil, nil
+	}
+}
+
+// massRenameBeforePreviewRanges splits before-column highlights from Simple match ranges: with an
+// empty replace the matches are removed, otherwise replaced.
+func massRenameBeforePreviewRanges(matchRanges []search.Range, replace string) (removed, replaced []search.Range) {
 	if replace == "" {
 		return matchRanges, nil
 	}
@@ -617,25 +666,6 @@ func massRenameAppendRange(ranges []search.Range, start, end int) []search.Range
 	return append(ranges, search.Range{Start: start, End: end})
 }
 
-// MassRenameReplacementRanges returns rune-index half-open ranges in the transformed basename
-// where replacement text was inserted (simple find/replace or expanded regex template).
-func MassRenameReplacementRanges(oldBase string, mode MassRenameMode, find, replace string, caseFold bool, rx *regexp.Regexp) []search.Range {
-	switch mode {
-	case MassRenameModeSimple:
-		if find == "" {
-			return nil
-		}
-		return massRenameSimpleReplacementRanges(oldBase, find, replace, caseFold)
-	case MassRenameModeRegex:
-		if rx == nil {
-			return nil
-		}
-		return massRenameRegexReplacementRanges(oldBase, rx, replace)
-	default:
-		return nil
-	}
-}
-
 func massRenameSimpleReplacementRanges(oldBase, find, replace string, caseFold bool) []search.Range {
 	h := []rune(oldBase)
 	n := []rune(find)
@@ -664,27 +694,39 @@ func massRenameSimpleReplacementRanges(oldBase, find, replace string, caseFold b
 	return ranges
 }
 
-func massRenameRegexReplacementRanges(oldBase string, rx *regexp.Regexp, replace string) []search.Range {
-	locs := rx.FindAllStringSubmatchIndex(oldBase, -1)
-	if len(locs) == 0 {
-		return nil
-	}
-	var ranges []search.Range
-	outPos := 0
-	lastByte := 0
-	for _, loc := range locs {
-		if len(loc) < 2 {
-			continue
+// massRenameRegexPreviewRanges aligns each match with its expansion on the capture groups copied
+// in their original order, and treats the gaps between them like MassRenameDiff: an old gap
+// opposite a new gap is replaced, an old gap alone is removed, and every new gap is added. A group
+// repeated or moved before an earlier one is new text.
+func massRenameRegexPreviewRanges(oldBase string, rx *regexp.Regexp, replace string) (removed, replaced, added []search.Range) {
+	outPos, lastByte := 0, 0
+	for _, loc := range rx.FindAllStringSubmatchIndex(oldBase, -1) {
+		outPos += utf8.RuneCountInString(oldBase[lastByte:loc[0]])
+		oldByte, newStart := loc[0], outPos
+		gap := func(oldEnd int) {
+			start := utf8.RuneCountInString(oldBase[:oldByte])
+			end := start + utf8.RuneCountInString(oldBase[oldByte:oldEnd])
+			if outPos > newStart {
+				replaced = massRenameAppendRange(replaced, start, end)
+			} else {
+				removed = massRenameAppendRange(removed, start, end)
+			}
+			added = massRenameAppendRange(added, newStart, outPos)
 		}
-		start, end := loc[0], loc[1]
-		outPos += utf8.RuneCountInString(oldBase[lastByte:start])
-		repl := massRenameExpand(rx, replace, oldBase, loc)
-		replRunes := utf8.RuneCountInString(repl)
-		ranges = massRenameAppendRange(ranges, outPos, outPos+replRunes)
-		outPos += replRunes
-		lastByte = end
+		for _, seg := range massRenameExpandSegments(rx, replace, oldBase, loc) {
+			kept := seg.srcStart >= oldByte
+			if kept {
+				gap(seg.srcStart)
+			}
+			outPos += utf8.RuneCountInString(seg.text)
+			if kept {
+				oldByte, newStart = seg.srcEnd, outPos
+			}
+		}
+		gap(loc[1])
+		lastByte = loc[1]
 	}
-	return ranges
+	return removed, replaced, added
 }
 
 // MassRenameHasWork returns true if at least one row would change its basename.

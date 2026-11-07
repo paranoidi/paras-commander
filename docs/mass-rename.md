@@ -22,7 +22,8 @@ the conflicts are gone.
 In every mode the preview colors the same way: in the before column, text that is dropped is
 red and text that is swapped for something else is yellow; in the after column, the new text
 is green. External $EDITOR and Capitalize work out the changed parts by comparing each old
-name with its new one character by character.
+name with its new one character by character. Regular expression leaves text that a capture
+group carries over uncolored, unless the group moves it ahead of an earlier group or repeats it.
 
 **Show only modified** hides unchanged rows in the preview. **Case insensitive** applies to Simple and Regular expression matching. **Trim whitespace** strips leading and trailing whitespace from the new names.
 

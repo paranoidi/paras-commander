@@ -616,9 +616,9 @@ func TestMassRenameMatchRangesEmptyFind(t *testing.T) {
 	}
 }
 
-func TestMassRenameBeforePreviewHighlightRanges_emptyReplace(t *testing.T) {
+func TestMassRenameBeforePreviewRanges_emptyReplace(t *testing.T) {
 	match := []search.Range{{Start: 0, End: 3}, {Start: 6, End: 9}}
-	removed, replaced := MassRenameBeforePreviewHighlightRanges(match, "")
+	removed, replaced := massRenameBeforePreviewRanges(match, "")
 	wantRemoved := match
 	if !massRenameRangesEqual(removed, wantRemoved) {
 		t.Fatalf("removed: got %v, want %v", removed, wantRemoved)
@@ -628,7 +628,7 @@ func TestMassRenameBeforePreviewHighlightRanges_emptyReplace(t *testing.T) {
 	}
 }
 
-func TestMassRenameBeforePreviewHighlightRanges_emptyReplaceIgnoresSharedRunesInDeletedRegions(t *testing.T) {
+func TestMassRenameBeforePreviewRanges_emptyReplaceIgnoresSharedRunesInDeletedRegions(t *testing.T) {
 	// Bracket tags share digits/spaces with kept "S01 "; LCS would falsely mark "01 " removed.
 	old := "Skeleton Knight in Another World - S01 [BD 1080p HEVC 10bit AAC-FLAC] [Dual-Audio]"
 	re, err := MassRenameCompileRegex(`\[.*?\]`, false)
@@ -636,7 +636,7 @@ func TestMassRenameBeforePreviewHighlightRanges_emptyReplaceIgnoresSharedRunesIn
 		t.Fatal(err)
 	}
 	match := MassRenameMatchRanges(old, MassRenameModeRegex, "", false, re)
-	removed, replaced := MassRenameBeforePreviewHighlightRanges(match, "")
+	removed, replaced := massRenameBeforePreviewRanges(match, "")
 	if replaced != nil {
 		t.Fatalf("replaced: got %v, want nil", replaced)
 	}
@@ -659,9 +659,9 @@ func TestMassRenameBeforePreviewHighlightRanges_emptyReplaceIgnoresSharedRunesIn
 	}
 }
 
-func TestMassRenameBeforePreviewHighlightRanges_nonemptyReplace(t *testing.T) {
+func TestMassRenameBeforePreviewRanges_nonemptyReplace(t *testing.T) {
 	match := []search.Range{{Start: 0, End: 3}}
-	removed, replaced := MassRenameBeforePreviewHighlightRanges(match, "bar")
+	removed, replaced := massRenameBeforePreviewRanges(match, "bar")
 	if removed != nil {
 		t.Fatalf("removed: got %v, want nil", removed)
 	}
@@ -670,9 +670,9 @@ func TestMassRenameBeforePreviewHighlightRanges_nonemptyReplace(t *testing.T) {
 	}
 }
 
-func TestMassRenameBeforePreviewHighlightRanges_whitespaceReplace(t *testing.T) {
+func TestMassRenameBeforePreviewRanges_whitespaceReplace(t *testing.T) {
 	match := []search.Range{{Start: 0, End: 3}}
-	removed, replaced := MassRenameBeforePreviewHighlightRanges(match, " ")
+	removed, replaced := massRenameBeforePreviewRanges(match, " ")
 	if removed != nil {
 		t.Fatalf("removed: got %v, want nil", removed)
 	}
@@ -683,12 +683,12 @@ func TestMassRenameBeforePreviewHighlightRanges_whitespaceReplace(t *testing.T) 
 
 func TestMassRenameReplacementRangesSharedRune(t *testing.T) {
 	old := "Season 11M"
-	got := MassRenameReplacementRanges(old, MassRenameModeSimple, "M", "xMissing", false, nil)
+	got := massRenameSimpleReplacementRanges(old, "M", "xMissing", false)
 	want := []search.Range{{Start: 9, End: 17}}
 	if !massRenameRangesEqual(got, want) {
 		t.Fatalf("xMissing: got %v, want %v", got, want)
 	}
-	got = MassRenameReplacementRanges(old, MassRenameModeSimple, "M", "Missing", false, nil)
+	got = massRenameSimpleReplacementRanges(old, "M", "Missing", false)
 	want = []search.Range{{Start: 9, End: 16}}
 	if !massRenameRangesEqual(got, want) {
 		t.Fatalf("Missing: got %v, want %v", got, want)
@@ -696,7 +696,7 @@ func TestMassRenameReplacementRangesSharedRune(t *testing.T) {
 }
 
 func TestMassRenameReplacementRangesMultiple(t *testing.T) {
-	got := MassRenameReplacementRanges("foo_foo.txt", MassRenameModeSimple, "foo", "x", false, nil)
+	got := massRenameSimpleReplacementRanges("foo_foo.txt", "foo", "x", false)
 	want := []search.Range{{Start: 0, End: 1}, {Start: 2, End: 3}}
 	if !massRenameRangesEqual(got, want) {
 		t.Fatalf("got %v, want %v", got, want)
@@ -708,7 +708,7 @@ func TestMassRenameReplacementRangesRegex(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got := MassRenameReplacementRanges("Season 11M", MassRenameModeRegex, "", "Missing", false, re)
+	_, _, got := MassRenamePreviewRanges("Season 11M", MassRenameModeRegex, "", "Missing", false, re)
 	want := []search.Range{{Start: 9, End: 16}}
 	if !massRenameRangesEqual(got, want) {
 		t.Fatalf("got %v, want %v", got, want)
@@ -760,14 +760,69 @@ func TestMassRenameComputeRegexZeroPad(t *testing.T) {
 	}
 }
 
-func TestMassRenameReplacementRangesZeroPad(t *testing.T) {
-	re, err := MassRenameCompileRegex(`\d+`, false)
-	if err != nil {
-		t.Fatal(err)
+func TestMassRenamePreviewRangesRegexCaptureGroups(t *testing.T) {
+	type ranges = []search.Range
+	cases := []struct {
+		name                     string
+		pattern, replace, base   string
+		removed, replaced, added ranges
+	}{
+		{name: "pad keeps the trailing group", pattern: `(\d+)(\D*)$`, replace: "${1:2}${2}", base: "1 maple pear 2 river stone",
+			added: ranges{{Start: 13, End: 14}}},
+		{name: "already wide enough changes nothing", pattern: `(\d+)(\D*)$`, replace: "${1:2}${2}", base: "lantern 10 cedar"},
+		{name: "whole match group pads", pattern: `\d+`, replace: "${0:3}", base: "walnut 1.txt",
+			added: ranges{{Start: 7, End: 9}}},
+		{name: "new text between groups", pattern: `(\w+) (\w+)`, replace: "$1-$2", base: "amber fox",
+			replaced: ranges{{Start: 5, End: 6}}, added: ranges{{Start: 5, End: 6}}},
+		{name: "text dropped between groups", pattern: `(\w+) (\w+) (\w+)`, replace: "$1 $3", base: "red oak leaf",
+			replaced: ranges{{Start: 3, End: 8}}, added: ranges{{Start: 3, End: 4}}},
+		{name: "group dropped from the end", pattern: `(\w+) \w+`, replace: "$1", base: "red oak",
+			removed: ranges{{Start: 3, End: 7}}},
+		{name: "literal replaces the match", pattern: `oak(\d)`, replace: "elm$1", base: "oak7",
+			replaced: ranges{{Start: 0, End: 3}}, added: ranges{{Start: 0, End: 3}}},
+		{name: "moved group is new text", pattern: `(\w+) (\w+)`, replace: "$2 $1", base: "moss fern",
+			replaced: nil, removed: ranges{{Start: 0, End: 5}}, added: ranges{{Start: 4, End: 9}}},
+		{name: "repeated group is new text", pattern: `(\d)`, replace: "$1$1", base: "a7",
+			added: ranges{{Start: 2, End: 3}}},
+		{name: "every match", pattern: `(\d+)`, replace: "${1:2}", base: "1 and 2",
+			added: ranges{{Start: 0, End: 1}, {Start: 7, End: 8}}},
+		{name: "offsets count runes", pattern: `(\d)(ö*)$`, replace: "${1:2}$2", base: "äö 1öö",
+			added: ranges{{Start: 3, End: 4}}},
+		{name: "unchanged dollar literal", pattern: `(\d)`, replace: "$$$1", base: "7",
+			added: ranges{{Start: 0, End: 1}}},
 	}
-	got := MassRenameReplacementRanges("walnut 1.txt", MassRenameModeRegex, "", "${0:3}", false, re)
-	if len(got) != 1 || got[0].Start != 7 || got[0].End != 10 {
-		t.Fatalf("got %+v, want one range 7..10", got)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			re, err := MassRenameCompileRegex(tc.pattern, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			removed, replaced, added := MassRenamePreviewRanges(tc.base, MassRenameModeRegex, "", tc.replace, false, re)
+			if !massRenameRangesEqual(removed, tc.removed) || !massRenameRangesEqual(replaced, tc.replaced) || !massRenameRangesEqual(added, tc.added) {
+				t.Fatalf("removed=%v replaced=%v added=%v, want removed=%v replaced=%v added=%v", removed, replaced, added, tc.removed, tc.replaced, tc.added)
+			}
+		})
+	}
+}
+
+func TestMassRenameRegexReplaceTemplateSyntax(t *testing.T) {
+	cases := []struct{ pattern, replace, base, want string }{
+		{`(?P<word>\w+) (\d+)`, "${2:3}_$word", "pine 4", "004_pine"},
+		{`(\d)`, "$$$1", "7", "$7"},
+		{`(\d)`, `\1\1`, "7", "77"},
+		{`(\d)`, "$1x", "7", "7x"},
+		{`(\d)`, "${1}x", "7", "7x"},
+		{`(\d)`, "$", "7", "$"},
+		{`(\d)`, "${bad name}", "7", "${bad name}"},
+	}
+	for _, tc := range cases {
+		re, err := MassRenameCompileRegex(tc.pattern, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := massRenameRegexReplace(re, tc.base, tc.replace); got != tc.want {
+			t.Fatalf("%q -> %q on %q: got %q, want %q", tc.pattern, tc.replace, tc.base, got, tc.want)
+		}
 	}
 }
 
