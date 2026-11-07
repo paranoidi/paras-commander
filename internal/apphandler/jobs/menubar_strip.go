@@ -16,6 +16,7 @@ var menuBarStripGroupOrder = []string{
 	string(jobs.StatusWaitingDecision),
 	string(jobs.StatusPaused),
 	string(jobs.StatusRunning),
+	string(jobs.StatusCanceling),
 }
 
 // menuBarJobGroups folds per-job statuses into ordered (status, count) groups, dropping
@@ -47,7 +48,7 @@ func (h *Handler) MenuBarStripSnapshot() ui.MenuBarJobsStrip {
 		if j == nil {
 			continue
 		}
-		if j.Status == jobs.StatusRunning {
+		if j.Status == jobs.StatusRunning || j.Status == jobs.StatusCanceling {
 			prog = j
 			break
 		}

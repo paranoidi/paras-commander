@@ -835,7 +835,7 @@ func jobTaskStepStatus(j JobEntry, i int) string {
 		return "queued"
 	case i < j.Step:
 		return "completed"
-	case j.Status == "failed" || j.Status == "canceled":
+	case j.Status == "failed" || j.Status == "canceled" || j.Status == "canceling":
 		return j.Status
 	}
 	return "running"

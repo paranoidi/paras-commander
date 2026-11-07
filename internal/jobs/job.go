@@ -70,6 +70,7 @@ const (
 	StatusPaused          Status = "paused"
 	StatusRunning         Status = "running"
 	StatusWaitingDecision Status = "decision"
+	StatusCanceling       Status = "canceling"
 	StatusCompleted       Status = "completed"
 	StatusFailed          Status = "failed"
 	StatusCanceled        Status = "canceled"
@@ -86,9 +87,19 @@ func (s Status) IsRetryable() bool {
 }
 
 // IsActive reports whether a worker is currently touching the job's trees: pre-scanning,
-// transferring, or mid-transfer blocked on a user decision. Queued and paused jobs are not active.
+// transferring, mid-transfer blocked on a user decision, or still winding down after a cancel.
+// Queued and paused jobs are not active.
 func (s Status) IsActive() bool {
-	return s == StatusScanning || s == StatusRunning || s == StatusWaitingDecision
+	return s == StatusScanning || s == StatusRunning || s == StatusWaitingDecision || s == StatusCanceling
+}
+
+// resumeRunning moves the job to StatusRunning unless a cancel is already winding it down. The
+// event loop applies EventStarted and EventJobResumed after the fact, so they can arrive after
+// CancelJob. Callers hold State.mu.
+func (j *Job) resumeRunning() {
+	if j.Status != StatusCanceling {
+		j.Status = StatusRunning
+	}
 }
 
 // Job represents a single background filesystem operation.

@@ -550,7 +550,7 @@ func (s *State) ApplyEvent(ev Event) {
 	case EventStarted:
 		job := s.findJobUnlocked(ev.JobID)
 		if job != nil {
-			job.Status = StatusRunning
+			job.resumeRunning()
 			if job.StartedAt.IsZero() {
 				job.StartedAt = time.Now()
 			}
@@ -593,7 +593,7 @@ func (s *State) ApplyEvent(ev Event) {
 	case EventJobResumed:
 		job := s.findJobUnlocked(ev.JobID)
 		if job != nil {
-			job.Status = StatusRunning
+			job.resumeRunning()
 			job.PendingBlocker = nil
 			s.addActiveUnlocked(job)
 		}
@@ -765,11 +765,15 @@ func (s *State) SubmitBlockerAnswer(jobID string, a BlockerAnswer) {
 // a job by any path also unblocks its producer instead of leaving it blocked forever on a full
 // channel send nobody drains. The one exception is the final fallback branch, which calls it
 // explicitly because it needs the found/not-found result the deferred call discards.
+//
+// A job a worker is still on (a running job, or one in its pre-scan) goes to StatusCanceling and
+// reaches StatusCanceled when the worker stops; every other branch finishes it here.
 func (s *State) CancelJob(id string) bool {
 	defer s.cancelJobScan(id)
 	s.mu.Lock()
-	if s.activeByIDUnlocked(id) != nil {
+	if job := s.activeByIDUnlocked(id); job != nil {
 		if cancel := s.cancelRun[id]; cancel != nil {
+			job.Status = StatusCanceling
 			s.mu.Unlock()
 			cancel()
 			return true
@@ -802,7 +806,8 @@ func (s *State) CancelJob(id string) bool {
 		s.SubmitBlockerDecision(id, DecisionCancel)
 		return true
 	}
-	if job := s.findJobUnlocked(id); job != nil && job.Status == StatusScanning {
+	if job := s.findJobUnlocked(id); job != nil && (job.Status == StatusScanning || job.Status == StatusCanceling) {
+		job.Status = StatusCanceling
 		s.mu.Unlock()
 		return true
 	}

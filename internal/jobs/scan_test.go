@@ -359,3 +359,64 @@ func TestScanSourceSizeSinkFiresOnlyForSingleSourceLocalCopy(t *testing.T) {
 		})
 	}
 }
+
+// TestCancelDuringScanShowsCanceling covers a job canceled in its pre-scan: it shows canceling
+// until the walk ends, is never made runnable, and ends canceled even when the walk finished
+// without an error.
+func TestCancelDuringScanShowsCanceling(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+	}{
+		{"walk stops on the cancel", context.Canceled},
+		{"walk finishes anyway", nil},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			s := NewState()
+			s.SetScanConfig(ScanConfig{ProgressMinInterval: 10 * time.Millisecond})
+
+			doneCh := make(chan struct{})
+			firstItem := make(chan struct{})
+			s.SetScanFunc(func(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, hooks ScanWalkHooks) PlanProducer {
+				return PlanProducer{
+					Items:     make(chan ops.PlanItem),
+					FirstItem: firstItem,
+					Totals:    func() (int, int, int64) { return 0, 0, 0 },
+					Done:      doneCh,
+					Err:       func() error { return tc.err },
+				}
+			})
+
+			job := &Job{ID: "canceled-scan", Type: TypeCopy, Status: StatusScanning, Sources: pathloc.PathsForTest("/a"), Destination: pathloc.MustParse("/b")}
+			s.AddJob(job)
+			if !s.CancelJob(job.ID) {
+				t.Fatal("CancelJob did not find the scanning job")
+			}
+			if got := s.Job(job.ID).Status; got != StatusCanceling {
+				t.Fatalf("status after cancel = %s, want canceling", got)
+			}
+			if !s.CancelJob(job.ID) {
+				t.Fatal("a second cancel must still find the job")
+			}
+			close(firstItem)
+			close(doneCh)
+
+			deadline := time.After(3 * time.Second)
+			for {
+				st := s.Job(job.ID).Status
+				if st == StatusCanceled {
+					return
+				}
+				if st != StatusCanceling {
+					t.Fatalf("status = %s while winding down, want canceling", st)
+				}
+				select {
+				case <-deadline:
+					t.Fatal("timeout waiting StatusCanceled")
+				case <-time.After(time.Millisecond):
+				}
+			}
+		})
+	}
+}

@@ -71,6 +71,12 @@ copy across devices removes the sources of the files it finished
 delete stops between files and an extract between archives. Cancel is still
 immediate, also after a soft stop was requested. Tasks cannot soft stop.
 
+**Canceling**: pressing Cancel on a job that is working shows it as `canceling`
+right away, so you can see the request was registered. Stopping can take a
+moment, for example while a [fileindex](fileindex.md) scan finishes what it has
+in hand, and the job keeps its place until it ends as `canceled`. Queued and
+paused jobs have nothing to wait for and become `canceled` at once.
+
 Some features run their own background work as a **task** job (for example a
 [fileindex](fileindex.md) scan). A task shows `task` as its type and its name
 in the Details panel, reports items, bytes and the current path like a

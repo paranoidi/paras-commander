@@ -29,6 +29,7 @@ running = { fg = "bright_green", bold = true }
 paused = { fg = "yellow", bold = true }
 decision = { fg = "cyan", bold = true }
 failed = { fg = "bright_red", bold = true }
+canceling = { fg = "bright_yellow", bold = true }
 canceled = { fg = "red", bold = true }
 completed = { fg = "green", bold = true }
 
@@ -402,6 +403,7 @@ scanning = "\uf110"
 queued = "\uf017"
 running = "\uf144"
 paused = "\uf28b"
+canceling = "\uf254"
 canceled = "\uf52f"
 failed = "\uf06a"
 decision = "\uf059"
@@ -468,6 +470,7 @@ separator = "·"  # between and after status-command segments
 
 [icons.menu.job]
 scanning = "\U000f02ca"
+canceling = "\uf254"
 completed = ""
 failed = ""
 decision = ""

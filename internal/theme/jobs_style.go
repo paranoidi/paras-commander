@@ -10,6 +10,7 @@ const (
 	IconKeyJobsListQueued    = "jobs.list.queued"
 	IconKeyJobsListRunning   = "jobs.list.running"
 	IconKeyJobsListPaused    = "jobs.list.paused"
+	IconKeyJobsListCanceling = "jobs.list.canceling"
 	IconKeyJobsListCanceled  = "jobs.list.canceled"
 	IconKeyJobsListFailed    = "jobs.list.failed"
 	IconKeyJobsListDecision  = "jobs.list.decision"
@@ -48,6 +49,8 @@ func (t Theme) IconJobsList(status string) string {
 		return "\U000f02d7"
 	case "paused":
 		return "\uf28b"
+	case "canceling":
+		return "\uf254"
 	case "canceled":
 		return "\uf28d"
 	case "failed":
@@ -122,11 +125,11 @@ func (t Theme) PanelJobMarkStyle(status string, write bool) tcell.Style {
 }
 
 // JobsProgressStyles returns progress-bar fill/track/label styles for the jobs list.
-// Paused and canceled jobs use the inactive palette (grey fill instead of green).
+// Paused, canceling and canceled jobs use the inactive palette (grey fill instead of green).
 // Completed jobs use the completed style for both the fill and the label (always a full bar).
 func (t Theme) JobsProgressStyles(status string) (fill, track, labelOnFill, labelOnTrack tcell.Style) {
 	switch status {
-	case "paused", "canceled":
+	case "paused", "canceling", "canceled":
 		return t.JobsProgressInactiveFill, t.JobsProgressInactiveTrack,
 			t.JobsProgressInactiveLabelOnFill, t.JobsProgressInactiveLabelOnTrack
 	case "completed":

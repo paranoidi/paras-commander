@@ -188,8 +188,12 @@ func (s *State) runJobScan(job *Job, ctx context.Context, cancel context.CancelF
 		if flipped {
 			return
 		}
-		flipped = true
 		s.mu.Lock()
+		if job.Status == StatusCanceling { // never make a canceled job runnable
+			s.mu.Unlock()
+			return
+		}
+		flipped = true
 		if job.PausedAfterScan {
 			job.Status = StatusPaused
 		} else {
@@ -256,6 +260,15 @@ waitLoop:
 	// the walk ended.
 	alreadyFlipped := flipped
 	flipToRunnable()
+
+	// Canceled during the scan: the walk may still have ended cleanly, so go by the status.
+	s.mu.Lock()
+	canceling := !alreadyFlipped && job.Status == StatusCanceling
+	s.mu.Unlock()
+	if canceling {
+		s.finishScanCanceled(job)
+		return
+	}
 
 	// Only fail/cancel the job here if it never left Scanning. Once flipToRunnable has already
 	// run once, the transfer worker may be actively executing the job (or have already finished

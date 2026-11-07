@@ -223,3 +223,44 @@ func TestTaskJobCannotPauseOrRetry(t *testing.T) {
 		t.Fatal("a task must not retry")
 	}
 }
+
+// TestCancelRunningTaskShowsCanceling checks a cancel is visible at once while the task winds
+// down, and that a late EventStarted does not hide it.
+func TestCancelRunningTaskShowsCanceling(t *testing.T) {
+	s := NewState()
+	stop := make(chan struct{})
+	defer close(stop)
+	s.StartWorker(stop)
+
+	running := make(chan struct{})
+	release := make(chan struct{})
+	job := NewTaskJob(&Task{Title: "lantern", Lease: "lantern", Run: func(ctx context.Context, r TaskReporter) error {
+		close(running)
+		<-ctx.Done()
+		<-release // a slow wind-down: the worker has not returned yet
+		return ctx.Err()
+	}}, pathloc.PathsForTest("/lantern"))
+	s.AddJob(job)
+	<-running
+	if !s.CancelJob(job.ID) {
+		t.Fatal("CancelJob did not find the running task")
+	}
+	if got := s.Job(job.ID).Status; got != StatusCanceling {
+		t.Fatalf("status after cancel = %s, want canceling", got)
+	}
+	s.ApplyEvent(Event{Type: EventStarted, JobID: job.ID, Status: StatusRunning})
+	s.ApplyEvent(Event{Type: EventJobResumed, JobID: job.ID, Status: StatusRunning})
+	if got := s.Job(job.ID).Status; got != StatusCanceling {
+		t.Fatalf("status after a late event = %s, want canceling", got)
+	}
+	if !s.CancelJob(job.ID) {
+		t.Fatal("a second cancel must still find the job")
+	}
+	if !s.HasUnfinishedWork() {
+		t.Fatal("a canceling task is still unfinished work")
+	}
+	close(release)
+	if got := applyUntilFinished(t, s, job.ID); got.Status != StatusCanceled {
+		t.Fatalf("final status = %s, want canceled", got.Status)
+	}
+}

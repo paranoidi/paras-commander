@@ -204,6 +204,7 @@ type Theme struct {
 	StatusPaused    tcell.Style
 	StatusDecision  tcell.Style
 	StatusFailed    tcell.Style
+	StatusCanceling tcell.Style
 	StatusCanceled  tcell.Style
 	StatusCompleted tcell.Style
 	// PanelIconFolderExcluded styles directory rows skipped by disk-usage traversal (devicons).
@@ -1011,6 +1012,8 @@ func (t Theme) IconMenuJob(status string) rune {
 		return '\uf071'
 	case "decision":
 		return '\uf059'
+	case "canceling":
+		return '\uf254'
 	case "completed":
 		return '\uf05d'
 	default:
@@ -1033,6 +1036,8 @@ func (t Theme) StatusStyle(status string) tcell.Style {
 		return t.StatusDecision
 	case "failed":
 		return t.StatusFailed
+	case "canceling":
+		return t.StatusCanceling
 	case "canceled":
 		return t.StatusCanceled
 	case "completed":
@@ -1159,6 +1164,7 @@ var requiredStyleKeys = []string{
 	"status.paused",
 	"status.decision",
 	"status.failed",
+	"status.canceling",
 	"status.canceled",
 	"status.completed",
 	"panel.icon.folder.excluded",
@@ -1852,6 +1858,7 @@ func parse(data []byte) (Theme, error) {
 		StatusPaused:                     styles["status.paused"],
 		StatusDecision:                   styles["status.decision"],
 		StatusFailed:                     styles["status.failed"],
+		StatusCanceling:                  styles["status.canceling"],
 		StatusCanceled:                   styles["status.canceled"],
 		StatusCompleted:                  styles["status.completed"],
 		PanelIconFolderExcluded:          styles["panel.icon.folder.excluded"],

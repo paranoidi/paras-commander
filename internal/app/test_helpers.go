@@ -231,7 +231,7 @@ func flushBackgroundJobs(t *testing.T, app *App) {
 		busy := app.jobState.RunsInFlight() > 0
 		for _, j := range app.jobState.AllJobs() {
 			switch j.Status {
-			case jobs.StatusScanning, jobs.StatusQueued, jobs.StatusRunning, jobs.StatusWaitingDecision:
+			case jobs.StatusScanning, jobs.StatusQueued, jobs.StatusRunning, jobs.StatusWaitingDecision, jobs.StatusCanceling:
 				busy = true
 			}
 			if busy {
