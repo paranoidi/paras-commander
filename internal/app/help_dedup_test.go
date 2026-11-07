@@ -66,6 +66,19 @@ func TestOpenHelpDialogInDedupView(t *testing.T) {
 	}
 }
 
+func TestDedupHelpShowsLeaderLetterForChordlessActions(t *testing.T) {
+	app := setupDedupViewApp(t)
+	for _, e := range app.buildDedupHelpEntries() {
+		if e.ActionID == keymap.ActionDedupExpandCopies {
+			if e.Keys != "Leader s" {
+				t.Fatalf("Keys = %q, want the leader letter", e.Keys)
+			}
+			return
+		}
+	}
+	t.Fatal("dedup help has no entry for dedup.expand-copies")
+}
+
 func TestBuildDedupHelpEntriesIncludesAllDedupActions(t *testing.T) {
 	app := setupDedupViewApp(t)
 	entries := app.buildDedupHelpEntries()

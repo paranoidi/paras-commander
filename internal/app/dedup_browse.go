@@ -158,6 +158,8 @@ func (a *App) handleDedupPanelKey(action string, event *tcell.EventKey) bool {
 		if err := p.Parent(rows); err != nil {
 			a.setErrorMessage("Browse", err)
 		}
+	case keymap.ActionNavForward, keymap.ActionNavBackward:
+		a.stepPanelHistory(p, action, rows)
 	case keymap.ActionOpenInPrimary, keymap.ActionOpenInSecondary:
 		if e, ok := p.CurrentEntry(); ok {
 			a.dedupCtrl.OpenInPanel(a.openInPanelID(action), e.Path, e.ResolvesToDir())

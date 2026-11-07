@@ -862,22 +862,25 @@ func (a *App) tryDispatchNavigation(actionID string) (handled, quit bool) {
 		if err := a.navigatePanelToDirectory(a.model.ActivePanel, a.model.UserHomeDir, ""); err != nil {
 			a.setErrorMessage("Navigate to home failed", err)
 		}
-	case keymap.ActionNavForward:
-		if _, warning, err := activePanel.HistoryForward(viewportRows); err != nil {
-			a.setErrorMessage("Forward history failed", err)
-		} else if warning != "" {
-			a.setTransientMessage(warning, ui.MessageUrgencyWarn)
-		}
-	case keymap.ActionNavBackward:
-		if _, warning, err := activePanel.HistoryBackward(viewportRows); err != nil {
-			a.setErrorMessage("Backward history failed", err)
-		} else if warning != "" {
-			a.setTransientMessage(warning, ui.MessageUrgencyWarn)
-		}
+	case keymap.ActionNavForward, keymap.ActionNavBackward:
+		a.stepPanelHistory(activePanel, actionID, viewportRows)
 	default:
 		return false, false
 	}
 	return true, false
+}
+
+// stepPanelHistory moves p one step through its directory history for nav.forward or nav.backward.
+func (a *App) stepPanelHistory(p *panel.State, action string, viewportRows int) {
+	step, label := p.HistoryBackward, "Backward history failed"
+	if action == keymap.ActionNavForward {
+		step, label = p.HistoryForward, "Forward history failed"
+	}
+	if _, warning, err := step(viewportRows); err != nil {
+		a.setErrorMessage(label, err)
+	} else if warning != "" {
+		a.setTransientMessage(warning, ui.MessageUrgencyWarn)
+	}
 }
 
 // announceRange shows the shared range-select toast for res (nothing for RangeNone).

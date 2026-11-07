@@ -224,16 +224,19 @@ func (a *App) handleCompareViewKey(event *tcell.EventKey) bool {
 	if a.model.ViMotionMode {
 		event = keymap.RemapViMotionKey(event)
 	}
-	switch event.Key() {
-	case tcell.KeyEsc:
+	if event.Key() == tcell.KeyEsc {
 		a.closeCompareView()
 		return false
-	case tcell.KeyLeft:
-		a.compareCtrl.MoveColumnFocus(-1)
-		return false
-	case tcell.KeyRight:
-		a.compareCtrl.MoveColumnFocus(1)
-		return false
+	}
+	if event.Modifiers() == tcell.ModNone { // Alt+arrows are history keys, which Compare does not have
+		switch event.Key() {
+		case tcell.KeyLeft:
+			a.compareCtrl.MoveColumnFocus(-1)
+			return false
+		case tcell.KeyRight:
+			a.compareCtrl.MoveColumnFocus(1)
+			return false
+		}
 	}
 
 	nextAction := a.actionFromKeyEvent(event)

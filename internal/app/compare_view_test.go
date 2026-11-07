@@ -189,6 +189,22 @@ func TestCompareViewLeftRightColumnFocus(t *testing.T) {
 	}
 }
 
+func TestCompareViewAltArrowsLeaveColumnFocus(t *testing.T) {
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, t.TempDir())
+	app.model.ViewMode = ui.ViewCompare
+	app.model.CompareView = ui.CompareViewState{FocusColumn: ui.CompareColumnSecondary}
+	before := app.activePanel().PathString()
+
+	app.handleCompareViewKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModAlt))
+	if app.model.CompareView.FocusColumn != ui.CompareColumnSecondary {
+		t.Fatalf("Alt+Left moved column focus to %v", app.model.CompareView.FocusColumn)
+	}
+	if app.model.ViewMode != ui.ViewCompare || app.activePanel().PathString() != before {
+		t.Fatalf("Alt+Left acted: view %v, path %q", app.model.ViewMode, app.activePanel().PathString())
+	}
+}
+
 func TestCompareViewOpenUsesPrimaryColumnFocus(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, t.TempDir())

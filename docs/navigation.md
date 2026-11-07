@@ -6,7 +6,7 @@ Besides typing paths and pressing Enter, Paras Commander has several ways to get
 
 | | |
 |---|---|
-| Back / forward | `C-←` / `C-→` |
+| Back / forward | `M-←` / `M-→` |
 | History dialog | `M-h` or `C-h`; Left/Right -> History...; Esc, `h` |
 | Both panels | `F5` inside the dialog |
 

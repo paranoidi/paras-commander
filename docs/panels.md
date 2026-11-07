@@ -52,7 +52,7 @@ Left/Right menu, Tree view (unbound by default) turns the panel into an expandab
 
 | Key | Action |
 |---|---|
-| `M-→` / `M-←` | Expand / collapse. Pressing expand again on an open directory opens one more level below it. Collapse on a file or closed row jumps to the parent. |
+| `C-→` / `C-←` | Expand / collapse. Pressing expand again on an open directory opens one more level below it. Collapse on a file or closed row jumps to the parent. |
 | `C-M-→` / `M-S-→` | Expand all, one level per press / fully |
 | `C-M-←` / `M-S-←` | Collapse all, one level per press / fully |
 | `M-↑` / `M-↓` | Previous / next sibling directory |

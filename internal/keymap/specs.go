@@ -435,7 +435,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Views:       HelpBrowser,
 			Title:       "Forward history",
 			Section:     "Navigation",
-			DefaultKeys: []string{"C-right"},
+			DefaultKeys: []string{"M-right"},
 			Keywords:    []string{"back", "re-enter"},
 		},
 		{
@@ -443,7 +443,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Views:       HelpBrowser,
 			Title:       "Backward history",
 			Section:     "Navigation",
-			DefaultKeys: []string{"C-left"},
+			DefaultKeys: []string{"M-left"},
 			Keywords:    []string{"forward", "re-enter", "timeline"},
 		},
 		{
@@ -1012,7 +1012,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Views:       HelpBrowser,
 			Title:       "Expand / deepen tree row",
 			Section:     "View",
-			DefaultKeys: []string{"M-right"},
+			DefaultKeys: []string{"C-right"},
 			Keywords:    []string{"tree", "expand", "directory", "nested"},
 		},
 		{
@@ -1020,7 +1020,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Views:       HelpBrowser,
 			Title:       "Collapse tree row",
 			Section:     "View",
-			DefaultKeys: []string{"M-left"},
+			DefaultKeys: []string{"C-left"},
 			Keywords:    []string{"tree", "collapse", "directory", "nested"},
 		},
 		{

@@ -58,7 +58,7 @@ func TestPanelToggleTreeNoOpOnFileRow(t *testing.T) {
 	}
 }
 
-// TestPanelTreeExpandActionEnablesTreeAndExpands exercises panel.tree-expand (Alt+Right)
+// TestPanelTreeExpandActionEnablesTreeAndExpands exercises panel.tree-expand
 // end-to-end through action dispatch: it should auto-enable tree layout (like Space) and expand
 // the directory under the cursor.
 func TestPanelTreeExpandActionEnablesTreeAndExpands(t *testing.T) {

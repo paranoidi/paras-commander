@@ -124,18 +124,18 @@ func TestActionFromKeyMapsCtrlAltRightToTreeExpandAllShallow(t *testing.T) {
 	}
 }
 
-func TestActionFromKeyMapsAltLeftToTreeCollapse(t *testing.T) {
+func TestActionFromKeyMapsCtrlLeftToTreeCollapse(t *testing.T) {
 	km := defaultKeymap(t)
-	event := tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModAlt)
+	event := tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModCtrl)
 	got := lookupActionForView(event, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
 	if got != keymap.ActionPanelTreeCollapse {
 		t.Fatalf("actionFromKeyEvent() = %v, want ActionPanelTreeCollapse", got)
 	}
 }
 
-func TestActionFromKeyMapsAltRightToTreeExpand(t *testing.T) {
+func TestActionFromKeyMapsCtrlRightToTreeExpand(t *testing.T) {
 	km := defaultKeymap(t)
-	event := tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt)
+	event := tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModCtrl)
 	got := lookupActionForView(event, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
 	if got != keymap.ActionPanelTreeExpand {
 		t.Fatalf("actionFromKeyEvent() = %v, want ActionPanelTreeExpand", got)
@@ -160,15 +160,15 @@ func TestActionFromKeyMapsAltDownToTreeNextSiblingDir(t *testing.T) {
 	}
 }
 
-func TestActionFromKeyMapsCtrlArrowsToDirectoryHistory(t *testing.T) {
+func TestActionFromKeyMapsAltArrowsToDirectoryHistory(t *testing.T) {
 	km := defaultKeymap(t)
-	fwd := tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModCtrl)
+	fwd := tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt)
 	if got := lookupActionForView(fwd, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser); got != keymap.ActionNavForward {
-		t.Fatalf("actionFromKeyEvent(C-right) = %v, want ActionNavForward", got)
+		t.Fatalf("actionFromKeyEvent(M-right) = %v, want ActionNavForward", got)
 	}
-	back := tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModCtrl)
+	back := tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModAlt)
 	if got := lookupActionForView(back, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser); got != keymap.ActionNavBackward {
-		t.Fatalf("actionFromKeyEvent(C-left) = %v, want ActionNavBackward", got)
+		t.Fatalf("actionFromKeyEvent(M-left) = %v, want ActionNavBackward", got)
 	}
 }
 

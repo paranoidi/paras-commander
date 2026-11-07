@@ -27,9 +27,9 @@ to start with Operations in the right column. A terminal too short for the
 bottom layout uses the side layout.
 
 A job queued from several selected entries shows an expander icon after its
-type. `M-→` lists each of its sources in a tree under
+type. `C-→` lists each of its sources in a tree under
 the job, each with its own status icon (queued, running, completed, failed,
-canceled) and done / failed / skipped counts; `M-←`
+canceled) and done / failed / skipped counts; `C-←`
 folds them away. With the cursor on a source, the Operations panel shows only
 that source's rows and names the source on its top border. The source being
 worked on is drawn in the job's status color and followed by the file it is
@@ -53,7 +53,7 @@ total `(estimated)` until the exact size is counted (see
 | `C-r` | Resume a paused job or retry a failed or canceled one |
 | `C-↑` / `C-↓` | Move the job in the queue |
 | `F8` | Clear finished jobs |
-| `M-→` / `M-←` | Expand / collapse a multi-source job into its sources |
+| `C-→` / `C-←` | Expand / collapse a multi-source job into its sources |
 | `F3` / `S-F3` | Filter the Operations panel by result / reset its filters |
 | `+` / `-` / `C-u` | Raise, lower or clear the transfer rate limit (Queue panel focused) |
 | `Tab` | Cycle the panels |

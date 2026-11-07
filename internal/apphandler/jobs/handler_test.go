@@ -941,7 +941,7 @@ func TestJobsViewExpandSourcesFiltersOperations(t *testing.T) {
 	model.JobsView.Selected = idx
 
 	key := func(k tcell.Key, mod tcell.ModMask) { h.HandleJobsViewKey(tcell.NewEventKey(k, 0, mod)) }
-	key(tcell.KeyRight, tcell.ModAlt)
+	key(tcell.KeyRight, tcell.ModCtrl)
 	if !model.JobsView.Expanded["multi"] {
 		t.Fatal("jobs.expand did not expand the selected job")
 	}
@@ -959,7 +959,7 @@ func TestJobsViewExpandSourcesFiltersOperations(t *testing.T) {
 	if got := opsLabels(model.JobsOpsWindow); got != "harbor/lantern/bramble.txt,harbor/lantern/acorn.txt" {
 		t.Fatalf("source 0 operations = %s", got)
 	}
-	key(tcell.KeyLeft, tcell.ModAlt)
+	key(tcell.KeyLeft, tcell.ModCtrl)
 	if model.JobsView.Expanded["multi"] || model.JobsView.SelectedSub != 0 || model.JobsView.Selected != idx {
 		t.Fatalf("jobs.collapse left expanded=%v sub=%d job=%d", model.JobsView.Expanded["multi"], model.JobsView.SelectedSub, model.JobsView.Selected)
 	}
@@ -990,9 +990,39 @@ func TestJobsListCopiesSourceDataOnlyWhenExpanded(t *testing.T) {
 		t.Fatalf("collapsed entry carries source data: %+v %+v", e.SourceStats, e.SourcePhases)
 	}
 	model.JobsView.FocusPane, model.JobsView.Selected = 0, idx
-	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt))
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModCtrl))
 	if e := model.JobsList[idx]; len(e.SourceStats) != 2 || len(e.SourcePhases) != 2 {
 		t.Fatalf("expanded entry source data: %+v %+v", e.SourceStats, e.SourcePhases)
+	}
+}
+
+// TestJobsAltArrowsDoNothing: Alt+Left/Right are history keys, which jobs do not have.
+func TestJobsAltArrowsDoNothing(t *testing.T) {
+	t.Parallel()
+	h, model, state := newMaximizeTestHandler(t)
+	state.AddJob(&jobs.Job{
+		ID:          "thicket",
+		Type:        jobs.TypeCopy,
+		Status:      jobs.StatusQueued,
+		Sources:     pathloc.PathsForTest("/harbor/lantern", "/harbor/willow"),
+		Destination: pathloc.MustParse("/meadow"),
+	})
+	h.SyncJobsList()
+	idx := slices.IndexFunc(model.JobsList, func(e ui.JobEntry) bool { return e.ID == "thicket" })
+	model.JobsView.FocusPane, model.JobsView.Selected = 0, idx
+	view := model.ViewMode
+	for _, k := range []tcell.Key{tcell.KeyRight, tcell.KeyLeft} {
+		h.HandleJobsViewKey(tcell.NewEventKey(k, 0, tcell.ModAlt))
+	}
+	if model.JobsView.Expanded["thicket"] || model.ViewMode != view {
+		t.Fatalf("Alt arrows acted: expanded=%v view=%v", model.JobsView.Expanded["thicket"], model.ViewMode)
+	}
+	order, _ := h.jobsPaneLayout()
+	model.JobsView.FocusPane = slices.Index(order, ui.JobsPaneOperations)
+	model.JobsView.Maximized = true
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModAlt))
+	if !model.JobsView.Maximized {
+		t.Fatal("Alt+Left restored the maximized pane")
 	}
 }
 

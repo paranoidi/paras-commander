@@ -28,8 +28,8 @@ func DefaultJobsOverlayKeys() map[string][]string {
 		ActionJobsShowResults:       {"F4"},
 		ActionJobsResultFilter:      {"F3"},
 		ActionJobsResetFilter:       {"S-F3"},
-		ActionJobsExpand:            {"M-right"},
-		ActionJobsCollapse:          {"M-left"},
+		ActionJobsExpand:            {"C-right"},
+		ActionJobsCollapse:          {"C-left"},
 
 		ActionJobsToggleOperationsLayout: {"C-space"},
 		ActionJobsCopyMessage:            {"\""}, // the global copy menu has nothing to copy here

@@ -218,11 +218,15 @@ func (a *App) buildHelpEntriesForView(vm ui.ViewMode) []dialog.HelpEntry {
 		if !helpkeys.ActionRunnableInView(vm, spec.ID) {
 			continue
 		}
-		keys := a.effectiveKeyStringsForView(spec.ID, spec.DefaultKeys, vm)
-		if len(keys) == 0 {
-			continue // unbound
+		label := helpkeys.JoinDisplay(a.effectiveKeyStringsForView(spec.ID, spec.DefaultKeys, vm), spec.PreferredKey)
+		if label == "" {
+			letter := a.keys.LeaderKey[spec.ID]
+			if letter == "" {
+				continue // unbound
+			}
+			label = "Leader " + letter // no chord, reachable through the leader menu only
 		}
-		entries = append(entries, newHelpEntry(spec, helpkeys.JoinDisplay(keys, spec.PreferredKey), helpSectionForView(vm, spec)))
+		entries = append(entries, newHelpEntry(spec, label, helpSectionForView(vm, spec)))
 	}
 	sortHelpEntriesBySection(entries)
 	return entries

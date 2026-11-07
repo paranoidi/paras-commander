@@ -459,6 +459,9 @@ func (h *Handler) handleJobsConflictPaneKey(event *tcell.EventKey) bool {
 		}
 		return false
 	}
+	if (event.Key() == tcell.KeyLeft || event.Key() == tcell.KeyRight) && event.Modifiers() != tcell.ModNone {
+		return false // modified arrows are other commands (history, expand), not button moves
+	}
 	switch event.Key() {
 	case tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown, tcell.KeyTab, tcell.KeyBacktab:
 		if sel.PendingBlocker == nil {
@@ -685,6 +688,9 @@ func (h *Handler) clampJobsFocusPane() {
 // Left restore the layout, printable runes type into the fuzzy filter, Up/Down/PgUp/PgDn/Home/End
 // scroll by row, the rest is swallowed.
 func (h *Handler) handleJobsMaximizedKey(event *tcell.EventKey) {
+	if event.Key() == tcell.KeyLeft && event.Modifiers() != tcell.ModNone {
+		return // modified arrows are other commands (history, expand), not "restore"
+	}
 	switch event.Key() {
 	case tcell.KeyEsc, tcell.KeyEnter, tcell.KeyLeft:
 		h.model.JobsView.Maximized = false

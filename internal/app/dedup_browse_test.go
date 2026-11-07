@@ -239,3 +239,66 @@ func TestDedupViewAltFOpensFilterDialog(t *testing.T) {
 		t.Fatal("dedup.filter-dialog should open the Filter dialog for dedup groups")
 	}
 }
+
+// TestDedupAltArrowsWalkHistoryOnlyInBrowsePanel: Alt+Left/Right are directory history in the
+// browse panel, and do nothing in the trees, while Ctrl+Left/Right collapse and expand like the
+// file list.
+func TestDedupAltArrowsWalkHistoryOnlyInBrowsePanel(t *testing.T) {
+	dir := t.TempDir()
+	meadow := filepath.Join(dir, "meadow")
+	if err := os.MkdirAll(meadow, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, rel := range []string{"lantern.txt", filepath.Join("meadow", "lantern.txt")} {
+		if err := os.WriteFile(filepath.Join(dir, rel), []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 100, 30)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+	alt := func(k tcell.Key) {
+		app.handleDedupViewKey(tcell.NewEventKey(k, 0, tcell.ModAlt))
+		app.reconcileAfterEvent()
+	}
+
+	dedupBrowseKey(app, tcell.KeyDown)
+	dedupBrowseSettle(t, app, screen)
+	treeRow := app.model.DedupView.Main.Selected
+	alt(tcell.KeyRight)
+	alt(tcell.KeyLeft)
+	if app.model.DedupView.Main.Selected != treeRow || app.model.ViewMode != ui.ViewDedup {
+		t.Fatalf("Alt arrows acted on the tree: row %d, view %v", app.model.DedupView.Main.Selected, app.model.ViewMode)
+	}
+	if got, _ := app.keys.Dedup.Lookup(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModCtrl)); got != keymap.ActionDedupCollapse {
+		t.Fatalf("C-left in dedup = %q", got)
+	}
+	if got, _ := app.keys.Dedup.Lookup(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModCtrl)); got != keymap.ActionDedupToggleNode {
+		t.Fatalf("C-right in dedup = %q", got)
+	}
+
+	dedupBrowseKey(app, tcell.KeyTab)
+	dedupBrowseKey(app, tcell.KeyTab)
+	p := &app.model.DedupPanel
+	if err := p.NavigateTo(meadow, "", 20); err != nil {
+		t.Fatal(err)
+	}
+	waitPanelPath := func(want string) {
+		t.Helper()
+		deadline := time.Now().Add(5 * time.Second)
+		for time.Now().Before(deadline) {
+			drainScreenInterrupts(app, screen)
+			if !p.ListingPending && p.PathString() == want {
+				return
+			}
+			time.Sleep(5 * time.Millisecond)
+		}
+		t.Fatalf("panel path = %q, want %q", p.PathString(), want)
+	}
+	waitPanelPath(meadow)
+	alt(tcell.KeyLeft)
+	waitPanelPath(dir)
+	alt(tcell.KeyRight)
+	waitPanelPath(meadow)
+}
