@@ -1,6 +1,7 @@
 package app
 
 import (
+	"slices"
 	"sort"
 	"strings"
 
@@ -607,6 +608,59 @@ func (a *App) activateDedupHelpAction(actionID string) bool {
 		return false
 	}
 	return false
+}
+
+// revealHelpEntry moves the help cursor to actionID's entry when event is its shortcut, clearing
+// the filter when the entry is filtered out. The action does not run. Reports whether the key was
+// consumed; a key that does not reveal keeps its usual meaning in the dialog.
+func (a *App) revealHelpEntry(event *tcell.EventKey, actionID string) bool {
+	st := &a.model.HelpView
+	if actionID == "" || st.TextEdit || !a.helpKeyCanReveal(event, actionID) {
+		return false
+	}
+	entIdx := slices.IndexFunc(st.Entries, func(e dialog.HelpEntry) bool { return e.ActionID == actionID })
+	if entIdx < 0 {
+		return false
+	}
+	if !slices.Contains(st.Ranked, entIdx) {
+		st.Query, st.QueryCursor, st.QueryScroll = "", 0, 0
+		a.syncHelpRanks()
+	}
+	st.Selected = slices.Index(st.Ranked, entIdx)
+	st.Focus = dialog.HelpFilter
+	st.EnsureListScroll(a.helpListRows())
+	return true
+}
+
+// helpKeyCanReveal reports whether event is free to reveal a help entry instead of acting in the
+// dialog. Text, the dialog's own motion keys, bare function keys and [dialog.help] chords keep
+// their meaning, and editing chords do while the focused filter has text to edit.
+func (a *App) helpKeyCanReveal(event *tcell.EventKey, actionID string) bool {
+	if actionID == keymap.ActionAppShowHelp || scrollquery.IsDialogInputRune(event) {
+		return false
+	}
+	if event.Modifiers() == tcell.ModNone {
+		switch key := event.Key(); key {
+		case tcell.KeyUp, tcell.KeyDown, tcell.KeyLeft, tcell.KeyRight,
+			tcell.KeyPgUp, tcell.KeyPgDn, tcell.KeyHome, tcell.KeyEnd,
+			tcell.KeyEnter, tcell.KeyEsc, tcell.KeyTab, tcell.KeyBacktab,
+			tcell.KeyBackspace, tcell.KeyBackspace2, tcell.KeyDelete:
+			return false
+		default:
+			if key >= tcell.KeyF1 && key <= tcell.KeyF64 {
+				return false
+			}
+		}
+	}
+	if _, ok := a.keys.HelpDialog.Lookup(event); ok {
+		return false
+	}
+	st := &a.model.HelpView
+	if st.Query == "" || st.Focus == dialog.HelpClose {
+		return true
+	}
+	id, ok := a.keys.DialogInput.Lookup(event)
+	return !ok || id == keymap.ActionDialogOK || id == keymap.ActionDialogCancel
 }
 
 func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {

@@ -625,6 +625,12 @@ func (a *App) handleGlobalKeyIntercepts(event *tcell.EventKey, resolvedAction st
 		}
 	}
 
+	// Runs before the answer-blocker, OK and Cancel chords so their help entries can be revealed.
+	if a.inputMode() == InputModeHelpView && a.revealHelpEntry(event, resolvedAction) {
+		a.render()
+		return true, false, true
+	}
+
 	if resolvedAction == keymap.ActionJobsAnswerBlocker {
 		if rendered := a.jobsCtrl.HandleAnswerBlockerKey(); rendered {
 			a.render()

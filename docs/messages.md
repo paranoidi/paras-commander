@@ -21,6 +21,7 @@ Press `F1` or `?` in any view to list the key bindings for that view. The list r
 - Type to filter. Matching is the same fuzzy search used elsewhere and looks at the keys, section, title and action name, with synonyms (for example "dotfiles" finds the hidden-files toggle). Section headers stay visible above their matches.
 - Up/Down, PgUp/PgDn, Home/End move through rows.
 - `Enter` runs the highlighted action, as if you pressed its key.
+- Press a shortcut to jump to its row. Nothing runs until you press `Enter`, so it is a safe way to find out what a key does. The filter is cleared if it hides the row. This works for chords such as `C-d` or `M-c`, and shows nothing for plain characters (they filter), the arrow and editing keys, or bare F-keys, which the footer already explains. While the filter has text, text-editing chords such as `C-u` edit it; clear the filter to look them up. Keys of the text-editing page are not looked up.
 - `F2` (`[dialog.help]`) switches to the text-input editing keys; `F2` again returns.
 - `F3` (`[dialog.help]`) opens the icon legend, one icon per line; `F3`, `F1` or `Esc` closes it.
 - `F1` or `Esc` closes help. In text fields a literal `?` is typed, not treated as help.
