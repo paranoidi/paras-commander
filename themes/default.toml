@@ -158,7 +158,7 @@ tagged = { fg = "blue" }
 
 [panel.meta]                  # meta cells matching a warn/critical rule; black under the active cursor
 warn = { fg = "yellow" }
-critical = { fg = "bright_red", bold = true }
+critical = { fg = "red" }
 
 [panel.scrollbar]             # scrollbar track/thumb colors and search match markers
 track = { fg = "bright_black" }
