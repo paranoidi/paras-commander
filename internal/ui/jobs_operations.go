@@ -111,8 +111,9 @@ func (w JobsOpsWindow) row(i int) (JobOperationRow, bool) {
 	return w.Rows[i-w.Offset], true
 }
 
-// jobOperationIconCols is the icon column width: a one-cell result icon and one space.
-const jobOperationIconCols = 2
+// jobOperationIconCols is the icon column width: a one-cell result icon and two spaces, since
+// nerd font glyphs spill into the cell after theirs.
+const jobOperationIconCols = 3
 
 // JobsOpsMaxScroll is the largest Operations scroll offset for a pane of contentRows rows
 // showing total display rows: the pane scrolls by row away from the newest edge.

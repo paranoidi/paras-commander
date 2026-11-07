@@ -205,7 +205,7 @@ func TestDrawJobsOperationsPanelActiveRow(t *testing.T) {
 	th := theme.Default()
 	drawJobsOperationsPanel(screen, rect, JobsViewState{}, win, "", th, false, true, false, false)
 
-	if row := screenRowText(screen, rect, rect.Y+1); !strings.Contains(row, th.IconJobsList("running")+" harbor/willow.bin") {
+	if row := screenRowText(screen, rect, rect.Y+1); !strings.Contains(row, th.IconJobsList("running")+"  harbor/willow.bin") {
 		t.Fatalf("top row = %q, want the job icon and the active item", row)
 	}
 	if row := screenRowText(screen, rect, rect.Y+2); !strings.Contains(row, "harbor/lantern.txt") {
@@ -255,7 +255,7 @@ func TestDrawJobsOperationsPanelNewestLast(t *testing.T) {
 	th := theme.Default()
 	win := opsWindowOf("orchard/kettle.bin", 2, 0, "pebble", "thistle")
 	drawJobsOperationsPanel(screen, rect, JobsViewState{}, win, "", th, false, true, false, true)
-	for i, want := range []string{"orchard/thistle.txt", "orchard/pebble.txt", th.IconJobsList("running") + " orchard/kettle.bin"} {
+	for i, want := range []string{"orchard/thistle.txt", "orchard/pebble.txt", th.IconJobsList("running") + "  orchard/kettle.bin"} {
 		if row := screenRowText(screen, rect, rect.Y+1+i); !strings.Contains(row, want) {
 			t.Fatalf("row %d = %q, want %q", i, row, want)
 		}
