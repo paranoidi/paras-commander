@@ -7,21 +7,10 @@ import (
 	"github.com/paranoidi/paras-commander/internal/app/helpkeys"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // helpOtherContextsSection groups the actions a key runs outside the view help was opened from.
 const helpOtherContextsSection = "Other contexts"
-
-func (a *App) closeHelpKeyPrompt() { a.model.HelpView.KeyPrompt = false }
-
-// applyHelpKeyPromptEvent acts on a widget event of the prompt; its one button is mouse-only, every
-// key being the one looked up.
-func (a *App) applyHelpKeyPromptEvent(ev dlg.Event) {
-	if ev.ID == dialog.HelpKeyPromptCancel {
-		a.closeHelpKeyPrompt()
-	}
-}
 
 // filterHelpByKey closes the prompt and narrows help to the actions bound to event. The query
 // stays usable on the narrowed list and Esc (helpEsc) returns to the page.

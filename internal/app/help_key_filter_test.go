@@ -8,8 +8,6 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 var keyF4 = tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone)
@@ -221,17 +219,18 @@ func newOpenHelpTextEdit(t *testing.T) *App {
 	return a
 }
 
-func TestHelpKeyPromptCancelButton(t *testing.T) {
+func TestHelpKeyPromptHasNoButtonsAndIgnoresClicks(t *testing.T) {
 	a := newHelpEntriesApp(t)
 	a.openHelpDialog()
 	a.handleKey(keyF4)
-	d, ok := a.activeDialog(keyEsc)
-	if !ok {
-		t.Fatal("prompt is not the active dialog")
+	if strings.Contains(screenText(a), "Cancel") {
+		t.Fatalf("prompt draws a button:\n%s", screenText(a))
 	}
-	d.apply(dlg.Event{ID: dialog.HelpKeyPromptCancel})
-	if a.model.HelpView.KeyPrompt || !a.model.HelpView.Open {
-		t.Fatalf("state = %+v", a.model.HelpView)
+	checkDialogInvariants(t, a)
+	w, h := a.screen.Size()
+	a.handleDialogMouse(w/2, h/2, tcell.Button1, tcell.Button1)
+	if !a.model.HelpView.KeyPrompt {
+		t.Fatal("a click closed the prompt")
 	}
 }
 
