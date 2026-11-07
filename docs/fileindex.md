@@ -346,6 +346,8 @@ finishes. A tag no entry uses any more stays in the list.
 A user menu command can queue a scan by itself once it has run: see
 [Updating the file index](commands.md#updating-the-file-index).
 
+Queuing a scan clears the panel's selection.
+
 `M-S` works in three stages on the chosen paths. First it walks
 them and records new and changed files by name: they are searchable (Find in
 index, the `fileindex://` view) as soon as each batch is saved, before any

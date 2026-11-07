@@ -672,6 +672,25 @@ func TestFileIndexMenuScanLabel(t *testing.T) {
 	}
 }
 
+// TestFileIndexScanClearsSelection checks both scans run on the selection and then drop it.
+func TestFileIndexScanClearsSelection(t *testing.T) {
+	for _, action := range []string{keymap.ActionFileIndexScan, keymap.ActionFileIndexScanFast} {
+		t.Run(action, func(t *testing.T) {
+			a, screen, dir, _ := fileIndexApp(t)
+			selected := filepath.Join(dir, "harbor.txt")
+			a.activePanel().AddSelection(selected)
+			a.dispatch(action) // queued once the index is open, off the UI thread
+			drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+				return a.activePanel().SelectedPathCount() == 0
+			})
+			all := a.jobState.AllJobs()
+			if len(all) != 1 || len(all[0].Sources) != 1 || all[0].Sources[0].String() != selected {
+				t.Fatalf("jobs = %+v, want one scan of the selection", all)
+			}
+		})
+	}
+}
+
 // openIndexFind browses the app's directory through fileindex:// and opens the find dialog there.
 func openIndexFind(t *testing.T, a *App, screen tcell.SimulationScreen, dir string) {
 	t.Helper()
