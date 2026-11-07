@@ -29,9 +29,10 @@ of running; it needs a newer pc.
 
 `<` opens the **File Index menu** at the bottom of the screen;
 the `:` leader menu lists it under Tools with the same `<`. The menu groups
-its actions into Browse, Tagging, Actions and Duplicates columns. Each action's
+its actions into Browse, Tagging, Tools, Actions and Duplicates groups, with
+Tools below Tagging in the same column. Each action's
 letter in the menu is the letter of its own shortcut, in lowercase: every
-fileindex shortcut is `Alt+Shift` plus that letter. The Duplicates column starts
+fileindex shortcut is `Alt+Shift` plus that letter. The Duplicates group starts
 with [Find duplicates](find-duplicates.md) under `F`, the
 uppercase of Find in index's letter. All actions are also in Help (`F1`) under
 fileindex. The keys below are the defaults; rebind the shortcuts under

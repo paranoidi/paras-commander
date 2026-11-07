@@ -5,15 +5,18 @@ import (
 	"unicode"
 )
 
-// fileIndexMenuGroups is the fileindex menu's grouped layout: one macro column per group, in order.
-var fileIndexMenuGroups = []struct {
-	title   string
-	actions []string
-}{
-	{"Browse", []string{ActionFileIndexFind, ActionFileIndexBrowseWith, ActionFileIndexBrowse, ActionFileIndexReveal}},
-	{"Tagging", []string{ActionFileIndexTags}},
-	{"Actions", []string{ActionFileIndexScan, ActionFileIndexScanFast, ActionFileIndexPrune, ActionFileIndexReportDifferences}},
-	{"Duplicates", []string{ActionFileIndexFindDuplicates, ActionFileIndexCopies, ActionFileIndexCopiesOutside}},
+// fileIndexMenuGroups is the fileindex menu's grouped layout. Tools stacks under Tagging in the
+// same macro column; every other group has a column of its own.
+var fileIndexMenuGroups = leaderMenuViewSpec{
+	order: []string{"Browse", "Tagging", "Tools", "Actions", "Duplicates"},
+	actions: map[string][]string{
+		"Browse":     {ActionFileIndexBrowseWith, ActionFileIndexBrowse, ActionFileIndexReveal},
+		"Tagging":    {ActionFileIndexTags},
+		"Tools":      {ActionFileIndexFind},
+		"Actions":    {ActionFileIndexScan, ActionFileIndexScanFast, ActionFileIndexPrune, ActionFileIndexReportDifferences},
+		"Duplicates": {ActionFileIndexFindDuplicates, ActionFileIndexCopies, ActionFileIndexCopiesOutside},
+	},
+	column: map[string]int{"Browse": 0, "Tagging": 1, "Tools": 1, "Actions": 2, "Duplicates": 3},
 }
 
 // DefaultFileIndexMenuKeys returns built-in default fileindex-menu letters per action. Each is
@@ -40,21 +43,6 @@ func (b *Bundle) FileIndexMenuEntries() []LeaderMenuEntry {
 	if b == nil {
 		return nil
 	}
-	var out []LeaderMenuEntry
-	col := 0
-	for _, g := range fileIndexMenuGroups {
-		var rows []LeaderMenuEntry
-		for _, id := range g.actions {
-			if key, ok := parseMenuKeyRune(b.FileIndexMenuKey, id); ok {
-				rows = append(rows, LeaderMenuEntry{GroupColumn: col, ActionID: id, Key: key, Label: actionSpecTitle(id)})
-			}
-		}
-		if len(rows) == 0 {
-			continue
-		}
-		out = append(out, LeaderMenuEntry{GroupTitle: g.title, GroupColumn: col})
-		out = append(out, rows...)
-		col++
-	}
-	return out
+	g := fileIndexMenuGroups
+	return buildLeaderMenuEntries(b.FileIndexMenuKey, g.order, g.actions, g.column)
 }

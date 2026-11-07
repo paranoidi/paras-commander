@@ -30,11 +30,11 @@ import (
 )
 
 var fileIndexActions = []string{
-	keymap.ActionFileIndexFind,
 	keymap.ActionFileIndexBrowseWith,
 	keymap.ActionFileIndexBrowse,
 	keymap.ActionFileIndexReveal,
 	keymap.ActionFileIndexTags,
+	keymap.ActionFileIndexFind,
 	keymap.ActionFileIndexScan,
 	keymap.ActionFileIndexScanFast,
 	keymap.ActionFileIndexPrune,
@@ -65,12 +65,14 @@ func TestFileIndexActionsInHelpAndMenus(t *testing.T) {
 	// every fileindex chord is Alt+Shift+letter. Fast scan takes uppercase of scan's letter instead,
 	// and find duplicates uppercase of find's.
 	var inMenu, groups []string
+	groupColumn := map[string]int{}
 	for _, e := range a.keys.FileIndexMenuEntries() {
 		if e.ActionID == keymap.ActionPanelFindDuplicates {
 			t.Error("panel.find-duplicates must not be in the fileindex menu")
 		}
 		if e.GroupTitle != "" {
 			groups = append(groups, e.GroupTitle)
+			groupColumn[e.GroupTitle] = e.GroupColumn
 			continue
 		}
 		inMenu = append(inMenu, e.ActionID)
@@ -92,8 +94,11 @@ func TestFileIndexActionsInHelpAndMenus(t *testing.T) {
 	if !slices.Equal(inMenu, fileIndexActions) {
 		t.Fatalf("fileindex menu = %v, want %v", inMenu, fileIndexActions)
 	}
-	if want := []string{"Browse", "Tagging", "Actions", "Duplicates"}; !slices.Equal(groups, want) {
+	if want := []string{"Browse", "Tagging", "Tools", "Actions", "Duplicates"}; !slices.Equal(groups, want) {
 		t.Fatalf("fileindex menu groups = %v, want %v", groups, want)
+	}
+	if groupColumn["Tools"] != groupColumn["Tagging"] {
+		t.Fatalf("Tools must stack under Tagging: columns = %v", groupColumn)
 	}
 
 	// The `:` leader menu reaches the fileindex menu, not the actions themselves.
