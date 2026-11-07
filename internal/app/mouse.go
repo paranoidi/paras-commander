@@ -101,19 +101,33 @@ func wheelDelta(buttons tcell.ButtonMask, rows int) int {
 // a preview there.
 func (a *App) mousePanelAt(layout ui.Layout, x, y int) (panelID int, file ui.Rect, ok bool) {
 	for _, id := range []int{ui.PrimaryPanel, ui.SecondaryPanel} {
-		col, p := layout.Primary, &a.model.Primary
+		col := layout.Primary
 		if id == ui.SecondaryPanel {
-			col, p = layout.Secondary, &a.model.Secondary
+			col = layout.Secondary
 		}
 		if !col.Contains(x, y) {
 			continue
 		}
-		if id != a.model.ActivePanel && (a.model.QuickViewDisplayActive() || a.model.FilePreviewDraw.Open) {
-			return 0, ui.Rect{}, false
-		}
-		return id, ui.FileListFrame(col, p, id, a.model.ActivePanel, a.model.ThemeDialog.Open, a.selectedStripSplitParams(id, 0)), true
+		file, ok := a.panelFileFrame(layout, id)
+		return id, file, ok
 	}
 	return 0, ui.Rect{}, false
+}
+
+// panelFileFrame returns the file list frame panelID draws in layout; ok is false when its column
+// is off screen or shows the preview instead.
+func (a *App) panelFileFrame(layout ui.Layout, panelID int) (ui.Rect, bool) {
+	col, p := layout.Primary, &a.model.Primary
+	if panelID == ui.SecondaryPanel {
+		col, p = layout.Secondary, &a.model.Secondary
+	}
+	if col.Width <= 0 {
+		return ui.Rect{}, false
+	}
+	if panelID != a.model.ActivePanel && (a.model.QuickViewDisplayActive() || a.model.FilePreviewDraw.Open) {
+		return ui.Rect{}, false
+	}
+	return ui.FileListFrame(col, p, panelID, a.model.ActivePanel, a.model.ThemeDialog.Open, a.selectedStripSplitParams(panelID, 0)), true
 }
 
 // mouseHit locates a cell in the browser: the panel under it and, when it lies on an entry row,

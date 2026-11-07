@@ -21,6 +21,9 @@ type Host interface {
 	// arms/re-arms an idle timer (mirroring the disk-usage idle sort) so a fast-finishing
 	// directory doesn't reshuffle the list out from under the user's cursor or scroll.
 	NoteMetaColumnResolved(panelID int)
+	// PanelMetaFit reports the meta columns panelID draws right now; ok is false while its file
+	// list is not on screen.
+	PanelMetaFit(panelID int) (fit ui.PanelMetaFit, ok bool)
 	// IconMetaRunning returns the theme icon shown for a meta command still in flight.
 	// Fetched per call (not snapshotted) because the active theme can change at runtime.
 	IconMetaRunning() string

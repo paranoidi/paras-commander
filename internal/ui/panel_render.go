@@ -779,6 +779,29 @@ func panelColumnLayout(rect Rect, state panel.State, display PanelDisplayConfig)
 	}
 }
 
+// carouselPanelPlan is the column set and meta-free fit widths of one carousel pass.
+type carouselPanelPlan struct {
+	ShowChild     bool
+	Parent, Child panelcarousel.Column
+	ChildKind     panelcarousel.ChildPreviewKind
+	FitWidths     [3]int
+}
+
+// newCarouselPanelPlan plans a carousel pass for the panel frame rect; ok is false when the
+// carousel does not fit there and the panel draws the classic listing instead.
+func newCarouselPanelPlan(rect Rect, state panel.State, quickViewOn, hideInactive bool, layout panelcarousel.Layout, showIcons bool, style uiscrollbar.Style, visibleRows int) (carouselPanelPlan, bool) {
+	filePreviewEligible := panelcarousel.FilePreviewEligible(rect, hideInactive, layout)
+	showChild := panelcarousel.ShowChildPreviewColumn(state, quickViewOn, filePreviewEligible)
+	if !panelcarousel.LayoutFits(rect, layout, showChild) {
+		return carouselPanelPlan{}, false
+	}
+	parent, _, child, childKind := panelcarousel.BuildColumns(state, visibleRows, quickViewOn, filePreviewEligible)
+	return carouselPanelPlan{
+		ShowChild: showChild, Parent: parent, Child: child, ChildKind: childKind,
+		FitWidths: panelcarousel.MeasureFitColumnWidths(layout, parent, state, showIcons, showChild, style, visibleRows),
+	}, true
+}
+
 // drawPanelCarousel paints the carousel-mode (parent/center/child column) listing for a panel
 // when it fits the available width, and reports whether it did so. When it returns false, the
 // caller falls through to the classic single-column listing (unchanged behavior from the
@@ -789,16 +812,14 @@ func drawPanelCarousel(screen tcell.Screen, p panelCarouselParams) bool {
 	headerStyle, headerCarouselStyle := p.HeaderStyle, p.HeaderCarouselStyle
 	chromeSurface, selectionSizeLabel, visibleRows := p.SurfaceStyle, p.SelectionSizeLabel, p.VisibleRows
 	quickViewOn := ctx.QuickViewDriverPanelID >= 0
-	filePreviewEligible := panelcarousel.FilePreviewEligible(rect, ctx.HideInactivePanel, display.CarouselLayout)
-	showChildCol := panelcarousel.ShowChildPreviewColumn(state, quickViewOn, filePreviewEligible)
-	if !panelcarousel.LayoutFits(rect, display.CarouselLayout, showChildCol) {
+	plan, ok := newCarouselPanelPlan(rect, state, quickViewOn, ctx.HideInactivePanel, display.CarouselLayout, display.ShowIcons, panelStyle.ScrollbarStyle, visibleRows)
+	if !ok {
 		return false
 	}
-	parent, _, child, childKind := panelcarousel.BuildColumns(state, visibleRows, quickViewOn, filePreviewEligible)
-	fitWidths := panelcarousel.MeasureFitColumnWidths(display.CarouselLayout, parent, state, display.ShowIcons, showChildCol, panelStyle.ScrollbarStyle, visibleRows)
-	metaLayouts, metaTotalW := FitCarouselMetaColumns(rect, display.CarouselLayout, state, display.ShowIcons, showChildCol, panelStyle.ScrollbarStyle, visibleRows, fitWidths, display.MetaColumns)
+	showChildCol, parent, child, childKind := plan.ShowChild, plan.Parent, plan.Child, plan.ChildKind
+	metaLayouts, metaTotalW := FitCarouselMetaColumns(rect, display.CarouselLayout, state, display.ShowIcons, showChildCol, panelStyle.ScrollbarStyle, visibleRows, plan.FitWidths, display.MetaColumns)
 	meta := CarouselMeta(metaLayouts, metaTotalW, panelStyle.Styles)
-	measuredFitWidth := panelcarousel.WithCenterMeta(fitWidths, metaTotalW)
+	measuredFitWidth := panelcarousel.WithCenterMeta(plan.FitWidths, metaTotalW)
 	carouselDisk := panelcarousel.DiskUsage{
 		Active:                 display.ShowDiskUsage,
 		PanelID:                ctx.PanelID,

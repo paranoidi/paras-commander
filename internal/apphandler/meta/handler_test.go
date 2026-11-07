@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -41,7 +42,12 @@ type fakeHost struct {
 	// errMessages records SetErrorMessage errors; transient records urgencies by message.
 	errMessages []error
 	urgencies   []ui.MessageUrgency
+	// fit is what PanelMetaFit reports; fitHidden makes it report the panel off screen.
+	fit       ui.PanelMetaFit
+	fitHidden bool
 }
+
+func (f *fakeHost) PanelMetaFit(int) (ui.PanelMetaFit, bool) { return f.fit, !f.fitHidden }
 
 func (f *fakeHost) SetTransientMessage(text string, u ui.MessageUrgency) {
 	f.messages = append(f.messages, text)
@@ -1289,5 +1295,76 @@ func TestResultsGen_wakeAndDispatchBumpAndLayoutSeesNewValue(t *testing.T) {
 	h.ReconcileForPanel(0) // dispatches into the existing column
 	if h.model.MetaResults[0][0].ResultsGen <= gen1 {
 		t.Fatal("dispatch must bump ResultsGen")
+	}
+}
+
+func metaFit(room int, titles ...string) ui.PanelMetaFit {
+	fit := ui.PanelMetaFit{Width: 60, NameRoom: room}
+	for _, title := range titles {
+		fit.Drawn = append(fit.Drawn, ui.MetaColumnLayout{EntryName: strings.ToLower(title), Title: title})
+	}
+	return fit
+}
+
+func TestReportLostColumns(t *testing.T) {
+	const room = 40
+	tests := []struct {
+		name  string
+		steps []ui.PanelMetaFit
+		want  []string
+	}{
+		{"first flush only seeds", []ui.PanelMetaFit{metaFit(room, "Heron")}, nil},
+		{"never fit stays quiet", []ui.PanelMetaFit{metaFit(room, "Heron"), metaFit(room, "Heron")}, nil},
+		{"lost column toasts", []ui.PanelMetaFit{metaFit(room, "Heron", "Otter"), metaFit(room, "Heron")},
+			[]string{"Column Otter no longer fits on available space"}},
+		{"columns lost together share a toast", []ui.PanelMetaFit{metaFit(room, "Heron", "Otter", "Finch"), metaFit(room, "Heron")},
+			[]string{"Columns Otter, Finch no longer fit on available space"}},
+		{"space change moves the baseline silently", []ui.PanelMetaFit{metaFit(room, "Heron", "Otter"), metaFit(room-10, "Heron"), metaFit(room-10, "Heron")}, nil},
+		{"reported once per run", []ui.PanelMetaFit{metaFit(room, "Heron", "Otter"), metaFit(room, "Heron"), metaFit(room, "Heron", "Otter"), metaFit(room, "Heron")},
+			[]string{"Column Otter no longer fits on available space"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fh := &fakeHost{}
+			h := &Handler{host: fh, model: &ui.Model{}}
+			h.model.MetaResults[0] = []ui.MetaColumnState{{EntryName: "heron"}}
+			for _, fit := range tt.steps {
+				fh.fit = fit
+				h.reportLostColumns(0)
+			}
+			if !slices.Equal(fh.messages, tt.want) {
+				t.Fatalf("messages = %q, want %q", fh.messages, tt.want)
+			}
+		})
+	}
+}
+
+func TestReportLostColumns_newRunReseeds(t *testing.T) {
+	fh := &fakeHost{fit: metaFit(40, "Heron", "Otter")}
+	h := &Handler{host: fh, model: &ui.Model{}}
+	h.model.MetaResults[0] = []ui.MetaColumnState{{EntryName: "heron"}}
+	h.reportLostColumns(0)
+
+	h.runGen[0]++
+	fh.fit = metaFit(40, "Heron")
+	h.reportLostColumns(0)
+	if len(fh.messages) != 0 {
+		t.Fatalf("messages = %q: a new run must not compare against the old one", fh.messages)
+	}
+}
+
+func TestReportLostColumns_offScreenReseeds(t *testing.T) {
+	fh := &fakeHost{fit: metaFit(40, "Heron", "Otter")}
+	h := &Handler{host: fh, model: &ui.Model{}}
+	h.model.MetaResults[0] = []ui.MetaColumnState{{EntryName: "heron"}}
+	h.reportLostColumns(0)
+
+	fh.fitHidden = true
+	h.reportLostColumns(0)
+	fh.fitHidden = false
+	fh.fit = metaFit(40, "Heron")
+	h.reportLostColumns(0)
+	if len(fh.messages) != 0 {
+		t.Fatalf("messages = %q: the panel came back with a new baseline", fh.messages)
 	}
 }

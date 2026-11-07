@@ -657,6 +657,61 @@ func (h *Handler) HandleRenderFlush() {
 		}
 	}
 	h.refreshMetaPatternFilters()
+	h.reportLostColumns(ui.PrimaryPanel)
+	h.reportLostColumns(ui.SecondaryPanel)
+}
+
+// columnFitWatch is one panel's baseline for reportLostColumns.
+type columnFitWatch struct {
+	seeded bool
+	gen    uint64 // run the baseline belongs to
+	fit    ui.PanelMetaFit
+	warned map[string]bool // columns already reported in this run, by EntryName
+}
+
+// reportLostColumns toasts columns that incoming results pushed out of panelID's listing. The
+// first flush of a run only records what is drawn, so a column that never fit is not reported,
+// and a change of available space (resize, zoom, listing format) moves the baseline silently: the
+// user caused that one and can see it. Each column is reported once per run.
+func (h *Handler) reportLostColumns(panelID int) {
+	w := &h.fitWatch[panelID]
+	fit, ok := h.host.PanelMetaFit(panelID)
+	if !ok || len(h.model.MetaResults[panelID]) == 0 {
+		w.seeded = false
+		return
+	}
+	if !w.seeded || w.gen != h.runGen[panelID] {
+		*w = columnFitWatch{seeded: true, gen: h.runGen[panelID], fit: fit, warned: map[string]bool{}}
+		return
+	}
+	prev := w.fit
+	w.fit = fit
+	if prev.Width != fit.Width || prev.NameRoom != fit.NameRoom {
+		return
+	}
+	var lost []string
+	for _, lay := range prev.Drawn {
+		if !w.warned[lay.EntryName] && !metaLayoutsHave(fit.Drawn, lay.EntryName) {
+			w.warned[lay.EntryName] = true
+			lost = append(lost, lay.Title)
+		}
+	}
+	switch len(lost) {
+	case 0:
+	case 1:
+		h.host.SetTransientMessage("Column "+lost[0]+" no longer fits on available space", ui.MessageUrgencyInfo)
+	default:
+		h.host.SetTransientMessage("Columns "+strings.Join(lost, ", ")+" no longer fit on available space", ui.MessageUrgencyInfo)
+	}
+}
+
+func metaLayoutsHave(layouts []ui.MetaColumnLayout, entryName string) bool {
+	for _, lay := range layouts {
+		if lay.EntryName == entryName {
+			return true
+		}
+	}
+	return false
 }
 
 // refreshMetaPatternFilters re-runs the active entry filter on any panel whose filter matches

@@ -180,6 +180,35 @@ func FitCarouselMetaColumns(frame Rect, layout panelcarousel.Layout, center pane
 	return layouts, totalWidth
 }
 
+// PanelMetaFit describes the meta columns panelID draws in its file list frame.
+type PanelMetaFit struct {
+	// Width and NameRoom (the name column width with no meta at all) identify the available
+	// space: when they change, a different Drawn is not down to the column contents.
+	Width, NameRoom int
+	Drawn           []MetaColumnLayout
+}
+
+// PanelMetaFitAt is the fit drawPanel applies to panelID in the frame file. hideInactive is the
+// effective Model.HideInactivePanel of a render snapshot.
+func PanelMetaFitAt(file Rect, model *Model, panelID int, hideInactive bool) PanelMetaFit {
+	state := model.PanelForFileListRender(panelID)
+	cols := model.MetaResults[panelID]
+	fit := PanelMetaFit{Width: file.Width}
+	if state.CarouselMode {
+		rows := PanelListRows(file)
+		plan, ok := newCarouselPanelPlan(file, state, model.QuickViewDriverPanelID() >= 0, hideInactive, model.CarouselLayout, model.UseNerdfontIcons, model.PanelScrollbar, rows)
+		if ok {
+			fit.NameRoom = panelcarousel.CenterNameWidth(file, model.CarouselLayout, state, model.UseNerdfontIcons, plan.ShowChild, model.PanelScrollbar, rows, plan.FitWidths, 0)
+			fit.Drawn, _ = FitCarouselMetaColumns(file, model.CarouselLayout, state, model.UseNerdfontIcons, plan.ShowChild, model.PanelScrollbar, rows, plan.FitWidths, cols)
+			return fit
+		}
+	}
+	layoutRes := panelColumnLayout(file, state, PanelDisplayConfig{ShowIcons: model.UseNerdfontIcons, NarrowPanelsNameOnly: model.NarrowPanelsNameOnly})
+	fit.NameRoom = panelNameColumnWidth(layoutRes, panel.EffectiveListFormat(state.ListFormat), false, 0)
+	fit.Drawn, _ = fitPanelMetaColumns(layoutRes, state, cols)
+	return fit
+}
+
 // CarouselMeta builds the carousel center column's meta segment from FitCarouselMetaColumns.
 func CarouselMeta(layouts []MetaColumnLayout, totalWidth int, styles theme.Theme) panelcarousel.Meta {
 	if len(layouts) == 0 {

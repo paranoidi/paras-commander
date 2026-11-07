@@ -75,6 +75,9 @@ type Handler struct {
 	// pendingReveal fires once per busy period after [panels].pending_marker_delay_ms and posts
 	// PendingRevealPayload; HandlePendingReveal then shows the markers (clears PendingHidden).
 	pendingReveal [2]sched.Debouncer
+	// fitWatch tracks the drawn columns per panel so a column lost to incoming results is
+	// reported (reportLostColumns).
+	fitWatch [2]columnFitWatch
 	// cache stores computed meta results by [cmdName][absPath] for entries with cache = true.
 	// Nil until first caching write. Protected by cacheMu.
 	cache   map[string]map[string]string
