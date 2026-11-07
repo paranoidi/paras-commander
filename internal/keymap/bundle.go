@@ -37,6 +37,17 @@ type Bundle struct {
 	FileIndexMenuKey map[string]string
 }
 
+// Overlays returns every overlay map, in overlayRegistry order; an unset overlay is nil, which
+// Map.Lookup treats as empty.
+func (b *Bundle) Overlays() []*Map {
+	return []*Map{
+		b.Jobs, b.Commands, b.Messages, b.FilePreview, b.DialogInput, b.RenameDialog, b.MkdirDialog,
+		b.BookmarkDialog, b.FindDialog, b.HistoryDialog, b.FlattenDialog, b.TransferDialog,
+		b.Compare, b.Dedup, b.Terminal, b.MassRenameDialog, b.RunForEachDialog, b.PinDialog,
+		b.HelpDialog, b.UserMenu, b.CommandOutputDialog, b.MetaDialog,
+	}
+}
+
 // ActionForLeaderKey returns the action ID bound to the Esc function-menu leader key r,
 // if any (reverse lookup over LeaderKey, which maps action ID → letter). Only considers
 // actions in the browser's built-in leader menu (leaderMenuGroupActions) — the sole caller is

@@ -49,9 +49,6 @@ func TestCentralDialogOKCancelKeys(t *testing.T) {
 				t.Fatal("dialog did not open")
 			}
 			app.handleKey(ev)
-			if dialogs[d].name == "help" && name != "Esc" && name != "F9" {
-				return // these chords reveal their help entry (TestHelpOKAndCancelChordsRevealTheirActions)
-			}
 			if name == "Alt+O" || name == "Alt+Enter" {
 				// OK may stay open (empty mkdir name, same-directory copy rename prompt); every other dialog closes.
 				if dialogs[d].name == "mkdir" || dialogs[d].name == "transfer" {

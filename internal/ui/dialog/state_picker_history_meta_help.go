@@ -303,4 +303,6 @@ type HelpViewState struct {
 	ListScroll  int              // first visible row index into Ranked
 	Focus       dlg.ID           // HelpFilter (the filter steering the list; "" too) or HelpClose
 	TextEdit    bool             // true on the dialog text-input editing keys page
+	KeyPrompt   bool             // the find-by-keypress prompt is open and takes the next key
+	KeyFilter   string           // the key Entries is narrowed to ("" = the whole page)
 }

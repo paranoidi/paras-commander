@@ -1153,6 +1153,9 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 	}
 	if model.HelpView.Open {
 		dialog.DrawHelpDialog(screen, layout, model.HelpView, styles, model.PanelScrollbar)
+		if model.HelpView.KeyPrompt {
+			dialog.DrawHelpKeyPrompt(screen, layout, styles)
+		}
 	}
 	if model.IconLegendDialog.Open {
 		dialog.DrawIconLegendDialog(screen, layout, model.IconLegendDialog, styles, model.PanelScrollbar)

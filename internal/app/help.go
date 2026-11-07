@@ -1,7 +1,6 @@
 package app
 
 import (
-	"slices"
 	"sort"
 	"strings"
 
@@ -94,13 +93,7 @@ func (a *App) buildTextEditHelpEntries() []dialog.HelpEntry {
 		if len(keys) == 0 {
 			continue
 		}
-		entries = append(entries, dialog.HelpEntry{
-			ActionID:   spec.ID,
-			Title:      spec.Title,
-			Keys:       helpkeys.JoinDisplay(keys, spec.PreferredKey),
-			Section:    "Text editing",
-			FuzzyExtra: strings.TrimSpace(spec.ID + helpkeys.ConcatKeywords(spec.Keywords)),
-		})
+		entries = append(entries, newHelpEntry(spec, helpkeys.JoinDisplay(keys, spec.PreferredKey), "Text editing"))
 	}
 	sortHelpEntriesBySection(entries)
 	return entries
@@ -113,6 +106,11 @@ func (a *App) toggleHelpTextEdit() {
 		a.openHelpDialog()
 		return
 	}
+	a.openHelpTextEditPage()
+}
+
+// openHelpTextEditPage shows the text-editing keys page.
+func (a *App) openHelpTextEditPage() {
 	a.model.HelpView = dialog.HelpViewState{
 		Open:     true,
 		Title:    "Help — Text editing",
@@ -137,6 +135,9 @@ func helpDialogOverlayFooterKeys(keys *keymap.Map, textEdit bool) []menu.Functio
 	}
 	if lbl := keys.MenuBindingLabel(keymap.ActionHelpLegend); lbl != "" {
 		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Icon legend"})
+	}
+	if lbl := keys.MenuBindingLabel(keymap.ActionHelpFindByKey); lbl != "" {
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Find action by keypress"})
 	}
 	return out
 }
@@ -221,17 +222,21 @@ func (a *App) buildHelpEntriesForView(vm ui.ViewMode) []dialog.HelpEntry {
 		if len(keys) == 0 {
 			continue // unbound
 		}
-		displayKeys := helpkeys.JoinDisplay(keys, spec.PreferredKey)
-		entries = append(entries, dialog.HelpEntry{
-			ActionID:   spec.ID,
-			Title:      spec.Title,
-			Keys:       displayKeys,
-			Section:    helpSectionForView(vm, spec),
-			FuzzyExtra: strings.TrimSpace(spec.ID + helpkeys.ConcatKeywords(spec.Keywords)),
-		})
+		entries = append(entries, newHelpEntry(spec, helpkeys.JoinDisplay(keys, spec.PreferredKey), helpSectionForView(vm, spec)))
 	}
 	sortHelpEntriesBySection(entries)
 	return entries
+}
+
+// newHelpEntry is the help row of spec, showing keys under section.
+func newHelpEntry(spec keymap.ActionSpec, keys, section string) dialog.HelpEntry {
+	return dialog.HelpEntry{
+		ActionID:   spec.ID,
+		Title:      spec.Title,
+		Keys:       keys,
+		Section:    section,
+		FuzzyExtra: strings.TrimSpace(spec.ID + helpkeys.ConcatKeywords(spec.Keywords)),
+	}
 }
 
 // sortHelpEntriesBySection stable-sorts entries by keymap.HelpSectionOrder priority (ties
@@ -610,65 +615,16 @@ func (a *App) activateDedupHelpAction(actionID string) bool {
 	return false
 }
 
-// revealHelpEntry moves the help cursor to actionID's entry when event is its shortcut, clearing
-// the filter when the entry is filtered out. The action does not run. Reports whether the key was
-// consumed; a key that does not reveal keeps its usual meaning in the dialog.
-func (a *App) revealHelpEntry(event *tcell.EventKey, actionID string) bool {
-	st := &a.model.HelpView
-	if actionID == "" || st.TextEdit || !a.helpKeyCanReveal(event, actionID) {
-		return false
-	}
-	entIdx := slices.IndexFunc(st.Entries, func(e dialog.HelpEntry) bool { return e.ActionID == actionID })
-	if entIdx < 0 {
-		return false
-	}
-	if !slices.Contains(st.Ranked, entIdx) {
-		st.Query, st.QueryCursor, st.QueryScroll = "", 0, 0
-		a.syncHelpRanks()
-	}
-	st.Selected = slices.Index(st.Ranked, entIdx)
-	st.Focus = dialog.HelpFilter
-	st.EnsureListScroll(a.helpListRows())
-	return true
-}
-
-// helpKeyCanReveal reports whether event is free to reveal a help entry instead of acting in the
-// dialog. Text, the dialog's own motion keys, bare function keys and [dialog.help] chords keep
-// their meaning, and editing chords do while the focused filter has text to edit.
-func (a *App) helpKeyCanReveal(event *tcell.EventKey, actionID string) bool {
-	if actionID == keymap.ActionAppShowHelp || scrollquery.IsDialogInputRune(event) {
-		return false
-	}
-	if event.Modifiers() == tcell.ModNone {
-		switch key := event.Key(); key {
-		case tcell.KeyUp, tcell.KeyDown, tcell.KeyLeft, tcell.KeyRight,
-			tcell.KeyPgUp, tcell.KeyPgDn, tcell.KeyHome, tcell.KeyEnd,
-			tcell.KeyEnter, tcell.KeyEsc, tcell.KeyTab, tcell.KeyBacktab,
-			tcell.KeyBackspace, tcell.KeyBackspace2, tcell.KeyDelete:
-			return false
-		default:
-			if key >= tcell.KeyF1 && key <= tcell.KeyF64 {
-				return false
-			}
-		}
-	}
-	if _, ok := a.keys.HelpDialog.Lookup(event); ok {
-		return false
-	}
-	st := &a.model.HelpView
-	if st.Query == "" || st.Focus == dialog.HelpClose {
-		return true
-	}
-	id, ok := a.keys.DialogInput.Lookup(event)
-	return !ok || id == keymap.ActionDialogOK || id == keymap.ActionDialogCancel
-}
-
 func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 	st := &a.model.HelpView
 
 	if a.keys.HelpDialog != nil {
-		if id, ok := a.keys.HelpDialog.Lookup(event); ok && id == keymap.ActionHelpTextEditKeys {
+		switch id, _ := a.keys.HelpDialog.Lookup(event); id {
+		case keymap.ActionHelpTextEditKeys:
 			a.toggleHelpTextEdit()
+			return false
+		case keymap.ActionHelpFindByKey:
+			st.KeyPrompt = true
 			return false
 		}
 	}

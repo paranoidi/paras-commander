@@ -9,7 +9,7 @@
 - **Leader menu for discovery.** `:` opens the leader menu, which lists commands by group with a one-letter key and the direct chord next to each. You can learn the chords from it or never learn them at all. `Esc` toggles a persistent vi/leader mode, marked by a yellow border.
 - **Vim keys where reading matters.** Read-only views such as the fullscreen preview accept vim-style motion keys.
 - **Context decides.** A view or dialog can give a key its own meaning while it has focus, so the same chord can do different things in the jobs view, compare results or a dialog.
-- **Dialogs behave the same everywhere.** OK, Cancel and the mnemonics of buttons and options work the same way in every dialog: Alt+letter always, a plain letter too while no text input is focused. The job conflict dialog, delete confirmations and the remove empty directories confirm accept Alt+letter only. Help is the one exception to OK and Cancel: there `M-o` and `M-c` show the command they are bound to, so close it with `Esc` or `F1`.
+- **Dialogs behave the same everywhere.** OK, Cancel and the mnemonics of buttons and options work the same way in every dialog: Alt+letter always, a plain letter too while no text input is focused. The job conflict dialog, delete confirmations and the remove empty directories confirm accept Alt+letter only.
 - **Terminal-safe chords.** Defaults avoid combinations that common terminals don't deliver reliably. A few shortcuts therefore have less obvious letters.
 - **Everything is rebindable.** Every action can be bound in `keybindings.toml`; see [Keybindings](keybindings.md).
 

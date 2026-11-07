@@ -180,7 +180,7 @@ func TestHelpF2TogglesTextEditPage(t *testing.T) {
 	a := newHelpEntriesApp(t)
 	a.openHelpDialog()
 	normalTitle := a.model.HelpView.Title
-	if lbl := helpDialogOverlayFooterKeys(a.keys.HelpDialog, false); len(lbl) != 2 || lbl[0].KeyLabel != "F2" || lbl[0].Hint != "Text edit keys" || lbl[1].KeyLabel != "F3" || lbl[1].Hint != "Icon legend" {
+	if lbl := helpDialogOverlayFooterKeys(a.keys.HelpDialog, false); len(lbl) != 3 || lbl[0].KeyLabel != "F2" || lbl[0].Hint != "Text edit keys" || lbl[1].KeyLabel != "F3" || lbl[1].Hint != "Icon legend" || lbl[2].KeyLabel != "F4" || lbl[2].Hint != "Find action by keypress" {
 		t.Fatalf("footer = %+v", lbl)
 	}
 	f2 := tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone)
@@ -203,7 +203,7 @@ func TestHelpF2TogglesTextEditPage(t *testing.T) {
 			t.Fatalf("non-text-edit entry listed: %+v", e)
 		}
 	}
-	if lbl := helpDialogOverlayFooterKeys(a.keys.HelpDialog, true); len(lbl) != 2 || lbl[0].Hint != "All keys" || lbl[1].Hint != "Icon legend" {
+	if lbl := helpDialogOverlayFooterKeys(a.keys.HelpDialog, true); len(lbl) != 3 || lbl[0].Hint != "All keys" || lbl[1].Hint != "Icon legend" {
 		t.Fatalf("footer = %+v", lbl)
 	}
 	a.handleHelpDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))

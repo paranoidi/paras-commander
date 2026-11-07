@@ -48,6 +48,7 @@ const (
 	InputModeMetaDialog
 	InputModeLeaderMenu
 	InputModeHelpView
+	InputModeHelpKeyPrompt
 	InputModeIconLegendDialog
 	InputModeHostKeyDialog
 	InputModeElevateDialog
@@ -94,6 +95,8 @@ func (a *App) inputMode() InputMode {
 		return InputModeIndexTagsDialog
 	case a.model.MetaDialog.Open:
 		return InputModeMetaDialog
+	case a.model.HelpView.KeyPrompt:
+		return InputModeHelpKeyPrompt
 	case a.model.HelpView.Open:
 		return InputModeHelpView
 	case a.model.IconLegendDialog.Open:
@@ -234,9 +237,17 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 	if a.model.IconLegendDialog.Open {
 		return footerWithEscClose([]menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}})
 	}
+	if a.model.HelpView.KeyPrompt {
+		return nil // every key is the one being looked up
+	}
 	if a.model.HelpView.Open {
 		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
 		rest = append(helpDialogOverlayFooterKeys(a.keys.HelpDialog, a.model.HelpView.TextEdit), rest...)
+		if a.model.HelpView.KeyFilter != "" {
+			esc := menu.FooterEscClose
+			esc.Hint = "Clear"
+			return append([]menu.FunctionKey{esc}, rest...)
+		}
 		return footerWithEscClose(rest)
 	}
 	if keys, ok := a.auxiliaryViewFooterKeys(); ok {
@@ -625,12 +636,6 @@ func (a *App) handleGlobalKeyIntercepts(event *tcell.EventKey, resolvedAction st
 		}
 	}
 
-	// Runs before the answer-blocker, OK and Cancel chords so their help entries can be revealed.
-	if a.inputMode() == InputModeHelpView && a.revealHelpEntry(event, resolvedAction) {
-		a.render()
-		return true, false, true
-	}
-
 	if resolvedAction == keymap.ActionJobsAnswerBlocker {
 		if rendered := a.jobsCtrl.HandleAnswerBlockerKey(); rendered {
 			a.render()
@@ -821,6 +826,11 @@ var inputModeKeyHandlers = map[InputMode]func(*App, *tcell.EventKey) bool{
 func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	a.mouse.keyed = true // hides every hover until the pointer reports again (mouseState.hovers)
 	a.clearPanelTitleHover()
+	if a.inputMode() == InputModeHelpKeyPrompt { // ahead of every intercept: F10 or Esc is just the key asked about
+		a.filterHelpByKey(event)
+		a.render()
+		return false, true
+	}
 	a.deferDiskIdleSortOnUserActivity()
 	a.deferMetaIdleSortOnUserActivity()
 	resolvedAction := a.actionFromKeyEvent(event)

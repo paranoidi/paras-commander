@@ -5,10 +5,11 @@ func DefaultHelpDialogOverlayKeys() map[string][]string {
 	return map[string][]string{
 		ActionHelpTextEditKeys: {"F2"},
 		ActionHelpLegend:       {"F3"},
+		ActionHelpFindByKey:    {"F4"},
 	}
 }
 
 // AllowedInHelpDialogOverlay reports whether actionID may appear under [dialog.help].
 func AllowedInHelpDialogOverlay(actionID string) bool {
-	return actionID == ActionHelpTextEditKeys || actionID == ActionHelpLegend
+	return actionID == ActionHelpTextEditKeys || actionID == ActionHelpLegend || actionID == ActionHelpFindByKey
 }

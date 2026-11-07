@@ -499,6 +499,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"help dialog", "icons", "legend", "file list"},
 		},
 		{
+			ID:           ActionHelpFindByKey,
+			Title:        "Find action by keypress",
+			Section:      "Navigation",
+			DefaultKeys:  nil, // overlay: DefaultHelpDialogOverlayKeys
+			PreferredKey: "F4",
+			Keywords:     []string{"help dialog", "what does this key do", "lookup", "reverse"},
+		},
+		{
 			ID:           ActionUserMenuBack,
 			Title:        "User menu: parent menu",
 			Section:      "Navigation",

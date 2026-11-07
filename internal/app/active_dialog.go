@@ -112,7 +112,10 @@ func (a *App) activeDialog(event *tcell.EventKey) (activeDialog, bool) {
 		return found(func() (dlg.Spec, bool) {
 			spec, _, fit := dialog.HelpDialogView(m.HelpView, layout(), a.styles)
 			return spec, fit
-		}, &m.HelpView.Focus, a.applyHelpEvent, dialogButtons{OK: a.closeHelpDialog, Cancel: a.closeHelpDialog})
+		}, &m.HelpView.Focus, a.applyHelpEvent, dialogButtons{OK: a.closeHelpDialog, Cancel: a.closeHelpDialog, Esc: a.helpEsc})
+	case InputModeHelpKeyPrompt:
+		return found(fits(dialog.HelpKeyPromptView), scratch(dialog.HelpKeyPromptCancel), noQuit(a.applyHelpKeyPromptEvent),
+			dialogButtons{OK: a.closeHelpKeyPrompt, Cancel: a.closeHelpKeyPrompt})
 	case InputModeIconLegendDialog:
 		return found(func() (dlg.Spec, bool) {
 			return dialog.IconLegendDialogView(m.IconLegendDialog, layout(), a.styles)

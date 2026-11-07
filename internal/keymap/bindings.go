@@ -293,6 +293,16 @@ func FormatChord(ch Chord) string {
 	return b.String()
 }
 
+// DisplayEvent formats a live key press the way FormatChord formats a binding. A rune already
+// carries its Shift, so the modifier is dropped as in Map.Lookup.
+func DisplayEvent(ev *tcell.EventKey) string {
+	ch := CanonicalChord(EventChord(ev))
+	if ch.Key == tcell.KeyRune {
+		ch.Mod &^= tcell.ModShift
+	}
+	return FormatChord(ch)
+}
+
 // DisplayKey converts a keybindings.toml key string to its FormatChord display form.
 // Strings that do not parse are returned unchanged.
 func DisplayKey(s string) string {
