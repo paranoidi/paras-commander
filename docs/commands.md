@@ -95,7 +95,8 @@ User menu entries and Run for each run on local panels only, and a command never
 - it uses `%t` and one of the tagged rows `%t` expands to (the tags in the panel directory, and in expanded folders in a tree layout) is a ghost row; the highlighted row is not part of `%t`;
 - it uses `%d`, or runs in the highlighted row's directory (the default `cwd`), and that row is a ghost row in a tree layout, whose directory is an index path;
 - it is a `run_for_each` entry or Run for each and one of the rows it runs on is a ghost row. The rows are the tagged rows, or the highlighted row when nothing is tagged, so real tags with a ghost row highlighted are not refused;
-- it uses `%F`, `%T` or `%D` and the other panel's highlighted row, the tags `%T` expands to or its directory is an index path. This includes a `fileindex://` other panel. An SFTP other panel is not refused.
+- it uses `%F`, `%T` or `%D` and the other panel's highlighted row, the tags `%T` expands to or its directory is an index path. This includes a `fileindex://` other panel. An SFTP other panel is not refused;
+- its `fileindex_scan` directory is on an SFTP panel ("fileindex_scan needs a local directory").
 
 So a ghost row highlighted in a flat listing does not stop `touch x`, which runs in the panel directory, but it stops `mkdir -p %f`. In a tree layout it stops `touch x` unless the entry sets `cwd = "panel"`. A command without the macro that would read a tagged ghost row runs normally and leaves the tags alone. The `..` row and an empty panel are not refused. Run for each checks the rows when it opens and the other panel's macros once the command is typed, as the red error line of the dialog. A menu that stays open (`keep_open`) shows the warning instead of its "Ran" toast.
 
@@ -113,10 +114,29 @@ So a ghost row highlighted in a flat listing does not stop `touch x`, which runs
 | `pool = "name"` | Waits for a slot in a [worker pool](#worker-pools) |
 | `keep_open = true` | Keeps the menu open after launching (needs `background`, `detach` or `interactive`) |
 | `cwd = "panel"` | Runs in the panel directory instead of the highlighted row's directory (`"cursor"`, the default); see [Working directory](#working-directory) |
+| `fileindex_scan = "%d"` | Scans that directory into the [file index](fileindex.md) once the command has run (`"%d"` or `"%D"`, not with `detach`); see [Updating the file index](#updating-the-file-index) |
 
 Other fields: `title` (required), `command` (required unless the table is a submenu), `key` (single activation letter, otherwise derived from the title), `default = true`, `toast` (message after success), `shell = true` (force `sh -c`), `when` (visibility), `shell_patterns`, `dialog_width` and `dialog_height` (`"80%"` or a number). `interactive` cannot be combined with `detach`, `background`, `dialog` or `run_for_each`.
 
 `when` takes the same predicate language as [Predicates](predicates.md): a bare pattern such as `"*.png"` matches the highlighted file name, and a list means "any of".
+
+### Updating the file index
+
+A command that changes files leaves the [file index](fileindex.md) out of date until the next scan. Set `fileindex_scan` to `"%d"` or `"%D"` to queue a scan of that directory once the command has run:
+
+```toml
+[convert]
+title = "Convert to other panel"
+command = "convert-all %d %D"
+background = true
+fileindex_scan = "%D"
+```
+
+- The directory is the one the macro names when the command starts, so moving the panel while it runs changes nothing. On a `fileindex://` panel it is the real directory.
+- The scan also runs after a non-zero exit, because a failed command may have changed files. It does not run when the command could not start, or was canceled or killed.
+- A `run_for_each` entry scans once, when the whole batch ends, if at least one item ran.
+- The scan appears in the job list like any other, without the usual job started and completed messages, so the command's `toast` or failure notification stays on screen. A scan that fails or is canceled still says so.
+- It works with every mode except `detach`, because pc never sees a detached process finish. A value other than `"%d"` or `"%D"`, or combining it with `detach`, is a menu load error.
 
 Entries are uniquely named TOML tables in the order you write them. A table that contains child tables instead of `command` is a submenu, nested as deep as you like. Load errors (unknown field, bad `when`, `cwd` other than `cursor` / `panel`, `run_for_each` without `%f`, unknown `pool`) are shown as a critical message.
 

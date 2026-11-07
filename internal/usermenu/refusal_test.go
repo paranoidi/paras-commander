@@ -115,3 +115,25 @@ func TestCommandRefusalFlat(t *testing.T) {
 		})
 	}
 }
+
+func TestCommandRefusalFileIndexScanDir(t *testing.T) {
+	active := &panel.State{Path: pathloc.MustParse("/srv/orchard")}
+	cases := []struct {
+		name string
+		dir  pathloc.Path
+		want string
+	}{
+		{"unset", pathloc.Path{}, ""},
+		{"local", pathloc.MustParse("/srv/meadow"), ""},
+		{"index", pathloc.MustParse(pathloc.FileIndexPrefix + "/srv/meadow"), ""},
+		{"sftp", pathloc.MustParse("sftp://paras@example.invalid/srv"), FileIndexScanRefusal},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			l := Launch{Command: "true", FileIndexScanDir: tc.dir}
+			if got := CommandRefusal(l, active, nil); got != tc.want {
+				t.Fatalf("CommandRefusal = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}

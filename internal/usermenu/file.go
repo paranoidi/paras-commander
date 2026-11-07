@@ -40,6 +40,7 @@ var menuEntryKeys = map[string]struct{}{
 	"dialog_width":   {},
 	"dialog_height":  {},
 	"cwd":            {},
+	"fileindex_scan": {},
 }
 
 // boolField decodes a TOML boolean, tracking whether it was set.
@@ -91,7 +92,10 @@ type MenuEntry struct {
 	// CwdPanel is set by cwd = "panel": the entry runs in the panel directory instead of the
 	// directory holding the cursor row (the default, also what an absent field loads as).
 	CwdPanel bool
-	Entries  []MenuEntry
+	// FileIndexScan is the macro letter ('d' or 'D', 0 when unset) of fileindex_scan: the directory
+	// to scan into the fileindex once the command has run (FileIndexScanDir).
+	FileIndexScan byte
+	Entries       []MenuEntry
 }
 
 // WorkDir is the directory a non-run_for_each launch of e uses on panel p.
@@ -100,6 +104,15 @@ func (e MenuEntry) WorkDir(p *panel.State) pathloc.Path {
 		return p.Path
 	}
 	return p.CursorDir()
+}
+
+// FileIndexScanDir is the directory fileindex_scan names: what %d or %D resolves to, as a location
+// rather than the macro's string (which does not survive for a fileindex:// directory).
+func (e MenuEntry) FileIndexScanDir(active, other *panel.State) pathloc.Path {
+	if e.FileIndexScan == 'D' {
+		return other.CursorDir()
+	}
+	return active.CursorDir()
 }
 
 // IsSubmenu reports whether e is a submenu container (has nested child entries) rather
@@ -180,6 +193,7 @@ type menuEntry struct {
 	DialogWidth   *dimField  `toml:"dialog_width"`
 	DialogHeight  *dimField  `toml:"dialog_height"`
 	Cwd           string     `toml:"cwd"`
+	FileIndexScan string     `toml:"fileindex_scan"`
 }
 
 // LoadFile reads and validates menu.toml from path.
@@ -466,6 +480,9 @@ func validateSubmenuMutualExclusion(path string, raw menuEntry) error {
 	if strings.TrimSpace(raw.Cwd) != "" {
 		return entryError(path, "cwd "+suffix)
 	}
+	if strings.TrimSpace(raw.FileIndexScan) != "" {
+		return entryError(path, "fileindex_scan "+suffix)
+	}
 	return nil
 }
 
@@ -578,6 +595,26 @@ func decodeRunForEach(path string, rawValues []string, interactive, detach, dial
 	return runForEach, nil
 }
 
+// decodeFileIndexScan resolves fileindex_scan to its macro letter (0 when unset). A detached
+// command is refused because pc never sees it finish.
+func decodeFileIndexScan(path, raw string, detach bool) (byte, error) {
+	var letter byte
+	switch strings.TrimSpace(raw) {
+	case "":
+		return 0, nil
+	case "%d":
+		letter = 'd'
+	case "%D":
+		letter = 'D'
+	default:
+		return 0, entryError(path, fmt.Sprintf("fileindex_scan: invalid value %q (want %%d/%%D)", raw))
+	}
+	if detach {
+		return 0, entryError(path, "fileindex_scan cannot be combined with detach")
+	}
+	return letter, nil
+}
+
 // decodeLeafEntry validates and converts a raw table with no child tables (path, for error
 // messages) into a runnable leaf MenuEntry.
 func decodeLeafEntry(path, title string, raw menuEntry, entryShellPatterns bool) (MenuEntry, error) {
@@ -621,6 +658,11 @@ func decodeLeafEntry(path, title string, raw menuEntry, entryShellPatterns bool)
 		return MenuEntry{}, entryError(path, fmt.Sprintf("cwd: invalid value %q (want cursor/panel)", raw.Cwd))
 	}
 
+	fileIndexScan, err := decodeFileIndexScan(path, raw.FileIndexScan, modes.detach)
+	if err != nil {
+		return MenuEntry{}, err
+	}
+
 	keepOpen := raw.KeepOpen != nil && raw.KeepOpen.Set && raw.KeepOpen.Value
 	if keepOpen {
 		if modes.dialog {
@@ -656,6 +698,7 @@ func decodeLeafEntry(path, title string, raw menuEntry, entryShellPatterns bool)
 		DialogWidth:   dialogWidth,
 		DialogHeight:  dialogHeight,
 		CwdPanel:      cwdPanel,
+		FileIndexScan: fileIndexScan,
 	}, nil
 }
 

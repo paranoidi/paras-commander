@@ -778,3 +778,35 @@ func TestDecodeCwdErrors(t *testing.T) {
 		}
 	}
 }
+
+func TestDecodeFileIndexScan(t *testing.T) {
+	const entry = "[scan]\ntitle = \"Scan\"\ncommand = \"true\"\n"
+	for value, want := range map[string]byte{"%d": 'd', "%D": 'D', " %D ": 'D'} {
+		mf, err := Decode([]byte(entry + "fileindex_scan = \"" + value + "\"\n"))
+		if err != nil {
+			t.Fatalf("%q: %v", value, err)
+		}
+		if got := mf.Entries[0].FileIndexScan; got != want {
+			t.Fatalf("%q: FileIndexScan = %q, want %q", value, got, want)
+		}
+	}
+	mf, err := Decode([]byte(entry))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := mf.Entries[0].FileIndexScan; got != 0 {
+		t.Fatalf("unset: FileIndexScan = %q", got)
+	}
+
+	for name, body := range map[string]string{
+		"another macro": entry + "fileindex_scan = \"%f\"\n",
+		"a plain path":  entry + "fileindex_scan = \"/srv/orchard\"\n",
+		"detach":        entry + "fileindex_scan = \"%d\"\ndetach = true\n",
+		"submenu":       "[tools]\ntitle = \"Tools\"\nfileindex_scan = \"%d\"\n[tools.one]\ntitle = \"One\"\ncommand = \"true\"\n",
+	} {
+		_, err := Decode([]byte(body))
+		if err == nil || !strings.Contains(err.Error(), "fileindex_scan") {
+			t.Fatalf("%s: err = %v, want a fileindex_scan error", name, err)
+		}
+	}
+}

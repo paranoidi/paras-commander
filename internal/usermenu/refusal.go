@@ -13,6 +13,10 @@ import (
 // work on.
 const LocalOnlyRefusal = "User commands run on local panels only"
 
+// FileIndexScanRefusal is the message for a fileindex_scan directory on an SFTP panel: the index
+// covers local paths only.
+const FileIndexScanRefusal = "fileindex_scan needs a local directory"
+
 // Launch describes a user-menu or Run-for-each command for CommandRefusal.
 type Launch struct {
 	Command  string
@@ -22,6 +26,9 @@ type Launch struct {
 	// nothing is tagged). A caller resolves them only once the active panel is known to be local.
 	RunForEach     bool
 	RunForEachRows []localfs.Entry
+	// FileIndexScanDir is the directory fileindex_scan will scan once the command has run (the zero
+	// Path for none).
+	FileIndexScanDir pathloc.Path
 }
 
 // CommandRefusal is the message for refusing the launch of l from the active panel, or "" when it
@@ -31,7 +38,8 @@ type Launch struct {
 // %{a|b}, the alternative that resolves): %f (cursor row),
 // %t (the tags %t expands to, tagged ghost rows included: panel.State.CommandTags), %d or the cursor-row working directory, the rows of a
 // run_for_each launch, and %F, %T and %D of the other panel (which may be SFTP, but not an index
-// panel). A pure string check, safe on the UI goroutine.
+// panel). A fileindex_scan directory on an SFTP panel is refused too, before anything runs. A pure
+// string check, safe on the UI goroutine.
 func CommandRefusal(l Launch, active, other *panel.State) string {
 	if active == nil {
 		return ""
@@ -82,6 +90,9 @@ func CommandRefusal(l Launch, active, other *panel.State) string {
 	}
 	if localOnly {
 		return LocalOnlyRefusal
+	}
+	if l.FileIndexScanDir.Scheme() == pathloc.SchemeSFTP {
+		return FileIndexScanRefusal
 	}
 	return ""
 }
