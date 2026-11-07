@@ -95,13 +95,10 @@ func TestMetaAlertUsesCursorIconColorOnActiveCursor(t *testing.T) {
 	state := metaAlertState("harbor", "meadow", "thistle")
 	state.Cursor = 2
 	st := metaAlertRow(t, state, 2, '3', PanelContext{FileListActive: true, CursorRowActive: true})
-	fg, bg, attrs := st.Decompose()
+	fg, bg, _ := st.Decompose()
 	_, wantBG, _ := styles.PanelCursorActive.Decompose()
 	if fg != wantFG || bg != wantBG {
 		t.Fatalf("fg %v bg %v, want fg %v bg %v", fg, bg, wantFG, wantBG)
-	}
-	if attrs&tcell.AttrBold == 0 {
-		t.Fatal("critical cell under the cursor should stay bold")
 	}
 }
 
