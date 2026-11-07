@@ -2,6 +2,7 @@ package cmdrun
 
 import (
 	"os/exec"
+	"slices"
 	"strings"
 	"testing"
 
@@ -187,5 +188,29 @@ func TestBuildInvocationArgvHostilePathStaysStructured(t *testing.T) {
 	}
 	if built.Argv[1] == "-c" {
 		t.Fatal("argv mode must not wrap sh -c")
+	}
+}
+
+func TestBuildInvocationFallbackGroupStaysExec(t *testing.T) {
+	ctx := cmdmacro.Context{Active: &cmdmacro.PanelSnapshot{
+		Dir:         "/srv/orchard",
+		TaggedInDir: []string{"/srv/orchard/harbor.txt", "/srv/orchard/walnut.txt"},
+	}}
+	built, err := BuildInvocation(InvocationSpec{Template: `tool --all %{t|d} --verbose`, Mode: ModeAuto, Ctx: ctx})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"tool", "--all", "/srv/orchard/harbor.txt", "/srv/orchard/walnut.txt", "--verbose"}
+	if !slices.Equal(built.Argv, want) {
+		t.Fatalf("argv = %#v, want %#v", built.Argv, want)
+	}
+
+	ctx.Active.TaggedInDir = nil
+	built, err = BuildInvocation(InvocationSpec{Template: `tool %{t|d} | wc -l`, Mode: ModeAuto, Ctx: ctx})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(built.Argv) != 3 || built.Argv[1] != "-c" || built.Argv[2] != `tool '/srv/orchard' | wc -l` {
+		t.Fatalf("a real pipe beside a group: argv = %#v", built.Argv)
 	}
 }

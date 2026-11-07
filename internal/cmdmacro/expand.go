@@ -3,6 +3,7 @@ package cmdmacro
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -28,7 +29,88 @@ func QuoteShellArg(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
 
-// ExpandCommandLine substitutes %% %f %F %d %D %t %T into template.
+// macroLetters are the single-letter macros; a fallback group %{a|b|...} takes only these.
+const macroLetters = "fFdDtT"
+
+// protectedGroupSep stands in for | inside a fallback group while a command line goes through
+// shell-operator detection and argv parsing, which both stop at an unquoted |.
+const protectedGroupSep = "\x1f"
+
+// macroAt parses the macro at template[i], which must be '%'. letters holds the macro's
+// alternatives in order: one letter for %f, several for %{t|d}. letters is empty when the text
+// is no macro: a literal % that spans width bytes (2 for %%, 1 otherwise). Anything but a strict
+// %{a|b|...} of macro letters stays literal, so curl's %{http_code} passes through unchanged.
+func macroAt(template string, i int) (letters string, width int) {
+	if i+1 >= len(template) {
+		return "", 1
+	}
+	c := template[i+1]
+	switch {
+	case c == '%':
+		return "", 2
+	case c == '{':
+		return groupAt(template, i)
+	case strings.IndexByte(macroLetters, c) >= 0:
+		return template[i+1 : i+2], 2
+	}
+	return "", 1
+}
+
+func groupAt(template string, i int) (letters string, width int) {
+	var b strings.Builder
+	for j := i + 2; j+1 < len(template); j += 2 {
+		if strings.IndexByte(macroLetters, template[j]) < 0 {
+			return "", 1
+		}
+		b.WriteByte(template[j])
+		switch template[j+1] {
+		case '}':
+			return b.String(), j + 2 - i
+		case '|', protectedGroupSep[0]:
+		default:
+			return "", 1
+		}
+	}
+	return "", 1
+}
+
+// resolveMacro returns the first alternative of letters that has a value.
+func resolveMacro(letters string, ctx Context) (byte, []string, error) {
+	var err error
+	for i := 0; i < len(letters); i++ {
+		var vals []string
+		if vals, err = macroValues(letters[i], ctx); err == nil {
+			return letters[i], vals, nil
+		}
+	}
+	if len(letters) > 1 {
+		err = fmt.Errorf("cmdmacro: %%{%s}: no value", strings.Join(strings.Split(letters, ""), "|"))
+	}
+	return 0, nil, err
+}
+
+// ProtectGroups hides the | of fallback groups so template can go through shell-operator
+// detection and argv parsing. ExpandArgvToken accepts the protected form.
+func ProtectGroups(template string) string {
+	var b strings.Builder
+	for i := 0; i < len(template); {
+		if template[i] != '%' {
+			b.WriteByte(template[i])
+			i++
+			continue
+		}
+		_, width := macroAt(template, i)
+		token := template[i : i+width]
+		if width > 2 {
+			token = strings.ReplaceAll(token, "|", protectedGroupSep)
+		}
+		b.WriteString(token)
+		i += width
+	}
+	return b.String()
+}
+
+// ExpandCommandLine substitutes %% %f %F %d %D %t %T and fallback groups into template.
 // Path and name values are POSIX-single-quoted so the result is safe for sh -c.
 func ExpandCommandLine(template string, ctx Context) (string, error) {
 	if ctx.RowPath == "" && ctx.Active == nil {
@@ -117,25 +199,22 @@ func walkMacros(template string, ctx Context, onMacro func([]string), onLit func
 		lit.Reset()
 	}
 	for i := 0; i < len(template); i++ {
-		if template[i] != '%' || i+1 >= len(template) {
+		if template[i] != '%' {
 			lit.WriteByte(template[i])
 			continue
 		}
-		switch template[i+1] {
-		case '%':
+		letters, width := macroAt(template, i)
+		i += width - 1
+		if letters == "" {
 			lit.WriteByte('%')
-			i++
-		case 'f', 'F', 'd', 'D', 't', 'T':
-			vals, err := macroValues(template[i+1], ctx)
-			if err != nil {
-				return err
-			}
-			flushLit()
-			onMacro(vals)
-			i++
-		default:
-			lit.WriteByte('%')
+			continue
 		}
+		_, vals, err := resolveMacro(letters, ctx)
+		if err != nil {
+			return err
+		}
+		flushLit()
+		onMacro(vals)
 	}
 	flushLit()
 	return nil
@@ -210,19 +289,20 @@ func taggedPaths(ps *PanelSnapshot) ([]string, error) {
 	return paths, nil
 }
 
-// CommandRequiresMacro reports whether template contains macro %<letter> (not %%).
+// CommandRequiresMacro reports whether template always reads macro %<letter> when it has a
+// value: a plain %<letter>, or a fallback group that tries it first. %% is no macro. It needs no
+// panel state; ResolvedMacros tells which alternative of a group a launch actually uses.
 func CommandRequiresMacro(template string, letter byte) bool {
-	for i := 0; i < len(template)-1; i++ {
+	for i := 0; i < len(template); {
 		if template[i] != '%' {
-			continue
-		}
-		if template[i+1] == '%' {
 			i++
 			continue
 		}
-		if template[i+1] == letter {
+		letters, width := macroAt(template, i)
+		if letters != "" && letters[0] == letter {
 			return true
 		}
+		i += width
 	}
 	return false
 }
@@ -236,30 +316,45 @@ type MacroUse struct {
 	Values []string
 }
 
-// MacroDisplayValues returns the distinct macros template references, in first-use order,
-// with their values for display: %f/%F bare names are joined with their panel's directory so
-// every value is a path. Macros that fail to expand are omitted.
-func MacroDisplayValues(template string, ctx Context) []MacroUse {
+// ResolvedMacros returns the distinct macros template reads under ctx, in first-use order, with
+// their raw values: a fallback group contributes the alternative that won, and a macro without a
+// value is omitted. It is the one answer to "what does this launch read".
+func ResolvedMacros(template string, ctx Context) []MacroUse {
 	var out []MacroUse
 	seen := map[byte]bool{}
-	for i := 0; i < len(template)-1; i++ {
+	for i := 0; i < len(template); {
 		if template[i] != '%' {
+			i++
 			continue
 		}
-		i++
-		letter := template[i]
-		if seen[letter] {
+		letters, width := macroAt(template, i)
+		i += width
+		if letters == "" {
 			continue
 		}
-		vals, err := macroValues(letter, ctx)
-		if err != nil {
-			continue // also skips %% and unknown letters
+		letter, vals, err := resolveMacro(letters, ctx)
+		if err != nil || seen[letter] {
+			continue
 		}
 		seen[letter] = true
-		if dir := macroDir(letter, ctx); dir != "" && !filepath.IsAbs(vals[0]) {
-			vals = []string{filepath.Join(dir, vals[0])}
-		}
 		out = append(out, MacroUse{Letter: letter, Values: vals})
+	}
+	return out
+}
+
+// UsesMacro reports whether uses (from ResolvedMacros) holds letter.
+func UsesMacro(uses []MacroUse, letter byte) bool {
+	return slices.ContainsFunc(uses, func(u MacroUse) bool { return u.Letter == letter })
+}
+
+// MacroDisplayValues returns ResolvedMacros for display: %f/%F bare names are joined with their
+// panel's directory so every value is a path.
+func MacroDisplayValues(template string, ctx Context) []MacroUse {
+	out := ResolvedMacros(template, ctx)
+	for i, u := range out {
+		if dir := macroDir(u.Letter, ctx); dir != "" && !filepath.IsAbs(u.Values[0]) {
+			out[i].Values = []string{filepath.Join(dir, u.Values[0])}
+		}
 	}
 	return out
 }

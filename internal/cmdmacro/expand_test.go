@@ -141,3 +141,76 @@ func TestMacroDisplayValues(t *testing.T) {
 		t.Fatalf("FOverride: got %v", got)
 	}
 }
+
+func TestFallbackGroups(t *testing.T) {
+	tagged := &PanelSnapshot{Dir: "/srv/orchard", CurrentName: "meadow.txt", HasCurrent: true,
+		TaggedInDir: []string{"/srv/orchard/walnut.txt", "/srv/orchard/harbor.txt"}}
+	plain := &PanelSnapshot{Dir: "/srv/orchard", CurrentName: "meadow.txt", HasCurrent: true}
+	empty := &PanelSnapshot{Dir: "/srv/orchard"}
+	other := &PanelSnapshot{Dir: "/srv/willow", TaggedInDir: []string{"/srv/willow/clover.txt"}}
+
+	cases := []struct {
+		name, tmpl string
+		active     *PanelSnapshot
+		want       string
+	}{
+		{"first alternative wins", "tool %{t|d}", tagged, `tool '/srv/orchard/harbor.txt' '/srv/orchard/walnut.txt'`},
+		{"falls back when empty", "tool %{t|d}", plain, `tool '/srv/orchard'`},
+		{"chain reaches the other panel", "tool %{t|T|d}", plain, `tool '/srv/willow/clover.txt'`},
+		{"no cursor skips f", "tool %{f|d}", empty, `tool '/srv/orchard'`},
+		{"single letter group", "tool %{f}.bak", plain, `tool 'meadow.txt'.bak`},
+		{"curl format stays literal", "curl -w '%{http_code}' x", plain, `curl -w '%{http_code}' x`},
+		{"unknown letter stays literal", "tool %{t|x}", plain, `tool %{t|x}`},
+		{"spaces stay literal", "tool %{t | d}", plain, `tool %{t | d}`},
+		{"empty group stays literal", "tool %{}", plain, `tool %{}`},
+		{"unterminated stays literal", "tool %{t|d", plain, `tool %{t|d`},
+		{"trailing separator stays literal", "tool %{t|}", plain, `tool %{t|}`},
+		{"escaped percent", "tool %%{t|d}", plain, `tool %{t|d}`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := ExpandCommandLine(tc.tmpl, Context{Active: tc.active, Other: other})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != tc.want {
+				t.Fatalf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+
+	_, err := ExpandCommandLine("tool %{t|T}", Context{Active: plain, Other: plain})
+	if err == nil || !strings.Contains(err.Error(), "cmdmacro: %{t|T}: no value") {
+		t.Fatalf("all alternatives empty: err = %v", err)
+	}
+}
+
+func TestCommandRequiresMacroGroups(t *testing.T) {
+	cases := []struct {
+		tmpl string
+		want bool
+	}{
+		{"echo %f", true},
+		{"echo %{f|d}", true},
+		{"echo %{t|f}", false}, // tags would win, so the item is not guaranteed
+		{"echo %%f", false},
+		{"echo %{http_code}", false},
+	}
+	for _, tc := range cases {
+		if got := CommandRequiresMacro(tc.tmpl, 'f'); got != tc.want {
+			t.Errorf("CommandRequiresMacro(%q) = %v, want %v", tc.tmpl, got, tc.want)
+		}
+	}
+}
+
+func TestResolvedMacrosNamesTheWinner(t *testing.T) {
+	ctx := Context{Active: &PanelSnapshot{Dir: "/srv/orchard", TaggedInDir: []string{"/srv/orchard/walnut.txt"}}}
+	uses := ResolvedMacros("a %{t|d} b %t %{F|d}", ctx)
+	if !UsesMacro(uses, 't') || !UsesMacro(uses, 'd') || UsesMacro(uses, 'F') || len(uses) != 2 {
+		t.Fatalf("uses = %#v", uses)
+	}
+	ctx.Active.TaggedInDir = nil
+	if uses := ResolvedMacros("%{t|d}", ctx); UsesMacro(uses, 't') || !UsesMacro(uses, 'd') {
+		t.Fatalf("empty tags: uses = %#v", uses)
+	}
+}

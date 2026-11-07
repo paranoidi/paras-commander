@@ -16,9 +16,26 @@ Command lines may contain these placeholders. Do not put quotes around them: pat
 | `%D` | Directory of the highlighted row on the other panel |
 | `%t` | Tagged (selected) files of the active panel, one quoted argument each |
 | `%T` | Tagged files of the other panel |
+| `%{t\|d}` | The first listed macro that has a value (see [Fallback macros](#fallback-macros)) |
 | `%%` | A literal `%` |
 
-A line containing shell operators (`|`, `>>`, `&&`) runs through `sh -c`; any other line is split into arguments directly.
+A line containing shell operators (`|`, `>>`, `&&`) runs through `sh -c`; any other line is split into arguments directly. The `|` inside `%{...}` is not an operator.
+
+### Fallback macros
+
+`%{a|b|...}` tries the listed macro letters in order and expands to the first one that has a value:
+
+```toml
+[process]
+title = "Process"
+command = "some-tool %{t|d}"
+```
+
+This passes the tagged files, or the directory when nothing is tagged. `%{t|f}` gives the tagged files or the highlighted file, `%{T|D}` does the same as `%{t|d}` for the other panel, and chains can be longer (`%{t|T|d}`). `%t` and `%T` have no value when nothing is tagged, `%f` and `%F` when there is no highlighted row; `%d` always has one, so it makes a good last choice. If no letter has a value, the command does not run and shows an error.
+
+- Only the letter that is used counts: `%{t|d}` clears the tags when it used them, and the local-panel checks below look only at that letter.
+- Write it without spaces, using only the letters `f F d D t T`. Anything else is left as plain text, so `curl -w '%{http_code}'` works as you would expect.
+- In Run for each and `run_for_each` entries, `f` must come first (`%{f|d}`) unless `%f` also appears elsewhere in the command. The selection has already been taken by then, so `t` has no value and is skipped.
 
 ## Run for each
 

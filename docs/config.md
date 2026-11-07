@@ -345,7 +345,7 @@ step to the next/previous path, and Insert or Space (under
 move on. The Select group, Unselect group and Invert selection keys (`+`, `-`, `*` by default, the same actions as in the panel) select, unselect or invert all detected paths in the active panel; the group dialogs match the file name (or the full path with "Match full path") of each detected path and honour Files only / Directories only. PgUp/PgDn/Home/End still scroll; output without paths scrolls with Up/Down. Only the first 5000
 candidates per output are checked.
 
-A `menu.toml` command clears the tags it used when it starts: `%t` clears the active panel's tags, `%T` the other panel's, and a command using only `%d`, `%f` and the like leaves them. `interactive` and `detach` entries clear only if they ran or started without error. `run_for_each` entries clear the active panel's tags.
+A `menu.toml` command clears the tags it used when it starts: `%t` clears the active panel's tags, `%T` the other panel's, and a command using only `%d`, `%f` and the like leaves them. In a fallback such as `%{t|d}`, only the macro that was actually used counts. `interactive` and `detach` entries clear only if they ran or started without error. `run_for_each` entries clear the active panel's tags.
 
 A `menu.toml` `run_for_each` entry may also set `pty = true` (or `pty = 1`) to run each invocation
 attached to a live pseudo-TTY instead of capturing output non-interactively — the same mode as

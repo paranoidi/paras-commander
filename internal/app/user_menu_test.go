@@ -888,6 +888,9 @@ func TestUserMenuClearsOnlyConsumedSelection(t *testing.T) {
 		{"tagged in active", "echo %t", 0, 2},
 		{"tagged in other", "echo %T", 2, 0},
 		{"directory only", "echo %d", 2, 2},
+		{"fallback clears the tags it used", "echo %{t|d}", 0, 2},
+		{"fallback that never reaches tags", "echo %{d|t}", 2, 2},
+		{"fallback does not cascade across panels", "echo %{t|T}", 0, 2},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

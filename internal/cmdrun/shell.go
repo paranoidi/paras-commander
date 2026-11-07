@@ -4,6 +4,8 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+
+	"github.com/paranoidi/paras-commander/internal/cmdmacro"
 )
 
 // shellOperatorTokens are argv tokens that require a real shell (redirection, pipelines, etc.).
@@ -25,6 +27,7 @@ func ArgvNeedsShell(argv []string) bool {
 
 // NeedsShellFromLine reports whether a command line needs a shell to interpret operators.
 func NeedsShellFromLine(line string) bool {
+	line = cmdmacro.ProtectGroups(line) // the | of %{t|d} is no pipe
 	if lineNeedsShellOutsideQuotes(line) {
 		return true
 	}

@@ -430,6 +430,18 @@ run_for_each = ["files"]
 	}
 }
 
+func TestDecodeRunForEachFallbackGroup(t *testing.T) {
+	entry := func(cmd string) []byte {
+		return []byte("[each]\ntitle = \"Each\"\ncommand = \"" + cmd + "\"\nrun_for_each = [\"files\"]\n")
+	}
+	if _, err := Decode(entry("echo %{f|d}")); err != nil {
+		t.Fatalf("f first: %v", err)
+	}
+	if _, err := Decode(entry("echo %{t|f}")); err == nil || !strings.Contains(err.Error(), "requires %f") {
+		t.Fatalf("f not first: err = %v, want run_for_each requires %%f", err)
+	}
+}
+
 func TestDecodeMultipleDefaultEntries(t *testing.T) {
 	_, err := Decode([]byte(`[one]
 title = "One"

@@ -71,7 +71,7 @@ func BuildInvocation(spec InvocationSpec) (InvocationResult, error) {
 }
 
 func expandInvocationArgv(template string, ctx cmdmacro.Context) ([]string, error) {
-	argv, err := ParseCommandArgv(template)
+	argv, err := ParseCommandArgv(cmdmacro.ProtectGroups(template))
 	if err != nil {
 		return nil, err
 	}

@@ -96,6 +96,11 @@ func TestCommandRefusalFlat(t *testing.T) {
 		{"%T of an sftp panel", "echo %T", false, false, local(onReal), sftp, ""},
 		{"%D of an sftp panel", "ls %D", false, false, local(onReal), sftp, ""},
 		{"%F without another panel", "echo %F", false, false, local(onReal), nil, ""},
+		{"fallback uses tags, ghost cursor row", "echo %{t|f}", false, false, local(onGhost, orchard+"/harbor.txt"), local(onReal), ""},
+		{"fallback falls to %f on a ghost cursor row", "echo %{t|f}", false, false, local(onGhost), local(onReal), ghostMsg},
+		{"fallback uses a tagged ghost", "echo %{t|d}", false, false, local(onReal, ghost.Path), local(onReal), ghostMsg},
+		{"fallback skips %T when %t wins", "echo %{t|T}", false, false, local(onReal, orchard+"/harbor.txt"), local(onReal, ghost.Path), ""},
+		{"fallback reaches %T", "echo %{t|T}", false, false, local(onReal), local(onReal, ghost.Path), ghostMsg},
 		{"names are sorted and listed once", "echo %f %T", false, false, local(onGhost), index(ghost.Path, ghostTag, ghostTag), bothGhostMsg},
 	}
 	for _, tc := range cases {

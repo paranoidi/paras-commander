@@ -274,11 +274,14 @@ func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 	}
 	argv := built.Argv
 	macros := cmdmacro.MacroDisplayValues(entry.Command, macroCtx)
+	// Resolved before the run: clearing one panel's tags, or an interactive command deleting the
+	// tagged files, must not move a fallback group on to another alternative.
+	consumed := cmdmacro.ResolvedMacros(entry.Command, macroCtx)
 
 	workDir := entry.WorkDir(active).String()
 	switch {
 	case entry.Dialog:
-		clearConsumedSelection(entry.Command, active, other)
+		clearConsumedSelection(consumed, active, other)
 		rowIdx, rowID := a.appendUserMenuCommandRow(entry.Command, macros)
 		ctx, cancel := context.WithCancel(a.commandsCtrl.Context())
 		a.commandsCtrl.OpenRunningOutputDialog(rowID, entry.Title, strings.TrimSpace(entry.Pool) != "", cancel, entry.DialogWidth, entry.DialogHeight)
@@ -289,14 +292,14 @@ func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 		}()
 	case entry.Interactive:
 		if a.runUserMenuInteractive(argv, workDir, entry.Toast) {
-			clearConsumedSelection(entry.Command, active, other)
+			clearConsumedSelection(consumed, active, other)
 		}
 	case entry.Detach:
 		if a.runUserMenuDetached(argv, workDir, entry.Toast) {
-			clearConsumedSelection(entry.Command, active, other)
+			clearConsumedSelection(consumed, active, other)
 		}
 	default:
-		clearConsumedSelection(entry.Command, active, other)
+		clearConsumedSelection(consumed, active, other)
 		rowIdx, rowID := a.appendUserMenuCommandRow(entry.Command, macros)
 		if !entry.Background {
 			a.commandsCtrl.OpenViewAt(rowIdx)
@@ -308,12 +311,12 @@ func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 }
 
 // clearConsumedSelection clears the tags the command read: %t uses the active
-// panel's, %T the other panel's.
-func clearConsumedSelection(cmd string, active, other *panel.State) {
-	if cmdmacro.CommandRequiresMacro(cmd, 't') {
+// panel's, %T the other panel's. consumed comes from cmdmacro.ResolvedMacros.
+func clearConsumedSelection(consumed []cmdmacro.MacroUse, active, other *panel.State) {
+	if cmdmacro.UsesMacro(consumed, 't') {
 		active.ClearSelection()
 	}
-	if cmdmacro.CommandRequiresMacro(cmd, 'T') {
+	if cmdmacro.UsesMacro(consumed, 'T') {
 		other.ClearSelection()
 	}
 }

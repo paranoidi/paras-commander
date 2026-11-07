@@ -91,7 +91,7 @@ const MenuStubTOML = `# User function menu
 #
 # run_for_each    [string] optional   values: "files" | "dirs"
 #   Run once per selected item (or cursor when nothing selected).
-#   command must include %f; not combinable with interactive or detach.
+#   command must include %f (or %{f|...}); not combinable with interactive or detach.
 #
 # shell           bool     optional   default: false
 #   Force sh -c even without shell operators (>> | && …).
@@ -153,6 +153,10 @@ const MenuStubTOML = `# User function menu
 #     %D  directory of the highlighted row on the other panel
 #     %t  tagged files in the active panel's directory, at any depth in tree view (quoted tokens)
 #     %T  tagged files in the other panel's directory, at any depth in tree view (quoted tokens)
+#     %{a|b|...}  first of these macro letters that has a value: "tool %{t|d}" gets the
+#         tagged files, or the directory when nothing is tagged. No spaces inside; only
+#         the letter that is used counts (its tags are cleared, %d leaves them alone).
+#         run_for_each needs f as the first letter, or %f elsewhere in the command.
 #
 # --- end of documentation ---
 `

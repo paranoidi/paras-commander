@@ -27,7 +27,8 @@ type Launch struct {
 // CommandRefusal is the message for refusing the launch of l from the active panel, or "" when it
 // may run. The only rule: a command must never receive a fileindex:// value (a ghost row, or a
 // path of an index panel) as if it were a real file or directory. So a non-local active panel is
-// always refused, and otherwise only what the command actually reads counts: %f (cursor row),
+// always refused, and otherwise only what the command actually reads counts (for a fallback group
+// %{a|b}, the alternative that resolves): %f (cursor row),
 // %t (the tags %t expands to, tagged ghost rows included: panel.State.CommandTags), %d or the cursor-row working directory, the rows of a
 // run_for_each launch, and %F, %T and %D of the other panel (which may be SFTP, but not an index
 // panel). A pure string check, safe on the UI goroutine.
@@ -39,7 +40,8 @@ func CommandRefusal(l Launch, active, other *panel.State) string {
 		return LocalOnlyRefusal
 	}
 	ctx := MacroContext(active, other, "", "")
-	uses := func(letter byte) bool { return cmdmacro.CommandRequiresMacro(l.Command, letter) }
+	resolved := cmdmacro.ResolvedMacros(l.Command, ctx)
+	uses := func(letter byte) bool { return cmdmacro.UsesMacro(resolved, letter) }
 	var values []string // every value the command would read; the fileindex:// ones are refused
 	localOnly := false  // refused with no row to name
 	if l.RunForEach {
