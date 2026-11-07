@@ -16,6 +16,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/cmdmacro"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/jobbridge"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
@@ -666,64 +667,69 @@ func (h *Handler) HandleRenderFlush() {
 // would follow every navigation into a directory with wide values.
 const MinColumnShownBeforeToast = 500 * time.Millisecond
 
-// columnFitWatch is one panel's baseline for reportLostColumns.
+// columnFitCheckInterval spaces reportLostColumns' fit checks while results still arrive: a fit
+// costs a layout and, in a carousel, a measure of every row, and flushes run at render rate.
+const columnFitCheckInterval = 250 * time.Millisecond
+
+// columnFitWatch is one panel's baseline for reportLostColumns; the zero value has none.
 type columnFitWatch struct {
-	seeded   bool
-	gen      uint64 // run the baseline belongs to
-	seededAt time.Time
-	fit      ui.PanelMetaFit
-	warned   map[string]bool // columns already reported in this run, by EntryName
+	gen       uint64 // run the baseline belongs to
+	seededAt  time.Time
+	checkedAt time.Time
+	fit       ui.PanelMetaFit
+	warned    map[string]bool // columns already reported in this run, by EntryName
 }
 
 // seedColumnFit records what panelID draws as the baseline of its current run.
 func (h *Handler) seedColumnFit(panelID int, fit ui.PanelMetaFit) {
-	h.fitWatch[panelID] = columnFitWatch{seeded: true, gen: h.runGen[panelID], seededAt: time.Now(), fit: fit, warned: map[string]bool{}}
+	now := time.Now()
+	h.fitWatch[panelID] = columnFitWatch{gen: h.runGen[panelID], seededAt: now, checkedAt: now, fit: fit, warned: map[string]bool{}}
 }
 
 // reportLostColumns toasts columns that incoming results pushed out of panelID's listing. The
 // baseline is seeded when a run starts. A column lost within MinColumnShownBeforeToast of that is
 // not reported, nor is one that never fit, and a change of available space (resize, zoom, listing
 // format) moves the baseline silently: the user caused that one and can see it. Each column is
-// reported once per run.
+// reported once per run. While commands are pending, checks are columnFitCheckInterval apart; the
+// flush that ends the run always checks.
 func (h *Handler) reportLostColumns(panelID int) {
 	w := &h.fitWatch[panelID]
-	fit, ok := h.host.PanelMetaFit(panelID)
-	if !ok || len(h.model.MetaResults[panelID]) == 0 {
-		w.seeded = false
+	cols := h.model.MetaResults[panelID]
+	if len(cols) == 0 {
+		*w = columnFitWatch{}
 		return
 	}
-	if !w.seeded || w.gen != h.runGen[panelID] {
+	seeded := !w.seededAt.IsZero() && w.gen == h.runGen[panelID]
+	if seeded && pendingCount(cols) > 0 && time.Since(w.checkedAt) < columnFitCheckInterval {
+		return
+	}
+	fit, ok := h.host.PanelMetaFit(panelID)
+	if !ok {
+		*w = columnFitWatch{}
+		return
+	}
+	if !seeded {
 		h.seedColumnFit(panelID, fit)
 		return
 	}
 	prev := w.fit
 	w.fit = fit
+	w.checkedAt = time.Now()
 	if prev.Width != fit.Width || prev.NameRoom != fit.NameRoom || time.Since(w.seededAt) < MinColumnShownBeforeToast {
 		return
 	}
 	var lost []string
 	for _, lay := range prev.Drawn {
-		if !w.warned[lay.EntryName] && !metaLayoutsHave(fit.Drawn, lay.EntryName) {
+		drawn := slices.ContainsFunc(fit.Drawn, func(l ui.MetaColumnLayout) bool { return l.EntryName == lay.EntryName })
+		if !w.warned[lay.EntryName] && !drawn {
 			w.warned[lay.EntryName] = true
 			lost = append(lost, lay.Title)
 		}
 	}
-	switch len(lost) {
-	case 0:
-	case 1:
-		h.host.SetTransientMessage("Column "+lost[0]+" no longer fits on available space", ui.MessageUrgencyInfo)
-	default:
-		h.host.SetTransientMessage("Columns "+strings.Join(lost, ", ")+" no longer fit on available space", ui.MessageUrgencyInfo)
+	if n := len(lost); n > 0 {
+		h.host.SetTransientMessage(fmt.Sprintf("%s %s no longer %s on available space",
+			jobbridge.Plural(n, "Column", "Columns"), strings.Join(lost, ", "), jobbridge.Plural(n, "fits", "fit")), ui.MessageUrgencyInfo)
 	}
-}
-
-func metaLayoutsHave(layouts []ui.MetaColumnLayout, entryName string) bool {
-	for _, lay := range layouts {
-		if lay.EntryName == entryName {
-			return true
-		}
-	}
-	return false
 }
 
 // refreshMetaPatternFilters re-runs the active entry filter on any panel whose filter matches

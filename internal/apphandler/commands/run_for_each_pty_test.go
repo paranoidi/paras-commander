@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/cmdmacro"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pools"
@@ -146,7 +147,7 @@ func TestForegroundPTYOwnershipIsBatchLevel(t *testing.T) {
 			},
 			AllowDirs: true,
 			PTY:       true,
-			BuildItem: func(ent localfs.Entry) (RunForEachBuiltItem, error) {
+			BuildItem: func(ent localfs.Entry, _ cmdmacro.Context) (RunForEachBuiltItem, error) {
 				if ent.Name == "aspen" {
 					hitSecond.Store(true)
 					<-releaseSecond
@@ -294,7 +295,7 @@ func blockingPTYSpec(entries []localfs.Entry) RunForEachBatchSpec {
 		Entries:   entries,
 		AllowDirs: true,
 		PTY:       true,
-		BuildItem: func(localfs.Entry) (RunForEachBuiltItem, error) {
+		BuildItem: func(localfs.Entry, cmdmacro.Context) (RunForEachBuiltItem, error) {
 			return RunForEachBuiltItem{Argv: []string{"sleep", "60"}, UserLine: "sleep 60"}, nil
 		},
 	}

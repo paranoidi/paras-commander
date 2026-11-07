@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/paranoidi/paras-commander/internal/cmdmacro"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -74,15 +75,12 @@ func (h *Handler) ExecuteRunForEach() {
 	poolName := strings.TrimSpace(fd.RunForEachPool)
 	inDirs := fd.RunForEachInDirs
 	usePTY := fd.RunForEachPTY
-	active := h.host.ActivePanel()
-	other := h.host.InactivePanel()
 	h.RecomputeRunForEachValidation()
 	if strings.TrimSpace(fd.RunForEachCommandError) != "" {
 		return
 	}
 	h.recordRunForEachHistory(cmdLine)
 	h.host.CloseFileDialog()
-	macroCtx := usermenu.MacroContext(active, other, "", "")
 	h.StartRunForEachBatch(RunForEachBatchSpec{
 		Kind:            ui.CommandRunKindRunForEach,
 		Entries:         entries,
@@ -93,8 +91,8 @@ func (h *Handler) ExecuteRunForEach() {
 		Background:      false,
 		PTY:             usePTY,
 		NotifyLabel:     "Run for each",
-		BuildItem: func(ent localfs.Entry) (RunForEachBuiltItem, error) {
-			return BuildRunForEachItem(cmdLine, ent, macroCtx, false, !inDirs)
+		BuildItem: func(ent localfs.Entry, ctx cmdmacro.Context) (RunForEachBuiltItem, error) {
+			return BuildRunForEachItem(cmdLine, ent, ctx, false, !inDirs)
 		},
 	})
 }

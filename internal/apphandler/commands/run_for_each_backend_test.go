@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/cmdmacro"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -45,7 +46,7 @@ func TestRunForEachUnifiedBatchRunsEachEntryInItsGivenWorkDir(t *testing.T) {
 	spec := RunForEachBatchSpec{
 		Entries:   entries,
 		AllowDirs: true,
-		BuildItem: func(localfs.Entry) (RunForEachBuiltItem, error) {
+		BuildItem: func(localfs.Entry, cmdmacro.Context) (RunForEachBuiltItem, error) {
 			return RunForEachBuiltItem{Argv: []string{"pwd"}, UserLine: "pwd"}, nil
 		},
 	}
@@ -145,13 +146,13 @@ func TestRunForEachPoolWaitingStaysPending(t *testing.T) {
 		AllowDirs:  true,
 		PoolName:   "one",
 		Background: true,
-		BuildItem: func(localfs.Entry) (RunForEachBuiltItem, error) {
+		BuildItem: func(localfs.Entry, cmdmacro.Context) (RunForEachBuiltItem, error) {
 			script := "while [ ! -f " + strconv.Quote(gate) + " ]; do sleep 0.05; done"
 			return RunForEachBuiltItem{Argv: []string{"sh", "-c", script}, UserLine: "hold"}, nil
 		},
 	}
 	wait := hold
-	wait.BuildItem = func(localfs.Entry) (RunForEachBuiltItem, error) {
+	wait.BuildItem = func(localfs.Entry, cmdmacro.Context) (RunForEachBuiltItem, error) {
 		return RunForEachBuiltItem{Argv: []string{"true"}, UserLine: "true"}, nil
 	}
 
@@ -270,7 +271,7 @@ func TestRunForEachCancelWhilePoolWaiting(t *testing.T) {
 		Entries:   []localfs.Entry{{Name: "lantern", Path: dir, Type: localfs.EntryDirectory}},
 		AllowDirs: true,
 		PoolName:  "one",
-		BuildItem: func(localfs.Entry) (RunForEachBuiltItem, error) {
+		BuildItem: func(localfs.Entry, cmdmacro.Context) (RunForEachBuiltItem, error) {
 			return RunForEachBuiltItem{Argv: []string{"true"}, UserLine: "true"}, nil
 		},
 	}
@@ -351,7 +352,7 @@ func TestRunForEachPoolRunsEntriesConcurrently(t *testing.T) {
 		Background: true,
 		AllowFiles: true,
 		PoolName:   "io",
-		BuildItem: func(localfs.Entry) (RunForEachBuiltItem, error) {
+		BuildItem: func(localfs.Entry, cmdmacro.Context) (RunForEachBuiltItem, error) {
 			return RunForEachBuiltItem{Argv: []string{"sh", "-c", script}, UserLine: strconv.Quote(script)}, nil
 		},
 	}
@@ -399,7 +400,7 @@ func TestStartRunForEachBatchClearsSelectionAtStart(t *testing.T) {
 		Entries:    []localfs.Entry{{Name: "harbor", Path: dir, Type: localfs.EntryDirectory}},
 		AllowDirs:  true,
 		Background: true,
-		BuildItem: func(localfs.Entry) (RunForEachBuiltItem, error) {
+		BuildItem: func(localfs.Entry, cmdmacro.Context) (RunForEachBuiltItem, error) {
 			return RunForEachBuiltItem{Argv: []string{"sleep", "5"}, UserLine: "sleep"}, nil
 		},
 	})

@@ -273,15 +273,14 @@ func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 		return
 	}
 	argv := built.Argv
-	macros := cmdmacro.MacroDisplayValues(entry.Command, macroCtx)
 	// Resolved before the run: clearing one panel's tags, or an interactive command deleting the
 	// tagged files, must not move a fallback group on to another alternative.
-	consumed := cmdmacro.ResolvedMacros(entry.Command, macroCtx)
+	macros := cmdmacro.MacroDisplayValues(entry.Command, macroCtx)
 
 	workDir := entry.WorkDir(active).String()
 	switch {
 	case entry.Dialog:
-		clearConsumedSelection(consumed, active, other)
+		clearConsumedSelection(macros, active, other)
 		rowIdx, rowID := a.appendUserMenuCommandRow(entry.Command, macros)
 		ctx, cancel := context.WithCancel(a.commandsCtrl.Context())
 		a.commandsCtrl.OpenRunningOutputDialog(rowID, entry.Title, strings.TrimSpace(entry.Pool) != "", cancel, entry.DialogWidth, entry.DialogHeight)
@@ -292,14 +291,14 @@ func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 		}()
 	case entry.Interactive:
 		if a.runUserMenuInteractive(argv, workDir, entry.Toast) {
-			clearConsumedSelection(consumed, active, other)
+			clearConsumedSelection(macros, active, other)
 		}
 	case entry.Detach:
 		if a.runUserMenuDetached(argv, workDir, entry.Toast) {
-			clearConsumedSelection(consumed, active, other)
+			clearConsumedSelection(macros, active, other)
 		}
 	default:
-		clearConsumedSelection(consumed, active, other)
+		clearConsumedSelection(macros, active, other)
 		rowIdx, rowID := a.appendUserMenuCommandRow(entry.Command, macros)
 		if !entry.Background {
 			a.commandsCtrl.OpenViewAt(rowIdx)
@@ -311,7 +310,7 @@ func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 }
 
 // clearConsumedSelection clears the tags the command read: %t uses the active
-// panel's, %T the other panel's. consumed comes from cmdmacro.ResolvedMacros.
+// panel's, %T the other panel's. consumed is what the launch resolved.
 func clearConsumedSelection(consumed []cmdmacro.MacroUse, active, other *panel.State) {
 	if cmdmacro.UsesMacro(consumed, 't') {
 		active.ClearSelection()
@@ -343,8 +342,7 @@ func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active, other 
 		}
 	}
 
-	cmdTemplate := entry.Command
-	macroCtx := usermenu.MacroContext(active, other, "", "")
+	cmdTemplate, forceShell := entry.Command, entry.Shell
 	notifyLabel := "User menu: " + strings.TrimSpace(entry.Title)
 	if notifyLabel == "User menu:" {
 		notifyLabel = "User menu"
@@ -359,8 +357,8 @@ func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active, other 
 		PTY:          entry.PTY,
 		PanelWorkDir: entry.CwdPanel,
 		NotifyLabel:  notifyLabel,
-		BuildItem: func(ent localfs.Entry) (commandsctrl.RunForEachBuiltItem, error) {
-			return commandsctrl.BuildRunForEachItem(cmdTemplate, ent, macroCtx, entry.Shell, true)
+		BuildItem: func(ent localfs.Entry, ctx cmdmacro.Context) (commandsctrl.RunForEachBuiltItem, error) {
+			return commandsctrl.BuildRunForEachItem(cmdTemplate, ent, ctx, forceShell, true)
 		},
 	})
 	return true

@@ -39,7 +39,7 @@ func (h metaHost) PanelMetaFit(panelID int) (ui.PanelMetaFit, bool) {
 	if !ok {
 		return ui.PanelMetaFit{}, false
 	}
-	return ui.PanelMetaFitAt(file, &a.model, panelID, a.model.HideInactivePanel || a.autohideInactivePanel()), true
+	return ui.PanelMetaFitAt(file, &a.model, panelID, a.effectiveHideInactivePanel()), true
 }
 
 func (h metaHost) IconMetaRunning() string { return h.app.styles.IconMetaRunning() }

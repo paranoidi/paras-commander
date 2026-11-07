@@ -2,6 +2,7 @@ package cmdmacro
 
 import (
 	"fmt"
+	"iter"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -289,20 +290,31 @@ func taggedPaths(ps *PanelSnapshot) ([]string, error) {
 	return paths, nil
 }
 
+// macroRefs yields the alternatives of each macro in template, in order.
+func macroRefs(template string) iter.Seq[string] {
+	return func(yield func(string) bool) {
+		for i := 0; i < len(template); {
+			if template[i] != '%' {
+				i++
+				continue
+			}
+			letters, width := macroAt(template, i)
+			i += width
+			if letters != "" && !yield(letters) {
+				return
+			}
+		}
+	}
+}
+
 // CommandRequiresMacro reports whether template always reads macro %<letter> when it has a
 // value: a plain %<letter>, or a fallback group that tries it first. %% is no macro. It needs no
 // panel state; ResolvedMacros tells which alternative of a group a launch actually uses.
 func CommandRequiresMacro(template string, letter byte) bool {
-	for i := 0; i < len(template); {
-		if template[i] != '%' {
-			i++
-			continue
-		}
-		letters, width := macroAt(template, i)
-		if letters != "" && letters[0] == letter {
+	for letters := range macroRefs(template) {
+		if letters[0] == letter {
 			return true
 		}
-		i += width
 	}
 	return false
 }
@@ -322,16 +334,7 @@ type MacroUse struct {
 func ResolvedMacros(template string, ctx Context) []MacroUse {
 	var out []MacroUse
 	seen := map[byte]bool{}
-	for i := 0; i < len(template); {
-		if template[i] != '%' {
-			i++
-			continue
-		}
-		letters, width := macroAt(template, i)
-		i += width
-		if letters == "" {
-			continue
-		}
+	for letters := range macroRefs(template) {
 		letter, vals, err := resolveMacro(letters, ctx)
 		if err != nil || seen[letter] {
 			continue

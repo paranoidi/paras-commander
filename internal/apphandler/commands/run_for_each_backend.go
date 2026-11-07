@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"slices"
 	"strings"
 	"sync"
 
@@ -16,9 +15,10 @@ import (
 	"github.com/paranoidi/paras-commander/internal/subshell"
 	"github.com/paranoidi/paras-commander/internal/textutil"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/usermenu"
 )
 
-type runForEachItemBuilder func(entry localfs.Entry) (item RunForEachBuiltItem, err error)
+type runForEachItemBuilder func(entry localfs.Entry, ctx cmdmacro.Context) (item RunForEachBuiltItem, err error)
 
 // RunForEachBatchSpec describes one run-for-each style command batch (Run-for-each dialog,
 // user-menu run_for_each entries).
@@ -56,6 +56,7 @@ type RunForEachBatchSpec struct {
 	PTY bool
 
 	BuildItem runForEachItemBuilder
+	macroCtx  cmdmacro.Context // set by StartRunForEachBatch
 }
 
 // runForEachWorkDirs is the working directory of each of spec.Entries: its own path with
@@ -89,8 +90,12 @@ func (h *Handler) StartRunForEachBatch(spec RunForEachBatchSpec) {
 		return
 	}
 
-	// The batch iterates the selection; the tags are already captured in spec.Entries.
+	// Resolved here because the batch goroutine must not read panel state: every item expands
+	// its macros from this snapshot, taken before the tags go.
 	active := h.host.ActivePanel()
+	spec.macroCtx = usermenu.MacroContext(active, h.host.InactivePanel(), "", "")
+
+	// The batch iterates the selection; the tags are already captured in spec.Entries.
 	active.ClearSelection()
 
 	// Resolved here because the batch goroutine must not read panel state.
@@ -178,12 +183,12 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 		idx := start + i
 		abs := textutil.AbsPathClean(ent.Path)
 
-		built, buildErr := spec.BuildItem(ent)
+		built, buildErr := spec.BuildItem(ent, spec.macroCtx)
 		// Macro values get their own row lines, so line 1 keeps only the template.
 		userLine, _, _ := strings.Cut(built.UserLine, " → ")
 		// The iterated item is always shown, even when the template omits %f (directory mode).
 		macros := built.Macros
-		if !slices.ContainsFunc(macros, func(m cmdmacro.MacroUse) bool { return m.Letter == 'f' }) {
+		if !cmdmacro.UsesMacro(macros, 'f') {
 			macros = append([]cmdmacro.MacroUse{{Letter: 'f', Values: []string{abs}}}, macros...)
 		}
 		if buildErr != nil {

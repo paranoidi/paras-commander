@@ -1364,7 +1364,7 @@ func TestRunForPanel_seedsBaselineSoFirstResultCanReportLoss(t *testing.T) {
 	cols := []ui.MetaColumnState{{EntryName: "heron"}, {EntryName: "otter"}}
 	h.runForPanel(0, nil, cols)
 	defer h.stopRun(0)
-	if !h.fitWatch[0].seeded || h.fitWatch[0].gen != h.runGen[0] {
+	if h.fitWatch[0].seededAt.IsZero() || h.fitWatch[0].gen != h.runGen[0] {
 		t.Fatalf("fitWatch = %+v, want seeded for run %d", h.fitWatch[0], h.runGen[0])
 	}
 
@@ -1387,6 +1387,41 @@ func TestReportLostColumns_newRunReseeds(t *testing.T) {
 	h.reportLostColumns(0)
 	if len(fh.messages) != 0 {
 		t.Fatalf("messages = %q: a new run must not compare against the old one", fh.messages)
+	}
+}
+
+func TestReportLostColumns_pendingChecksAreSpaced(t *testing.T) {
+	fh := &fakeHost{fit: metaFit(40, "Heron", "Otter")}
+	h := &Handler{host: fh, model: &ui.Model{}}
+	h.model.MetaResults[0] = []ui.MetaColumnState{{EntryName: "heron", PendingCount: 3}}
+	h.reportLostColumns(0)
+	h.fitWatch[0].seededAt = time.Now().Add(-MinColumnShownBeforeToast)
+
+	fh.fit = metaFit(40, "Heron")
+	h.reportLostColumns(0)
+	if len(fh.messages) != 0 {
+		t.Fatalf("messages = %q: checked inside the interval", fh.messages)
+	}
+
+	h.fitWatch[0].checkedAt = time.Now().Add(-columnFitCheckInterval)
+	h.reportLostColumns(0)
+	if len(fh.messages) != 1 {
+		t.Fatalf("messages = %q, want the toast once the interval passed", fh.messages)
+	}
+}
+
+func TestReportLostColumns_lastFlushChecksAtOnce(t *testing.T) {
+	fh := &fakeHost{fit: metaFit(40, "Heron", "Otter")}
+	h := &Handler{host: fh, model: &ui.Model{}}
+	h.model.MetaResults[0] = []ui.MetaColumnState{{EntryName: "heron", PendingCount: 1}}
+	h.reportLostColumns(0)
+	h.fitWatch[0].seededAt = time.Now().Add(-MinColumnShownBeforeToast)
+
+	h.model.MetaResults[0][0].PendingCount = 0
+	fh.fit = metaFit(40, "Heron")
+	h.reportLostColumns(0)
+	if len(fh.messages) != 1 {
+		t.Fatalf("messages = %q, want the toast on the flush that ends the run", fh.messages)
 	}
 }
 

@@ -20,8 +20,7 @@ type RunForEachBuiltItem struct {
 }
 
 // BuildRunForEachItem expands cmdTemplate's macros for ent and returns the argv to run. ctx is
-// the batch's macro snapshot, taken once on the UI goroutine before the tags are cleared: the
-// batch goroutine must not read panel state, and every item sees the panels as they were at launch.
+// the macro snapshot of the panels at launch (see StartRunForEachBatch).
 // When requireF is true, returns an error if the template omits the required %f (iterated
 // item) macro; when false (run-in-each-directory mode), %f is optional since the shell is
 // already positioned inside ent's directory.

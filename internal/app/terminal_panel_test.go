@@ -9,6 +9,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	commandsctrl "github.com/paranoidi/paras-commander/internal/apphandler/commands"
+	"github.com/paranoidi/paras-commander/internal/cmdmacro"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/subshell"
@@ -245,7 +246,7 @@ func TestResizeTerminalFeedToLayoutUpdatesRunForEachPTY(t *testing.T) {
 		Entries:   []localfs.Entry{{Name: "willow", Path: dir, Type: localfs.EntryDirectory}},
 		AllowDirs: true,
 		PTY:       true,
-		BuildItem: func(localfs.Entry) (commandsctrl.RunForEachBuiltItem, error) {
+		BuildItem: func(localfs.Entry, cmdmacro.Context) (commandsctrl.RunForEachBuiltItem, error) {
 			return commandsctrl.RunForEachBuiltItem{Argv: []string{"sleep", "60"}, UserLine: "sleep 60"}, nil
 		},
 	})

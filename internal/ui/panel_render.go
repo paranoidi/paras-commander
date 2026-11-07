@@ -816,8 +816,7 @@ func drawPanelCarousel(screen tcell.Screen, p panelCarouselParams) bool {
 	if !ok {
 		return false
 	}
-	showChildCol, parent, child, childKind := plan.ShowChild, plan.Parent, plan.Child, plan.ChildKind
-	metaLayouts, metaTotalW := FitCarouselMetaColumns(rect, display.CarouselLayout, state, display.ShowIcons, showChildCol, panelStyle.ScrollbarStyle, visibleRows, plan.FitWidths, display.MetaColumns)
+	metaLayouts, metaTotalW := FitCarouselMetaColumns(rect, display.CarouselLayout, state, display.ShowIcons, plan.ShowChild, panelStyle.ScrollbarStyle, visibleRows, plan.FitWidths, display.MetaColumns)
 	meta := CarouselMeta(metaLayouts, metaTotalW, panelStyle.Styles)
 	measuredFitWidth := panelcarousel.WithCenterMeta(plan.FitWidths, metaTotalW)
 	carouselDisk := panelcarousel.DiskUsage{
@@ -833,8 +832,8 @@ func drawPanelCarousel(screen tcell.Screen, p panelCarouselParams) bool {
 		FolderColor:           ctx.FolderColor,
 		Frame:                 rect,
 		Center:                state,
-		Parent:                parent,
-		Child:                 child,
+		Parent:                plan.Parent,
+		Child:                 plan.Child,
 		Styles:                panelStyle.Styles,
 		ChromeBlocked:         ctx.ChromeBlocked,
 		FileListActive:        ctx.FileListActive,
@@ -842,8 +841,8 @@ func drawPanelCarousel(screen tcell.Screen, p panelCarouselParams) bool {
 		HeaderStyle:           headerStyle,
 		HeaderCarouselStyle:   headerCarouselStyle,
 		SurfaceStyle:          chromeSurface,
-		ShowChildColumn:       showChildCol,
-		ChildPreviewKind:      childKind,
+		ShowChildColumn:       plan.ShowChild,
+		ChildPreviewKind:      plan.ChildKind,
 		DiskUsage:             carouselDisk,
 		OtherPanelPath:        ctx.OtherPanelPath,
 		ScrollbarStyle:        panelStyle.ScrollbarStyle,
@@ -866,14 +865,14 @@ func drawPanelCarousel(screen tcell.Screen, p panelCarouselParams) bool {
 			return state.IsRenameMarked(entry)
 		},
 	})
-	paintCarouselFilePreview := display.CarouselFilePreview.Open && showChildCol &&
-		(childKind == panelcarousel.ChildPreviewFile ||
+	paintCarouselFilePreview := display.CarouselFilePreview.Open && plan.ShowChild &&
+		(plan.ChildKind == panelcarousel.ChildPreviewFile ||
 			ctx.FileListActive && (state.Filter.Active || state.Filter.Editing) ||
 			// Nav coalesce pending: keep the open file preview covering the child column
 			// until the debounce flush decides whether the child becomes a directory listing.
 			state.CarouselChildPreviewCoalesce)
 	if paintCarouselFilePreview {
-		if previewRect, ok := panelcarousel.ChildPreviewPaintRect(rect, showChildCol, display.CarouselLayout, measuredFitWidth); ok {
+		if previewRect, ok := panelcarousel.ChildPreviewPaintRect(rect, plan.ShowChild, display.CarouselLayout, measuredFitWidth); ok {
 			// The child preview's own rect stops one column short of the panel's real
 			// border (a blank margin column sits between them) — point the scrollbar at
 			// the border column itself, matching the plain file list's scrollbar position,
@@ -882,7 +881,7 @@ func drawPanelCarousel(screen tcell.Screen, p panelCarouselParams) bool {
 			drawFilePreviewPanel(screen, Rect(previewRect), display.CarouselFilePreview, panelStyle.Styles, ctx.ChromeBlocked, false, false, true, false, state.PathString(), display.UserHomeDir, panelStyle.ScrollbarStyle, rect.X+rect.Width-1, borderStyle)
 		}
 	}
-	if !showChildCol {
+	if !plan.ShowChild {
 		drawPanelListScrollbar(screen, rect,
 			panelScrollPos{ListTopY: PanelListTop(rect), Visible: visibleRows, Total: state.VisibleEntryCount(), Offset: state.ScrollOffset},
 			panelStyle.ScrollbarStyle, panelScrollbarShow(ctx.FileListActive, display.ScrollbarShowInactive),
@@ -891,7 +890,7 @@ func drawPanelCarousel(screen tcell.Screen, p panelCarouselParams) bool {
 	if selectionSizeLabel != "" {
 		drawPanelBottomSelectionSize(screen, rect, ctx.PanelID, bottomCtx)
 	} else {
-		drawPanelCursorNameHintForState(screen, rect, ctx.PanelID, state, bottomCtx, ctx.FileListActive, ctx.ChromeBlocked, titleStyle, display.ShowIcons, panelcarousel.CenterNameWidth(rect, display.CarouselLayout, state, display.ShowIcons, showChildCol, panelStyle.ScrollbarStyle, visibleRows, measuredFitWidth, meta.Width), display.JobMarks, ctx.CursorNameHintFallbackOut, ctx.CursorNameHintPinnedOut)
+		drawPanelCursorNameHintForState(screen, rect, ctx.PanelID, state, bottomCtx, ctx.FileListActive, ctx.ChromeBlocked, titleStyle, display.ShowIcons, panelcarousel.CenterNameWidth(rect, display.CarouselLayout, state, display.ShowIcons, plan.ShowChild, panelStyle.ScrollbarStyle, visibleRows, measuredFitWidth, meta.Width), display.JobMarks, ctx.CursorNameHintFallbackOut, ctx.CursorNameHintPinnedOut)
 	}
 	return true
 }

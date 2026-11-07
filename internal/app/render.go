@@ -189,7 +189,7 @@ func (a *App) snapshotModelForBrowserPaint() ui.Model {
 	a.commandsMu.RUnlock()
 	model.CursorNameHintPinOutPrimary = &a.model.Primary.CursorNameHintPinned
 	model.CursorNameHintPinOutSecondary = &a.model.Secondary.CursorNameHintPinned
-	model.HideInactivePanel = a.model.HideInactivePanel || a.autohideInactivePanel()
+	model.HideInactivePanel = a.effectiveHideInactivePanel()
 	// Match ui.Model.renderSubFocus: suppress panel/strip focus while the terminal owns input.
 	if model.TerminalPanel.Visible && model.TerminalPanel.Focused {
 		model.ActiveSubFocus = -1
@@ -356,7 +356,7 @@ func (a *App) render() {
 	a.commandsMu.RUnlock()
 	modelSnapshot.CursorNameHintPinOutPrimary = &a.model.Primary.CursorNameHintPinned
 	modelSnapshot.CursorNameHintPinOutSecondary = &a.model.Secondary.CursorNameHintPinned
-	modelSnapshot.HideInactivePanel = a.model.HideInactivePanel || a.autohideInactivePanel()
+	modelSnapshot.HideInactivePanel = a.effectiveHideInactivePanel()
 	a.overlays = ui.Render(a.screen, modelSnapshot, a.styles)
 	a.syncTerminalPanelCursor()
 	a.emitScreenAfterFullRender()
@@ -615,6 +615,11 @@ func (a *App) narrowAutohideInactivePanel() bool {
 // hide-inactive-panel toggle.
 func (a *App) autohideInactivePanel() bool {
 	return a.carouselAutohideInactivePanel() || a.narrowAutohideInactivePanel()
+}
+
+// effectiveHideInactivePanel is Model.HideInactivePanel as a render pass applies it.
+func (a *App) effectiveHideInactivePanel() bool {
+	return a.model.HideInactivePanel || a.autohideInactivePanel()
 }
 
 // setCarouselAutohideOverride writes carouselAutohideOverride and republishes the ordering flag.
