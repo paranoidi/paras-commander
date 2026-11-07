@@ -215,9 +215,9 @@ func fitListingTextLen(entries []localfs.Entry) int {
 // (index 0) and center (index 1) columns whose layout token is fit-mode; index 2 is always 0
 // (fit-mode is rejected there at parse time). Scans every entry in the column's listing (not
 // just the visible window) so width doesn't jitter while scrolling. Call ONCE per render pass;
-// thread the same result into SplitColumns (via DrawBody / ChildPreviewPaintRect) and
+// thread the same result, with WithCenterMeta applied, into SplitColumns (via DrawBody / ChildPreviewPaintRect) and
 // CenterNameWidth so all three agree on the same frame's column geometry.
-func MeasureFitColumnWidths(layout Layout, parent Column, center panel.State, showIcons, showChild bool, style uiscrollbar.Style, visibleRows int, metaW int) [3]int {
+func MeasureFitColumnWidths(layout Layout, parent Column, center panel.State, showIcons, showChild bool, style uiscrollbar.Style, visibleRows int) [3]int {
 	var out [3]int
 	for i := 0; i < 2; i++ {
 		if k := layout.Splits[i].Kind; k != SplitFitChars && k != SplitFitPercent {
@@ -264,14 +264,20 @@ func MeasureFitColumnWidths(layout Layout, parent Column, center panel.State, sh
 		if layout.ShowSize[i] {
 			w += 1 + panellist.SizeCells
 		}
-		if i == 1 && metaW > 0 {
-			w += 2 + metaW
-		}
 		w++ // 1-char right margin so content doesn't touch the next column
 		w += reserve
 		out[i] = w
 	}
 	return out
+}
+
+// WithCenterMeta returns measured (from MeasureFitColumnWidths) with a measured center column
+// widened by metaW cells of meta columns and their gap. Unmeasured columns stay 0.
+func WithCenterMeta(measured [3]int, metaW int) [3]int {
+	if measured[1] > 0 && metaW > 0 {
+		measured[1] += 2 + metaW
+	}
+	return measured
 }
 
 // CenterNameWidth returns the name-column width for the carousel center column.

@@ -70,6 +70,10 @@ func (a *App) toggleHideInactivePanel() {
 	if a.model.ViewMode != ui.ViewBrowser {
 		return
 	}
+	if !a.model.HideInactivePanel && a.narrowAutohideInactivePanel() {
+		a.setTransientMessage("Inactive panel hidden: too narrow to show file names", ui.MessageUrgencyInfo)
+		return
+	}
 	if a.model.QuickViewForcesSlotOrder() {
 		// Quick view is borrowing the slot carousel autohide keeps hidden, so the twin panel
 		// counts as hidden: showing it means quick view gives the slot back.

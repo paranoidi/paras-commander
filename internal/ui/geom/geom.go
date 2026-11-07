@@ -135,6 +135,17 @@ func mainPanelColumnWidths(total int, split PanelPaneSplit) (primaryW, secondary
 	return mainPanelAxisSplit(total, split)
 }
 
+// InactivePaneWidth is the width split gives the inactive panel of a side-by-side layout total
+// cells wide, whether or not split hides it.
+func InactivePaneWidth(total int, split PanelPaneSplit) int {
+	split.HideInactivePanel = false
+	primaryW, secondaryW := mainPanelColumnWidths(total, split)
+	if split.ActivePanel == 0 {
+		return secondaryW
+	}
+	return primaryW
+}
+
 // mainPanelRowHeights splits total height between primary and secondary rows.
 func mainPanelRowHeights(total int, split PanelPaneSplit) (primaryH, secondaryH int) {
 	return mainPanelAxisSplit(total, split)

@@ -38,6 +38,11 @@ func CalculateLayoutWithOrientation(width, height int, showMenuBar bool, split g
 // PanelPaneSplit controls twin-pane split along the layout axis (see geom.PanelPaneSplit).
 type PanelPaneSplit = geom.PanelPaneSplit
 
+// InactivePaneWidth is the inactive panel's width in a side-by-side layout (see geom.InactivePaneWidth).
+func InactivePaneWidth(total int, split PanelPaneSplit) int {
+	return geom.InactivePaneWidth(total, split)
+}
+
 // PanelWidthSplit is a legacy alias for PanelPaneSplit.
 type PanelWidthSplit = geom.PanelPaneSplit
 

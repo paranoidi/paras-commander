@@ -106,8 +106,8 @@ func (h previewHost) BrowserMenuDefinitions() []menu.Definition {
 	return h.app.browserMenuDefinitions()
 }
 
-func (h previewHost) CarouselAutohideInactivePanel() bool {
-	return h.app.carouselAutohideInactivePanel()
+func (h previewHost) AutohideInactivePanel() bool {
+	return h.app.autohideInactivePanel()
 }
 
 func (h previewHost) EditActiveFile() { h.app.editActiveFile() }

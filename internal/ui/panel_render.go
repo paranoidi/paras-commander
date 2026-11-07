@@ -296,9 +296,8 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	showGit, gitStrip, rowTextWidth := layoutRes.ShowGit, layoutRes.GitStrip, layoutRes.RowTextWidth
 	gitStart, iconStart, diskDenom := layoutRes.GitStart, layoutRes.IconStart, layoutRes.DiskDenom
 
-	metaLayouts, metaTotalW := LayoutMetaColumns(display.MetaColumns)
-	showMeta := len(metaLayouts) > 0
-	showMetaEffective := showMeta && !nameOnlyDisplay
+	metaLayouts, metaTotalW := fitPanelMetaColumns(layoutRes, state, display.MetaColumns)
+	showMetaEffective := len(metaLayouts) > 0
 	listTextWidth := rowTextWidth
 	headerRow := newPanelHeaderRow(layoutRes, state, display.ShowIcons, metaLayouts)
 	headerTreeGutter := headerRow.TreeGutter
@@ -696,9 +695,26 @@ func panelNameColumnWidth(layoutRes panelColumnLayoutResult, f panel.ListFormat,
 	return panelListNameWidth(layoutRes.RowTextWidth, f, layoutRes.NameOnlyDisplay, false)
 }
 
-// PanelNameColumnWidth is the file-name column width drawPanel would give a panel panelWidth
-// cells wide (border, icon gutter/strip, git strip, listing format and meta columns all
-// counted). A name-only (narrow) panel hides meta, so the name takes the whole row.
+// fitPanelMetaColumns lays out the meta columns a panel has room for: the rightmost go first
+// until the name column is at least config.MinPanelNameWidthWithMeta wide, and a name-only panel
+// shows none. It is the one source of the drawn columns for rows, header and header hit tests.
+func fitPanelMetaColumns(layoutRes panelColumnLayoutResult, state panel.State, cols []MetaColumnState) ([]MetaColumnLayout, int) {
+	if layoutRes.NameOnlyDisplay {
+		return nil, 0
+	}
+	layouts, totalW := LayoutMetaColumns(cols)
+	listFmt := panel.EffectiveListFormat(state.ListFormat)
+	rowTextWidth := layoutRes.RowTextWidth - panelTreeHeaderGutter(layoutRes, state)
+	for len(layouts) > 0 && panelListNameWidthWithMeta(rowTextWidth, totalW, listFmt, false, false) < config.MinPanelNameWidthWithMeta {
+		layouts, totalW = dropLastMetaColumn(layouts, totalW)
+	}
+	return layouts, totalW
+}
+
+// PanelNameColumnWidth is the file-name column width of a panel panelWidth cells wide with every
+// meta column shown (border, icon gutter/strip, git strip and listing format also counted), so it
+// tells the zoom gate whether the whole listing fits, not what fitPanelMetaColumns left of it. A
+// name-only (narrow) panel hides meta, so the name takes the whole row.
 // LayoutMetaColumns reuses each column's cached cells while its ResultsGen is unchanged, so
 // repeated calls (each layout, including mouse motion) are cheap.
 func PanelNameColumnWidth(panelWidth int, state panel.State, showIcons, narrowPanelsNameOnly bool, metaCols []MetaColumnState) int {
@@ -711,10 +727,28 @@ func PanelNameColumnWidth(panelWidth int, state panel.State, showIcons, narrowPa
 	return panelNameColumnWidth(layoutRes, panel.EffectiveListFormat(state.ListFormat), showMeta, metaTotalW)
 }
 
+// PanelNameOnlyWidth is the name column width of a name-only listing in a panel panelWidth cells
+// wide: the whole row text, with no git strip or trailing columns.
+func PanelNameOnlyWidth(panelWidth int, state panel.State, showIcons bool) int {
+	return panelListBaseWidth(panelWidth, state, showIcons)
+}
+
+// panelListBaseWidth is the row text width of a panel panelWidth cells wide before any git strip:
+// the interior less the icon gutter and strip.
+func panelListBaseWidth(panelWidth int, state panel.State, showIcons bool) int {
+	width := panelWidth - 2
+	if showIcons {
+		width -= panelIconListLeadingGutter
+		if state.ListLayout != panel.ListLayoutTree {
+			width -= panelIconStripCells
+		}
+	}
+	return width
+}
+
 // panelColumnLayout computes the leading-column (gutter/git/icon) widths and offsets for a
 // panel listing, moved verbatim out of drawPanel's body.
 func panelColumnLayout(rect Rect, state panel.State, display PanelDisplayConfig) panelColumnLayoutResult {
-	interior := rect.Width - 2
 	leftGutter := 0
 	if display.ShowIcons {
 		leftGutter = panelIconListLeadingGutter
@@ -723,8 +757,9 @@ func panelColumnLayout(rect Rect, state panel.State, display PanelDisplayConfig)
 	if display.ShowIcons && state.ListLayout != panel.ListLayoutTree {
 		iconStrip = panelIconStripCells
 	}
-	baseListWidth := interior - leftGutter - iconStrip
-	nameOnlyDisplay := display.NarrowPanelsNameOnly && baseListWidth < config.NarrowPanelRowTextWidthThreshold
+	baseListWidth := panelListBaseWidth(rect.Width, state, display.ShowIcons)
+	nameOnlyDisplay := (display.NarrowPanelsNameOnly && baseListWidth < config.NarrowPanelRowTextWidthThreshold) ||
+		panelListNameWidth(baseListWidth, state.ListFormat, false, panelListGitColumnActive(state, false)) < config.MinPanelNameWidth
 	showGit := panelListGitColumnActive(state, nameOnlyDisplay)
 	gitStrip := 0
 	if showGit {
@@ -760,8 +795,10 @@ func drawPanelCarousel(screen tcell.Screen, p panelCarouselParams) bool {
 		return false
 	}
 	parent, _, child, childKind := panelcarousel.BuildColumns(state, visibleRows, quickViewOn, filePreviewEligible)
-	meta := CarouselMeta(display.MetaColumns, panelStyle.Styles)
-	measuredFitWidth := panelcarousel.MeasureFitColumnWidths(display.CarouselLayout, parent, state, display.ShowIcons, showChildCol, panelStyle.ScrollbarStyle, visibleRows, meta.Width)
+	fitWidths := panelcarousel.MeasureFitColumnWidths(display.CarouselLayout, parent, state, display.ShowIcons, showChildCol, panelStyle.ScrollbarStyle, visibleRows)
+	metaLayouts, metaTotalW := FitCarouselMetaColumns(rect, display.CarouselLayout, state, display.ShowIcons, showChildCol, panelStyle.ScrollbarStyle, visibleRows, fitWidths, display.MetaColumns)
+	meta := CarouselMeta(metaLayouts, metaTotalW, panelStyle.Styles)
+	measuredFitWidth := panelcarousel.WithCenterMeta(fitWidths, metaTotalW)
 	carouselDisk := panelcarousel.DiskUsage{
 		Active:                 display.ShowDiskUsage,
 		PanelID:                ctx.PanelID,
@@ -1021,19 +1058,25 @@ type panelHeaderRow struct {
 	Columns              []PanelHeaderColumn
 }
 
+// panelTreeHeaderGutter is the fixed tree gutter the header reserves (see newPanelHeaderRow), which
+// is also a tree row's gutter at depth 0.
+func panelTreeHeaderGutter(layoutRes panelColumnLayoutResult, state panel.State) int {
+	if state.ListLayout == panel.ListLayoutTree && panelIconStripCells > 0 && panelIconStripCells < layoutRes.RowTextWidth {
+		return panelIconStripCells
+	}
+	return 0
+}
+
 func newPanelHeaderRow(layoutRes panelColumnLayoutResult, state panel.State, showIcons bool, metaLayouts []MetaColumnLayout) panelHeaderRow {
 	// In tree mode, panelColumnLayout zeroes iconStrip (icons move into each row's tree gutter
 	// instead of a shared strip), but drawPanelRow still reserves panelIconStripCells of gutter
 	// width at depth 0 (see treeGutterWidth there). The header has no per-depth gutter of its own,
 	// so shift/narrow it by that same fixed amount — this is the single place that offset is
 	// computed; row drawing keeps deriving its own (per-depth) gutter independently.
-	r := panelHeaderRow{}
-	if state.ListLayout == panel.ListLayoutTree && panelIconStripCells > 0 && panelIconStripCells < layoutRes.RowTextWidth {
-		r.TreeGutter = panelIconStripCells
-	}
+	r := panelHeaderRow{TreeGutter: panelTreeHeaderGutter(layoutRes, state)}
 	r.X = layoutRes.IconStart + layoutRes.IconStrip + r.TreeGutter
 	r.Width = layoutRes.RowTextWidth - r.TreeGutter
-	showMeta := len(metaLayouts) > 0 && !layoutRes.NameOnlyDisplay
+	showMeta := len(metaLayouts) > 0
 	r.Text, r.Columns = panelListHeader(r.Width, state, showIcons, showMeta, metaLayouts, layoutRes.NameOnlyDisplay, layoutRes.ShowGit)
 	for i := range r.Columns {
 		r.Columns[i].X += r.X

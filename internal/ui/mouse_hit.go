@@ -97,8 +97,9 @@ func PanelHeaderColumnAt(file Rect, model *Model, panelID, x, y int) (col PanelH
 		return PanelHeaderColumn{}, false, false
 	}
 	display := PanelDisplayConfig{ShowIcons: model.UseNerdfontIcons, NarrowPanelsNameOnly: model.NarrowPanelsNameOnly}
-	metaLayouts, _ := LayoutMetaColumns(model.MetaResults[panelID])
-	row := newPanelHeaderRow(panelColumnLayout(file, state, display), state, display.ShowIcons, metaLayouts)
+	layoutRes := panelColumnLayout(file, state, display)
+	metaLayouts, _ := fitPanelMetaColumns(layoutRes, state, model.MetaResults[panelID])
+	row := newPanelHeaderRow(layoutRes, state, display.ShowIcons, metaLayouts)
 	for _, c := range row.Columns {
 		if x >= c.X && x < c.X+c.Width {
 			return c, true, true

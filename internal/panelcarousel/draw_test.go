@@ -356,7 +356,7 @@ func TestFitModeColumnHeaderNeverTruncatesWithShortNames(t *testing.T) {
 	parent := Column{Kind: ColumnParent, Populated: true, Snapshot: panel.ListingSnapshot{Entries: entries}}
 	visibleRows := frame.Height - 2
 
-	measured := MeasureFitColumnWidths(layout, parent, center, false, true, uiscrollbar.StyleThumb, visibleRows, 0)
+	measured := MeasureFitColumnWidths(layout, parent, center, false, true, uiscrollbar.StyleThumb, visibleRows)
 
 	DrawBody(screen, BodyParams{
 		Frame:                 frame,

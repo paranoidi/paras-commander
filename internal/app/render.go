@@ -189,7 +189,7 @@ func (a *App) snapshotModelForBrowserPaint() ui.Model {
 	a.commandsMu.RUnlock()
 	model.CursorNameHintPinOutPrimary = &a.model.Primary.CursorNameHintPinned
 	model.CursorNameHintPinOutSecondary = &a.model.Secondary.CursorNameHintPinned
-	model.HideInactivePanel = a.model.HideInactivePanel || a.carouselAutohideInactivePanel()
+	model.HideInactivePanel = a.model.HideInactivePanel || a.autohideInactivePanel()
 	// Match ui.Model.renderSubFocus: suppress panel/strip focus while the terminal owns input.
 	if model.TerminalPanel.Visible && model.TerminalPanel.Focused {
 		model.ActiveSubFocus = -1
@@ -356,7 +356,7 @@ func (a *App) render() {
 	a.commandsMu.RUnlock()
 	modelSnapshot.CursorNameHintPinOutPrimary = &a.model.Primary.CursorNameHintPinned
 	modelSnapshot.CursorNameHintPinOutSecondary = &a.model.Secondary.CursorNameHintPinned
-	modelSnapshot.HideInactivePanel = a.model.HideInactivePanel || a.carouselAutohideInactivePanel()
+	modelSnapshot.HideInactivePanel = a.model.HideInactivePanel || a.autohideInactivePanel()
 	a.overlays = ui.Render(a.screen, modelSnapshot, a.styles)
 	a.syncTerminalPanelCursor()
 	a.emitScreenAfterFullRender()
@@ -535,7 +535,18 @@ func (a *App) applyCarouselPanelZoomPercents(totalWidth int) {
 	}
 }
 
+// panelPaneSplit is the browser split for width cells (<= 0: the terminal width), with
+// every reason to hide the inactive panel applied.
 func (a *App) panelPaneSplit(width int, filePreviewOpen bool) ui.PanelPaneSplit {
+	split := a.visiblePanelPaneSplit(width, filePreviewOpen)
+	hide := a.model.HideInactivePanel || a.carouselAutohideInactivePanel() || (!filePreviewOpen && a.inactivePanelTooNarrow(split, width))
+	split.HideInactivePanel = ui.LayoutHideInactivePanel(a.model.ViewMode, hide)
+	return split
+}
+
+// visiblePanelPaneSplit is the split with both panels on screen, the shares
+// inactivePanelTooNarrow measures: its result feeds the hide flag but never these widths.
+func (a *App) visiblePanelPaneSplit(width int, filePreviewOpen bool) ui.PanelPaneSplit {
 	w, h := a.screen.Size()
 	if width <= 0 {
 		width = w
@@ -555,12 +566,11 @@ func (a *App) panelPaneSplit(width int, filePreviewOpen bool) ui.PanelPaneSplit 
 		}
 	}
 	return ui.PanelPaneSplit{
-		Zoom:              ui.PanelZoomSplitsColumns(a.model.ViewMode, zoom),
-		ActivePanel:       a.model.ActivePanel,
-		ActivePercent:     activePct,
-		InactivePercent:   inactivePct,
-		HideInactivePanel: ui.LayoutHideInactivePanel(a.model.ViewMode, a.model.HideInactivePanel || a.carouselAutohideInactivePanel()),
-		SwapPanes:         a.model.ViewMode == ui.ViewBrowser && a.model.EffectiveSwapPanes(),
+		Zoom:            ui.PanelZoomSplitsColumns(a.model.ViewMode, zoom),
+		ActivePanel:     a.model.ActivePanel,
+		ActivePercent:   activePct,
+		InactivePercent: inactivePct,
+		SwapPanes:       a.model.ViewMode == ui.ViewBrowser && a.model.EffectiveSwapPanes(),
 	}
 }
 
@@ -578,6 +588,33 @@ func (a *App) carouselAutohideWanted() bool {
 // autohide (wanted and not overridden by the hide-inactive-panel toggle).
 func (a *App) carouselAutohideInactivePanel() bool {
 	return a.carouselAutohideWanted() && !a.carouselAutohideOverride
+}
+
+// inactivePanelTooNarrow reports whether the inactive panel could not list legible names even
+// with nothing but names, given its share of split. Stacked panes take the full width, and sync
+// follow and quick view need both panels, as for carousel autohide.
+func (a *App) inactivePanelTooNarrow(split ui.PanelPaneSplit, width int) bool {
+	if a.model.ViewMode != ui.ViewBrowser || a.effectivePaneSplitOrientation() != ui.SplitHorizontal ||
+		a.model.SyncFollowEnabled || a.model.QuickViewEnabled {
+		return false
+	}
+	if width <= 0 {
+		width, _ = a.screen.Size()
+	}
+	return ui.PanelNameOnlyWidth(ui.InactivePaneWidth(width, split), *a.inactivePanel(), a.model.UseNerdfontIcons) < config.MinPanelNameWidth
+}
+
+// narrowAutohideInactivePanel reports whether the inactive panel is hidden for being too narrow
+// at the current terminal size.
+func (a *App) narrowAutohideInactivePanel() bool {
+	filePreviewOpen := a.previewCtrl.FilePreviewOpen() || a.model.QuickViewDisplayActive()
+	return !filePreviewOpen && a.inactivePanelTooNarrow(a.visiblePanelPaneSplit(0, false), 0)
+}
+
+// autohideInactivePanel reports whether the inactive panel is hidden by anything other than the
+// hide-inactive-panel toggle.
+func (a *App) autohideInactivePanel() bool {
+	return a.carouselAutohideInactivePanel() || a.narrowAutohideInactivePanel()
 }
 
 // setCarouselAutohideOverride writes carouselAutohideOverride and republishes the ordering flag.

@@ -400,6 +400,13 @@ const (
 	// 40 targets a 50/50 split on an 80-column terminal (inner listing width 38) with file icons off;
 	// with icons on, the text budget is three cells narrower so the gate still trips.
 	NarrowPanelRowTextWidthThreshold = 40
+	// MinPanelNameWidthWithMeta is the narrowest name column (cells) a panel keeps while showing meta
+	// columns: columns that would squeeze the name below it are dropped, rightmost first.
+	MinPanelNameWidthWithMeta = 20
+	// MinPanelNameWidth is the legibility floor for the name column (cells). A panel whose name
+	// column would be narrower lists names only, whatever [ui].narrow_panels_name_only says; an
+	// inactive panel still narrower than this when listing names only is hidden.
+	MinPanelNameWidth = 10
 
 	// MinCarouselPanelInnerWidth is the minimum interior width (cells inside the panel frame) for carousel mode.
 	MinCarouselPanelInnerWidth = 72 // 3 × MinCarouselColumnWidth

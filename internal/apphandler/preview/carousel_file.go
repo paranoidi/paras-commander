@@ -157,7 +157,7 @@ func (h *Handler) carouselFilePreviewEligible() bool {
 	if !ok {
 		return false
 	}
-	return panelcarousel.FilePreviewEligible(rect, h.model.HideInactivePanel || h.host.CarouselAutohideInactivePanel(), h.model.CarouselLayout)
+	return panelcarousel.FilePreviewEligible(rect, h.model.HideInactivePanel || h.host.AutohideInactivePanel(), h.model.CarouselLayout)
 }
 
 // carouselChildPreviewLayoutMetrics returns the embedded file preview's text width and content
@@ -179,8 +179,9 @@ func (h *Handler) carouselChildPreviewLayoutMetrics() (textW, contentH int, ok b
 	}
 	state := *h.host.ActivePanel()
 	parent, _, _, _ := panelcarousel.BuildColumns(state, listH, false, true)
-	_, metaW := ui.LayoutMetaColumns(h.model.MetaResults[h.model.ActivePanel])
-	measuredFitWidth := panelcarousel.MeasureFitColumnWidths(h.model.CarouselLayout, parent, state, h.model.UseNerdfontIcons, true, h.model.PanelScrollbar, listH, metaW)
+	fitWidths := panelcarousel.MeasureFitColumnWidths(h.model.CarouselLayout, parent, state, h.model.UseNerdfontIcons, true, h.model.PanelScrollbar, listH)
+	_, metaW := ui.FitCarouselMetaColumns(rect, h.model.CarouselLayout, state, h.model.UseNerdfontIcons, true, h.model.PanelScrollbar, listH, fitWidths, h.model.MetaResults[h.model.ActivePanel])
+	measuredFitWidth := panelcarousel.WithCenterMeta(fitWidths, metaW)
 	childRect, ok := panelcarousel.ChildPreviewPaintRect(rect, true, h.model.CarouselLayout, measuredFitWidth)
 	if !ok {
 		return 1, listH, false

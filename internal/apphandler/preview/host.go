@@ -63,7 +63,7 @@ type Host interface {
 	LayoutForTerminalSizePreview(width, height int, filePreviewOpen bool) ui.Layout
 	TerminalLayoutRows() int
 	BrowserMenuDefinitions() []menu.Definition
-	CarouselAutohideInactivePanel() bool
+	AutohideInactivePanel() bool
 	EditActiveFile()
 	EditFullscreenPreviewFile()
 	OpenDeleteDialogForPreviewedFile()

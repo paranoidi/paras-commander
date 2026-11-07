@@ -155,7 +155,7 @@ func (f *identityTestHost) PanelPaneSplit(int, bool) ui.PanelPaneSplit {
 }
 func (f *identityTestHost) TerminalLayoutRows() int                   { return 24 }
 func (f *identityTestHost) BrowserMenuDefinitions() []menu.Definition { return nil }
-func (f *identityTestHost) CarouselAutohideInactivePanel() bool       { return false }
+func (f *identityTestHost) AutohideInactivePanel() bool               { return false }
 func (f *identityTestHost) EditActiveFile()                           {}
 func (f *identityTestHost) EditFullscreenPreviewFile()                {}
 func (f *identityTestHost) OpenDeleteDialogForPreviewedFile()         {}

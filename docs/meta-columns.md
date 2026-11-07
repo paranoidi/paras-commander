@@ -51,6 +51,8 @@ cache = true
 
 Up to 8 columns can be active per panel, ordered by `order` then name. Output is filled in as commands finish; a pending cell shows an icon, but only for commands still running after `[panels].pending_marker_delay_ms` (default 800 ms), so fast commands do not flash it; until then the cell is blank. Set it to `0` to show the icon immediately, or to `-1` to never show it (a hung command then looks the same as an empty value; see [config.md](config.md)). If the output contains tabs or newlines it is split into aligned sub-columns. Numeric cells (sizes such as `5.6G` or `1.2 GiB` included) are right-aligned and text is left-aligned; wide columns shrink first and are clipped with an ellipsis. In the carousel view meta columns appear only in the centre column.
 
+Columns never crowd out the file name. When a panel has too little width, the rightmost columns are not drawn until the name column has at least 20 cells again; they keep running and still sort, but a column that is not drawn shows no sort arrow. See [Layout](layout.md).
+
 A failing command leaves the cell empty and shows one warning toast per run, not one per file.
 
 `C-y` (`panel.refresh`) drops the cache and recomputes all active columns for that panel. Changing directory runs the active columns for the new listing. In [tree view](panels.md#tree-view) the columns also fill in for expanded directories: each directory's rows are computed as they load, with the command running in that directory.

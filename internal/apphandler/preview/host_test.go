@@ -121,7 +121,7 @@ func (f *fakeHost) PanelPaneSplit(int, bool) ui.PanelPaneSplit {
 }
 func (f *fakeHost) TerminalLayoutRows() int                   { return 0 }
 func (f *fakeHost) BrowserMenuDefinitions() []menu.Definition { return nil }
-func (f *fakeHost) CarouselAutohideInactivePanel() bool       { return false }
+func (f *fakeHost) AutohideInactivePanel() bool               { return false }
 func (f *fakeHost) EditActiveFile()                           {}
 func (f *fakeHost) EditFullscreenPreviewFile()                {}
 func (f *fakeHost) OpenDeleteDialogForPreviewedFile()         {}

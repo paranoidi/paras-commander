@@ -6,11 +6,13 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // metaColumnSep separates meta columns in the header and rows.
@@ -151,9 +153,35 @@ func metaHeader(layouts []MetaColumnLayout) (string, []int) {
 	return b.String(), starts
 }
 
-// CarouselMeta lays out active meta columns for the carousel center column.
-func CarouselMeta(cols []MetaColumnState, styles theme.Theme) panelcarousel.Meta {
+// dropLastMetaColumn removes the rightmost layout and returns the remaining total width.
+func dropLastMetaColumn(layouts []MetaColumnLayout, totalWidth int) ([]MetaColumnLayout, int) {
+	last := len(layouts) - 1
+	totalWidth -= layouts[last].Width
+	if last > 0 {
+		totalWidth -= len(metaColumnSep)
+	}
+	return layouts[:last], totalWidth
+}
+
+// FitCarouselMetaColumns lays out the meta columns the carousel center column has room for: the
+// rightmost go first until its name column is at least config.MinPanelNameWidthWithMeta wide, or
+// as wide as without any meta when a fit-mode column hugging short names is narrower than that.
+// fitWidths comes from panelcarousel.MeasureFitColumnWidths; widening it for each candidate is
+// arithmetic, so the listing is not scanned again.
+func FitCarouselMetaColumns(frame Rect, layout panelcarousel.Layout, center panel.State, showIcons, showChild bool, style uiscrollbar.Style, visibleRows int, fitWidths [3]int, cols []MetaColumnState) ([]MetaColumnLayout, int) {
+	nameWidth := func(measured [3]int, metaW int) int {
+		return panelcarousel.CenterNameWidth(frame, layout, center, showIcons, showChild, style, visibleRows, measured, metaW)
+	}
+	floor := min(config.MinPanelNameWidthWithMeta, nameWidth(fitWidths, 0))
 	layouts, totalWidth := LayoutMetaColumns(cols)
+	for len(layouts) > 0 && nameWidth(panelcarousel.WithCenterMeta(fitWidths, totalWidth), totalWidth) < floor {
+		layouts, totalWidth = dropLastMetaColumn(layouts, totalWidth)
+	}
+	return layouts, totalWidth
+}
+
+// CarouselMeta builds the carousel center column's meta segment from FitCarouselMetaColumns.
+func CarouselMeta(layouts []MetaColumnLayout, totalWidth int, styles theme.Theme) panelcarousel.Meta {
 	if len(layouts) == 0 {
 		return panelcarousel.Meta{}
 	}
