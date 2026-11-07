@@ -661,18 +661,30 @@ func (h *Handler) HandleRenderFlush() {
 	h.reportLostColumns(ui.SecondaryPanel)
 }
 
+// MinColumnShownBeforeToast is how long a run must have been showing a column for
+// reportLostColumns to report losing it: a column gone sooner was barely on screen, and a toast
+// would follow every navigation into a directory with wide values.
+const MinColumnShownBeforeToast = 500 * time.Millisecond
+
 // columnFitWatch is one panel's baseline for reportLostColumns.
 type columnFitWatch struct {
-	seeded bool
-	gen    uint64 // run the baseline belongs to
-	fit    ui.PanelMetaFit
-	warned map[string]bool // columns already reported in this run, by EntryName
+	seeded   bool
+	gen      uint64 // run the baseline belongs to
+	seededAt time.Time
+	fit      ui.PanelMetaFit
+	warned   map[string]bool // columns already reported in this run, by EntryName
+}
+
+// seedColumnFit records what panelID draws as the baseline of its current run.
+func (h *Handler) seedColumnFit(panelID int, fit ui.PanelMetaFit) {
+	h.fitWatch[panelID] = columnFitWatch{seeded: true, gen: h.runGen[panelID], seededAt: time.Now(), fit: fit, warned: map[string]bool{}}
 }
 
 // reportLostColumns toasts columns that incoming results pushed out of panelID's listing. The
-// first flush of a run only records what is drawn, so a column that never fit is not reported,
-// and a change of available space (resize, zoom, listing format) moves the baseline silently: the
-// user caused that one and can see it. Each column is reported once per run.
+// baseline is seeded when a run starts. A column lost within MinColumnShownBeforeToast of that is
+// not reported, nor is one that never fit, and a change of available space (resize, zoom, listing
+// format) moves the baseline silently: the user caused that one and can see it. Each column is
+// reported once per run.
 func (h *Handler) reportLostColumns(panelID int) {
 	w := &h.fitWatch[panelID]
 	fit, ok := h.host.PanelMetaFit(panelID)
@@ -681,12 +693,12 @@ func (h *Handler) reportLostColumns(panelID int) {
 		return
 	}
 	if !w.seeded || w.gen != h.runGen[panelID] {
-		*w = columnFitWatch{seeded: true, gen: h.runGen[panelID], fit: fit, warned: map[string]bool{}}
+		h.seedColumnFit(panelID, fit)
 		return
 	}
 	prev := w.fit
 	w.fit = fit
-	if prev.Width != fit.Width || prev.NameRoom != fit.NameRoom {
+	if prev.Width != fit.Width || prev.NameRoom != fit.NameRoom || time.Since(w.seededAt) < MinColumnShownBeforeToast {
 		return
 	}
 	var lost []string
@@ -801,6 +813,9 @@ func (h *Handler) runForPanel(panelID int, cmdDefs []metacmds.MetaEntry, cols []
 	}
 	h.model.MetaResults[panelID] = cols
 	h.dispatch(ctx, panelID, cmdDefs, cols, groups)
+	if fit, ok := h.host.PanelMetaFit(panelID); ok {
+		h.seedColumnFit(panelID, fit)
+	}
 }
 
 // dispatch marks the groups' entries pending in cols (pre-filling cached values) and runs cmdDefs

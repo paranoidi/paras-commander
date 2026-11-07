@@ -1331,11 +1331,48 @@ func TestReportLostColumns(t *testing.T) {
 			for _, fit := range tt.steps {
 				fh.fit = fit
 				h.reportLostColumns(0)
+				h.fitWatch[0].seededAt = time.Now().Add(-MinColumnShownBeforeToast)
 			}
 			if !slices.Equal(fh.messages, tt.want) {
 				t.Fatalf("messages = %q, want %q", fh.messages, tt.want)
 			}
 		})
+	}
+}
+
+func TestReportLostColumns_barelyShownColumnStaysQuiet(t *testing.T) {
+	fh := &fakeHost{fit: metaFit(40, "Heron", "Otter")}
+	h := &Handler{host: fh, model: &ui.Model{}}
+	h.model.MetaResults[0] = []ui.MetaColumnState{{EntryName: "heron"}}
+	h.reportLostColumns(0)
+
+	fh.fit = metaFit(40, "Heron")
+	h.reportLostColumns(0)
+	if len(fh.messages) != 0 {
+		t.Fatalf("messages = %q: the column was gone within the minimum", fh.messages)
+	}
+}
+
+// One slow column: its first result is the run's first flush and pushes it out, seconds after
+// the run seeded the baseline.
+func TestRunForPanel_seedsBaselineSoFirstResultCanReportLoss(t *testing.T) {
+	fh := &fakeHost{
+		panels: [2]*panel.State{{}, {}},
+		fit:    metaFit(40, "Heron", "Otter"),
+	}
+	h := &Handler{host: fh, model: &ui.Model{}}
+	cols := []ui.MetaColumnState{{EntryName: "heron"}, {EntryName: "otter"}}
+	h.runForPanel(0, nil, cols)
+	defer h.stopRun(0)
+	if !h.fitWatch[0].seeded || h.fitWatch[0].gen != h.runGen[0] {
+		t.Fatalf("fitWatch = %+v, want seeded for run %d", h.fitWatch[0], h.runGen[0])
+	}
+
+	h.fitWatch[0].seededAt = time.Now().Add(-MinColumnShownBeforeToast)
+	fh.fit = metaFit(40, "Heron")
+	h.reportLostColumns(0)
+	if want := []string{"Column Otter no longer fits on available space"}; !slices.Equal(fh.messages, want) {
+		t.Fatalf("messages = %q, want %q", fh.messages, want)
 	}
 }
 

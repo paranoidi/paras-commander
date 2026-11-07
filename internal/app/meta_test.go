@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	metactrl "github.com/paranoidi/paras-commander/internal/apphandler/meta"
@@ -99,6 +100,7 @@ func TestMetaResultWideningColumnToastsLostColumn(t *testing.T) {
 	}
 	app.metaCtrl.HandleRenderFlush()
 	app.model.Message = ""
+	time.Sleep(metactrl.MinColumnShownBeforeToast)
 
 	app.metaCtrl.HandleWake(metactrl.WakePayload{PanelID: ui.PrimaryPanel, EntryName: "otter", Path: path, Value: "wide-pebble"})
 	app.metaCtrl.HandleRenderFlush()
