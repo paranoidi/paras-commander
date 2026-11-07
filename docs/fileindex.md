@@ -42,7 +42,7 @@ fileindex. The keys below are the defaults; rebind the shortcuts under
 | `M-F` | `f` | [Find in index](#find-in-index) from the current directory, on a local or `fileindex://` panel |
 | `M-I` | `i` | Toggle [browsing with fileindex](#browsing-with-fileindex): the real directory plus the index's state per entry |
 | `M-B` | `b` | Toggle: show the current directory in the index, or from the index go to the real location |
-| `M-R` | `r` | From the index, go to the entry's real location |
+| `M-R` | `r` | Back to the plain filesystem: from the index, go to the entry's real location; with browsing with fileindex on, turn it off |
 | `M-W` | `F` | [Find duplicates](find-duplicates.md) from the index for the current directory, also from a normal panel: it never reads the disk, so it only sees indexed files (selected directories on a normal panel are ignored) |
 | `M-O` | `o` | [Other copies](#other-copies) of the file under the cursor, from the index |
 | `M-D` | `d` | [Copies outside directory](#copies-outside-directory): files under the current directory that also exist elsewhere in the index |
@@ -65,6 +65,8 @@ works on the disk), and the index is merged into it:
 - Entries the index recorded but that are gone from disk appear as extra
   **ghost rows** (icon `missing`), with their indexed size and modification
   time.
+
+`M-R` also turns the mode off.
 
 `[fileindex] start_browse_with` ([config.toml](config.md)) starts both panels
 with the mode on.

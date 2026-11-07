@@ -10,8 +10,9 @@ import (
 
 // toggleFileIndexMenu opens the fileindex menu strip (fileindex.menu), or closes it when open:
 // the fileindex.* actions under letters that match their default chords ([fileindex_menu]).
-// fileindex.reveal is dimmed off a fileindex:// panel (fileindex.open toggles, so it stays
-// enabled), and the scan labels name what fileindex.scan and fileindex.scan-fast will scan.
+// fileindex.reveal is dimmed on a plain panel, where it has nothing to leave (fileindex.browse
+// toggles, so it stays enabled), and the scan labels name what fileindex.scan and
+// fileindex.scan-fast will scan.
 func (a *App) toggleFileIndexMenu() {
 	if a.leaderMenuOpen(ui.LeaderMenuFileIndex) {
 		a.closeLeaderMenu()
@@ -21,7 +22,8 @@ func (a *App) toggleFileIndexMenu() {
 		return
 	}
 	items, actions := a.buildLeaderMenuItems(a.keys.FileIndexMenuEntries())
-	inIndex := a.activePanel().Path.Scheme() == pathloc.SchemeFileIndex
+	p := a.activePanel()
+	inIndex := p.WithIndex || p.Path.Scheme() == pathloc.SchemeFileIndex
 	row := 0
 	for i := range items {
 		if items[i].GroupTitle != "" {

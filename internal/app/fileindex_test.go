@@ -618,8 +618,8 @@ func TestFileIndexHostPathFeatures(t *testing.T) {
 	}
 }
 
-// The fileindex menu dims Browse filesystem off an index panel; Browse index toggles, so it
-// never dims.
+// The fileindex menu dims Browse filesystem on a plain panel; Browse index toggles, so it never
+// dims.
 func TestFileIndexMenuDimsReveal(t *testing.T) {
 	a := newHelpEntriesApp(t)
 	dimmed := func() map[string]bool {
@@ -632,16 +632,20 @@ func TestFileIndexMenuDimsReveal(t *testing.T) {
 		return out
 	}
 	for _, tc := range []struct {
-		dir, want string
+		dir       string
+		withIndex bool
+		want      string
 	}{
-		{"/srv/orchard", "Browse filesystem"},
-		{"fileindex:///srv/orchard", ""},
+		{"/srv/orchard", false, "Browse filesystem"},
+		{"/srv/orchard", true, ""},
+		{"fileindex:///srv/orchard", false, ""},
 	} {
 		p, err := pathloc.Parse(tc.dir)
 		if err != nil {
 			t.Fatal(err)
 		}
 		a.activePanel().Path = p
+		a.activePanel().WithIndex = tc.withIndex
 		a.toggleFileIndexMenu()
 		if got := dimmed(); (tc.want == "" && len(got) != 0) || (tc.want != "" && (len(got) != 1 || !got[tc.want])) {
 			t.Errorf("%s: dimmed = %v, want only %q", tc.dir, got, tc.want)
@@ -1008,6 +1012,31 @@ func TestFileIndexBrowseWithOverlayAndToggle(t *testing.T) {
 	// Toggling off drops the overlay (and the ghost rows with it).
 	a.dispatch(keymap.ActionFileIndexBrowseWith)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return !a.activePanel().WithIndex })
+}
+
+// Browse filesystem leaves Browse with fileindex: the panel stays on its directory, without the
+// overlay and its ghost rows.
+func TestFileIndexRevealLeavesBrowseWith(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	if err := os.Remove(filepath.Join(dir, "meadow.txt")); err != nil {
+		t.Fatal(err)
+	}
+	a.dispatch(keymap.ActionPanelRefresh)
+	browseWith(t, a, screen)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		_, ok := entryStatus(a, "meadow.txt")
+		return ok
+	})
+
+	a.dispatch(keymap.ActionFileIndexReveal)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		_, ghost := entryStatus(a, "meadow.txt")
+		return !ghost && !a.activePanel().ListingPending
+	})
+	p := a.activePanel()
+	if p.WithIndex || p.PathString() != dir {
+		t.Fatalf("WithIndex = %v, path = %s, want off on %s", p.WithIndex, p.PathString(), dir)
+	}
 }
 
 func TestFileIndexBrowseWithRefusesSFTP(t *testing.T) {

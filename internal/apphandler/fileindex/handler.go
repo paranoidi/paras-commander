@@ -322,10 +322,15 @@ func (h *Handler) BrowseWith() {
 		h.reveal(true)
 		return
 	}
-	p.WithIndex = !p.WithIndex
+	h.setBrowseWith(!p.WithIndex)
+}
+
+// setBrowseWith turns the overlay on or off for the active panel and reloads it.
+func (h *Handler) setBrowseWith(on bool) {
+	h.host.ActivePanel().WithIndex = on
 	h.host.ReloadPanel(h.model.ActivePanel)
 	msg := "Browse with fileindex off"
-	if p.WithIndex {
+	if on {
 		msg = "Browse with fileindex on"
 	}
 	h.host.SetTransientMessage(msg, ui.MessageUrgencyInfo)
@@ -360,14 +365,21 @@ func (h *Handler) Browse() {
 }
 
 // Reveal shows the cursor entry of a fileindex:// panel at its real location (its parent
-// directory on disk, the entry highlighted), or the panel's own directory with no entry.
-func (h *Handler) Reveal() { h.reveal(false) }
+// directory on disk, the entry highlighted), or the panel's own directory with no entry. With
+// browse with fileindex on, the panel already is the real directory, so it turns the overlay off.
+func (h *Handler) Reveal() {
+	if p := h.host.ActivePanel(); p.WithIndex && p.Path.Scheme() != pathloc.SchemeFileIndex {
+		h.setBrowseWith(false)
+		return
+	}
+	h.reveal(false)
+}
 
 // reveal is Reveal; withIndex also turns the browse-with-fileindex overlay on for the target.
 func (h *Handler) reveal(withIndex bool) {
 	p := h.host.ActivePanel()
 	if p.Path.Scheme() != pathloc.SchemeFileIndex {
-		h.host.SetTransientMessage("Reveal works on fileindex:// panels", ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage("Browse filesystem works on index panels", ui.MessageUrgencyWarn)
 		return
 	}
 	panelID := h.model.ActivePanel
