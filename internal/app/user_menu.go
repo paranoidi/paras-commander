@@ -344,6 +344,7 @@ func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active, other 
 	}
 
 	cmdTemplate := entry.Command
+	macroCtx := usermenu.MacroContext(active, other, "", "")
 	notifyLabel := "User menu: " + strings.TrimSpace(entry.Title)
 	if notifyLabel == "User menu:" {
 		notifyLabel = "User menu"
@@ -359,7 +360,7 @@ func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active, other 
 		PanelWorkDir: entry.CwdPanel,
 		NotifyLabel:  notifyLabel,
 		BuildItem: func(ent localfs.Entry) (commandsctrl.RunForEachBuiltItem, error) {
-			return commandsctrl.BuildRunForEachItem(cmdTemplate, ent, active, other, entry.Shell, true)
+			return commandsctrl.BuildRunForEachItem(cmdTemplate, ent, macroCtx, entry.Shell, true)
 		},
 	})
 	return true

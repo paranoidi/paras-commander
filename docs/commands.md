@@ -35,7 +35,7 @@ This passes the tagged files, or the directory when nothing is tagged. `%{t|f}` 
 
 - Only the letter that is used counts: `%{t|d}` clears the tags when it used them, and the local-panel checks below look only at that letter.
 - Write it without spaces, using only the letters `f F d D t T`. Anything else is left as plain text, so `curl -w '%{http_code}'` works as you would expect.
-- In Run for each and `run_for_each` entries, `f` must come first (`%{f|d}`) unless `%f` also appears elsewhere in the command. The selection has already been taken by then, so `t` has no value and is skipped.
+- In Run for each and `run_for_each` entries, `f` must come first (`%{f|d}`) unless `%f` also appears elsewhere in the command.
 
 ## Run for each
 
@@ -44,6 +44,7 @@ Runs one command once per selected item (or the highlighted item when nothing is
 - **Open**: `C-M-r`, menu **Command -> Run for each...** (`f`), or Esc menu `R`.
 - Each item runs in the directory holding its row: in a flat listing that is the panel directory, in a tree layout an item in an expanded subdirectory runs in that subdirectory.
 - The command must contain `%f`. The field validates as you type: an invalid command shows a red message, a valid one shows `-> <expanded command>` for the first item.
+- Every other macro keeps the value it had when the batch started, so moving around the panels while it runs does not affect the remaining items. `%t` gives each run the full list of tagged files.
 - **Run in each selected directory** (`M-r`): runs the command with each selected directory as its working directory instead of the directory holding its row. Only directories may be selected in this mode, and `%f` becomes optional.
 - **Allocate pseudo-TTY (interactive)** (`M-t`): runs each item on a live terminal shown in the bottom [terminal panel](subshell.md#terminal-panel), for tools that need a real terminal. Only one foreground batch uses the panel at a time; others wait. The Commands view records the final screen of each run. Linux only; elsewhere it falls back to normal capture.
 - **Worker pool**: when `pools.toml` defines pools, radios let the batch share a limited number of parallel slots; see [Worker pools](#worker-pools).

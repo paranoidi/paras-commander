@@ -82,6 +82,7 @@ func (h *Handler) ExecuteRunForEach() {
 	}
 	h.recordRunForEachHistory(cmdLine)
 	h.host.CloseFileDialog()
+	macroCtx := usermenu.MacroContext(active, other, "", "")
 	h.StartRunForEachBatch(RunForEachBatchSpec{
 		Kind:            ui.CommandRunKindRunForEach,
 		Entries:         entries,
@@ -93,7 +94,7 @@ func (h *Handler) ExecuteRunForEach() {
 		PTY:             usePTY,
 		NotifyLabel:     "Run for each",
 		BuildItem: func(ent localfs.Entry) (RunForEachBuiltItem, error) {
-			return BuildRunForEachItem(cmdLine, ent, active, other, false, !inDirs)
+			return BuildRunForEachItem(cmdLine, ent, macroCtx, false, !inDirs)
 		},
 	})
 }
@@ -166,7 +167,7 @@ func validateRunForEachCommand(cmdLine string, entries []localfs.Entry, active, 
 	if msg := runForEachRefusal(cmdLine, entries, active, other); msg != "" {
 		return "", msg
 	}
-	built, err := BuildRunForEachItem(cmdLine, ent, active, other, false, !inDirs)
+	built, err := BuildRunForEachItem(cmdLine, ent, usermenu.MacroContext(active, other, "", ""), false, !inDirs)
 	if err != nil {
 		return "", err.Error()
 	}

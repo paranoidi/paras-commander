@@ -1166,6 +1166,42 @@ func TestUserMenuRunForEachTreeCwdPanelRunsInPanelRoot(t *testing.T) {
 	}
 }
 
+func TestUserMenuRunForEachItemsSeeTheLaunchSnapshot(t *testing.T) {
+	cases := []struct{ name, macro string }{
+		{"tags", "%t"},
+		{"fallback resolves to the tags", "%{t|d}"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			app, root, sub := userMenuTreeFixture(t, "[each]\nkey = \"e\"\ntitle = \"Each\"\ncommand = \"echo %f "+tc.macro+" %D >> seen\"\nrun_for_each = [\"files\"]\ncwd = \"panel\"\n")
+			tags := []string{filepath.Join(root, "lantern.txt"), filepath.Join(sub, "ember.txt")}
+			app.model.Primary.SelectedPaths = map[string]bool{tags[0]: true, tags[1]: true}
+			launchOther := app.model.Secondary.PathString()
+
+			runUserMenuKey(app, 'e')
+			// Items build after launch: moving the other panel must not reach them.
+			app.model.Secondary.Path = pathloc.MustParse(sub)
+			waitCommandsDone(t, app)
+
+			b, err := os.ReadFile(filepath.Join(root, "seen"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			lines := strings.Split(strings.TrimSpace(string(b)), "\n")
+			if len(lines) != len(tags) {
+				t.Fatalf("seen = %q, want one line per item", b)
+			}
+			for _, line := range lines {
+				// %f comes first, then every tag, then the launch-time %D.
+				want := " " + strings.Join([]string{min(tags[0], tags[1]), max(tags[0], tags[1])}, " ") + " " + launchOther
+				if !strings.HasSuffix(line, want) {
+					t.Fatalf("line = %q, want suffix %q", line, want)
+				}
+			}
+		})
+	}
+}
+
 // ghostOverlay makes dir listings gain one index-only (ghost) file called name in every
 // directory whose base name is inDir ("" for any), like the fileindex overlay of a browse-with panel.
 func ghostOverlay(name, inDir string) panel.IndexOverlayFunc {
