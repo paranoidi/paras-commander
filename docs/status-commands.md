@@ -8,7 +8,7 @@ Status commands are small shell commands whose output is shown at the top-left o
 
 ## Choosing what is shown
 
-Open **Display → Status commands** (`ui.status-commands`) to get a checkbox list of every available status command. Check the ones to show and confirm with OK. The choice is saved to the `show` line of `status.toml` and takes effect immediately. With mouse support on, a left click on the status commands in the menu bar opens the same dialog (with none shown the area is gone, so use the menu). Commands that stay checked keep their order; newly checked ones are added after them.
+Open **Display → Status commands** to get a checkbox list of every available status command. Check the ones to show and confirm with OK. The choice is saved to the `show` line of `status.toml` and takes effect immediately. With mouse support on, a left click on the status commands in the menu bar opens the same dialog (with none shown the area is gone, so use the menu). Commands that stay checked keep their order; newly checked ones are added after them.
 
 ## Built-in commands
 

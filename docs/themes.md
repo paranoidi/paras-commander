@@ -57,4 +57,4 @@ Changing the theme also changes how the Messages toasts look (`message.info`, `m
 
 ## Preview (syntax highlighting) themes
 
-File previews use Chroma styles, chosen by `[preview] style` ([Config](config.md#preview)), default `catppuccin-frappe`. Pick one with Options -> Preview settings, or in the fullscreen preview (`F3`) through the `:` menu's theme picker (`t`, action `preview.theme-picker`). Besides Chroma's built-in styles, `pc` loads Chroma XML styles from `themes/preview/*.xml` in the config directory (the repository ships `themes/preview/jetbrains.xml` as an example). See [Quick view and preview](quick-view-preview.md).
+File previews use Chroma styles, chosen by `[preview] style` ([Config](config.md#preview)), default `catppuccin-frappe`. Pick one with Options -> Preview settings, or in the fullscreen preview (`F3`) through the `:` menu's theme picker (`t`). Besides Chroma's built-in styles, `pc` loads Chroma XML styles from `themes/preview/*.xml` in the config directory (the repository ships `themes/preview/jetbrains.xml` as an example). See [Quick view and preview](quick-view-preview.md).

@@ -6,12 +6,12 @@ A panel keeps a set of selected paths. File operations (copy, move, delete, run 
 
 | Key | Action |
 |---|---|
-| `Insert` / `Space` | `panel.select-toggle`: toggle the cursor entry |
-| `+` | `panel.select-group`: Select group dialog |
-| `-` / `M-u` | `panel.unselect-group`: Unselect group dialog |
-| `*` / `C-i` | `panel.invert-selection` |
-| `M-k` | `panel.select-range`: first press sets the start, second press selects everything between it and the cursor |
-| `C-u` | `panel.clear-selection` |
+| `Insert` / `Space` | Toggle the cursor entry |
+| `+` | Select group dialog |
+| `-` / `M-u` | Unselect group dialog |
+| `*` / `C-i` | Invert the selection |
+| `M-k` | First press sets the start, second press selects everything between it and the cursor |
+| `C-u` | Clear the selection |
 
 All are rebindable in `keybindings.toml`. Leader menu (`:`) Selection group: `k` range, `g` group, `i` invert, `U` clear. While a range start is pending, its row shows a marker and the cursor row turns yellow. Range select also works in the carousel, [Compare](compare-directories.md) and [Find duplicates](find-duplicates.md).
 
@@ -31,18 +31,18 @@ When selected paths lie outside the current directory, a Selected strip lists th
 
 | Key | Action |
 |---|---|
-| `C-s` | `panel.focus-selected`: focus the strip (shows it even when everything is local) |
-| `C-M-s` | `panel.open-selected-root`: change to the common root of the selection |
+| `C-s` | Focus the strip (shows it even when everything is local) |
+| `C-M-s` | Change to the common root of the selection |
 | `Enter` (in strip) | Go to the directory containing the highlighted path |
 | `Insert` / `Delete` (in strip) | Unselect the row |
 | typing (in strip) | Fuzzy filter the strip |
-| `F2` (in strip) | `panel.select-parent-dirs`: replace the selection with the parent directories |
+| `F2` (in strip) | Replace the selection with the parent directories |
 
 Copying or moving a multi-location selection shows every source in the transfer dialog and keeps the directory structure below the common root ([File operations](fileoperations.md)). Selected items deleted in the background drop out of the selection.
 
 ## Stash
 
-Each panel has one stash slot. `C-M-Insert` (`panel.stash-toggle`):
+Each panel has one stash slot. `C-M-Insert`:
 
 - selection and empty stash: save the selection and clear it;
 - no selection and a stash: restore it;

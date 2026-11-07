@@ -24,34 +24,34 @@ A line containing shell operators (`|`, `>>`, `&&`) runs through `sh -c`; any ot
 
 Runs one command once per selected item (or the highlighted item when nothing is selected).
 
-- **Open**: `C-M-r` (`file.run-for-each`), menu **Command -> Run for each...** (`f`), or Esc menu `R`.
+- **Open**: `C-M-r`, menu **Command -> Run for each...** (`f`), or Esc menu `R`.
 - Each item runs in the directory holding its row: in a flat listing that is the panel directory, in a tree layout an item in an expanded subdirectory runs in that subdirectory.
 - The command must contain `%f`. The field validates as you type: an invalid command shows a red message, a valid one shows `-> <expanded command>` for the first item.
 - **Run in each selected directory** (`M-r`): runs the command with each selected directory as its working directory instead of the directory holding its row. Only directories may be selected in this mode, and `%f` becomes optional.
 - **Allocate pseudo-TTY (interactive)** (`M-t`): runs each item on a live terminal shown in the bottom [terminal panel](subshell.md#terminal-panel), for tools that need a real terminal. Only one foreground batch uses the panel at a time; others wait. The Commands view records the final screen of each run. Linux only; elsewhere it falls back to normal capture.
 - **Worker pool**: when `pools.toml` defines pools, radios let the batch share a limited number of parallel slots; see [Worker pools](#worker-pools).
-- **History** (`F3`, `file.run-for-each.history`): fuzzy picker over the command lines you ran earlier in this session.
+- **History** (`F3`): fuzzy picker over the command lines you ran earlier in this session.
 
 The dialog does not open, and nothing runs, on a panel that is not local (SFTP, the file index) or when the highlighted or a tagged row is only in the index (see [Local panels only](#local-panels-only)). The selection is cleared when the batch starts. A failed batch shows a summary toast and opens the Commands view.
 
 ## Commands view
 
-Open with `M-c` (`commands.open`), **Display -> Commands** or Esc menu `E`. The left list holds one row per run, newest at the top, with its phase and exit marker; opening the view selects the newest run; the command is shown as written, followed by one line per macro it used. Stdout and Stderr appear in two panes, wrapped to the pane width.
+Open with `M-c`, **Display -> Commands** or Esc menu `E`. The left list holds one row per run, newest at the top, with its phase and exit marker; opening the view selects the newest run; the command is shown as written, followed by one line per macro it used. Stdout and Stderr appear in two panes, wrapped to the pane width.
 
 | Key | Action |
 |---|---|
 | `Tab` / `S-Tab` | Cycle list, stdout, stderr |
 | `Up` `Down` `PgUp` `PgDn` `Home` `End` | Move through the run list as drawn (`Up` toward newer runs, `Home` the top row), or scroll the focused output pane. Panes follow the tail until you scroll up; reaching the bottom follows again |
-| `F8` | Terminate the selected running command (`commands.terminate`) |
-| `S-F8` | Kill it (`commands.kill`) |
+| `F8` | Terminate the selected running command |
+| `S-F8` | Kill it |
 | a printable character | Type-to-jump filter over the command lines |
-| `Left` / `Esc` | Close the view (`commands.close`; Esc first closes an open filter) |
+| `Left` / `Esc` | Close the view (Esc first closes an open filter) |
 
 Quitting with commands still running asks for confirmation, like unfinished jobs.
 
 ## User menu
 
-`F2` (`app.user-menu`, also `§` or `;`; menu **Command -> User menu**, Esc menu `X`) opens a strip of your own commands. Press the highlighted letter to run an entry; `Left` or `Backspace` leaves a submenu, `Esc` closes the menu. `F9` inside the menu, or `S-F2` (`app.user-menu-edit`) anywhere, opens `menu.toml` in `$EDITOR` and reloads it. A missing file is created with a commented reference of every field.
+`F2` (also `§` or `;`; menu **Command -> User menu**, Esc menu `X`) opens a strip of your own commands. Press the highlighted letter to run an entry; `Left` or `Backspace` leaves a submenu, `Esc` closes the menu. `F9` inside the menu, or `S-F2` anywhere, opens `menu.toml` in `$EDITOR` and reloads it. A missing file is created with a commented reference of every field.
 
 A `menu.toml` in the active directory (name from `local_names`, default `menu.toml`) takes precedence over the global one; see [Config](config.md#user_menu). The same trust rule as [Meta columns](meta-columns.md#open) applies: a group- or world-writable `menu.toml` (other than one writable only by your private group) or one owned by another user is skipped with a warning, and the user menu then shows that warning instead of opening the editor.
 
@@ -138,7 +138,7 @@ detach = true
 
 ### Output dialog paths
 
-When a `dialog = true` command finishes, paths printed in its output that exist (relative ones are taken from the directory the command ran in) are highlighted. `Up`/`Down` jump between lines with paths, `Left`/`Right` step between paths, and `Insert` or `Space` (`command-output.toggle-selection`) toggles the path's selection in the active panel. The select group, unselect group and invert selection keys of the panels work on all detected paths.
+When a `dialog = true` command finishes, paths printed in its output that exist (relative ones are taken from the directory the command ran in) are highlighted. `Up`/`Down` jump between lines with paths, `Left`/`Right` step between paths, and `Insert` or `Space` toggles the path's selection in the active panel. The select group, unselect group and invert selection keys of the panels work on all detected paths.
 
 ### Selection after a command
 
@@ -167,4 +167,4 @@ With `run_executables_on_enter` (default on), `Enter` on a local executable file
 ## Options
 
 - `[user_menu]`, `[pools]`, `[commands]` (`force_color`) and `[panels]` (`run_executables_on_enter`, `execute_rules`): [Config](config.md#user_menu).
-- Keys: [Keybindings](keybindings.md); everything above is rebindable in `keybindings.toml` (`[commands]` for the view keys, `[dialog.user_menu]` for `usermenu.back`, `[dialog.run_for_each]` for history, `[dialog.command_output]` for toggle-selection).
+- Keys: [Keybindings](keybindings.md); everything above is rebindable in `keybindings.toml` (`[commands]` for the view keys, `[dialog.user_menu]` for leaving a submenu, `[dialog.run_for_each]` for history, `[dialog.command_output]` for toggling a path's selection).

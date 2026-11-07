@@ -4,7 +4,7 @@ Find is a fuzzy, recursive search across everything below a panel's directory. R
 
 ## Opening
 
-`C-f` (`panel.find-dialog`), Left/Right -> Find ..., or Esc then `f`. It searches below the active panel's path (the Left/Right menu uses that panel). Rebindable in `keybindings.toml`.
+`C-f`, Left/Right -> Find ..., or Esc then `f`. It searches below the active panel's path (the Left/Right menu uses that panel). Rebindable in `keybindings.toml`.
 
 ## Searching
 
@@ -21,7 +21,7 @@ Options in the dialog:
 
 ## Match modes
 
-`M-m` (`find.cycle-match-mode`) cycles how the query is read, or pick it on the **Match** row of the advanced section. A non-fuzzy mode shows its name after the search icon.
+`M-m` cycles how the query is read, or pick it on the **Match** row of the advanced section. A non-fuzzy mode shows its name after the search icon.
 
 | Mode | Query | Order |
 |---|---|---|
@@ -33,7 +33,7 @@ Matching ignores case when `[filter] case_insensitive` is on, unless **Case sens
 
 ## Advanced criteria
 
-`M-a` (`find.toggle-advanced`) or the **Advanced** checkbox opens a section under the options and moves focus to its first row; the results are greyed out while focus is in the section (their keys do not reach them) and the dialog keeps its size, the section taking rows from the results. While focus is on a check box or radio (not a text field), the highlighted letter of each option toggles it, with or without `Alt`. Every filled field must hold; results update as you change it. Check boxes apply at once; text fields apply on Enter or when focus leaves them. A focused text field shows a tooltip below it that explains what it matches and the syntax it takes (`[ui] tooltips = false` in `config.toml` turns tooltips off). A field that does not parse turns red and is ignored. While the section is closed, the criteria in effect are summarized on the line above the results, so nothing filters invisibly. `M-r` (`find.reset-advanced`) clears the mode and every criterion. The section and its values stay for the rest of the session.
+`M-a` or the **Advanced** checkbox opens a section under the options and moves focus to its first row; the results are greyed out while focus is in the section (their keys do not reach them) and the dialog keeps its size, the section taking rows from the results. While focus is on a check box or radio (not a text field), the highlighted letter of each option toggles it, with or without `Alt`. Every filled field must hold; results update as you change it. Check boxes apply at once; text fields apply on Enter or when focus leaves them. A focused text field shows a tooltip below it that explains what it matches and the syntax it takes (`[ui] tooltips = false` in `config.toml` turns tooltips off). A field that does not parse turns red and is ignored. While the section is closed, the criteria in effect are summarized on the line above the results, so nothing filters invisibly. `M-r` clears the mode and every criterion. The section and its values stay for the rest of the session.
 
 | Field | Keeps | Input |
 |---|---|---|
@@ -55,18 +55,18 @@ Age, size, owner, executable and empty criteria need file metadata, so the first
 |---|---|
 | `Enter` | Navigate: a directory opens in the panel; a file opens its parent with the file highlighted. If rows are marked, they are added to the panel selection instead |
 | `Insert` or `Space` | Mark / unmark the row |
-| `F5` or `C-a` | Mark all matching results (`find.select-all`) |
-| `S-F5` | Unmark all (`find.unselect-all`) |
-| `F6` / `S-F6` | Mark / unmark by group pattern (`find.select-group`, `find.unselect-group`) |
-| `F2` | Replace the selection with the parent directories of the marked results (`find.select-parent-dirs`) |
-| `F3` | View the highlighted file fullscreen (`find.view`); closing the viewer returns to Find as you left it |
-| `F4` | Edit the highlighted file in the external editor and keep Find open (`find.edit`) |
-| `M-a` | Show / hide the advanced criteria (`find.toggle-advanced`) |
-| `M-m` | Next match mode (`find.cycle-match-mode`) |
-| `M-r` | Reset the match mode and criteria (`find.reset-advanced`) |
+| `F5` or `C-a` | Mark all matching results |
+| `S-F5` | Unmark all |
+| `F6` / `S-F6` | Mark / unmark by group pattern |
+| `F2` | Replace the selection with the parent directories of the marked results |
+| `F3` | View the highlighted file fullscreen; closing the viewer returns to Find as you left it |
+| `F4` | Edit the highlighted file in the external editor and keep Find open |
+| `M-a` | Show / hide the advanced criteria |
+| `M-m` | Next match mode |
+| `M-r` | Reset the match mode and criteria |
 | `S-←` / `S-→` | Open the result in the left / right panel and keep Find open |
 | `M-Insert` | Pin the row |
-| `C-f` | Hide Find and keep it: scan, query, results and marks (`panel.find-dialog`; in Jump to directory `panel.jump-dialog`). The panel shows a yellow search icon at its bottom right; the same key on that panel and directory brings Find back as you left it. Opening Find anywhere else asks: **Restore** brings the parked search back, **New search here** drops it and starts over, Esc leaves it parked |
+| `C-f` | Hide Find and keep it: scan, query, results and marks (`M-m` in Jump to directory). The panel shows a yellow search icon at its bottom right; the same key on that panel and directory brings Find back as you left it. Opening Find anywhere else asks: **Restore** brings the parked search back, **New search here** drops it and starts over, Esc leaves it parked |
 | `Esc` | Cancel the scan and close |
 
 Marked results show their combined size on the separator line. Marking a directory removes conflicting marks of its contents or parents and says so in a toast. The footer shows the keys that apply; the unmark keys appear as the grey Shift word after their mark key (`Select allUnselect`).

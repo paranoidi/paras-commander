@@ -6,12 +6,12 @@ Paras Commander previews files in three places: **quick view** (the inactive pan
 
 ## Opening
 
-| Surface | Default key | Action id | Menu / leader |
-|---|---|---|---|
-| Fullscreen preview | `F3` (also `C-v`) | `file.view` | Esc, `v` |
-| Quick view | `S-F3` (also `C-M-v`) | `file.quick-view` | Left/Right -> Quick view; Esc, `V` |
-| Carousel view | `M-v` | `panel.toggle-carousel` | Left/Right -> Carousel view |
-| Preview settings | `M-F3` | `preview.settings-dialog` | Options -> Preview settings |
+| Surface | Default key | Menu / leader |
+|---|---|---|
+| Fullscreen preview | `F3` (also `C-v`) | Esc, `v` |
+| Quick view | `S-F3` (also `C-M-v`) | Left/Right -> Quick view; Esc, `V` |
+| Carousel view | `M-v` | Left/Right -> Carousel view |
+| Preview settings | `M-F3` | Options -> Preview settings |
 
 All keys are rebindable in `keybindings.toml`. From the command line, `pc -qp <path>` starts with quick view on, `pc <file>` opens the file in the fullscreen viewer (where `q` quits the app) and `pc --carousel` starts in carousel view.
 
@@ -20,7 +20,7 @@ All keys are rebindable in `keybindings.toml`. From the command line, `pc -qp <p
 Quick view is per panel: the panel you turn it on for becomes the driver, and the other panel shows a preview of whatever the driver's cursor is on. The driver's bottom border shows ` Quick view -> ` and an arrow glyph on the cursor row points at the preview. The inactive panel keeps its own path, cursor and selection and returns when quick view is switched off.
 
 - A directory under the cursor is listed in the preview pane (the directory is not entered and history is not touched).
-- `C-k` / `C-j` (`file.quick-view.preview-page-up` / `-down`) page the preview without leaving the file list.
+- `C-k` / `C-j` page the preview without leaving the file list.
 - `Tab` only swaps the active panel while quick view is on. With it off, `Tab` cycles file list, selected strip and the preview pane, so arrows scroll the preview when it has focus.
 - Quick view and [panel sync](navigation.md#latched-panel-sync) are mutually exclusive; turning one on turns the other off. Zoom is disabled while a preview is shown (even 50/50 split).
 - With `[preview].quick_view_disable_on_inactive_nav` (default on) quick view switches off when the inactive panel navigates elsewhere, for example through "open in other panel".
@@ -30,20 +30,20 @@ Quick view is per panel: the panel you turn it on for becomes the driver, and th
 
 The preview takes the whole screen (no menu bar; the filename is the top row). Besides the vim-style keys below, arrows, PgUp/PgDn, Home, End and Space scroll as usual.
 
-| Key | Action id | Does |
-|---|---|---|
-| `j` / `k` | `preview.scroll-down` / `-up` | Scroll a line |
-| `C-d` / `C-u` | `preview.half-page-down` / `-up` | Half page |
-| `C-f` / `C-b` | `preview.page-down` / `-up` | Full page |
-| `g` / `G` | `preview.top` / `preview.bottom` | Start / end |
-| `/` | `preview.search-start` | Search (case-insensitive, literal); Enter accepts, Esc cancels; match locations are marked on the scrollbar |
-| `n` / `p` | `preview.search-next` / `-prev` | Next / previous match (wraps) |
-| `F5` | `preview.reload` | Re-read the file from disk, keeping scroll and search |
-| `F6` | `preview.toggle-raw` | Markdown: switch between rendered and raw source |
-| `F9` | `preview.theme-picker` | Pick the syntax theme (live preview, Enter saves, Esc reverts) |
-| `:` | `preview.menu` | Preview menu |
-| `C-M-j` / `C-M-k` | `preview.diff-next-hunk` / `-prev-hunk` | Next / previous change in a diff (also in quick view) |
-| `Esc`, `q`, `h` | `preview.close` | Close (`q` quits when pc was started with a file argument) |
+| Key | Does |
+|---|---|
+| `j` / `k` | Scroll a line |
+| `C-d` / `C-u` | Half page |
+| `C-f` / `C-b` | Full page |
+| `g` / `G` | Start / end |
+| `/` | Search (case-insensitive, literal); Enter accepts, Esc cancels; match locations are marked on the scrollbar |
+| `n` / `p` | Next / previous match (wraps) |
+| `F5` | Re-read the file from disk, keeping scroll and search |
+| `F6` | Markdown: switch between rendered and raw source |
+| `F9` | Pick the syntax theme (live preview, Enter saves, Esc reverts) |
+| `:` | Preview menu |
+| `C-M-j` / `C-M-k` | Next / previous change in a diff (also in quick view) |
+| `Esc`, `q`, `h` | Close (`q` quits when pc was started with a file argument) |
 
 The preview menu (`:`) lists theme picker, raw toggle, reload, search, next/previous diff change, Edit, Delete and Quit, each on a letter key; the letters are configurable in the `[preview_menu]` section of `keybindings.toml`. F4 edits the file and returns to the preview. Image previews ignore `/` search and the F9 picker.
 

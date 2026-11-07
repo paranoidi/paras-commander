@@ -4,7 +4,7 @@ Renames the selected entries (or the entry under the cursor) in one go. The dial
 live before/after preview with the changed text highlighted; nothing is renamed until you
 confirm. Swaps and chains (a to b, b to a) are handled safely.
 
-Open it with `S-F6` or `C-r` (`file.rename`) while entries are selected
+Open it with `S-F6` or `C-r` while entries are selected
 in the current directory; without a selection the same key opens the
 single-entry [Rename](fileoperations.md#rename) dialog. Rebind it in
 `keybindings.toml`. If any new name is a duplicate, collides with an existing

@@ -14,7 +14,7 @@ Listing uses `tar`, `unzip`, `unrar` and `7z` (`7za` / `7zz`). If the needed too
 
 | | |
 |---|---|
-| Key | `C-x` (action `file.extract`, rebindable in `keybindings.toml`) |
+| Key | `C-x` (rebindable in `keybindings.toml`) |
 | Menu | File -> Extract (`x`) |
 | Leader | Esc, `x` |
 

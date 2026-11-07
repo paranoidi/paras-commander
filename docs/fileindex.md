@@ -27,34 +27,34 @@ of running; it needs a newer pc.
 
 ## Actions
 
-`<` (`fileindex.menu`) opens the **File Index menu** at the bottom of the screen;
+`<` opens the **File Index menu** at the bottom of the screen;
 the `:` leader menu lists it under Tools with the same `<`. The menu groups
 its actions into Browse, Tagging, Actions and Duplicates columns. Each action's
 letter in the menu is the letter of its own shortcut, in lowercase: every
 fileindex shortcut is `Alt+Shift` plus that letter. The Duplicates column starts
-with `fileindex.find-duplicates` ([Find duplicates](find-duplicates.md)) under `F`, the
-uppercase of `fileindex.find`'s letter. All actions are also in Help (`F1`) under
+with [Find duplicates](find-duplicates.md) under `F`, the
+uppercase of Find in index's letter. All actions are also in Help (`F1`) under
 fileindex. The keys below are the defaults; rebind the shortcuts under
 `[main]` and the menu letters under `[fileindex_menu]` in `keybindings.toml`.
 
-| Key | Menu | Action | |
-|---|---|---|---|
-| `M-F` | `f` | `fileindex.find` | [Find in index](#find-in-index) from the current directory, on a local or `fileindex://` panel |
-| `M-I` | `i` | `fileindex.browse-with` | Toggle [browsing with fileindex](#browsing-with-fileindex): the real directory plus the index's state per entry |
-| `M-B` | `b` | `fileindex.browse` | Toggle: show the current directory in the index, or from the index go to the real location |
-| `M-R` | `r` | `fileindex.reveal` | From the index, go to the entry's real location |
-| `M-W` | `F` | `fileindex.find-duplicates` | [Find duplicates](find-duplicates.md) from the index for the current directory, also from a normal panel: it never reads the disk, so it only sees indexed files (selected directories on a normal panel are ignored) |
-| `M-O` | `o` | `fileindex.other-copies` | [Other copies](#other-copies) of the file under the cursor, from the index |
-| `M-D` | `d` | `fileindex.copies-outside` | [Copies outside directory](#copies-outside-directory): files under the current directory that also exist elsewhere in the index |
-| `M-S` | `s` | `fileindex.scan` | Scan the selected entries, else the current directory (the menu says which) |
-| `M-A` | `S` | `fileindex.scan-fast` | [Fast scan](#scan-and-prune) the selected entries, else the current directory: hash only the first 8 KB of larger files |
-| `M-P` | `p` | `fileindex.prune` | Remove what is gone from disk under the current directory |
-| `M-E` | `e` | `fileindex.report-differences` | [Report differences](#report-differences) between the disk and the index under the directory under the cursor, else the current directory |
-| `M-T` | `t` | `fileindex.tags` | [Edit tags](#tags) |
+| Key | Menu | Action |
+|---|---|---|
+| `M-F` | `f` | [Find in index](#find-in-index) from the current directory, on a local or `fileindex://` panel |
+| `M-I` | `i` | Toggle [browsing with fileindex](#browsing-with-fileindex): the real directory plus the index's state per entry |
+| `M-B` | `b` | Toggle: show the current directory in the index, or from the index go to the real location |
+| `M-R` | `r` | From the index, go to the entry's real location |
+| `M-W` | `F` | [Find duplicates](find-duplicates.md) from the index for the current directory, also from a normal panel: it never reads the disk, so it only sees indexed files (selected directories on a normal panel are ignored) |
+| `M-O` | `o` | [Other copies](#other-copies) of the file under the cursor, from the index |
+| `M-D` | `d` | [Copies outside directory](#copies-outside-directory): files under the current directory that also exist elsewhere in the index |
+| `M-S` | `s` | Scan the selected entries, else the current directory (the menu says which) |
+| `M-A` | `S` | [Fast scan](#scan-and-prune) the selected entries, else the current directory: hash only the first 8 KB of larger files |
+| `M-P` | `p` | Remove what is gone from disk under the current directory |
+| `M-E` | `e` | [Report differences](#report-differences) between the disk and the index under the directory under the cursor, else the current directory |
+| `M-T` | `t` | [Edit tags](#tags) |
 
 ## Browsing with fileindex
 
-`fileindex.browse-with` turns **Browse with fileindex** on or off for the active
+`M-I` turns **Browse with fileindex** on or off for the active
 panel. The panel stays a normal local panel (real paths, every file operation
 works on the disk), and the index is merged into it:
 
@@ -113,8 +113,7 @@ when nothing differs, so a difference below the automatic depth shows only
 after such a request. A tagged directory keeps `tagged` instead of showing
 `unchecked`. The glyphs are under
 `[icons.fileindex_state]` and the colors under `[panel.fileindex]` in the
-theme (scanning uses `[status] scanning`); without Nerd Font icons a letter is shown instead. The fileindex menu
-(`fileindex.menu`) shows a legend of these icons at the bottom.
+theme (scanning uses `[status] scanning`); without Nerd Font icons a letter is shown instead. The fileindex menu shows a legend of these icons at the bottom.
 
 On a ghost row:
 
@@ -142,9 +141,9 @@ included.
 
 ## Browsing the index
 
-`fileindex.browse` shows the current directory as `fileindex:///path/to/dir`,
+`M-B` shows the current directory as `fileindex:///path/to/dir`,
 with the same entry under the cursor; on an index panel it does what
-`fileindex.reveal` does, so the one shortcut toggles. Navigation then works as usual: history,
+`M-R` does, so the one shortcut toggles. Navigation then works as usual: history,
 bookmarks and the path picker accept `fileindex://` paths too. The index root is
 `fileindex:///`. With Nerd Font icons on (`use_nerdfont_icons`), panel titles
 and other path displays show `fileindex://` as the database icon followed by
@@ -153,7 +152,7 @@ a space.
 An index view lists what the index recorded, including files that have since
 gone from disk. Files show their indexed size and modification time;
 directories show no modification time, and their size once it is requested,
-as on a local panel (see Disk usage below). `fileindex.reveal` goes back to the real directory
+as on a local panel (see Disk usage below). `M-R` goes back to the real directory
 with the entry highlighted, or says the entry is no longer on disk.
 
 In an index view:
@@ -188,17 +187,17 @@ In an index view:
 
 ## Finding in the index
 
-`panel.find-dialog` on an index view opens **Find in index**, which searches
+Find (`C-f`) on an index view opens **Find in index**, which searches
 the index under the panel directory instead of walking the disk (files that
-have gone from disk are found too). `panel.jump-dialog` opens the same dialog
-for directories only. `fileindex.find` opens it from an ordinary local panel
+have gone from disk are found too). Jump to directory (`M-m`) opens the same dialog
+for directories only. `M-F` opens it from an ordinary local panel
 too, so you can search the index without leaving the real directory: Enter
 then shows the result in the real location (falling back to the index view when
 the directory is gone from disk). The query runs as you type; results are capped at
 `[ui.find].max_results` and the title shows `N+` when more matched. A finished query
 without results turns the query red.
 
-Two query modes (radios; `find.cycle-match-mode` switches between them):
+Two query modes (radios; `M-m` switches between them):
 
 - **Pattern** matches file and directory names, ignoring case. Plain text finds
   names containing it (`holiday`). With `*` (any run) or `?` (one character)
@@ -215,13 +214,11 @@ box (1-9 levels below the panel directory, empty or 0 for unlimited), and
 panel.
 
 Keys work as in Find: mark results and press OK to add them to the panel
-selection (`find.select-all`, `find.unselect-all`, `find.select-group`,
-`find.unselect-group`, `find.select-parent-dirs`, `panel.select-toggle`);
-`find.view` opens the real file in the viewer (closing it returns to the
-dialog as it was) and `find.edit` in the external editor; `ui.open-primary` and
-`ui.open-secondary` show a result in a panel without closing; `panel.pin-toggle`
-pins it. The key that opened the dialog (`fileindex.find`, `panel.find-dialog` or
-`panel.jump-dialog`) hides it with its query and marks kept; the panel shows a
+selection;
+`F3` opens the real file in the viewer (closing it returns to the
+dialog as it was) and `F4` in the external editor; `Shift+Left` and
+`Shift+Right` show a result in a panel without closing; `Alt+Insert`
+pins it. The key that opened the dialog hides it with its query and marks kept; the panel shows a
 yellow search icon at its bottom right until the same key on that panel and
 directory brings it back. Opening it anywhere else asks whether to restore the
 parked search or start a new one there. OK without marks shows the result under the cursor in the panel: a
@@ -232,7 +229,7 @@ or modes to filter on.
 
 ## Other copies
 
-`fileindex.other-copies` lists where else the file under the cursor exists according
+`M-O` lists where else the file under the cursor exists according
 to the index, and jumps to the one you choose: a picker titled "Other copies of
 name (N)" lists the full paths of the other copies, filtered as you type; Enter
 or OK shows the copy in the active panel, in its directory with the file
@@ -243,13 +240,13 @@ view. It works on local and index panels, on files only.
 The picker's list works like Find's, with the same keys (`keybindings.toml`,
 `[dialog.find]` and `[main]`):
 
-| Action | Key | Effect |
-|---|---|---|
-| `panel.select-toggle` | `Insert` | Mark the file and move down; OK then adds the marked files to the active panel's selection instead of jumping |
-| `panel.pin-toggle` | `Alt+Insert` | Pin or unpin the file |
-| `ui.open-primary` / `ui.open-secondary` | `Shift+Left` / `Shift+Right` | Show the file in the left/top / right/bottom panel, keeping the picker open |
-| `find.view` | `F3` | View the file; closing the viewer returns to the picker |
-| `find.edit` | `F4` | Edit the file, keeping the picker open |
+| Key | Effect |
+|---|---|
+| `Insert` | Mark the file and move down; OK then adds the marked files to the active panel's selection instead of jumping |
+| `Alt+Insert` | Pin or unpin the file |
+| `Shift+Left` / `Shift+Right` | Show the file in the left/top / right/bottom panel, keeping the picker open |
+| `F3` | View the file; closing the viewer returns to the picker |
+| `F4` | Edit the file, keeping the picker open |
 
 [Report differences](#report-differences) uses the same picker and keys; view and
 edit refuse a file that is missing from disk.
@@ -267,7 +264,7 @@ edit refuse a file that is missing from disk.
 
 ## Copies outside directory
 
-`fileindex.copies-outside` answers "is it safe to delete these because they exist
+`M-D` answers "is it safe to delete these because they exist
 elsewhere?". It opens the [Find duplicates](find-duplicates.md) results view for the active
 panel's directory, listing only the files under it that have a copy somewhere else in the
 index; each group shows the copies inside and outside the directory. Groups entirely inside
@@ -288,7 +285,7 @@ root itself has nothing outside it.
 
 ## Columns
 
-The index adds columns to the meta-column picker (`panel.meta`, see
+The index adds columns to the meta-column picker (see
 [Meta columns](meta-columns.md)), in its **File Index** section, listed only
 while the index database exists and opens. They work on local panels and in
 index views, and sort and filter like any meta column:
@@ -314,7 +311,7 @@ fileindex), and switches them off again when it leaves both.
 
 ## Tags
 
-`fileindex.tags` opens the tag editor for the selection, else the entry under
+`M-T` opens the tag editor for the selection, else the entry under
 the cursor, else the current directory. It lists every tag in the database as
 checkboxes in two columns, with the tags the entries already carry checked. A
 tag that only some of the selected entries carry shows as mixed (`[-]`).
@@ -346,7 +343,7 @@ finishes. A tag no entry uses any more stays in the list.
 
 ## Scan and prune
 
-`fileindex.scan` works in three stages on the chosen paths. First it walks
+`M-S` works in three stages on the chosen paths. First it walks
 them and records new and changed files by name: they are searchable (Find in
 index, the `fileindex://` view) as soon as each batch is saved, before any
 hashing, and show the `unhashed` state. Then it removes from the index
@@ -355,13 +352,13 @@ including unhashed ones left by an earlier scan. With `hash = false` under
 `[fileindex]` the scan stops after the removal, so files stay unhashed (no hash
 or copies column, left out of duplicate detection) until a scan with hashing
 runs.
-`fileindex.scan-fast` is the same scan with its last stage reduced: it hashes
+`M-A` is the same scan with its last stage reduced: it hashes
 only the first 8 KB of files larger than that, so a big tree is done in a
 fraction of the time, even with `hash = false`. Those files keep the `unhashed`
 state, count only as potential duplicates in [Find duplicates](find-duplicates.md)
-and stay out of the hash and copies columns until a plain `fileindex.scan` hashes
+and stay out of the hash and copies columns until a plain scan hashes
 them fully; running a fast scan again skips them.
-`fileindex.prune` only does the removal, for the current directory. In an
+`M-P` only does the removal, for the current directory. In an
 index view all of them act on the real paths.
 
 Both run as **task** jobs in the [jobs view](jobs.md): the Details panel shows
@@ -405,7 +402,7 @@ from disk only loses its record.
 
 ## Report differences
 
-`fileindex.report-differences` compares the disk with the index under a
+`M-E` compares the disk with the index under a
 directory and lists every difference: the directory under the cursor, else the
 current directory, on a local or `fileindex://` panel. It runs as a task job in
 the [jobs view](jobs.md), with a progress count and cancel, beside a running scan
@@ -415,7 +412,7 @@ request and you are still looking at the file list of the same panel with no
 dialog open, a picker titled "Differences under NAME (N)" opens by itself;
 otherwise a message says "N differences under NAME: see Jobs view". Either way
 the result stays on the job: select it in the jobs view and use **Jobs → Show
-results** (`jobs.show-results`) to open the picker again. The picker lists the
+results** to open the picker again. The picker lists the
 paths, filtered as you type, each with its state:
 
 | State | Meaning |

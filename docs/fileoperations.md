@@ -127,19 +127,19 @@ nothing is selected. Delete and rename act on the entries that were selected
 when the dialog opened, even if you move the cursor afterwards. All keys are
 rebindable in `keybindings.toml`.
 
-| Operation | Key | Action id | Menu |
-|---|---|---|---|
-| Copy | `F5`, `C-c` | `file.copy` | File -> Copy |
-| Move | `F6` | `file.move` | File -> Move |
-| Rename | `S-F6`, `C-r` | `file.rename` | File -> Rename |
-| Duplicate | `S-F5` | `file.duplicate` | Esc menu `p` |
-| Mkdir | `F7` | `file.mkdir` | File -> Mkdir |
-| Mkdir and open | `S-F7` | `file.mkdir-open-in-other` | Esc menu `o` |
-| Delete | `F8`, `Delete` | `file.delete` | File -> Delete |
-| Symlink | `C-l` | `file.symlink` | File -> Symlink |
-| Hard link | unbound | `file.hardlink` | File -> Link |
-| Flatten | `C-z` | `file.flatten` | File -> Flatten |
-| Extract archive | `C-x` | `file.extract` | File -> Extract |
+| Operation | Key | Menu |
+|---|---|---|
+| Copy | `F5`, `C-c` | File -> Copy |
+| Move | `F6` | File -> Move |
+| Rename | `S-F6`, `C-r` | File -> Rename |
+| Duplicate | `S-F5` | Esc menu `p` |
+| Mkdir | `F7` | File -> Mkdir |
+| Mkdir and open | `S-F7` | Esc menu `o` |
+| Delete | `F8`, `Delete` | File -> Delete |
+| Symlink | `C-l` | File -> Symlink |
+| Hard link | unbound | File -> Link |
+| Flatten | `C-z` | File -> Flatten |
+| Extract archive | `C-x` | File -> Extract |
 
 Symlinks, hard links, chmod and chown are local-only. All dialogs accept
 `M-o` (OK) and `Esc` (Cancel).
