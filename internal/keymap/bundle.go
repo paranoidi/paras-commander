@@ -44,7 +44,7 @@ func (b *Bundle) Overlays() []*Map {
 		b.Jobs, b.Commands, b.Messages, b.FilePreview, b.DialogInput, b.RenameDialog, b.MkdirDialog,
 		b.BookmarkDialog, b.FindDialog, b.HistoryDialog, b.FlattenDialog, b.TransferDialog,
 		b.Compare, b.Dedup, b.Terminal, b.MassRenameDialog, b.RunForEachDialog, b.PinDialog,
-		b.HelpDialog, b.UserMenu, b.CommandOutputDialog, b.MetaDialog,
+		b.HelpDialog, b.UserMenu, b.CommandOutputDialog, b.MetaDialog, b.FilePreviewSearch,
 	}
 }
 
