@@ -498,7 +498,7 @@ func Run(cfg LaunchConfig) (err error) {
 	// sync.OnceValue cache tests rely on being unpopulated.
 	preview.WarmTmuxCaches(os.Getenv)
 
-	screen, err := tcell.NewScreen()
+	screen, err := newTerminalScreen()
 	if err != nil {
 		return fmt.Errorf("create screen: %w", err)
 	}
