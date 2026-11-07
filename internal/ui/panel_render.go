@@ -715,7 +715,7 @@ func fitPanelMetaColumns(layoutRes panelColumnLayoutResult, state panel.State, c
 // meta column shown (border, icon gutter/strip, git strip and listing format also counted), so it
 // tells the zoom gate whether the whole listing fits, not what fitPanelMetaColumns left of it. A
 // name-only (narrow) panel hides meta, so the name takes the whole row.
-// LayoutMetaColumns reuses each column's cached cells while its ResultsGen is unchanged, so
+// LayoutMetaColumns reuses each column's cached cells while its LayoutGen is unchanged, so
 // repeated calls (each layout, including mouse motion) are cheap.
 func PanelNameColumnWidth(panelWidth int, state panel.State, showIcons, narrowPanelsNameOnly bool, metaCols []MetaColumnState) int {
 	layoutRes := panelColumnLayout(Rect{Width: panelWidth}, state, PanelDisplayConfig{ShowIcons: showIcons, NarrowPanelsNameOnly: narrowPanelsNameOnly})

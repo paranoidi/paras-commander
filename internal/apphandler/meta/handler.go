@@ -48,7 +48,7 @@ func (h *Handler) postExecFailed(panelID int, gen uint64, exitCode int, stderr, 
 	}))
 }
 
-// HandleWake applies one async command result (or one provider batch) and schedules a debounced repaint.
+// HandleWake applies one async command result (or one provider batch) and schedules a paced repaint.
 // Called from Run's interrupt switch for WakePayload.
 func (h *Handler) HandleWake(d WakePayload) {
 	if d.Gen == h.runGen[d.PanelID] {
@@ -66,8 +66,8 @@ func (h *Handler) HandleWake(d WakePayload) {
 		if pendingCount(h.model.MetaResults[d.PanelID]) == 0 {
 			h.pendingReveal[d.PanelID].Stop()
 		}
+		h.scheduleRenderFlush(d.PanelID)
 	}
-	h.scheduleRenderDebounced()
 }
 
 func (h *Handler) applyWakeResult(d WakePayload) {
@@ -646,20 +646,48 @@ func (h *Handler) HandleLoad(d LoadPayload) {
 // directly. The host (App) decides when to actually apply the re-sort, deferred behind the same
 // idle-delay/user-activity hold as the disk-usage idle sort, so the listing does not reshuffle
 // under the user while they are still scrolling/typing.
-func (h *Handler) HandleRenderFlush() {
-	h.renderDebounce.Stop()
-	for panelID := range h.resortPending {
-		if !h.resortPending[panelID] {
-			continue
-		}
-		h.resortPending[panelID] = false
-		if h.ColumnResolved(panelID) {
-			h.host.NoteMetaColumnResolved(panelID)
+func (h *Handler) HandleRenderFlush(d RenderFlushPayload) {
+	h.renderDebounce[d.PanelID].Stop()
+	h.publishLayout(d.PanelID)
+	if h.resortPending[d.PanelID] {
+		h.resortPending[d.PanelID] = false
+		if h.ColumnResolved(d.PanelID) {
+			h.host.NoteMetaColumnResolved(d.PanelID)
 		}
 	}
-	h.refreshMetaPatternFilters()
-	h.reportLostColumns(ui.PrimaryPanel)
-	h.reportLostColumns(ui.SecondaryPanel)
+	h.refreshMetaPatternFilter(d.PanelID)
+	h.reportLostColumns(d.PanelID)
+}
+
+// publishLayout makes panelID's latest results the drawn layout. Once nothing is pending the
+// values are final, so the width guess of the run goes too.
+func (h *Handler) publishLayout(panelID int) {
+	cols := h.model.MetaResults[panelID]
+	resolved := pendingCount(cols) == 0
+	for i := range cols {
+		cols[i].LayoutGen = cols[i].ResultsGen
+		if resolved {
+			cols[i].Guess = ui.MetaLayoutGuess{}
+		}
+	}
+}
+
+// seedLayoutGuess starts cols at the layouts panelID last measured, its outgoing columns'
+// included: a refresh, or a sibling directory of the same kind, then moves nothing as its values
+// arrive.
+func (h *Handler) seedLayoutGuess(panelID int, cols []ui.MetaColumnState) {
+	if h.layoutGuess[panelID] == nil {
+		h.layoutGuess[panelID] = make(map[string]ui.MetaLayoutGuess)
+	}
+	outgoing := h.model.MetaResults[panelID]
+	for i := range outgoing {
+		if guess, ok := ui.MeasuredMetaLayout(&outgoing[i]); ok {
+			h.layoutGuess[panelID][outgoing[i].EntryName] = guess
+		}
+	}
+	for i := range cols {
+		cols[i].Guess = h.layoutGuess[panelID][cols[i].EntryName]
+	}
 }
 
 // MinColumnShownBeforeToast is how long a run must have been showing a column for
@@ -667,31 +695,24 @@ func (h *Handler) HandleRenderFlush() {
 // would follow every navigation into a directory with wide values.
 const MinColumnShownBeforeToast = 500 * time.Millisecond
 
-// columnFitCheckInterval spaces reportLostColumns' fit checks while results still arrive: a fit
-// costs a layout and, in a carousel, a measure of every row, and flushes run at render rate.
-const columnFitCheckInterval = 250 * time.Millisecond
-
 // columnFitWatch is one panel's baseline for reportLostColumns; the zero value has none.
 type columnFitWatch struct {
-	gen       uint64 // run the baseline belongs to
-	seededAt  time.Time
-	checkedAt time.Time
-	fit       ui.PanelMetaFit
-	warned    map[string]bool // columns already reported in this run, by EntryName
+	gen      uint64 // run the baseline belongs to
+	seededAt time.Time
+	fit      ui.PanelMetaFit
+	warned   map[string]bool // columns already reported in this run, by EntryName
 }
 
 // seedColumnFit records what panelID draws as the baseline of its current run.
 func (h *Handler) seedColumnFit(panelID int, fit ui.PanelMetaFit) {
-	now := time.Now()
-	h.fitWatch[panelID] = columnFitWatch{gen: h.runGen[panelID], seededAt: now, checkedAt: now, fit: fit, warned: map[string]bool{}}
+	h.fitWatch[panelID] = columnFitWatch{gen: h.runGen[panelID], seededAt: time.Now(), fit: fit, warned: map[string]bool{}}
 }
 
 // reportLostColumns toasts columns that incoming results pushed out of panelID's listing. The
 // baseline is seeded when a run starts. A column lost within MinColumnShownBeforeToast of that is
 // not reported, nor is one that never fit, and a change of available space (resize, zoom, listing
 // format) moves the baseline silently: the user caused that one and can see it. Each column is
-// reported once per run. While commands are pending, checks are columnFitCheckInterval apart; the
-// flush that ends the run always checks.
+// reported once per run.
 func (h *Handler) reportLostColumns(panelID int) {
 	w := &h.fitWatch[panelID]
 	cols := h.model.MetaResults[panelID]
@@ -700,9 +721,6 @@ func (h *Handler) reportLostColumns(panelID int) {
 		return
 	}
 	seeded := !w.seededAt.IsZero() && w.gen == h.runGen[panelID]
-	if seeded && pendingCount(cols) > 0 && time.Since(w.checkedAt) < columnFitCheckInterval {
-		return
-	}
 	fit, ok := h.host.PanelMetaFit(panelID)
 	if !ok {
 		*w = columnFitWatch{}
@@ -714,7 +732,6 @@ func (h *Handler) reportLostColumns(panelID int) {
 	}
 	prev := w.fit
 	w.fit = fit
-	w.checkedAt = time.Now()
 	if prev.Width != fit.Width || prev.NameRoom != fit.NameRoom || time.Since(w.seededAt) < MinColumnShownBeforeToast {
 		return
 	}
@@ -732,15 +749,11 @@ func (h *Handler) reportLostColumns(panelID int) {
 	}
 }
 
-// refreshMetaPatternFilters re-runs the active entry filter on any panel whose filter matches
-// live meta values (panel.PatternMetaFilterID), so rows appear/disappear as meta results resolve.
-// ponytail: O(n) rebuild per flush (already coalesced to ~16ms); coalesce further if huge dirs stutter.
-func (h *Handler) refreshMetaPatternFilters() {
-	for panelID := ui.PrimaryPanel; panelID <= ui.SecondaryPanel; panelID++ {
-		p := h.host.PanelByID(panelID)
-		if p == nil || p.ActiveEntryFilter == nil || p.ActiveEntryFilter.ID != panel.PatternMetaFilterID {
-			continue
-		}
+// refreshMetaPatternFilter re-runs panelID's active entry filter when it matches live meta values
+// (panel.PatternMetaFilterID), so rows appear/disappear as meta results resolve.
+func (h *Handler) refreshMetaPatternFilter(panelID int) {
+	p := h.host.PanelByID(panelID)
+	if p != nil && p.ActiveEntryFilter != nil && p.ActiveEntryFilter.ID == panel.PatternMetaFilterID {
 		p.RefreshEntryFilter()
 	}
 }
@@ -789,15 +802,25 @@ func (h *Handler) HandlePendingReveal(d PendingRevealPayload) {
 	}
 }
 
-// scheduleRenderDebounced arms a short timer to coalesce rapid WakePayload events
-// (one per entry in large directories) into a single screen repaint at ~60 fps.
-func (h *Handler) scheduleRenderDebounced() {
-	if h.renderDebounce.Armed() {
+// scheduleRenderFlush coalesces panelID's WakePayload events (one per entry in large directories)
+// into a flush at most every config.MetaLayoutInterval. It is first-arm-wins, so a steady stream
+// of results cannot postpone the flush; the result that resolves the last cell flushes at once.
+func (h *Handler) scheduleRenderFlush(panelID int) {
+	if pendingCount(h.model.MetaResults[panelID]) == 0 {
+		h.armRenderFlush(panelID, 0)
 		return
 	}
-	const debounce = 16 * time.Millisecond
-	h.renderDebounce.Arm(debounce, func() {
-		_ = h.screen.PostEvent(tcell.NewEventInterrupt(RenderFlushPayload{}))
+	if !h.renderDebounce[panelID].Armed() {
+		h.armRenderFlush(panelID, config.MetaLayoutInterval)
+	}
+}
+
+func (h *Handler) armRenderFlush(panelID int, delay time.Duration) {
+	h.renderDebounce[panelID].Arm(delay, func() {
+		if h.screen == nil {
+			return
+		}
+		_ = h.screen.PostEvent(tcell.NewEventInterrupt(RenderFlushPayload{PanelID: panelID}))
 	})
 }
 
@@ -813,6 +836,7 @@ func (h *Handler) runForPanel(panelID int, cmdDefs []metacmds.MetaEntry, cols []
 	// This run covers every loaded tree child, so ReconcileForPanel need not walk the tree again.
 	h.treeWalked[panelID] = panel.TreeChildrenGen
 
+	h.seedLayoutGuess(panelID, cols)
 	for i := range cols {
 		cols[i].Results = make(map[string]string, len(groups[0].entries))
 		cols[i].PendingCount = 0
@@ -874,6 +898,15 @@ func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.
 				}
 				_ = h.screen.PostEvent(tcell.NewEventInterrupt(PendingRevealPayload{PanelID: panelID, Gen: gen}))
 			})
+		}
+	}
+
+	// A dispatch into an idle panel shows its pending and cached cells right away, then holds the
+	// layout so the first update has a sample of values to size the columns from.
+	if wasIdle {
+		h.publishLayout(panelID)
+		if pendingCount(cols) > 0 {
+			h.armRenderFlush(panelID, config.MetaLayoutInterval)
 		}
 	}
 

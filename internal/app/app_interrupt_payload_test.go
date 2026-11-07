@@ -9,6 +9,8 @@ import (
 	"github.com/gdamore/tcell/v2"
 	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
 	metactrl "github.com/paranoidi/paras-commander/internal/apphandler/meta"
+	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
@@ -47,7 +49,9 @@ func TestHandleInterruptPayloadConsumesMetaRenderFlush(t *testing.T) {
 	app := newApp(t, screen, dir)
 	drainPendingEvents(screen)
 
-	app.metaCtrl.HandleWake(metactrl.WakePayload{})
+	// A pending cell keeps the flush on the paced timer rather than firing at once.
+	app.model.MetaResults[ui.PrimaryPanel] = []ui.MetaColumnState{{EntryName: "heron", PendingCount: 1}}
+	app.metaCtrl.HandleWake(metactrl.WakePayload{EntryName: "heron"})
 	if err := screen.PostEvent(tcell.NewEventInterrupt(metactrl.RenderFlushPayload{})); err != nil {
 		t.Fatalf("PostEvent: %v", err)
 	}
@@ -55,8 +59,8 @@ func TestHandleInterruptPayloadConsumesMetaRenderFlush(t *testing.T) {
 	applyNextInterruptEvent(t, app, screen)
 
 	// HandleRenderFlush must stop the debounce armed by HandleWake. Without that
-	// call, AfterFunc still posts a second RenderFlushPayload after ~16ms.
-	deadline := time.Now().Add(40 * time.Millisecond)
+	// call, AfterFunc still posts a second RenderFlushPayload after the interval.
+	deadline := time.Now().Add(config.MetaLayoutInterval + 40*time.Millisecond)
 	for time.Now().Before(deadline) {
 		for screen.HasPendingEvent() {
 			ev := screen.PollEvent()

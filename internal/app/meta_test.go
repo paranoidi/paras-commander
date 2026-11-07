@@ -98,12 +98,12 @@ func TestMetaResultWideningColumnToastsLostColumn(t *testing.T) {
 		{EntryName: "heron", ColumnTitle: "Heron", ResultsGen: 1, Results: map[string]string{path: "a"}},
 		{EntryName: "otter", ColumnTitle: "Otter", ResultsGen: 1, Results: map[string]string{path: "b"}},
 	}
-	app.metaCtrl.HandleRenderFlush()
+	app.metaCtrl.HandleRenderFlush(metactrl.RenderFlushPayload{PanelID: ui.PrimaryPanel})
 	app.model.Message = ""
 	time.Sleep(metactrl.MinColumnShownBeforeToast)
 
 	app.metaCtrl.HandleWake(metactrl.WakePayload{PanelID: ui.PrimaryPanel, EntryName: "otter", Path: path, Value: "wide-pebble"})
-	app.metaCtrl.HandleRenderFlush()
+	app.metaCtrl.HandleRenderFlush(metactrl.RenderFlushPayload{PanelID: ui.PrimaryPanel})
 	if want := "Column Otter no longer fits on available space"; app.model.Message != want {
 		t.Fatalf("message = %q, want %q", app.model.Message, want)
 	}

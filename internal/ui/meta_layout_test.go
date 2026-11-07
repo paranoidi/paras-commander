@@ -321,17 +321,67 @@ func TestMetaRowText_pendingHiddenPaintsBlankAtSameWidth(t *testing.T) {
 }
 
 func TestLayoutMetaColumns_cachedWhileGenerationUnchanged(t *testing.T) {
-	cols := []MetaColumnState{{EntryName: "mint", ColumnTitle: "Mint", ResultsGen: 1, Results: map[string]string{"/walnut": "alder"}}}
+	cols := []MetaColumnState{{EntryName: "mint", ColumnTitle: "Mint", ResultsGen: 1, LayoutGen: 1, Results: map[string]string{"/walnut": "alder"}}}
 	first, _ := LayoutMetaColumns(cols)
 	cols[0].Results["/walnut"] = "birch" // no bump: the cached layout is served
 	second, _ := LayoutMetaColumns(cols)
 	if got := second[0].Formatted["/walnut"]; got != first[0].Formatted["/walnut"] || strings.TrimSpace(got) != "alder" {
 		t.Fatalf("same generation: cell = %q, want the cached alder", got)
 	}
-	cols[0].ResultsGen++
+	cols[0].ResultsGen++ // unpublished: still the cached layout
+	if held, _ := LayoutMetaColumns(cols); strings.TrimSpace(held[0].Formatted["/walnut"]) != "alder" {
+		t.Fatalf("unpublished results: cell = %q, want the cached alder", held[0].Formatted["/walnut"])
+	}
+	cols[0].LayoutGen = cols[0].ResultsGen
 	third, _ := LayoutMetaColumns(cols)
 	if got := strings.TrimSpace(third[0].Formatted["/walnut"]); got != "birch" {
 		t.Fatalf("bumped generation: cell = %q, want birch", got)
+	}
+}
+
+func TestLayoutMetaColumns_guessWidthHoldsNarrowValues(t *testing.T) {
+	cols := []MetaColumnState{{EntryName: "mint", ColumnTitle: "Mint", LayoutGen: 1, Guess: MetaLayoutGuess{Width: 12}, Results: map[string]string{"/walnut": "alder"}}}
+	if layouts, total := LayoutMetaColumns(cols); layouts[0].Width != 12 || total != 12 {
+		t.Fatalf("width = %d, total = %d, want the floor", layouts[0].Width, total)
+	}
+	if guess, ok := MeasuredMetaLayout(&cols[0]); !ok || guess.Width != 5 {
+		t.Fatalf("measured = %+v, %v, want the values' own width", guess, ok)
+	}
+	cols[0].Guess = MetaLayoutGuess{}
+	if layouts, _ := LayoutMetaColumns(cols); layouts[0].Width != 5 {
+		t.Fatalf("width = %d, want 5 without the floor", layouts[0].Width)
+	}
+}
+
+func TestLayoutMetaColumns_guessAlignsUntilFirstValue(t *testing.T) {
+	cols := []MetaColumnState{{
+		EntryName: "mint", ColumnTitle: "Mint", Pending: "*", ResultsGen: 1, LayoutGen: 1,
+		Guess:   MetaLayoutGuess{Width: 12, RightAlign: false},
+		Results: map[string]string{"/walnut": "*"},
+	}}
+	if layouts, _ := LayoutMetaColumns(cols); layouts[0].RightAlign {
+		t.Fatal("all pending: want the guessed left alignment, not the empty column's right")
+	}
+	cols[0].Results["/walnut"] = "42"
+	cols[0].ResultsGen, cols[0].LayoutGen = 2, 2
+	if layouts, _ := LayoutMetaColumns(cols); !layouts[0].RightAlign {
+		t.Fatal("a numeric value must decide the alignment over the guess")
+	}
+}
+
+func TestMeasuredMetaLayout_needsValues(t *testing.T) {
+	for name, col := range map[string]MetaColumnState{
+		"not laid out": {EntryName: "mint", LayoutGen: 1, Results: map[string]string{"/walnut": "alder"}},
+		"no values":    {EntryName: "mint", LayoutGen: 1, Results: map[string]string{"/walnut": ""}},
+	} {
+		if name != "not laid out" {
+			cols := []MetaColumnState{col}
+			LayoutMetaColumns(cols)
+			col = cols[0]
+		}
+		if guess, ok := MeasuredMetaLayout(&col); ok {
+			t.Fatalf("%s: measured %+v, want none", name, guess)
+		}
 	}
 }
 
@@ -339,7 +389,7 @@ func TestLayoutMetaColumns_unmanagedGenerationNeverCached(t *testing.T) {
 	cols := []MetaColumnState{{EntryName: "mint", ColumnTitle: "Mint", Results: map[string]string{"/walnut": "alder"}}}
 	LayoutMetaColumns(cols)
 	if cols[0].layoutCache != nil {
-		t.Fatal("ResultsGen 0 must not store a cache")
+		t.Fatal("LayoutGen 0 must not store a cache")
 	}
 	cols[0].Results["/walnut"] = "birch"
 	layouts, _ := LayoutMetaColumns(cols)
@@ -365,7 +415,7 @@ func TestLayoutMetaColumns_titleAndPendingHiddenNeedNoBump(t *testing.T) {
 func TestMetaAlertLevelsSkipPendingAndCacheByGeneration(t *testing.T) {
 	t.Parallel()
 	cols := []MetaColumnState{{
-		EntryName: "copies", ColumnTitle: "Copies", Pending: "...", ResultsGen: 1,
+		EntryName: "copies", ColumnTitle: "Copies", Pending: "...", LayoutGen: 1,
 		Alerts:  panel.MustMetaAlerts([]string{">1", "..."}, []string{">2"}),
 		Results: map[string]string{"/a": "1", "/b": "2", "/c": "3", "/d": "..."},
 	}}
@@ -385,7 +435,7 @@ func TestMetaAlertLevelsSkipPendingAndCacheByGeneration(t *testing.T) {
 	if layouts[0].Levels["/a"] != panel.MetaAlertNone {
 		t.Fatal("unchanged generation should reuse cached levels")
 	}
-	cols[0].ResultsGen = 2
+	cols[0].LayoutGen = 2
 	layouts, _ = LayoutMetaColumns(cols)
 	if layouts[0].Levels["/a"] != panel.MetaAlertCritical {
 		t.Fatal("new generation should re-evaluate the rules")
