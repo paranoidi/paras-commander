@@ -26,7 +26,7 @@ func (st State) drawableBody() bool {
 	return st.ExitCode != 0 && strings.TrimSpace(st.Path) != ""
 }
 
-// DrawWarmCandidate is true when wrapped lines should be precomputed for drawing.
+// DrawWarmCandidate is true when the wrap layout should be precomputed for drawing.
 func (st State) DrawWarmCandidate() bool {
 	if !st.Open {
 		return false
@@ -61,7 +61,6 @@ func MergeDrawWithHold(live, hold State) State {
 	out.Source = hold.Source
 	out.CombinedText = hold.CombinedText
 	out.HighlightedCells = hold.HighlightedCells
-	out.highlightCacheKey = hold.highlightCacheKey
 	out.GutterWidth = hold.GutterWidth
 	out.ErrorMsg = hold.ErrorMsg
 	out.ExitCode = hold.ExitCode

@@ -1,6 +1,8 @@
 package chromaformat_test
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,7 +26,7 @@ func TestHighlightCustomLoadedStyle(t *testing.T) {
 	}
 
 	base := tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack)
-	res := chromaformat.Highlight("package main\n", chromaformat.Options{
+	res := chromaformat.Highlight(t.Context(), "package main\n", chromaformat.Options{
 		Path:        "handler.go",
 		StyleName:   "cedar-glow-preview",
 		BaseStyle:   base,
@@ -52,7 +54,7 @@ func TestHighlightCustomLoadedStyle(t *testing.T) {
 
 func TestHighlightGoKeywordColored(t *testing.T) {
 	base := tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack)
-	res := chromaformat.Highlight("package main\n", chromaformat.Options{
+	res := chromaformat.Highlight(t.Context(), "package main\n", chromaformat.Options{
 		Path:        "handler.go",
 		StyleName:   "monokai",
 		BaseStyle:   base,
@@ -80,7 +82,7 @@ func TestHighlightGoKeywordColored(t *testing.T) {
 
 func TestHighlightExpandsTabs(t *testing.T) {
 	base := tcell.StyleDefault
-	res := chromaformat.Highlight("a\tb", chromaformat.Options{
+	res := chromaformat.Highlight(t.Context(), "a\tb", chromaformat.Options{
 		Path:      "plain.txt",
 		StyleName: "monokai",
 		BaseStyle: base,
@@ -100,7 +102,7 @@ func TestHighlightExpandsTabs(t *testing.T) {
 func TestHighlightLineNumbersGutterWidth(t *testing.T) {
 	base := tcell.StyleDefault
 	source := "one\ntwo\nthree\n"
-	res := chromaformat.Highlight(source, chromaformat.Options{
+	res := chromaformat.Highlight(t.Context(), source, chromaformat.Options{
 		Path:        "ledger.txt",
 		StyleName:   "monokai",
 		BaseStyle:   base,
@@ -128,7 +130,7 @@ func TestHighlightLineNumbersMultiDigit(t *testing.T) {
 		}
 		lines.WriteString("x")
 	}
-	res := chromaformat.Highlight(lines.String(), chromaformat.Options{
+	res := chromaformat.Highlight(t.Context(), lines.String(), chromaformat.Options{
 		Path:        "ledger.txt",
 		StyleName:   "monokai",
 		BaseStyle:   base,
@@ -163,7 +165,7 @@ func cellsStringFromLine(cells []previewpanel.AnsiCell, line int) string {
 
 func TestHighlightUnknownExtensionUsesFallbackLexer(t *testing.T) {
 	base := tcell.StyleDefault
-	res := chromaformat.Highlight("echo hello", chromaformat.Options{
+	res := chromaformat.Highlight(t.Context(), "echo hello", chromaformat.Options{
 		Path:      "randomword.xyz",
 		StyleName: "monokai",
 		BaseStyle: base,
@@ -182,4 +184,74 @@ func cellsString(cells []previewpanel.AnsiCell) string {
 		b.WriteRune(c.R)
 	}
 	return b.String()
+}
+
+func cellText(cells []previewpanel.AnsiCell) string {
+	var b strings.Builder
+	for _, c := range cells {
+		b.WriteRune(c.R)
+	}
+	return b.String()
+}
+
+func TestHighlightPartialIsWholeBodyWithSameRunes(t *testing.T) {
+	var src strings.Builder
+	src.WriteString("package harbor\r\n\r\n")
+	for i := range 400 {
+		fmt.Fprintf(&src, "\tvar lantern%d = \"meadow\" // copper\r\n", i)
+	}
+	var partial []chromaformat.Result
+	res := chromaformat.Highlight(t.Context(), src.String(), chromaformat.Options{
+		Path:              "harbor.go",
+		StyleName:         "monokai",
+		BaseStyle:         tcell.StyleDefault,
+		LineNumbers:       true,
+		Partial:           func(r chromaformat.Result) { partial = append(partial, r) },
+		PartialAfterCells: 256,
+	})
+	if len(partial) != 1 {
+		t.Fatalf("partial calls = %d, want 1", len(partial))
+	}
+	p := partial[0]
+	if p.GutterWidth != res.GutterWidth {
+		t.Fatalf("gutter = %d, want %d", p.GutterWidth, res.GutterWidth)
+	}
+	if got, want := cellText(p.Cells), cellText(res.Cells); got != want {
+		t.Fatal("partial body must hold the same runes as the final body")
+	}
+	for i := range 256 {
+		if p.Cells[i].St != res.Cells[i].St {
+			t.Fatalf("cell %d of the highlighted prefix differs from the final body", i)
+		}
+	}
+	tailStyled := false
+	for i := len(p.Cells) / 2; i < len(p.Cells); i++ {
+		tailStyled = tailStyled || p.Cells[i].St != res.Cells[i].St
+	}
+	if !tailStyled {
+		t.Fatal("tail should still be unstyled in the partial body")
+	}
+}
+
+func TestHighlightShortBodyHasNoPartial(t *testing.T) {
+	called := false
+	chromaformat.Highlight(t.Context(), "package harbor\n", chromaformat.Options{
+		Path:              "harbor.go",
+		StyleName:         "monokai",
+		Partial:           func(chromaformat.Result) { called = true },
+		PartialAfterCells: 256,
+	})
+	if called {
+		t.Fatal("a body under the threshold is published once, as its final result")
+	}
+}
+
+func TestHighlightStopsWhenCanceled(t *testing.T) {
+	src := strings.Repeat("var lantern = \"meadow\" // copper\n", 20000)
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	res := chromaformat.Highlight(ctx, src, chromaformat.Options{Path: "harbor.go", StyleName: "monokai"})
+	if len(res.Cells) >= len(src) {
+		t.Fatalf("canceled run produced %d cells of %d", len(res.Cells), len(src))
+	}
 }

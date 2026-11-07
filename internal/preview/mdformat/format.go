@@ -6,6 +6,7 @@
 package mdformat
 
 import (
+	"context"
 	"strconv"
 	"strings"
 	"sync"
@@ -41,6 +42,11 @@ type Options struct {
 	StyleName    string
 	BaseStyle    tcell.Style
 	ContentWidth int
+	// Partial, when set, is called once on the caller's goroutine after the top-level block that
+	// reaches PartialAfterCells cells, with the rendered prefix of the body. A body that finishes
+	// first gets no call.
+	Partial           func(Result)
+	PartialAfterCells int
 }
 
 // Result is rendered terminal cells, same shape as chromaformat.Result.
@@ -50,7 +56,7 @@ type Result struct {
 
 // Render parses source with a CommonMark parser plus the GFM table extension
 // and walks the AST into styled, word-wrapped terminal cells.
-func Render(source string, opts Options) Result {
+func Render(ctx context.Context, source string, opts Options) Result {
 	width := opts.ContentWidth
 	if width < 1 {
 		width = 1
@@ -63,6 +69,7 @@ func Render(source string, opts Options) Result {
 		base:      opts.BaseStyle,
 		styleName: opts.StyleName,
 		width:     width,
+		ctx:       ctx,
 	}
 	// textBase carries the Chroma style's Text-token colours (including its
 	// background, which many styles set for every token) so plain prose
@@ -83,8 +90,33 @@ func Render(source string, opts Options) Result {
 		boosted := bg.Background.BrightenOrDarken(codeBlockTint)
 		r.codeBase = r.textBase.Background(tcell.NewRGBColor(int32(boosted.Red()), int32(boosted.Green()), int32(boosted.Blue())))
 	}
-	r.renderSiblings(doc, nil, nil)
+	r.renderTopLevel(ctx, doc, opts)
 	return Result{Cells: r.out}
+}
+
+// renderTopLevel renders doc block by block: rendering, not parsing, is the bulk of the work. A
+// canceled ctx stops at the next block and returns what was reached: the caller discards it after
+// checking ctx.
+func (r *renderer) renderTopLevel(ctx context.Context, doc ast.Node, opts Options) {
+	partialDue := opts.Partial != nil
+	first := true
+	for c := doc.FirstChild(); c != nil; c = c.NextSibling() {
+		if ctx.Err() != nil {
+			return
+		}
+		if !first {
+			r.blank()
+		}
+		first = false
+		r.renderBlock(c, nil, nil)
+		if partialDue && len(r.out) >= opts.PartialAfterCells {
+			partialDue = false
+			if c.NextSibling() != nil {
+				n := len(r.out)
+				opts.Partial(Result{Cells: r.out[:n:n]})
+			}
+		}
+	}
 }
 
 type renderer struct {
@@ -96,6 +128,7 @@ type renderer struct {
 	styleName string
 	width     int
 	out       []previewpanel.AnsiCell
+	ctx       context.Context
 }
 
 func (r *renderer) styleFor(tt chroma.TokenType) tcell.Style {
@@ -117,18 +150,6 @@ func (r *renderer) writeLine(cells []previewpanel.AnsiCell) {
 
 func (r *renderer) blank() {
 	r.out = append(r.out, previewpanel.AnsiCell{R: '\n', St: r.textBase})
-}
-
-// renderSiblings renders every block child of parent, separated by a blank line.
-func (r *renderer) renderSiblings(parent ast.Node, firstPrefix, contPrefix []previewpanel.AnsiCell) {
-	first := true
-	for c := parent.FirstChild(); c != nil; c = c.NextSibling() {
-		if !first {
-			r.blank()
-		}
-		first = false
-		r.renderBlock(c, firstPrefix, contPrefix)
-	}
 }
 
 // renderIndentedChildren renders every block child of parent with the given
@@ -416,21 +437,16 @@ func alignOf(aligns []east.Alignment, i int) east.Alignment {
 func (r *renderer) renderCode(code, lang string, firstPrefix, contPrefix []previewpanel.AnsiCell) {
 	code = strings.TrimSuffix(code, "\n")
 	const indent = "  "
-	width := r.width - len(contPrefix) - len(indent)
-	if width < 1 {
-		width = 1
-	}
 	opts := chromaformat.Options{
-		Language:     lang,
-		StyleName:    r.styleName,
-		BaseStyle:    r.codeBase,
-		TabWidth:     config.DefaultPreviewTabWidth,
-		ContentWidth: width,
+		Language:  lang,
+		StyleName: r.styleName,
+		BaseStyle: r.codeBase,
+		TabWidth:  config.DefaultPreviewTabWidth,
 	}
 	if lang == "" {
 		opts.Path = "code.txt"
 	}
-	hl := chromaformat.Highlight(code, opts)
+	hl := chromaformat.Highlight(r.ctx, code, opts)
 	// Chroma's Style.Get merges the page's Background entry into every token
 	// (style.go: Get() always inherits s.get(Background)), so each highlighted
 	// cell's background comes back as the page background no matter what

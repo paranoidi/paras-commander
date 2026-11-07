@@ -27,7 +27,7 @@ func drawImageBody(screen tcell.Screen, st State, textX, contentTop, textW, cont
 		neededImageRows = 1
 	}
 
-	lines := previewWrappedLines(st, textW, body)
+	lines := st.WrappedRows(textW, body)
 	// One blank row between metadata and the grid when both fit.
 	sep := 1
 	captionH := len(lines) + sep

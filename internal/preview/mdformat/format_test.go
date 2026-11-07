@@ -1,6 +1,7 @@
 package mdformat_test
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -62,7 +63,7 @@ func isUnderline(st tcell.Style) bool {
 
 func render(t *testing.T, source string, width int) mdformat.Result {
 	t.Helper()
-	return mdformat.Render(source, mdformat.Options{
+	return mdformat.Render(context.Background(), source, mdformat.Options{
 		Path:         "meadow.md",
 		StyleName:    "monokai",
 		BaseStyle:    testBase,
@@ -290,5 +291,45 @@ func TestRenderWordWrapAtSmallWidth(t *testing.T) {
 		if strings.HasSuffix(l, "-") {
 			t.Errorf("unexpected hard hyphenation in line %q", l)
 		}
+	}
+}
+
+func manyParagraphs(n int) string {
+	var b strings.Builder
+	for range n {
+		b.WriteString("Quiet **river** stones line the `harbor` near the copper meadow.\n\n")
+	}
+	return b.String()
+}
+
+func TestRenderPartialIsPrefixOfFinal(t *testing.T) {
+	var partial []mdformat.Result
+	res := mdformat.Render(t.Context(), manyParagraphs(300), mdformat.Options{
+		Path: "meadow.md", StyleName: "monokai", BaseStyle: testBase, ContentWidth: 40,
+		Partial:           func(r mdformat.Result) { partial = append(partial, r) },
+		PartialAfterCells: 512,
+	})
+	if len(partial) != 1 {
+		t.Fatalf("partial calls = %d, want 1", len(partial))
+	}
+	p := partial[0].Cells
+	if len(p) < 512 || len(p) >= len(res.Cells) {
+		t.Fatalf("partial cells = %d of %d", len(p), len(res.Cells))
+	}
+	for i := range p {
+		if p[i] != res.Cells[i] {
+			t.Fatalf("partial cell %d differs from the final body", i)
+		}
+	}
+}
+
+func TestRenderStopsWhenCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	res := mdformat.Render(ctx, manyParagraphs(300), mdformat.Options{
+		Path: "meadow.md", StyleName: "monokai", BaseStyle: testBase, ContentWidth: 40,
+	})
+	if len(res.Cells) != 0 {
+		t.Fatalf("canceled render produced %d cells", len(res.Cells))
 	}
 }

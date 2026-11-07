@@ -648,6 +648,13 @@ const (
 	DefaultPreviewTmuxSixelMaxBytes = 500_000
 	// DefaultMaxPreviewBytes caps internal preview reads (matches cmdrun.MaxStreamBytes).
 	DefaultMaxPreviewBytes = 512 * 1024
+	// DefaultPreviewFirstPaintCells is the fewest highlighted cells a large text preview shows on
+	// first paint, before the rest of the body arrives. It grows with the viewport.
+	DefaultPreviewFirstPaintCells = 8 * 1024
+	// DefaultPreviewAnalyseBytes caps how much of a file content-based language detection reads
+	// when its name matches no lexer. Detection looks at markers near the top of a file, and its
+	// cost grows with input size.
+	DefaultPreviewAnalyseBytes = 16 * 1024
 	// DefaultPreviewCommandsMaxStreamBytes caps stdout capture for a [[preview.commands]] rule,
 	// well above cmdrun.MaxStreamBytes (512KiB, sized for typical text/ANSI output): a rule's
 	// stdout may be a raw Sixel or Kitty graphics payload for a near-fullscreen pane, which can

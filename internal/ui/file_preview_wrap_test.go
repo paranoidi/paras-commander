@@ -7,7 +7,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-func TestFilePreviewWrapCacheReusesLines(t *testing.T) {
+func TestFilePreviewWrapCacheCountsRows(t *testing.T) {
 	base := tcell.StyleDefault.Foreground(tcell.ColorWhite)
 	text := strings.Repeat("word ", 200)
 	st := FilePreviewState{
@@ -15,13 +15,9 @@ func TestFilePreviewWrapCacheReusesLines(t *testing.T) {
 		Phase:        FilePreviewPhaseDone,
 		CombinedText: text,
 	}
-	first := st.EnsureWrappedLines(20, base)
-	second := st.EnsureWrappedLines(20, base)
-	if &first[0][0] != &second[0][0] {
-		t.Fatal("expected cached wrapped lines slice to be reused")
-	}
+	first := st.WrappedRows(20, base)
 	if count, ok := st.CachedWrappedLineCount(20); !ok || count != len(first) {
-		t.Fatalf("cache miss after second wrap: ok=%v count=%d want %d", ok, count, len(first))
+		t.Fatalf("cache miss after wrap: ok=%v count=%d want %d", ok, count, len(first))
 	}
 }
 
@@ -32,9 +28,9 @@ func TestFilePreviewWrapCacheInvalidatesOnTextChange(t *testing.T) {
 		Phase:        FilePreviewPhaseDone,
 		CombinedText: "alpha beta",
 	}
-	_ = st.EnsureWrappedLines(10, base)
+	st.EnsureWrapLayout(10, base)
 	st.CombinedText = "gamma delta"
-	lines := st.EnsureWrappedLines(10, base)
+	lines := st.WrappedRows(10, base)
 	if len(lines) == 0 {
 		t.Fatal("expected wrapped lines after text change")
 	}
@@ -56,9 +52,8 @@ func BenchmarkFilePreviewWrapCacheScroll(b *testing.B) {
 		Phase:        FilePreviewPhaseDone,
 		CombinedText: sb.String(),
 	}
-	lines := st.EnsureWrappedLines(80, base)
-	if len(lines) < 100 {
-		b.Fatalf("expected many wrapped lines, got %d", len(lines))
+	if rows := st.WrappedLineCount(80, base); rows < 100 {
+		b.Fatalf("expected many wrapped lines, got %d", rows)
 	}
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -84,6 +79,6 @@ func BenchmarkFilePreviewWrapCacheColdParse(b *testing.B) {
 			Phase:        FilePreviewPhaseDone,
 			CombinedText: text,
 		}
-		_ = st.EnsureWrappedLines(80, base)
+		st.EnsureWrapLayout(80, base)
 	}
 }

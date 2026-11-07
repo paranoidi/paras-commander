@@ -100,95 +100,27 @@ type State struct {
 	// command's actual output order instead of always reordering it.
 	ImageFirst bool
 
-	wrappedLines     [][]AnsiCell
-	wrapWidth        int
-	wrapStyleKey     uint64
-	wrapSource       Source
-	wrapCombinedText string
-	wrapCellsLen     int
-	wrapGutterWidth  int
-	wrapHighlightKey uint64
-	wrapSearchKey    uint64
-
-	// highlightCacheKey fingerprints HighlightedCells styles; bump when cells are replaced.
-	highlightCacheKey uint64
+	// layout is the row index of the body, immutable once built and shared between draw
+	// snapshots of State (see wrapLayout).
+	layout *wrapLayout
 }
 
-// SetHighlightedCells replaces internal Chroma cells and invalidates the wrap cache.
+// SetHighlightedCells replaces internal Chroma cells and invalidates the wrap layout.
 func (st *State) SetHighlightedCells(cells []AnsiCell) {
 	st.HighlightedCells = cells
-	st.highlightCacheKey = highlightCacheKey(cells)
-	st.clearWrapCache()
+	st.layout = nil
 }
 
-func (st *State) clearWrapCache() {
-	st.wrappedLines = nil
-	st.wrapWidth = 0
-	st.wrapStyleKey = 0
-	st.wrapSource = 0
-	st.wrapCombinedText = ""
-	st.wrapCellsLen = 0
-	st.wrapGutterWidth = 0
-	st.wrapHighlightKey = 0
-	st.wrapSearchKey = 0
-}
-
-func (st State) highlightedCacheKey() uint64 {
-	if st.highlightCacheKey != 0 {
-		return st.highlightCacheKey
-	}
-	return highlightCacheKey(st.HighlightedCells)
-}
-
-// HighlightedCacheKey fingerprints internal Chroma highlight styles for cache invalidation.
-func (st State) HighlightedCacheKey() uint64 {
-	return st.highlightedCacheKey()
-}
-
-// SourceLineToScrollOffset returns the wrapped-line index where source line lineN begins.
-// Used to jump to a diff hunk position. base is only used for ANSI text; rune widths
-// determine wrapping regardless of color.
+// SourceLineToScrollOffset returns the wrapped-row index where source line lineN begins, or
+// the last row when lineN is beyond the content. Used to jump to a diff hunk or search match.
+// base is only used for ANSI text; rune widths determine wrapping regardless of color.
 func (st State) SourceLineToScrollOffset(lineN, textWidth int, base tcell.Style) int {
-	if lineN <= 0 {
-		return 0
+	if textWidth < 1 {
+		textWidth = 1
 	}
-	var cells []AnsiCell
-	switch st.Source {
-	case SourceInternalHighlighted:
-		cells = st.HighlightedCells
-	default:
-		cells = AnsiStyledCells(st.CombinedText, base)
+	l := st.cachedLayout(textWidth)
+	if l == nil {
+		l = st.buildLayout(textWidth, base)
 	}
-	// Walk cells counting \n; stop after lineN newlines to find start of that source line.
-	srcNewlines := 0
-	endIdx := -1
-	for i, c := range cells {
-		if c.R == '\n' {
-			srcNewlines++
-			if srcNewlines == lineN {
-				endIdx = i + 1
-				break
-			}
-		}
-	}
-	gw := 0
-	if st.Source == SourceInternalHighlighted {
-		gw = st.GutterWidth
-	}
-	wrapFn := func(prefix []AnsiCell) [][]AnsiCell {
-		if gw > 0 {
-			return WrapAnsiCellsWithGutter(prefix, textWidth, gw)
-		}
-		return WrapAnsiCells(prefix, textWidth)
-	}
-	if endIdx < 0 {
-		// lineN is beyond content; return index of last wrapped line.
-		wrapped := wrapFn(cells)
-		return max(0, len(wrapped)-1)
-	}
-	wrapped := wrapFn(cells[:endIdx])
-	if len(wrapped) == 0 {
-		return 0
-	}
-	return len(wrapped) - 1
+	return l.rowOfLine(lineN)
 }

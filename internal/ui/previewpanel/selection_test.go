@@ -25,7 +25,7 @@ func gutteredState() State {
 func TestSelectionSkipsGutterAndKeepsOnlyHardBreaks(t *testing.T) {
 	st := gutteredState()
 	base := tcell.StyleDefault
-	if got := len(previewWrappedLines(st, 10, base)); got != 3 {
+	if got := len(st.WrappedRows(10, base)); got != 3 {
 		t.Fatalf("wrapped rows = %d, want 3", got)
 	}
 	// From "w" on the first row to "a" of anchor: crosses a soft wrap and a hard break.
@@ -123,7 +123,7 @@ func TestWordSelectionAt(t *testing.T) {
 	}
 	// A word longer than the row breaks mid-word; both of its rows select all of it.
 	st.SetHighlightedCells(plainCells("1  marigolds\n"))
-	if got := len(previewWrappedLines(st, 8, base)); got != 2 {
+	if got := len(st.WrappedRows(8, base)); got != 2 {
 		t.Fatalf("wrapped rows = %d, want 2", got)
 	}
 	for row := range 2 {

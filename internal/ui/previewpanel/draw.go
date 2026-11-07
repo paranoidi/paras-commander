@@ -330,34 +330,31 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 	// image layout — CombinedText (e.g. a rule command's caption) still renders reasonably; an
 	// image-only result just paints blank, matching drawImageOnly's own blank-fill.
 
-	lines := previewWrappedLines(st, textW, body)
+	layout := st.layoutFor(textW, body)
+	rowCount := layout.rowCount()
 	scroll := st.Scroll
 	if scroll < 0 {
 		scroll = 0
 	}
-	maxStart := max(0, len(lines)-contentH)
+	maxStart := max(0, rowCount-contentH)
 	if scroll > maxStart {
 		scroll = maxStart
 	}
 	selLo, selHi, selecting := st.Selection.Range()
-	var selStarts []int
-	if selecting {
-		// ponytail: O(wrapped rows) per frame, and an external body is re-parsed too; both bounded
-		// by DefaultMaxPreviewBytes. Cache the offsets with the wrap if it ever shows up in a profile.
-		selStarts = rowOffsets(lines, st.bodyCellsRaw(body), st.wrapGutter())
-	}
+	var rowBuf []AnsiCell
 	for row := 0; row < contentH; row++ {
 		y := contentTop + row
 		if paintLeftMargin {
 			screen.SetContent(leftMarginX, y, ' ', nil, marginStyle)
 		}
 		idx := scroll + row
-		if idx >= len(lines) {
+		if idx >= rowCount {
 			fillContentRow(screen, textX, y, textW, padStyle)
 		} else {
-			DrawCells(screen, textX, y, textW, lines[idx], padStyle)
+			rowBuf = layout.appendRow(rowBuf[:0], idx, &st.Search)
+			DrawCells(screen, textX, y, textW, rowBuf, padStyle)
 			if selecting {
-				paintSelection(screen, textX, y, textW, lines[idx], selStarts[idx], st.wrapGutter(), selLo, selHi)
+				paintSelection(screen, textX, y, textW, rowBuf, layout.rowOffset(idx), st.wrapGutter(), selLo, selHi)
 			}
 		}
 		if paintRightMargin {
@@ -367,7 +364,7 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 
 	scrollbarActive := p.PreviewFocused || p.Embedded
 	if p.ScrollbarStyle != "" && p.ScrollbarStyle != uiscrollbar.StyleNone {
-		if metrics, show := uiscrollbar.ComputeMetrics(len(lines), contentH, scroll); show {
+		if metrics, show := uiscrollbar.ComputeMetrics(rowCount, contentH, scroll); show {
 			railStyle := borderStyle
 			if p.ScrollbarRailStyle != (tcell.Style{}) {
 				railStyle = p.ScrollbarRailStyle
@@ -376,7 +373,7 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 				Screen: screen, X: scrollGutterX, ListTopY: contentTop, Visible: contentH,
 				Metrics: metrics, Style: p.ScrollbarStyle, Active: scrollbarActive,
 				Blocked: p.ChromeBlocked, FrameStyle: railStyle, Theme: p.Theme,
-				Marks: st.Search.searchMarkRows(lines, contentH), MarkStyle: p.Theme.PanelScrollbarMatch,
+				Marks: st.Search.searchMarkRows(layout, contentH), MarkStyle: p.Theme.PanelScrollbarMatch,
 			})
 		}
 	}

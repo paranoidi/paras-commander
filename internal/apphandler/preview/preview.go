@@ -991,6 +991,11 @@ func (h *Handler) refreshPreviewTargetAfterResize(target previewTarget) {
 	if !ok || (tw == h.previewLastWidth[target] && !isImageOrMedia) || skipNativeSixelResizeRefresh {
 		return
 	}
+	if h.previewReflowsAtDraw(target) {
+		h.previewLastWidth[target] = tw
+		h.clampPreviewScroll(target)
+		return
+	}
 
 	if isImageOrMedia {
 		// The stale payload (and any held copy of it) was encoded for the pre-resize pixel
@@ -1018,6 +1023,21 @@ func (h *Handler) refreshPreviewTargetAfterResize(target previewTarget) {
 		h.refreshCarouselFilePreview()
 	default:
 		h.refreshInactiveFilePreview()
+	}
+}
+
+// previewReflowsAtDraw reports whether target shows a Chroma body, whose cells do not depend on
+// width: the wrap layout reflows it on the next frame with no new run.
+func (h *Handler) previewReflowsAtDraw(target previewTarget) bool {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	switch target {
+	case previewTargetFullscreen:
+		return h.model.FullscreenFilePreview.ReflowsAtDraw()
+	case previewTargetCarousel:
+		return h.model.CarouselFilePreview.ReflowsAtDraw()
+	default:
+		return h.model.FilePreview.ReflowsAtDraw()
 	}
 }
 
@@ -1197,13 +1217,14 @@ func (h *Handler) ReconcileQuickViewPreview() {
 func (h *Handler) previewRequest(path string, textW, contentH int, workDir string, chromeBlocked bool, gitStatus *gitstatus.Cell, target previewTarget, isDir bool) previewrun.Request {
 	h.previewLastWidth[target] = textW
 	req := previewrun.Request{
-		Path:      path,
-		TextWidth: textW,
-		WorkDir:   workDir,
-		Preview:   h.host.Config().Preview,
-		BaseStyle: ui.FilePreviewBodyStyle(h.host.Styles(), chromeBlocked),
-		Theme:     h.host.Styles(),
-		IsDir:     isDir,
+		Path:         path,
+		TextWidth:    textW,
+		ViewportRows: contentH,
+		WorkDir:      workDir,
+		Preview:      h.host.Config().Preview,
+		BaseStyle:    ui.FilePreviewBodyStyle(h.host.Styles(), chromeBlocked),
+		Theme:        h.host.Styles(),
+		IsDir:        isDir,
 	}
 	// Computed unconditionally (not just for image/media paths) so a [[preview.commands]] rule
 	// can turn a non-graphical extension into a graphics preview and still get a pixel budget.
@@ -1331,7 +1352,16 @@ func (h *Handler) runPreview(ctx context.Context, req previewrun.Request, target
 		return
 	}
 
+	partialShown := false
+	req.OnPartial = func(res previewrun.Result) {
+		partialShown = true
+		h.applyPreviewResult(req, target, runGen, res)
+	}
 	res := previewrun.Run(ctx, req)
+	if partialShown {
+		h.refinePreviewResult(req, target, runGen, res)
+		return
+	}
 	h.applyPreviewResult(req, target, runGen, res)
 }
 
@@ -1403,6 +1433,16 @@ func mediaThumbWarm(req previewrun.Request) bool {
 }
 
 func (h *Handler) applyPreviewResult(req previewrun.Request, target previewTarget, runGen uint64, res previewrun.Result) {
+	h.applyPreviewBody(req, target, runGen, res, false)
+}
+
+// refinePreviewResult replaces a run's partial body with its final one. When the flat cells line
+// up, offsets into the body stay valid, so the selection and search position survive.
+func (h *Handler) refinePreviewResult(req previewrun.Request, target previewTarget, runGen uint64, res previewrun.Result) {
+	h.applyPreviewBody(req, target, runGen, res, true)
+}
+
+func (h *Handler) applyPreviewBody(req previewrun.Request, target previewTarget, runGen uint64, res previewrun.Result, refine bool) {
 	gen := h.previewRunGenFor(target)
 	path := req.Path
 	if runGen != gen.Load() {
@@ -1410,7 +1450,11 @@ func (h *Handler) applyPreviewResult(req previewrun.Request, target previewTarge
 	}
 	doneApplied := false
 	h.patchPreviewState(target, func(st *ui.FilePreviewState) {
-		st.ClearSelection()
+		sameOffsets := refine && res.ErrorMsg == "" && st.Source == res.Source &&
+			len(st.HighlightedCells) == len(res.HighlightedCells)
+		if !sameOffsets {
+			st.ClearSelection()
+		}
 		if !st.Open || st.Path != path {
 			return
 		}
@@ -1463,7 +1507,7 @@ func (h *Handler) applyPreviewResult(req previewrun.Request, target previewTarge
 		st.ImageInTmux = res.ImageInTmux
 		st.ImageCapabilityUncertain = res.ImageCapabilityUncertain
 		st.ImageFirst = res.ImageFirst
-		if st.Search.Active {
+		if st.Search.Active && !sameOffsets {
 			st.RecomputeSearch()
 		}
 		doneApplied = true

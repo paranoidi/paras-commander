@@ -1,20 +1,16 @@
 package previewpanel
 
-import (
-	"testing"
-
-	"github.com/gdamore/tcell/v2"
-)
+import "testing"
 
 func TestSearchMarkRows(t *testing.T) {
-	hl := tcell.StyleDefault.Foreground(tcell.ColorRed)
-	s := SearchState{Active: true, Matches: []SearchMatch{{}}, MatchStyle: hl, CurrentStyle: hl.Bold(true)}
-	lines := make([][]AnsiCell, 100)
-	for i := range lines {
-		lines[i] = []AnsiCell{{R: 'a'}}
+	cells := make([]AnsiCell, 0, 200)
+	for range 100 {
+		cells = append(cells, AnsiCell{R: 'a'}, AnsiCell{R: '\n'})
 	}
-	lines[55] = []AnsiCell{{R: 'b', St: hl}}
-	for i, m := range s.searchMarkRows(lines, 10) {
+	rows, lineRows := wrapRows(cells, 10, 0)
+	l := &wrapLayout{cells: cells, rows: rows[:100], lineRows: lineRows}
+	s := SearchState{Active: true, Matches: []SearchMatch{{Start: 110, End: 111, Line: 55}}}
+	for i, m := range s.searchMarkRows(l, 10) {
 		if m != (i == 5) {
 			t.Fatalf("row %d marked=%v", i, m)
 		}

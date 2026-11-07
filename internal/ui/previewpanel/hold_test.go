@@ -27,7 +27,7 @@ func TestMergeDrawWithHoldKeepsInternalCells(t *testing.T) {
 		Open: true, Phase: PhaseDone, Source: SourceInternalHighlighted,
 		HighlightedCells: []AnsiCell{{R: 's', St: base}, {R: 't', St: base}},
 	}
-	hold.EnsureWrappedLines(10, base)
+	hold.EnsureWrapLayout(10, base)
 	live := State{
 		Open: true, Phase: PhasePending, Path: "/tmp/new.go", TitleBase: "new.go",
 	}

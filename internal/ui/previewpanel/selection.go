@@ -49,47 +49,27 @@ func (st State) wrapGutter() int {
 	return 0
 }
 
-// rowOffsets maps each wrapped row to the flat offset of its cell 0. A soft-wrapped row starts with
-// gutter indent cells that have no flat counterpart, so its cell 0 lands gutter cells before the
-// row's first real cell: on every row, cell i is at offset+i and cells below gutter are not text.
-func rowOffsets(lines [][]AnsiCell, cells []AnsiCell, gutter int) []int {
-	out := make([]int, len(lines))
-	p := 0
-	for i, line := range lines {
-		indent := 0
-		if gutter > 0 && p > 0 && cells[p-1].R != '\n' {
-			indent = gutter
-		}
-		out[i] = p - indent
-		p += len(line) - indent
-		if p < len(cells) && cells[p].R == '\n' {
-			p++
-		}
-	}
-	return out
-}
-
 // CellOffsetAt returns the flat offset of the text cell at wrapped row and screen column, for a
 // body wrapped at textWidth. Row is clamped to the body, a column inside the gutter snaps to the
 // first text cell, and one past the row's end gives its newline (or last cell on a soft-wrapped row).
 func (st State) CellOffsetAt(row, col, textWidth int, base tcell.Style) int {
-	cells := st.bodyCellsRaw(base)
-	lines := previewWrappedLines(st, textWidth, base)
-	if len(cells) == 0 || len(lines) == 0 {
+	l := st.layoutFor(textWidth, base)
+	if len(l.cells) == 0 || l.rowCount() == 0 {
 		return 0
 	}
-	row = max(0, min(row, len(lines)-1))
+	row = max(0, min(row, l.rowCount()-1))
 	gutter := st.wrapGutter()
-	start := rowOffsets(lines, cells, gutter)[row]
+	start := l.rowOffset(row)
 	x := 0
-	for i, c := range lines[row] {
-		x += max(1, runewidth.RuneWidth(c.R))
+	cells := l.appendRow(nil, row, nil)
+	for i, c := range cells {
+		x += cellWidth(c.R)
 		if i >= gutter && col < x {
 			return start + i
 		}
 	}
-	end := start + len(lines[row])
-	if end < len(cells) && cells[end].R == '\n' {
+	end := start + len(cells)
+	if end < len(l.cells) && l.cells[end].R == '\n' {
 		return end
 	}
 	return max(0, end-1)
@@ -147,7 +127,7 @@ func (st State) SelectedText() string {
 }
 
 // paintSelection repaints the selected text cells of one drawn row in reverse video. It paints over
-// DrawCells so the row's trailing fill keeps its own style. start is the row's rowOffsets entry.
+// DrawCells so the row's trailing fill keeps its own style. start is the row's wrapLayout.rowOffset.
 func paintSelection(screen tcell.Screen, x, y, maxW int, line []AnsiCell, start, gutter, lo, hi int) {
 	col := 0
 	for i, c := range line {

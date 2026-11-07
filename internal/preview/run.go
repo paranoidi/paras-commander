@@ -84,6 +84,13 @@ func WillRenderMarkdown(req Request) bool {
 type Request struct {
 	Path      string
 	TextWidth int
+	// ViewportRows is the body height. With TextWidth it sizes the first paint of a large text body.
+	ViewportRows int
+	// OnPartial, when set, receives an early Result for a large text body, called on the goroutine
+	// running Run, once at most, before Run returns the final Result for the same file. Internal
+	// text gets a body with the final runes, colored as far as highlighting has reached; rendered
+	// markdown gets the blocks rendered so far.
+	OnPartial func(Result)
 	WorkDir   string
 	Preview   config.PreviewConfig
 	BaseStyle tcell.Style
@@ -204,86 +211,107 @@ func Run(ctx context.Context, req Request) Result {
 		return runExternal(ctx, req)
 	default:
 		if IsMarkdownPath(req.Path) && !req.RawMarkdown {
-			return runMarkdown(req)
+			return runMarkdown(ctx, req)
 		}
-		return runInternal(req)
+		return runInternal(ctx, req)
 	}
 }
 
-func runInternal(req Request) Result {
+// canceledResult is what a run returns once its context ended; the handler has already moved on
+// to a newer run by then and drops it.
+func canceledResult() Result { return Result{ErrorMsg: "Canceled"} }
+
+// firstPaintCells is how many cells a large text body renders before its first paint: enough for
+// the viewport even when most rows are full, with room to scroll.
+func firstPaintCells(req Request) int {
+	return max(config.DefaultPreviewFirstPaintCells, 2*req.TextWidth*req.ViewportRows)
+}
+
+// appendTruncationNotice marks a body cut at DefaultMaxPreviewBytes.
+func appendTruncationNotice(cells []previewpanel.AnsiCell, base tcell.Style) []previewpanel.AnsiCell {
+	cells = append(cells, previewpanel.AnsiCell{R: '\n', St: base})
+	for _, r := range "\n[output truncated]\n" {
+		cells = append(cells, previewpanel.AnsiCell{R: r, St: base})
+	}
+	return cells
+}
+
+// highlightOptions builds the Chroma options of a text run, publishing its first paint through
+// req.OnPartial with toResult, which also shapes the final body.
+func highlightOptions(req Request, path string, toResult func(chromaformat.Result) Result) chromaformat.Options {
+	opts := chromaformat.Options{
+		Path:              path,
+		StyleName:         req.Preview.Style,
+		BaseStyle:         req.BaseStyle,
+		LineNumbers:       req.Preview.LineNumbers,
+		TabWidth:          config.DefaultPreviewTabWidth,
+		PartialAfterCells: firstPaintCells(req),
+	}
+	if req.OnPartial != nil {
+		opts.Partial = func(hl chromaformat.Result) { req.OnPartial(toResult(hl)) }
+	}
+	return opts
+}
+
+func runInternal(ctx context.Context, req Request) Result {
 	data, truncated, err := readFileLimited(req.Path, config.DefaultMaxPreviewBytes)
 	if err != nil {
 		return Result{ErrorMsg: err.Error()}
 	}
-	source := decodeSource(data)
-	textW := req.TextWidth
-	if textW < 1 {
-		textW = 1
-	}
-	lineCount := strings.Count(source, "\n") + 1
-	if source == "" {
-		lineCount = 1
-	}
-	gutterReserve := 0
-	if req.Preview.LineNumbers {
-		digits := len(fmt.Sprintf("%d", lineCount))
-		gutterReserve = digits + 1
-	}
-	contentW := textW - gutterReserve
-	if contentW < 1 {
-		contentW = 1
-	}
-	hl := chromaformat.Highlight(source, chromaformat.Options{
-		Path:         req.Path,
-		StyleName:    req.Preview.Style,
-		BaseStyle:    req.BaseStyle,
-		LineNumbers:  req.Preview.LineNumbers,
-		TabWidth:     config.DefaultPreviewTabWidth,
-		ContentWidth: contentW,
-	})
-	cells := hl.Cells
-	if truncated {
-		cells = append(cells, previewpanel.AnsiCell{R: '\n', St: req.BaseStyle})
-		for _, r := range "\n[output truncated]\n" {
-			cells = append(cells, previewpanel.AnsiCell{R: r, St: req.BaseStyle})
+	toResult := func(hl chromaformat.Result) Result {
+		cells := hl.Cells
+		if truncated {
+			cells = appendTruncationNotice(cells, req.BaseStyle)
+		}
+		return Result{
+			Source:           previewpanel.SourceInternalHighlighted,
+			HighlightedCells: cells,
+			GutterWidth:      hl.GutterWidth,
+			Truncated:        truncated,
 		}
 	}
-	return Result{
-		Source:           previewpanel.SourceInternalHighlighted,
-		HighlightedCells: cells,
-		GutterWidth:      hl.GutterWidth,
-		Truncated:        truncated,
+	hl := chromaformat.Highlight(ctx, decodeSource(data), highlightOptions(req, req.Path, toResult))
+	if ctx.Err() != nil {
+		return canceledResult()
 	}
+	return toResult(hl)
 }
 
 // runMarkdown renders block-level markdown (headings, emphasis, lists, fenced
 // code, ...) instead of raw Chroma token coloring. Never reached for a git-dirty
 // file: Run only falls through to this default branch once req.GitDiff is false.
-func runMarkdown(req Request) Result {
+func runMarkdown(ctx context.Context, req Request) Result {
 	data, truncated, err := readFileLimited(req.Path, config.DefaultMaxPreviewBytes)
 	if err != nil {
 		return Result{ErrorMsg: err.Error()}
 	}
-	contentW := max(1, req.TextWidth)
-	md := mdformat.Render(decodeSource(data), mdformat.Options{
-		Path:         req.Path,
-		StyleName:    req.Preview.Style,
-		BaseStyle:    req.BaseStyle,
-		ContentWidth: contentW,
-	})
-	cells := md.Cells
-	if truncated {
-		cells = append(cells, previewpanel.AnsiCell{R: '\n', St: req.BaseStyle})
-		for _, r := range "\n[output truncated]\n" {
-			cells = append(cells, previewpanel.AnsiCell{R: r, St: req.BaseStyle})
+	toResult := func(cells []previewpanel.AnsiCell) Result {
+		return Result{
+			Source:           previewpanel.SourceInternalHighlighted,
+			HighlightedCells: cells,
+			Truncated:        truncated,
+			IsMarkdown:       true,
 		}
 	}
-	return Result{
-		Source:           previewpanel.SourceInternalHighlighted,
-		HighlightedCells: cells,
-		Truncated:        truncated,
-		IsMarkdown:       true,
+	opts := mdformat.Options{
+		Path:              req.Path,
+		StyleName:         req.Preview.Style,
+		BaseStyle:         req.BaseStyle,
+		ContentWidth:      max(1, req.TextWidth),
+		PartialAfterCells: firstPaintCells(req),
 	}
+	if req.OnPartial != nil {
+		opts.Partial = func(md mdformat.Result) { req.OnPartial(toResult(md.Cells)) }
+	}
+	md := mdformat.Render(ctx, decodeSource(data), opts)
+	if ctx.Err() != nil {
+		return canceledResult()
+	}
+	cells := md.Cells
+	if truncated {
+		cells = appendTruncationNotice(cells, req.BaseStyle)
+	}
+	return toResult(cells)
 }
 
 func runExternal(ctx context.Context, req Request) Result {
@@ -330,6 +358,13 @@ func combineStdoutStderr(stdout, stderr []byte, truncated bool) (combined string
 // nothing meaningful to diff (untracked, ignored, unmodified, or an empty diff).
 func gitDiffFallback(ctx context.Context, req Request, status gitstatus.Status) Result {
 	req.GitDiff = false
+	if onPartial := req.OnPartial; onPartial != nil {
+		req.OnPartial = func(res Result) {
+			res.StatusText = status.Label()
+			res.StatusThemeKey = status.ThemeKey()
+			onPartial(res)
+		}
+	}
 	res := Run(ctx, req)
 	res.StatusText = status.Label()
 	res.StatusThemeKey = status.ThemeKey()
@@ -397,32 +432,20 @@ func runGitDiff(ctx context.Context, req Request) Result {
 
 	hunkLines := parseDiffChangeChunkLines(rawDiff)
 
-	textW := max(1, req.TextWidth)
-	lineCount := strings.Count(rawDiff, "\n") + 1
-	gutterReserve := 0
-	if req.Preview.LineNumbers {
-		digits := len(fmt.Sprintf("%d", lineCount))
-		gutterReserve = digits + 1
+	toResult := func(hl chromaformat.Result) Result {
+		return Result{
+			IsDiff:           true,
+			Source:           previewpanel.SourceInternalHighlighted,
+			HighlightedCells: hl.Cells,
+			GutterWidth:      hl.GutterWidth,
+			DiffHunkLines:    hunkLines,
+		}
 	}
-	contentW := textW - gutterReserve
-	if contentW < 1 {
-		contentW = 1
+	hl := chromaformat.Highlight(ctx, rawDiff, highlightOptions(req, "file.diff", toResult))
+	if ctx.Err() != nil {
+		return canceledResult()
 	}
-	hl := chromaformat.Highlight(rawDiff, chromaformat.Options{
-		Path:         "file.diff",
-		StyleName:    req.Preview.Style,
-		BaseStyle:    req.BaseStyle,
-		LineNumbers:  req.Preview.LineNumbers,
-		TabWidth:     config.DefaultPreviewTabWidth,
-		ContentWidth: contentW,
-	})
-	return Result{
-		IsDiff:           true,
-		Source:           previewpanel.SourceInternalHighlighted,
-		HighlightedCells: hl.Cells,
-		GutterWidth:      hl.GutterWidth,
-		DiffHunkLines:    hunkLines,
-	}
+	return toResult(hl)
 }
 
 // parseDiffChangeChunkLines returns 0-based source line numbers where each

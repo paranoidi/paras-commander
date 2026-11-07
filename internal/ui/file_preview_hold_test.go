@@ -32,7 +32,7 @@ func TestMergeFilePreviewDrawWithHoldKeepsBodyWhileLoading(t *testing.T) {
 		TitleBase:    "old.txt",
 		CombinedText: "stale body",
 	}
-	hold.EnsureWrappedLines(10, tcell.StyleDefault)
+	hold.EnsureWrapLayout(10, tcell.StyleDefault)
 
 	live := FilePreviewState{
 		Open:      true,

@@ -20,26 +20,9 @@ func TestWrapHighlightedCellsScrollWidth(t *testing.T) {
 		Source:           previewpanel.SourceInternalHighlighted,
 		HighlightedCells: cells,
 	}
-	lines := st.EnsureWrappedLines(8, base)
+	lines := st.WrappedRows(8, base)
 	if len(lines) < 2 {
 		t.Fatalf("wrapped lines = %d, want >= 2", len(lines))
-	}
-}
-
-func TestWrapCacheReusesInternalCells(t *testing.T) {
-	base := tcell.StyleDefault
-	text := strings.Repeat("echo ", 100)
-	cells := previewpanel.AnsiStyledCells(text, base)
-	st := previewpanel.State{
-		Open:             true,
-		Phase:            previewpanel.PhaseDone,
-		Source:           previewpanel.SourceInternalHighlighted,
-		HighlightedCells: cells,
-	}
-	first := st.EnsureWrappedLines(20, base)
-	second := st.EnsureWrappedLines(20, base)
-	if &first[0][0] != &second[0][0] {
-		t.Fatal("expected cached wrapped lines slice to be reused")
 	}
 }
 
@@ -61,7 +44,7 @@ func TestWrapGutterContinuationIndent(t *testing.T) {
 		HighlightedCells: cells,
 		GutterWidth:      3,
 	}
-	lines := st.EnsureWrappedLines(40, base)
+	lines := st.WrappedRows(40, base)
 	if len(lines) < 2 {
 		t.Fatalf("wrapped lines = %d, want >= 2", len(lines))
 	}
@@ -77,7 +60,7 @@ func TestWrapGutterContinuationIndent(t *testing.T) {
 	}
 }
 
-func TestWrapAppliesSearchHighlightAndInvalidatesOnCurrentChange(t *testing.T) {
+func TestWrapAppliesSearchHighlightForCurrentMatch(t *testing.T) {
 	base := tcell.StyleDefault
 	matchStyle := base.Foreground(tcell.ColorYellow)
 	currentStyle := base.Foreground(tcell.ColorRed)
@@ -102,7 +85,7 @@ func TestWrapAppliesSearchHighlightAndInvalidatesOnCurrentChange(t *testing.T) {
 		CurrentStyle: currentStyle,
 	}
 
-	lines := st.EnsureWrappedLines(40, base)
+	lines := st.WrappedRows(40, base)
 	flat := lines[0]
 	if flat[0].St != currentStyle {
 		t.Fatalf("match 0 (current) style = %+v, want current style", flat[0].St)
@@ -117,9 +100,9 @@ func TestWrapAppliesSearchHighlightAndInvalidatesOnCurrentChange(t *testing.T) {
 		t.Fatal("HighlightedCells must not be mutated by the search overlay")
 	}
 
-	// Changing Current alone (no Matches/Query change) must bust the wrap cache.
+	// Changing Current alone restyles rows without a new layout.
 	st.Search.Current = 1
-	lines2 := st.EnsureWrappedLines(40, base)
+	lines2 := st.WrappedRows(40, base)
 	flat2 := lines2[0]
 	if flat2[0].St != matchStyle {
 		t.Fatalf("after Current change, match 0 style = %+v, want match style", flat2[0].St)

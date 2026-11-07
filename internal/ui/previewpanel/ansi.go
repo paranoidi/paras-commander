@@ -6,7 +6,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/mattn/go-runewidth"
 )
 
 // AnsiCell is one display rune with a resolved style (after SGR interpretation).
@@ -248,108 +247,4 @@ func AnsiStyledCells(s string, base tcell.Style) []AnsiCell {
 		out = append(out, AnsiCell{R: r, St: st.style(base)})
 	}
 	return out
-}
-
-// WrapAnsiCells breaks cells into visual lines of at most width terminal cells.
-func WrapAnsiCells(cells []AnsiCell, width int) [][]AnsiCell {
-	if width < 1 {
-		width = 1
-	}
-	if len(cells) == 0 {
-		return [][]AnsiCell{{}}
-	}
-	var lines [][]AnsiCell
-	var line []AnsiCell
-	lineWidth := 0
-	flushHard := func() {
-		lines = append(lines, line)
-		line = nil
-		lineWidth = 0
-	}
-	for _, c := range cells {
-		if c.R == '\n' {
-			flushHard()
-			continue
-		}
-		rw := runewidth.RuneWidth(c.R)
-		if rw < 1 {
-			rw = 1
-		}
-		if lineWidth+rw > width {
-			if len(line) > 0 {
-				lines = append(lines, line)
-				line = nil
-				lineWidth = 0
-			}
-		}
-		line = append(line, c)
-		lineWidth += rw
-	}
-	lines = append(lines, line)
-	return lines
-}
-
-// WrapAnsiCellsWithGutter wraps at width. Soft-wrapped continuation rows within one logical
-// line are indented with gutterWidth spaces so text aligns under code, not the gutter.
-// Indent spaces use the style of the first content cell on the continuation row.
-func WrapAnsiCellsWithGutter(cells []AnsiCell, width, gutterWidth int) [][]AnsiCell {
-	if width < 1 {
-		width = 1
-	}
-	if len(cells) == 0 {
-		return [][]AnsiCell{{}}
-	}
-	if gutterWidth < 1 {
-		return WrapAnsiCells(cells, width)
-	}
-	var out [][]AnsiCell
-	var logical []AnsiCell
-	flushLogical := func() {
-		out = append(out, wrapLogicalLineWithGutter(logical, width, gutterWidth)...)
-		logical = nil
-	}
-	for _, c := range cells {
-		if c.R == '\n' {
-			flushLogical()
-			continue
-		}
-		logical = append(logical, c)
-	}
-	if len(logical) > 0 {
-		flushLogical()
-	}
-	if len(out) == 0 {
-		return [][]AnsiCell{{}}
-	}
-	return out
-}
-
-func wrapLogicalLineWithGutter(cells []AnsiCell, width, gutterWidth int) [][]AnsiCell {
-	if len(cells) == 0 {
-		return [][]AnsiCell{{}}
-	}
-	var lines [][]AnsiCell
-	var line []AnsiCell
-	lineWidth := 0
-	for _, c := range cells {
-		rw := runewidth.RuneWidth(c.R)
-		if rw < 1 {
-			rw = 1
-		}
-		for lineWidth+rw > width && len(line) > 0 {
-			lines = append(lines, line)
-			indent := c.St
-			line = make([]AnsiCell, gutterWidth)
-			for i := range line {
-				line[i] = AnsiCell{R: ' ', St: indent}
-			}
-			lineWidth = gutterWidth
-		}
-		line = append(line, c)
-		lineWidth += rw
-	}
-	if len(line) > 0 {
-		lines = append(lines, line)
-	}
-	return lines
 }

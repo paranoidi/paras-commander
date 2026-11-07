@@ -26,13 +26,10 @@ func TestWrapCacheInvalidatesWhenHighlightStylesChange(t *testing.T) {
 		Source: previewpanel.SourceInternalHighlighted,
 	}
 	st.SetHighlightedCells(makeCells(base))
-	first := st.EnsureWrappedLines(40, base)
+	first := st.WrappedRows(40, base)
 
 	st.SetHighlightedCells(makeCells(alt))
-	second := st.EnsureWrappedLines(40, base)
-	if &first[0][0] == &second[0][0] {
-		t.Fatal("expected wrap cache miss after highlight style change")
-	}
+	second := st.WrappedRows(40, base)
 	if first[0][0].St == second[0][0].St {
 		t.Fatal("expected wrapped line styles to change with new highlight cells")
 	}

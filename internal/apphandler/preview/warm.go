@@ -51,7 +51,7 @@ func warmFilePreviewCopy(st ui.FilePreviewState, textW int, base tcell.Style) ui
 	if !filePreviewWarmCandidate(st) {
 		return st
 	}
-	st.EnsureWrappedLines(textW, base)
+	st.EnsureWrapLayout(textW, base)
 	return st
 }
 
@@ -141,28 +141,11 @@ func (h *Handler) filePreviewLineCount(textW int) int {
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if previewBodyCacheMatches(h.model.FilePreview, warmed) {
-		h.model.FilePreview.WrapCacheSnapshot(warmed)
-		if count, ok := h.model.FilePreview.CachedWrappedLineCount(textW); ok {
-			return count
-		}
+	h.model.FilePreview.WrapCacheSnapshot(warmed)
+	if count, ok := h.model.FilePreview.CachedWrappedLineCount(textW); ok {
+		return count
 	}
 	return warmed.WrappedLineCount(textW, base)
-}
-
-func previewBodyCacheMatches(live, warmed ui.FilePreviewState) bool {
-	if live.Source != warmed.Source {
-		return false
-	}
-	switch live.Source {
-	case ui.PreviewSourceInternalHighlighted:
-		if len(live.HighlightedCells) != len(warmed.HighlightedCells) {
-			return false
-		}
-		return live.HighlightedCacheKey() == warmed.HighlightedCacheKey()
-	default:
-		return live.CombinedText == warmed.CombinedText
-	}
 }
 
 func (h *Handler) carouselFilePreviewLineCount(textW int) int {
@@ -180,11 +163,9 @@ func (h *Handler) carouselFilePreviewLineCount(textW int) int {
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if previewBodyCacheMatches(h.model.CarouselFilePreview, warmed) {
-		h.model.CarouselFilePreview.WrapCacheSnapshot(warmed)
-		if count, ok := h.model.CarouselFilePreview.CachedWrappedLineCount(textW); ok {
-			return count
-		}
+	h.model.CarouselFilePreview.WrapCacheSnapshot(warmed)
+	if count, ok := h.model.CarouselFilePreview.CachedWrappedLineCount(textW); ok {
+		return count
 	}
 	return warmed.WrappedLineCount(textW, base)
 }
@@ -204,11 +185,9 @@ func (h *Handler) fullscreenFilePreviewLineCount(textW int) int {
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if previewBodyCacheMatches(h.model.FullscreenFilePreview, warmed) {
-		h.model.FullscreenFilePreview.WrapCacheSnapshot(warmed)
-		if count, ok := h.model.FullscreenFilePreview.CachedWrappedLineCount(textW); ok {
-			return count
-		}
+	h.model.FullscreenFilePreview.WrapCacheSnapshot(warmed)
+	if count, ok := h.model.FullscreenFilePreview.CachedWrappedLineCount(textW); ok {
+		return count
 	}
 	return warmed.WrappedLineCount(textW, base)
 }

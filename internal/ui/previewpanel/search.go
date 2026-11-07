@@ -1,13 +1,14 @@
 package previewpanel
 
 import (
+	"sort"
 	"unicode"
 
 	"github.com/gdamore/tcell/v2"
 )
 
 // SearchMatch is a half-open rune range [Start,End) into the flat pre-wrap body cell
-// stream (same indexing as bodyCells), plus the 0-based source line it starts on.
+// stream (same indexing as bodyCellsRaw), plus the 0-based source line it starts on.
 type SearchMatch struct {
 	Start, End, Line int
 }
@@ -24,24 +25,6 @@ type SearchState struct {
 	// (FuzzyHighlight/FuzzyHighlightCursor) — previewpanel has no theme dependency,
 	// so the caller supplies concrete styles rather than this package resolving them.
 	MatchStyle, CurrentStyle tcell.Style
-}
-
-// cacheKey fingerprints the parts of SearchState that affect rendered highlighting, for
-// wrap-cache invalidation. Zero when there is nothing to highlight.
-func (s SearchState) cacheKey() uint64 {
-	if !s.Active || len(s.Matches) == 0 {
-		return 0
-	}
-	h := uint64(1469598103934665603) // FNV offset basis
-	for _, r := range s.Query {
-		h ^= uint64(r)
-		h *= 1099511628211
-	}
-	h ^= uint64(len(s.Matches))
-	h *= 1099511628211
-	h ^= uint64(s.Current + 1)
-	h *= 1099511628211
-	return h
 }
 
 // FindMatches returns all non-overlapping case-insensitive literal occurrences of query
@@ -89,7 +72,6 @@ func runesEqualFold(cells []AnsiCell, q []rune) bool {
 // StartSearch begins an incremental "/" search: query capture with live highlighting.
 func (st *State) StartSearch() {
 	st.Search = SearchState{Current: -1, Active: true, Editing: true}
-	st.clearWrapCache()
 }
 
 // AppendSearchRune appends r to the query and recomputes matches.
@@ -116,37 +98,49 @@ func (st *State) RecomputeSearch() {
 	if len(st.Search.Matches) > 0 {
 		st.Search.Current = 0
 	}
-	st.clearWrapCache()
 }
 
 // AcceptSearch stops capturing keystrokes while keeping highlights visible (if any matches).
 func (st *State) AcceptSearch() {
 	st.Search.Editing = false
 	st.Search.Active = len(st.Search.Matches) > 0
-	st.clearWrapCache()
 }
 
 // CancelSearch clears search state and any highlighting.
 func (st *State) CancelSearch() {
 	st.Search = SearchState{Current: -1}
-	st.clearWrapCache()
 }
 
-// searchMarkRows maps wrapped lines containing highlighted matches onto `rows` scrollbar rows.
-// ponytail: identifies matches by their baked-in highlight style (a Chroma token with an identical
-// style would add a stray mark) and is an O(cells) scan per frame while searching; upgrade path =
-// record wrapped match rows when building the wrap cache.
-func (s SearchState) searchMarkRows(lines [][]AnsiCell, rows int) []bool {
-	if !s.Active || len(s.Matches) == 0 || rows <= 0 || len(lines) == 0 {
+// overlay restyles the part of cells inside a match. cells is a row's text, a private copy
+// whose first cell sits at flat offset off. Matches are sorted and do not overlap.
+func (s *SearchState) overlay(cells []AnsiCell, off int) {
+	if !s.Active || len(s.Matches) == 0 {
+		return
+	}
+	end := off + len(cells)
+	first := sort.Search(len(s.Matches), func(i int) bool { return s.Matches[i].End > off })
+	for i := first; i < len(s.Matches) && s.Matches[i].Start < end; i++ {
+		m := s.Matches[i]
+		style := s.MatchStyle
+		if i == s.Current {
+			style = s.CurrentStyle
+		}
+		for j := max(m.Start, off); j < min(m.End, end); j++ {
+			cells[j-off].St = style
+		}
+	}
+}
+
+// searchMarkRows maps wrapped rows containing matches onto `rows` scrollbar rows.
+func (s SearchState) searchMarkRows(l *wrapLayout, rows int) []bool {
+	if !s.Active || len(s.Matches) == 0 || rows <= 0 || l.rowCount() == 0 {
 		return nil
 	}
 	marks := make([]bool, rows)
-	for i, line := range lines {
-		for _, c := range line {
-			if c.St == s.MatchStyle || c.St == s.CurrentStyle {
-				marks[min(rows-1, i*rows/len(lines))] = true
-				break
-			}
+	n := l.rowCount()
+	for _, m := range s.Matches {
+		for r := l.rowAt(m.Start); r <= l.rowAt(m.End-1); r++ {
+			marks[min(rows-1, r*rows/n)] = true
 		}
 	}
 	return marks
