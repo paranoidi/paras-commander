@@ -50,6 +50,12 @@ type Live struct {
 	Stdout, Stderr CappedWriter
 }
 
+// Ran reports whether the command ran to an exit status of its own, whatever that was: false for a
+// launch failure and for a process killed by a signal (-1), which is how a cancel ends it.
+func (r RunResult) Ran() bool {
+	return r.LaunchErr == nil && r.ExitCode >= 0
+}
+
 // RunTracked behaves like Run but, once the subprocess starts, calls onStart with its
 // *os.Process so a caller can send it signals (e.g. terminate/kill) independently of ctx
 // cancellation. onStart may be nil. extraEnv (KEY=VALUE) is appended to the inherited environment.

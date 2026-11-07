@@ -267,3 +267,14 @@ func TestOutputDialogGroupSelectionKeys(t *testing.T) {
 		t.Fatalf("group select calls = %v, want %v", ph.groupSelect, want)
 	}
 }
+
+// The dialog showing the output replaces the banner and the refresh, not the follow-up work.
+func TestApplyWakeRunsAfterRunWhenDialogShowsResult(t *testing.T) {
+	h, _, _ := runningHandler(t)
+	res := OutputDialogResult("row1", "T", cmdrun.RunResult{Stdout: []byte("x")}, "", "", "")
+	ran := 0
+	h.ApplyWake(WakePayload{OpenOutputDialog: &res, AfterRun: func() { ran++ }})
+	if ran != 1 {
+		t.Fatalf("AfterRun ran %d times, want 1", ran)
+	}
+}

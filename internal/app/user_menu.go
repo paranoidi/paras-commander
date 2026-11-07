@@ -2,8 +2,10 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 
 	commandsctrl "github.com/paranoidi/paras-commander/internal/apphandler/commands"
@@ -239,9 +241,17 @@ func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 		}
 		launch.RunForEachRows = src.Entries
 	}
+	if entry.FileIndexScan != 0 {
+		launch.FileIndexScanDir = entry.FileIndexScanDir(active, other)
+	}
 	if msg := usermenu.CommandRefusal(launch, active, other); msg != "" {
 		a.setTransientMessage(msg, ui.MessageUrgencyWarn)
 		return
+	}
+	// Resolved at launch: the panels may be elsewhere by the time the command ends.
+	var scanAfter func()
+	if entry.FileIndexScan != 0 {
+		scanAfter = func() { a.fileindexCtrl.ScanAfterCommand(launch.FileIndexScanDir) }
 	}
 	if entry.KeepOpen && entry.Toast == "" {
 		prefix := "Ran"
@@ -251,7 +261,7 @@ func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 		entry.Toast = prefix + " " + backgroundRunTitle(entry.Title)
 	}
 	if len(entry.RunForEach) > 0 {
-		if a.executeUserMenuRunForEach(entry, active, other, src, srcErr) && entry.KeepOpen {
+		if a.executeUserMenuRunForEach(entry, active, src, srcErr, scanAfter) && entry.KeepOpen {
 			a.setTransientMessage(entry.Toast, ui.MessageUrgencyInfo)
 		}
 		return
@@ -287,10 +297,10 @@ func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 		a.commandsCtrl.BeginBatch()
 		go func() {
 			defer cancel()
-			a.runUserMenuCommand(ctx, rowIdx, rowID, argv, workDir, entry)
+			a.runUserMenuCommand(ctx, rowIdx, rowID, argv, workDir, entry, scanAfter)
 		}()
 	case entry.Interactive:
-		if a.runUserMenuInteractive(argv, workDir, entry.Toast) {
+		if a.runUserMenuInteractive(argv, workDir, entry.Toast, scanAfter) {
 			clearConsumedSelection(macros, active, other)
 		}
 	case entry.Detach:
@@ -305,7 +315,7 @@ func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 		}
 
 		a.commandsCtrl.BeginBatch()
-		go a.runUserMenuCommand(a.commandsCtrl.Context(), rowIdx, rowID, argv, workDir, entry)
+		go a.runUserMenuCommand(a.commandsCtrl.Context(), rowIdx, rowID, argv, workDir, entry, scanAfter)
 	}
 }
 
@@ -322,7 +332,7 @@ func clearConsumedSelection(consumed []cmdmacro.MacroUse, active, other *panel.S
 
 // executeUserMenuRunForEach reports whether the batch was started. src and srcErr are the
 // resolved source of active (ops.ResolveSource).
-func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active, other *panel.State, src ops.Source, srcErr error) bool {
+func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active *panel.State, src ops.Source, srcErr error, scanAfter func()) bool {
 	if srcErr != nil {
 		a.setErrorMessage("User menu", srcErr)
 		return false
@@ -357,6 +367,7 @@ func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active, other 
 		PTY:          entry.PTY,
 		PanelWorkDir: entry.CwdPanel,
 		NotifyLabel:  notifyLabel,
+		AfterRun:     scanAfter,
 		BuildItem: func(ent localfs.Entry, ctx cmdmacro.Context) (commandsctrl.RunForEachBuiltItem, error) {
 			return commandsctrl.BuildRunForEachItem(cmdTemplate, ent, ctx, forceShell, true)
 		},
@@ -364,11 +375,18 @@ func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active, other 
 	return true
 }
 
-// runUserMenuInteractive reports whether the command ran without error.
-func (a *App) runUserMenuInteractive(argv []string, workDir, toast string) bool {
-	if err := a.withTerminalReleased(func() error {
+// runUserMenuInteractive reports whether the command ran without error. scanAfter (may be nil)
+// also runs after a non-zero exit, which may have changed files as well.
+func (a *App) runUserMenuInteractive(argv []string, workDir, toast string, scanAfter func()) bool {
+	err := a.withTerminalReleased(func() error {
 		return userMenuInteractiveRunner(context.Background(), argv, workDir)
-	}); err != nil {
+	})
+	var exitErr *exec.ExitError
+	ran := err == nil || errors.As(err, &exitErr) && exitErr.ExitCode() >= 0
+	if ran && scanAfter != nil {
+		defer scanAfter()
+	}
+	if err != nil {
 		a.setErrorMessage("User menu", err)
 		return false
 	}
@@ -415,16 +433,21 @@ func (a *App) appendUserMenuCommandRow(cmdLine string, macros []cmdmacro.MacroUs
 
 // runUserMenuCommand runs a captured user-menu command recorded in Commands row idx/rowID.
 // With entry.Dialog, ctx cancellation means the user pressed Cancel in the output dialog.
-func (a *App) runUserMenuCommand(ctx context.Context, idx int, rowID string, argv []string, workDir string, entry usermenu.MenuEntry) {
+// scanAfter (may be nil) runs on the event loop if the command ran (cmdrun.RunResult.Ran).
+func (a *App) runUserMenuCommand(ctx context.Context, idx int, rowID string, argv []string, workDir string, entry usermenu.MenuEntry, scanAfter func()) {
 	defer a.commandsCtrl.EndBatch()
 	background, title, toast := entry.Background, entry.Title, entry.Toast
 
 	postBackgroundFinal := func(res cmdrun.RunResult) {
+		var afterRun func()
+		if res.Ran() {
+			afterRun = scanAfter
+		}
 		if !background && !entry.Dialog {
-			a.commandsCtrl.PostRenderWake()
+			a.commandsCtrl.PostWake(commandsctrl.WakePayload{AfterRun: afterRun})
 			return
 		}
-		p := commandsctrl.WakePayload{RefreshBrowserPanel: true}
+		p := commandsctrl.WakePayload{RefreshBrowserPanel: true, AfterRun: afterRun}
 		if entry.Dialog {
 			// Applied only if the dialog still shows this run; otherwise it is backgrounded.
 			out := commandsctrl.OutputDialogResult(rowID, title, res, entry.DialogWidth, entry.DialogHeight, workDir)

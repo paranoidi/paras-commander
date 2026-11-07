@@ -279,6 +279,23 @@ func (h *Handler) queueScan(title string, task func([]string) *jobs.Task) {
 	h.queueTask(title, task(paths), paths)
 }
 
+// ScanAfterCommand queues a scan of dir (user-menu fileindex_scan, the command already ran). It
+// shows no toast and omits the job's started and completed ones: the command's own notification is
+// the one to keep on screen, and the job list shows the scan. A failed scan still reports.
+func (h *Handler) ScanAfterCommand(dir pathloc.Path) {
+	p, err := hostPath(dir.String())
+	if err != nil {
+		h.host.SetErrorMessage(messageTitle, err)
+		return
+	}
+	h.withIndex(func() {
+		paths := []string{p}
+		task := h.index.ScanTask(paths)
+		task.ReportsOwnOutcome = true
+		h.addTask(task, paths)
+	})
+}
+
 // Prune queues a prune of the active panel's directory.
 func (h *Handler) Prune() {
 	if !h.localOrIndex() {

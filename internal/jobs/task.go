@@ -22,8 +22,9 @@ type Task struct {
 	Run func(ctx context.Context, r TaskReporter) error
 	// Steps names the task's stages in order (nil = no list); TaskProgress.Step indexes it.
 	Steps []string
-	// ReportsOwnOutcome marks a task that shows its own result: the job queue's "Job started" and
-	// "Job completed" toasts are omitted (failure and cancel toasts still show).
+	// ReportsOwnOutcome marks a task that shows its own result, or follows something that does: the
+	// job queue's "Job started" and "Job completed" toasts are omitted (failure and cancel toasts
+	// still show).
 	ReportsOwnOutcome bool
 	// Results is nil until the task has results to look at from the jobs view. It is set and read
 	// only on the UI goroutine; the worker never touches it.

@@ -22,6 +22,9 @@ type WakePayload struct {
 	OutputDialogLive *OutputDialogLive
 	// OutputDialogStartedRunID clears the output dialog's Queued state when it shows this run.
 	OutputDialogStartedRunID string
+	// AfterRun runs on the event loop once the rest of the payload's notifications are applied: the
+	// follow-up work of a finished command (user-menu fileindex_scan).
+	AfterRun func()
 
 	// TerminalPanelShow / TerminalPanelHide / TerminalPanelDrawer / TerminalPanelClearDrawer
 	// are applied on the event loop so ViewMode and TerminalPanel are never written from a
@@ -90,6 +93,9 @@ func (h *Handler) ApplyWake(p WakePayload) {
 	}
 	if strings.TrimSpace(p.NotifyLog) != "" {
 		h.host.SetTransientMessageBanner(p.NotifyLog, p.NotifyBanner, p.NotifyUrg)
+	}
+	if p.AfterRun != nil {
+		p.AfterRun()
 	}
 	h.applyTerminalPanelWake(p)
 	if p.measure != nil {

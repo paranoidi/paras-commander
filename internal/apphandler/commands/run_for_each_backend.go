@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 
@@ -54,6 +55,10 @@ type RunForEachBatchSpec struct {
 	// under run-for-each. Falls back silently to the non-PTY path on platforms without PTY
 	// support.
 	PTY bool
+
+	// AfterRun runs on the event loop once the batch has ended, if it was not canceled and at least
+	// one item ran to an exit status.
+	AfterRun func()
 
 	BuildItem runForEachItemBuilder
 	macroCtx  cmdmacro.Context // set by StartRunForEachBatch
@@ -154,6 +159,9 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 			p.NotifyLog = log
 			p.NotifyBanner = banner
 			p.NotifyUrg = urg
+		}
+		if ctx.Err() == nil && slices.ContainsFunc(snap, func(e ui.CommandRunEntry) bool { return e.ExitCode >= 0 }) {
+			p.AfterRun = spec.AfterRun
 		}
 		h.PostWake(p)
 	}()

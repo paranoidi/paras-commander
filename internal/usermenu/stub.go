@@ -104,6 +104,13 @@ const MenuStubTOML = `# User function menu
 #   every mode, including run_for_each. Macros are unaffected: %d is still the
 #   highlighted row's directory and %f / %t are absolute paths.
 #
+# fileindex_scan  string   optional   values: "%d" | "%D"
+#   Queue a fileindex scan of that directory once the command has run, so the
+#   index follows what the command changed on disk. The directory is fixed when
+#   the command starts. Runs after a non-zero exit too, not after a failed launch
+#   or a canceled or killed command; a run_for_each batch scans once at its end.
+#   Not combinable with detach; an SFTP directory refuses the launch.
+#
 # keep_open       bool     optional   default: false
 #   Keep the menu open at the same level after launching, to fire several
 #   entries in a row. Requires background, detach or interactive (also with
