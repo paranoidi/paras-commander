@@ -6,6 +6,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
+	"github.com/paranoidi/paras-commander/internal/panel"
 )
 
 func TestDecode_valid(t *testing.T) {
@@ -408,5 +409,58 @@ file = "echo test"
 	}
 	if mf.Entries[0].Workers > 64 {
 		t.Errorf("entry 0: expected Workers clamped to max 64, got %d", mf.Entries[0].Workers)
+	}
+}
+
+func TestDecode_alerts(t *testing.T) {
+	t.Parallel()
+	f, err := metacmds.Decode([]byte(`
+[[entry]]
+name = "lantern"
+description = "Lantern count"
+file = "cat %f"
+warn = ">1.5"
+critical = ["error", ">=4"]
+
+[[entry]]
+name = "meadow"
+description = "No rules"
+file = "cat %f"
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := f.Entries[0].Alerts
+	for value, want := range map[string]panel.MetaAlertLevel{
+		"1":           panel.MetaAlertNone,
+		"1.6":         panel.MetaAlertWarn,
+		"4":           panel.MetaAlertCritical,
+		"Fatal Error": panel.MetaAlertCritical,
+	} {
+		if got := a.Level(value); got != want {
+			t.Errorf("Level(%q) = %d, want %d", value, got, want)
+		}
+	}
+	if !f.Entries[1].Alerts.Empty() {
+		t.Error("entry without rules should have empty alerts")
+	}
+}
+
+func TestDecode_invalidAlert(t *testing.T) {
+	t.Parallel()
+	for _, field := range []string{`warn = ">lantern"`, `critical = ["ok", ">"]`, `warn = 2`} {
+		_, err := metacmds.Decode([]byte("[[entry]]\nname = \"a\"\ndescription = \"b\"\nfile = \"c\"\n" + field + "\n"))
+		if err == nil {
+			t.Errorf("%s: want error", field)
+		}
+	}
+}
+
+func TestWithProvidersCarriesAlerts(t *testing.T) {
+	t.Parallel()
+	p := &metacmds.Provider{Name: "harbor", Alerts: panel.MustMetaAlerts([]string{">1"}, nil)}
+	e, ok := metacmds.WithProviders(nil, []*metacmds.Provider{p}).EntryByName("harbor")
+	if !ok || e.Alerts.Level("2") != panel.MetaAlertWarn {
+		t.Fatalf("entry = %+v, ok = %v", e, ok)
 	}
 }

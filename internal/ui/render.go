@@ -74,6 +74,8 @@ type MetaColumnState struct {
 	// (or never, when the pending marker delay is -1). Results still hold the marker, so sort,
 	// filters and PendingCount are unaffected. The zero value shows the marker.
 	PendingHidden bool
+	// Alerts are the column's warn and critical rules, evaluated on the raw Results values.
+	Alerts panel.MetaAlerts
 	// ResultsGen is bumped by whoever mutates Results or Pending (the meta handler), so
 	// LayoutMetaColumns can reuse its formatted cells while the generation is unchanged. It must
 	// only grow over the column's lifetime. 0 means unmanaged: never cached, so a column built as

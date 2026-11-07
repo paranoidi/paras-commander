@@ -179,7 +179,7 @@ func (h *Handler) carouselChildPreviewLayoutMetrics() (textW, contentH int, ok b
 	}
 	state := *h.host.ActivePanel()
 	parent, _, _, _ := panelcarousel.BuildColumns(state, listH, false, true)
-	metaW := ui.CarouselMeta(h.model.MetaResults[h.model.ActivePanel]).Width
+	_, metaW := ui.LayoutMetaColumns(h.model.MetaResults[h.model.ActivePanel])
 	measuredFitWidth := panelcarousel.MeasureFitColumnWidths(h.model.CarouselLayout, parent, state, h.model.UseNerdfontIcons, true, h.model.PanelScrollbar, listH, metaW)
 	childRect, ok := panelcarousel.ChildPreviewPaintRect(rect, true, h.model.CarouselLayout, measuredFitWidth)
 	if !ok {

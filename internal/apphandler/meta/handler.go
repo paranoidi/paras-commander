@@ -266,14 +266,14 @@ func (h *Handler) rerunSinglePanel(panelID int) {
 	}
 	cols := make([]ui.MetaColumnState, len(sorted))
 	for i, e := range sorted {
-		cols[i] = ui.MetaColumnState{
-			EntryName:   e.Name,
-			ColumnTitle: e.Column,
-			Order:       e.Order,
-			Results:     nil,
-		}
+		cols[i] = newColumn(e)
 	}
 	h.runForPanel(panelID, sorted, cols)
+}
+
+// newColumn is the empty panel column of an entry.
+func newColumn(e metacmds.MetaEntry) ui.MetaColumnState {
+	return ui.MetaColumnState{EntryName: e.Name, ColumnTitle: e.Column, Order: e.Order, Alerts: e.Alerts}
 }
 
 func (h *Handler) rerunActivePanels() {
@@ -633,12 +633,7 @@ func (h *Handler) HandleLoad(d LoadPayload) {
 	}
 	cols := make([]ui.MetaColumnState, len(sorted))
 	for i, e := range sorted {
-		cols[i] = ui.MetaColumnState{
-			EntryName:   e.Name,
-			ColumnTitle: e.Column,
-			Order:       e.Order,
-			Results:     nil,
-		}
+		cols[i] = newColumn(e)
 	}
 	h.runForPanel(d.PanelID, sorted, cols)
 }

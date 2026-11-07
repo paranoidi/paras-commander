@@ -74,6 +74,15 @@ const MetaStubTOML = `# meta.toml — Meta column commands
 # sort_reverse    bool     optional   default: false
 #   Reverse the sort applied by sort_on_activation. Ignored without it.
 #
+# warn            string | [string]   optional
+# critical        string | [string]   optional
+#   Color cells whose value matches any listed rule; critical wins over warn.
+#   ">N" ">=N" "<N" "<=N" compare numbers: floats and sizes ("1.5", "1G").
+#   "=X" "!=X" compare whole values: as numbers when both sides are numbers,
+#   else as text. Anything else is a substring ("error"; "2" also matches 12).
+#   Text ignores case. Blank and tab/newline split values never alert.
+#   Colors come from the theme: panel.meta.warn and panel.meta.critical.
+#
 # Do not wrap %f in quotes in the script — the app POSIX-single-quotes the path when expanding.
 #
 # Examples:

@@ -665,3 +665,17 @@ func TestTooltipStylesFallBackWhenThemeOmitsThem(t *testing.T) {
 		t.Errorf("TooltipInfoStyle = (%v, %v), want the accent foreground on the tooltip box", fg, bg)
 	}
 }
+
+func TestPanelMetaAlertStylesFallBack(t *testing.T) {
+	data := testTheme(t, "metaalertfallback", map[string]bool{"panel.meta.warn": true, "panel.meta.critical": true}, nil)
+	th, err := parse(data)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if fg, _, _ := th.PanelMetaWarn.Decompose(); fg != tcell.ColorYellow {
+		t.Fatalf("warn fg = %v, want yellow", fg)
+	}
+	if fg, _, attrs := th.PanelMetaCritical.Decompose(); fg != tcell.ColorRed || attrs&tcell.AttrBold == 0 {
+		t.Fatalf("critical fg = %v attrs = %v, want bold red", fg, attrs)
+	}
+}

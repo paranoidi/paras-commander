@@ -24,6 +24,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
@@ -1253,5 +1254,19 @@ func TestTagStateCountsTargetsAcrossParents(t *testing.T) {
 	// A panel directory reads its own tags through its parent.
 	if st, err = x.TagState([]string{left}); err != nil || st.Counts["umber"] != 1 || st.Targets != 1 {
 		t.Fatalf("directory state = %+v, %v", st, err)
+	}
+}
+
+func TestCopiesColumnAlerts(t *testing.T) {
+	t.Parallel()
+	for value, want := range map[string]panel.MetaAlertLevel{
+		"1": panel.MetaAlertNone,
+		"2": panel.MetaAlertWarn,
+		"3": panel.MetaAlertCritical,
+		"9": panel.MetaAlertCritical,
+	} {
+		if got := copiesAlerts().Level(value); got != want {
+			t.Errorf("Level(%q) = %d, want %d", value, got, want)
+		}
 	}
 }

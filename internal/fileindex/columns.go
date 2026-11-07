@@ -16,6 +16,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
@@ -57,20 +58,27 @@ func (x *Index) Providers() []*metacmds.Provider {
 	cols := []struct {
 		name, title string
 		values      columnValues
+		alerts      panel.MetaAlerts
 	}{
-		{StatusColumn, "Status", x.statusValues},
-		{TagsColumn, "Tags", tagValues},
-		{CopiesColumn, "Copies", byName(copiesQuery, strconv.Itoa)},
-		{FirstSeenColumn, "First seen", byName(timestampQuery("created_at"), formatTimestamp)},
-		{LastSeenColumn, "Last seen", byName(timestampQuery("last_seen"), formatTimestamp)},
-		{TreeFilesColumn, "Tree files", treeFilesValues},
-		{HashColumn, "Hash", byName(hashQuery, func(h string) string { return h[:min(len(h), hashCells)] })},
+		{name: StatusColumn, title: "Status", values: x.statusValues},
+		{name: TagsColumn, title: "Tags", values: tagValues},
+		{name: CopiesColumn, title: "Copies", values: byName(copiesQuery, strconv.Itoa), alerts: copiesAlerts()},
+		{name: FirstSeenColumn, title: "First seen", values: byName(timestampQuery("created_at"), formatTimestamp)},
+		{name: LastSeenColumn, title: "Last seen", values: byName(timestampQuery("last_seen"), formatTimestamp)},
+		{name: TreeFilesColumn, title: "Tree files", values: treeFilesValues},
+		{name: HashColumn, title: "Hash", values: byName(hashQuery, func(h string) string { return h[:min(len(h), hashCells)] })},
 	}
 	out := make([]*metacmds.Provider, len(cols))
 	for i, c := range cols {
 		out[i] = x.provider(c.name, c.title, config.FileIndexColumnOrder+i, c.values)
+		out[i].Alerts = c.alerts
 	}
 	return out
+}
+
+// copiesAlerts are the copies column's alert rules.
+func copiesAlerts() panel.MetaAlerts {
+	return panel.MustMetaAlerts([]string{config.FileIndexCopiesWarn}, []string{config.FileIndexCopiesCritical})
 }
 
 // Provider returns the fileindex column provider called name, or nil.

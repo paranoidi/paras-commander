@@ -461,6 +461,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 	var jobSuffix panellist.JobSuffix
 	var jobStatus string
 	var rowSuffix panellist.RowSuffix
+	var metaAlerts []panellist.MetaAlert
 
 	// Tree-mode gutter (ancestor guide lines + folder expander) is prepended before the
 	// icon/name columns; every other column (size/date/permissions/git/marks) keeps using the
@@ -497,6 +498,9 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		metaText := ""
 		if showMetaEffective {
 			metaText = MetaRowText(metaLayouts, entry.Path)
+			if !ctx.ChromeBlocked {
+				metaAlerts = MetaRowAlerts(metaLayouts, entry.Path, panelStyle.Styles)
+			}
 		}
 		rowSuffix = panellist.NewRowSuffix(jobSuffix, newFileTier, renameMark, subtreeMark)
 		rowSuffix.Working = (state.ShowLoadingIcon && entry.Type == localfs.EntryDirectory && entry.Path == state.ListingPendingPath) ||
@@ -599,7 +603,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 	primitive.StyledTextCellwise(screen, listContentStart, y, listTextWidth, text, func(ci int) tcell.Style {
 		st := blendCell(leftGutter + gitStrip + iconStrip + treeGutterWidth + ci)
 		if ci >= nameWidth {
-			return panelStyle.Styles.PanelListingInfoStyle(st)
+			return panellist.MetaCellStyle(panelStyle.Styles.PanelListingInfoStyle(st), ci-panellist.MetaStart(nameWidth), metaAlerts, cursorIconKey, panelStyle.Styles)
 		}
 		return st
 	}, spans)
@@ -756,7 +760,7 @@ func drawPanelCarousel(screen tcell.Screen, p panelCarouselParams) bool {
 		return false
 	}
 	parent, _, child, childKind := panelcarousel.BuildColumns(state, visibleRows, quickViewOn, filePreviewEligible)
-	meta := CarouselMeta(display.MetaColumns)
+	meta := CarouselMeta(display.MetaColumns, panelStyle.Styles)
 	measuredFitWidth := panelcarousel.MeasureFitColumnWidths(display.CarouselLayout, parent, state, display.ShowIcons, showChildCol, panelStyle.ScrollbarStyle, visibleRows, meta.Width)
 	carouselDisk := panelcarousel.DiskUsage{
 		Active:                 display.ShowDiskUsage,

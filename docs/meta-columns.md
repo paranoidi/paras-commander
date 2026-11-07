@@ -55,6 +55,33 @@ A failing command leaves the cell empty and shows one warning toast per run, not
 
 `C-y` (`panel.refresh`) drops the cache and recomputes all active columns for that panel. Changing directory runs the active columns for the new listing. In [tree view](panels.md#tree-view) the columns also fill in for expanded directories: each directory's rows are computed as they load, with the command running in that directory.
 
+## Alert colors
+
+`warn` and `critical` on an `[[entry]]` color the cells worth noticing. Each takes a rule or a list of rules; a cell alerts when any rule in the list matches, and `critical` wins over `warn`.
+
+```toml
+[[entry]]
+name = "lines"
+description = "Line count"
+file = "wc -l < %f"
+warn = ">1000.5"
+critical = [">5000", "error"]
+```
+
+| Rule | Matches |
+|---|---|
+| `>N`, `>=N`, `<N`, `<=N` | Numbers. `N` is a float or a byte size (`1.5`, `0.25`, `1G`), read the same way as for sorting. A cell that is not a number never matches. |
+| `=X`, `!=X` | The whole value: as numbers when both sides are numbers (`=1.50` matches `1.5`), otherwise as text. |
+| any other text | A substring of the value. |
+
+Text matching ignores case. Anything not starting with an operator is a substring, so `warn = "2"` also matches `12`; use `=2` for the number. Text starting with an operator character can only be matched as a whole value (`=>5`).
+
+Blank cells, still-running cells and output split into sub-columns never alert. An invalid rule, such as `>abc`, is reported as a `meta.toml` error in the picker.
+
+The colors are `warn` and `critical` in the theme's `[panel.meta]` table. Under the active panel's cursor an alerting cell takes the cursor's icon color, like row icons and marks, so it stays readable on the cursor bar. Under a dialog the panel stays dimmed and shows no alerts.
+
+Built-in columns can come with their own rules, such as the [fileindex](fileindex.md#columns) Copies column; these are fixed and cannot be changed from `meta.toml`.
+
 ## Sorting and filtering
 
 Active meta columns appear in the Sort dialog (`M-s`, up to four). Values that parse as numbers sort numerically, and so do byte sizes with a binary unit (`512`, `800K`, `5.6G`, `1.2 GiB`, `3 MB`), so `du -h`-style output sorts by size; empty, missing and still-running cells sort last. An all-numeric column sorts high-first, others A to Z; the header arrow points toward larger values. Once every value has arrived the panel re-sorts after `[disk_usage].idle_sort_delay_ms` of cursor inactivity rather than reshuffling while results stream in.

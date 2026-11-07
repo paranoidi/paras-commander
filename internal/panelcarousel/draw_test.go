@@ -9,6 +9,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
@@ -549,6 +550,71 @@ func TestDrawBodyRendersMetaInCenterColumnOnly(t *testing.T) {
 	}
 	if strings.Contains(parentRow, metaVal) {
 		t.Fatalf("parent row %q should not contain meta value %q", parentRow, metaVal)
+	}
+}
+
+func TestDrawBodyMetaAlertFollowsCursorIconColor(t *testing.T) {
+	t.Parallel()
+	styles := theme.Default()
+	wantCursorFG, ok := styles.PanelFileIconFG["panel.active.row.cursor"]
+	if !ok {
+		t.Fatal("default theme missing panel.active.row.cursor icon")
+	}
+	wantFG, _, _ := styles.PanelMetaWarn.Decompose()
+	infoFG, _, _ := styles.PanelRowInfo.Decompose()
+
+	for _, c := range []struct {
+		name     string
+		cursor   int
+		inactive bool
+		blocked  bool
+		want     tcell.Color
+	}{
+		{name: "plain row", cursor: 1, want: wantFG},
+		{name: "active cursor", want: wantCursorFG},
+		{name: "inactive cursor", inactive: true, want: wantFG},
+		{name: "blocked", cursor: 1, blocked: true, want: infoFG},
+	} {
+		screen := tcell.NewSimulationScreen("UTF-8")
+		if err := screen.Init(); err != nil {
+			t.Fatalf("Init: %v", err)
+		}
+		t.Cleanup(screen.Fini)
+		frame := geom.Rect{X: 0, Y: 0, Width: 100, Height: 18}
+		screen.SetSize(frame.Width, frame.Height)
+		center := panel.State{Path: pathloc.MustParse("/vol"), Cursor: c.cursor, Entries: []localfs.Entry{
+			{Name: "lantern", Path: "/vol/lantern", Type: localfs.EntryFile},
+			{Name: "港口草地", Path: "/vol/wide", Type: localfs.EntryFile},
+		}}
+		DrawBody(screen, BodyParams{
+			Frame: frame, Center: center, Styles: styles, FileListActive: !c.inactive, ChromeBlocked: c.blocked,
+			HeaderStyle: styles.PanelActiveHeader, HeaderCarouselStyle: styles.PanelActiveHeaderCarousel,
+			SurfaceStyle: styles.PanelActiveSurface, Layout: DefaultLayout(),
+			Meta: Meta{
+				Width: 3,
+				Row:   func(path string) string { return "abc" },
+				Alerts: func(path string) []panellist.MetaAlert {
+					if path == "/vol/lantern" {
+						return []panellist.MetaAlert{{Start: 1, End: 2, Style: styles.PanelMetaWarn}}
+					}
+					return nil
+				},
+			},
+		})
+		cols := SplitColumns(frame, false, DefaultLayout(), [3]int{})
+		row := rowText(screen, cols[1].X, cols[1].Y, cols[1].Width)
+		i := strings.Index(row, "abc")
+		if i < 0 {
+			t.Fatalf("%s: row %q has no meta text", c.name, row)
+		}
+		_, before, _ := screen.Get(cols[1].X+len([]rune(row[:i])), cols[1].Y)
+		_, alerted, _ := screen.Get(cols[1].X+len([]rune(row[:i]))+1, cols[1].Y)
+		if fg, _, _ := alerted.Decompose(); fg != c.want {
+			t.Errorf("%s: alert cell fg %v, want %v", c.name, fg, c.want)
+		}
+		if !c.blocked && before == alerted {
+			t.Errorf("%s: cell outside the alert range is styled the same", c.name)
+		}
 	}
 }
 

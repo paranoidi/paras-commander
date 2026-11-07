@@ -297,7 +297,7 @@ index views, and sort and filter like any meta column:
 |---|---|---|
 | **Status** | `fileindex.status` | how the entry compares with the index: `indexed` (a file with the same size and modification time as when scanned, or a known directory), `changed` (a file whose size or modification time differs), `unhashed` (in the index but not hashed yet), `new` (not in the index), `excluded` (not in the index and skipped by the scan rules) or `missing` (in an index view, gone from disk) |
 | **Tags** | `fileindex.tags` | a file's or a directory's tags, comma separated |
-| **Copies** | `fileindex.copies` | how many indexed files have the same content, this one included; JPEGs compare their metadata-free hash, as [find duplicates](find-duplicates.md) does |
+| **Copies** | `fileindex.copies` | how many indexed files have the same content, this one included; JPEGs compare their metadata-free hash, as [find duplicates](find-duplicates.md) does. Counts above 1 use the warn [alert color](meta-columns.md#alert-colors), counts above 2 the critical one |
 | **First seen** | `fileindex.first-seen` | when the file or directory was first indexed at this path, in local time |
 | **Last seen** | `fileindex.last-seen` | when a scan last saw the file or directory, in local time |
 | **Tree files** | `fileindex.tree-files` | for a directory, how many indexed files are under it |

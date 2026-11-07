@@ -21,6 +21,8 @@ type Meta struct {
 	Width  int                      // total cells incl. inter-column gaps
 	Header string                   // padded header segment
 	Row    func(path string) string // padded row segment for an entry path
+	// Alerts returns the alerting cells of an entry path's row segment.
+	Alerts func(path string) []panellist.MetaAlert
 }
 
 // formatBriefRow formats icon+name+[meta]+size for carousel columns. metaW is the pre-laid-out

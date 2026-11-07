@@ -1,12 +1,15 @@
 package ui
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/mattn/go-runewidth"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/primitive"
+	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
 func TestLayoutMetaCells_emptyMap(t *testing.T) {
@@ -356,5 +359,56 @@ func TestLayoutMetaColumns_titleAndPendingHiddenNeedNoBump(t *testing.T) {
 	}
 	if !second[0].PendingHidden || strings.TrimSpace(MetaRowText(second, "/walnut")) != "" {
 		t.Fatal("PendingHidden must take effect without a bump")
+	}
+}
+
+func TestMetaAlertLevelsSkipPendingAndCacheByGeneration(t *testing.T) {
+	t.Parallel()
+	cols := []MetaColumnState{{
+		EntryName: "copies", ColumnTitle: "Copies", Pending: "...", ResultsGen: 1,
+		Alerts:  panel.MustMetaAlerts([]string{">1", "..."}, []string{">2"}),
+		Results: map[string]string{"/a": "1", "/b": "2", "/c": "3", "/d": "..."},
+	}}
+	layouts, _ := LayoutMetaColumns(cols)
+	want := map[string]panel.MetaAlertLevel{"/b": panel.MetaAlertWarn, "/c": panel.MetaAlertCritical}
+	if len(layouts[0].Levels) != len(want) {
+		t.Fatalf("levels = %v, want %v", layouts[0].Levels, want)
+	}
+	for path, level := range want {
+		if layouts[0].Levels[path] != level {
+			t.Fatalf("levels = %v, want %v", layouts[0].Levels, want)
+		}
+	}
+
+	cols[0].Results["/a"] = "9"
+	layouts, _ = LayoutMetaColumns(cols)
+	if layouts[0].Levels["/a"] != panel.MetaAlertNone {
+		t.Fatal("unchanged generation should reuse cached levels")
+	}
+	cols[0].ResultsGen = 2
+	layouts, _ = LayoutMetaColumns(cols)
+	if layouts[0].Levels["/a"] != panel.MetaAlertCritical {
+		t.Fatal("new generation should re-evaluate the rules")
+	}
+}
+
+func TestMetaRowAlertsCellRanges(t *testing.T) {
+	t.Parallel()
+	styles := theme.Default()
+	layouts := []MetaColumnLayout{
+		{Width: 6, Levels: map[string]panel.MetaAlertLevel{"/a": panel.MetaAlertWarn}},
+		{Width: 4},
+		{Width: 3, Levels: map[string]panel.MetaAlertLevel{"/a": panel.MetaAlertCritical}},
+	}
+	got := MetaRowAlerts(layouts, "/a", styles)
+	want := []panellist.MetaAlert{
+		{Start: 0, End: 6, Style: styles.PanelMetaWarn},
+		{Start: 14, End: 17, Style: styles.PanelMetaCritical},
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("alerts = %+v, want %+v", got, want)
+	}
+	if got := MetaRowAlerts(layouts, "/b", styles); got != nil {
+		t.Fatalf("row without alerts = %+v, want nil", got)
 	}
 }

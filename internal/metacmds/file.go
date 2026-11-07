@@ -8,6 +8,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/paranoidi/paras-commander/internal/entrymatch"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/panel"
 )
 
 // MetaFile is the decoded meta command definition file (meta.toml).
@@ -41,6 +42,8 @@ type MetaEntry struct {
 	SortOnActivation bool
 	// SortReverse reverses that sort. Ignored when SortOnActivation is false.
 	SortReverse bool
+	// Alerts are the warn and critical rules coloring this column's cells.
+	Alerts panel.MetaAlerts
 	// Provider is set for a Go column provider (WithProviders): its values come from
 	// Provider.Values, and File, Dirs, When, Cache and Workers do not apply.
 	Provider *Provider
@@ -64,6 +67,8 @@ type metaEntryRaw struct {
 	Workers          int        `toml:"workers"`
 	SortOnActivation bool       `toml:"sort_on_activation"`
 	SortReverse      bool       `toml:"sort_reverse"`
+	Warn             *whenField `toml:"warn"`
+	Critical         *whenField `toml:"critical"`
 }
 
 // boolField decodes a TOML boolean, tracking whether it was set.
@@ -85,6 +90,14 @@ func (s *boolField) UnmarshalTOML(data interface{}) error {
 type whenField struct {
 	Set   bool
 	Value []string
+}
+
+// list is the decoded strings; nil when the key is absent.
+func (w *whenField) list() []string {
+	if w == nil {
+		return nil
+	}
+	return w.Value
 }
 
 func (w *whenField) UnmarshalTOML(data interface{}) error {
@@ -165,6 +178,10 @@ func Decode(data []byte) (*MetaFile, error) {
 			return nil, fmt.Errorf("meta.toml: entry %d: duplicate name %q (entry %d)", i, name, prev)
 		}
 		seenNames[name] = i
+		alerts, err := panel.ParseMetaAlerts(e.Warn.list(), e.Critical.list())
+		if err != nil {
+			return nil, fmt.Errorf("meta.toml: entry %d: %w", i, err)
+		}
 		column := strings.TrimSpace(e.Column)
 		if column == "" {
 			column = name
@@ -182,6 +199,7 @@ func Decode(data []byte) (*MetaFile, error) {
 			Workers:          workers,
 			SortOnActivation: e.SortOnActivation,
 			SortReverse:      e.SortReverse,
+			Alerts:           alerts,
 		})
 	}
 	return out, nil

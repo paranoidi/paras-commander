@@ -203,10 +203,14 @@ func drawCarouselColumn(cp carouselColumnParams) {
 		entry, selState, entryIndex, isCursor, selected, style := ce.Entry, ce.SelState, ce.EntryIndex, ce.IsCursor, ce.Selected, ce.Style
 		showSize := p.Layout.ShowSize[colIdx]
 		metaW, metaText := 0, ""
+		var metaAlerts []panellist.MetaAlert
 		if colIdx == 1 && p.Meta.Width > 0 {
 			metaW = p.Meta.Width
 			if p.Meta.Row != nil {
 				metaText = p.Meta.Row(entry.Path)
+			}
+			if p.Meta.Alerts != nil && !p.ChromeBlocked {
+				metaAlerts = p.Meta.Alerts(entry.Path)
 			}
 		}
 		listStart, listW := columnListContentOrigin(col.X, col.Width, p.ShowIcons, reserve)
@@ -272,7 +276,7 @@ func drawCarouselColumn(cp carouselColumnParams) {
 		drawCarouselRowIconAndText(screen, cp, carouselRowPaintState{
 			Y: y, Entry: entry, CursorKey: cursorKey, BlendCell: blendCell,
 			ListStart: listStart, ListW: listW, NameColOffset: nameColOffset, NameWidth: nameWidth,
-			Text: text, Spans: spans, Styles: p.Styles,
+			Text: text, Spans: spans, MetaAlerts: metaAlerts, Styles: p.Styles,
 		})
 	}
 	if columnScrollbarNeeded(hasLane, showSB, p.ScrollbarStyle, total, visibleRows, offset) {
@@ -358,6 +362,7 @@ type carouselRowPaintState struct {
 	NameWidth     int
 	Text          string
 	Spans         []primitive.Span
+	MetaAlerts    []panellist.MetaAlert
 	Styles        theme.Theme
 }
 
@@ -384,7 +389,7 @@ func drawCarouselRowIconAndText(screen tcell.Screen, cp carouselColumnParams, rp
 	primitive.StyledTextCellwise(screen, rp.ListStart, rp.Y, rp.ListW, rp.Text, func(ci int) tcell.Style {
 		st := rp.BlendCell(rp.NameColOffset + ci)
 		if ci >= rp.NameWidth {
-			return rp.Styles.PanelListingInfoStyle(st)
+			return panellist.MetaCellStyle(rp.Styles.PanelListingInfoStyle(st), ci-panellist.MetaStart(rp.NameWidth), rp.MetaAlerts, rp.CursorKey, rp.Styles)
 		}
 		return st
 	}, rp.Spans)

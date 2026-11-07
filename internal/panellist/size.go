@@ -6,9 +6,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
 // SizeCells is the fixed display width (terminal cells) of the right-aligned size column shared
@@ -109,6 +111,35 @@ func FormatHumanScaled(v float64, sfx byte, maxW int) string {
 	return s
 }
 
+// metaGap separates the name from the meta segment in a row.
+const metaGap = "  "
+
+// MetaStart is the cell where JoinRow starts the meta segment for a name of nameWidth cells.
+func MetaStart(nameWidth int) int { return nameWidth + len(metaGap) }
+
+// MetaAlert is one alerting meta column of a row: its cells, relative to the start of the meta
+// segment, and the theme's alert style. Cells rather than a primitive.Span: spans count runes,
+// which drift from the column on a row with a wide-character name.
+type MetaAlert struct {
+	Start, End int
+	Style      tcell.Style
+}
+
+// MetaCellStyle styles a row's cell at metaCell, relative to the start of the meta segment: an
+// alerting cell takes the alert's foreground and attributes on the row background, like a row
+// indicator (Theme.PanelRowIconForeground, so the cursor's icon color wins and it stays legible
+// on the cursor bar). Any other cell keeps info.
+func MetaCellStyle(info tcell.Style, metaCell int, alerts []MetaAlert, cursorStyleKey string, th theme.Theme) tcell.Style {
+	for _, a := range alerts {
+		if metaCell >= a.Start && metaCell < a.End {
+			_, bg, _ := info.Decompose()
+			_, _, attrs := a.Style.Decompose()
+			return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, a.Style)).Background(bg).Attributes(attrs)
+		}
+	}
+	return info
+}
+
 // JoinRow lays out one name/meta/size row: name is left-padded to nameWidth, meta (already
 // padded by the caller) follows with a two-space gap when showMeta, and size is right-aligned
 // to SizeCells with a one-space gap when showSize.
@@ -117,9 +148,9 @@ func JoinRow(nameWidth int, name, meta string, showMeta bool, size string, showS
 	name = runewidth.FillRight(name, nameWidth)
 	if showMeta {
 		if showSize {
-			return fmt.Sprintf("%s  %s %*s", name, meta, SizeCells, size)
+			return fmt.Sprintf("%s%s%s %*s", name, metaGap, meta, SizeCells, size)
 		}
-		return name + "  " + meta
+		return name + metaGap + meta
 	}
 	if showSize {
 		return fmt.Sprintf("%s %*s", name, SizeCells, size)

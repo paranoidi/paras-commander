@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/panel"
 )
 
 // Provider is a Go column provider: a meta column a built-in feature computes in-process, listed
@@ -25,6 +26,8 @@ type Provider struct {
 	// Available, when set, reports whether the provider is offered at all (e.g. its database
 	// opens). It is called with each meta file load, which may be on the UI thread.
 	Available func() bool
+	// Alerts are the warn and critical rules coloring the column's cells.
+	Alerts panel.MetaAlerts
 }
 
 // entry is the provider as a meta entry (MetaEntry.Provider set).
@@ -33,7 +36,7 @@ func (p *Provider) entry() MetaEntry {
 	if col == "" {
 		col = p.Name
 	}
-	return MetaEntry{Name: p.Name, Description: p.Description, Column: col, Order: p.Order, Provider: p}
+	return MetaEntry{Name: p.Name, Description: p.Description, Column: col, Order: p.Order, Alerts: p.Alerts, Provider: p}
 }
 
 // WithProviders returns mf's entries followed by one entry per available provider; a provider replaces a

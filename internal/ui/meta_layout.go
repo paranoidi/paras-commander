@@ -4,11 +4,17 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
+	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/primitive"
+	"github.com/paranoidi/paras-commander/internal/theme"
 )
+
+// metaColumnSep separates meta columns in the header and rows.
+const metaColumnSep = "  "
 
 // MetaColumnLayout is a rendered meta column ready for panel list rows.
 type MetaColumnLayout struct {
@@ -27,6 +33,9 @@ type MetaColumnLayout struct {
 	Pending string
 	// PendingHidden mirrors MetaColumnState.PendingHidden: rows showing Pending paint blank.
 	PendingHidden bool
+	// Levels holds the alert level of each alerting row; nil when none alerts. Shared with later
+	// draws: read-only.
+	Levels map[string]panel.MetaAlertLevel
 }
 
 // metaCellsCache is the part of a column's layout derived from Results and Pending alone.
@@ -36,6 +45,7 @@ type metaCellsCache struct {
 	formatted  map[string]string
 	rightAlign bool
 	numeric    bool
+	levels     map[string]panel.MetaAlertLevel
 }
 
 // LayoutMetaColumns formats each active meta column and returns layouts plus total terminal width
@@ -53,6 +63,7 @@ func LayoutMetaColumns(cols []MetaColumnState) (layouts []MetaColumnLayout, tota
 			c = &metaCellsCache{
 				gen: col.ResultsGen, width: w, formatted: formatted, rightAlign: rightAlign,
 				numeric: panel.MetaValuesNumeric(col.Results, col.Pending),
+				levels:  metaCellLevels(col),
 			}
 			if col.ResultsGen != 0 {
 				col.layoutCache = c
@@ -72,13 +83,34 @@ func LayoutMetaColumns(cols []MetaColumnState) (layouts []MetaColumnLayout, tota
 			Pending:    col.Pending,
 
 			PendingHidden: col.PendingHidden,
+			Levels:        c.levels,
 		}
 		if i > 0 {
-			totalWidth += 2
+			totalWidth += len(metaColumnSep)
 		}
 		totalWidth += w
 	}
 	return layouts, totalWidth
+}
+
+// metaCellLevels evaluates col's alert rules on its raw values; still-pending cells never alert.
+func metaCellLevels(col *MetaColumnState) map[string]panel.MetaAlertLevel {
+	if col.Alerts.Empty() {
+		return nil
+	}
+	var levels map[string]panel.MetaAlertLevel
+	for path, raw := range col.Results {
+		if col.Pending != "" && raw == col.Pending {
+			continue
+		}
+		if level := col.Alerts.Level(raw); level != panel.MetaAlertNone {
+			if levels == nil {
+				levels = make(map[string]panel.MetaAlertLevel)
+			}
+			levels[path] = level
+		}
+	}
+	return levels
 }
 
 // MetaHeaderText returns the padded header segment for meta columns.
@@ -96,7 +128,7 @@ func metaHeader(layouts []MetaColumnLayout) (string, []int) {
 	var b strings.Builder
 	starts := make([]int, len(layouts))
 	for i, lay := range layouts {
-		sep := "  "
+		sep := metaColumnSep
 		cell := padMetaLineToWidth(lay.Title, lay.Width, lay.RightAlign)
 		if lay.SortArrow != 0 {
 			arrowed := string(lay.SortArrow) + lay.Title
@@ -120,7 +152,7 @@ func metaHeader(layouts []MetaColumnLayout) (string, []int) {
 }
 
 // CarouselMeta lays out active meta columns for the carousel center column.
-func CarouselMeta(cols []MetaColumnState) panelcarousel.Meta {
+func CarouselMeta(cols []MetaColumnState, styles theme.Theme) panelcarousel.Meta {
 	layouts, totalWidth := LayoutMetaColumns(cols)
 	if len(layouts) == 0 {
 		return panelcarousel.Meta{}
@@ -130,6 +162,9 @@ func CarouselMeta(cols []MetaColumnState) panelcarousel.Meta {
 		Header: MetaHeaderText(layouts),
 		Row: func(path string) string {
 			return MetaRowText(layouts, path)
+		},
+		Alerts: func(path string) []panellist.MetaAlert {
+			return MetaRowAlerts(layouts, path, styles)
 		},
 	}
 }
@@ -157,7 +192,28 @@ func MetaRowText(layouts []MetaColumnLayout, path string) string {
 		}
 		parts[i] = padMetaLineToWidth(text, lay.Width, lay.RightAlign)
 	}
-	return strings.Join(parts, "  ")
+	return strings.Join(parts, metaColumnSep)
+}
+
+// MetaRowAlerts returns the alerting columns of one file row as cell ranges in the MetaRowText
+// segment; nil when none alerts.
+func MetaRowAlerts(layouts []MetaColumnLayout, path string, styles theme.Theme) []panellist.MetaAlert {
+	var alerts []panellist.MetaAlert
+	start := 0
+	for _, lay := range layouts {
+		if level := lay.Levels[path]; level != panel.MetaAlertNone {
+			alerts = append(alerts, panellist.MetaAlert{Start: start, End: start + lay.Width, Style: metaAlertStyle(level, styles)})
+		}
+		start += lay.Width + len(metaColumnSep)
+	}
+	return alerts
+}
+
+func metaAlertStyle(level panel.MetaAlertLevel, styles theme.Theme) tcell.Style {
+	if level == panel.MetaAlertCritical {
+		return styles.PanelMetaCritical
+	}
+	return styles.PanelMetaWarn
 }
 
 const (

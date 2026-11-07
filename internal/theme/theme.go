@@ -254,6 +254,10 @@ type Theme struct {
 	// PanelFileIndex styles the fileindex state icons ([panel.fileindex]) by state name.
 	PanelFileIndex map[string]tcell.Style
 
+	// PanelMetaWarn and PanelMetaCritical color meta cells matching an alert rule ([panel.meta]).
+	PanelMetaWarn     tcell.Style
+	PanelMetaCritical tcell.Style
+
 	FuzzyInput           tcell.Style
 	FuzzyInputNomatch    tcell.Style
 	FuzzyHighlight       tcell.Style
@@ -1247,6 +1251,7 @@ var optionalStyleKeys = func() []string {
 		"jobs.operations.success", "jobs.operations.failed", "jobs.operations.skipped", "jobs.progress.completed.fill", "panel.row.mark.job.removing",
 		"tooltip.text", "tooltip.info")
 	keys = append(keys, fileIndexStateStyleKeys()...)
+	keys = append(keys, "panel.meta.warn", "panel.meta.critical")
 	return keys
 }()
 
@@ -1651,6 +1656,14 @@ func parse(data []byte) (Theme, error) {
 	if err != nil {
 		return Theme{}, err
 	}
+	panelMetaWarn, err := optionalStyle(specs, palette, "panel.meta.warn", tcell.StyleDefault.Foreground(tcell.ColorYellow))
+	if err != nil {
+		return Theme{}, err
+	}
+	panelMetaCritical, err := optionalStyle(specs, palette, "panel.meta.critical", tcell.StyleDefault.Foreground(tcell.ColorRed).Bold(true))
+	if err != nil {
+		return Theme{}, err
+	}
 	panelRowMarkRangeAnchor, err := optionalStyle(specs, palette, "panel.row.mark.range_anchor", tcell.StyleDefault.Foreground(tcell.ColorYellow))
 	if err != nil {
 		return Theme{}, err
@@ -1849,6 +1862,8 @@ func parse(data []byte) (Theme, error) {
 		PanelGitIgnored:     styles["panel.git.ignored"],
 		PanelGitConflicted:  styles["panel.git.conflicted"],
 		PanelFileIndex:      panelFileIndex,
+		PanelMetaWarn:       panelMetaWarn,
+		PanelMetaCritical:   panelMetaCritical,
 
 		FuzzyInput:           styles["fuzzy.input"],
 		FuzzyInputNomatch:    styles["fuzzy.input.nomatch"],

@@ -33,6 +33,10 @@ Which columns a panel shows beside each name (size, mtime, permissions, meta col
 An extra listing column whose values come from a user-configured per-entry command.
 _Avoid_: custom column
 
+**Meta alert**:
+A meta cell colored because its value matches its column's `warn` or `critical` rules.
+_Avoid_: highlight (that is fuzzy match or cursor styling)
+
 **Folder colour**:
 The Nemo-compatible tint of a local directory's name and icon, read from the GVfs metadata database into an in-memory snapshot (`internal/foldercolor`).
 

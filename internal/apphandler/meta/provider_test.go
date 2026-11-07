@@ -149,6 +149,24 @@ func TestProviderColumnSortsAndFilters(t *testing.T) {
 	}
 }
 
+func TestProviderAlertsReachColumnOnRerun(t *testing.T) {
+	p := &metacmds.Provider{
+		Name: "lantern.copies", Column: "Copies",
+		Alerts: panel.MustMetaAlerts([]string{">1"}, nil),
+		Values: func(_ context.Context, _ string, _ []localfs.Entry) (map[string]string, error) {
+			return nil, nil
+		},
+	}
+	screen, h, _, _ := providerFixture(t, p)
+	h.activeEntries[0] = []string{p.Name}
+	h.rerunSinglePanel(0)
+	pumpWakes(t, screen, h, 0)
+	cols := h.model.MetaResults[0]
+	if len(cols) != 1 || cols[0].Alerts.Level("2") != panel.MetaAlertWarn {
+		t.Fatalf("columns = %+v, want the provider's alert rules", cols)
+	}
+}
+
 func TestProviderErrorLeavesCellsEmptyAndReportsOnce(t *testing.T) {
 	p := &metacmds.Provider{Name: "lantern.tags", Values: func(context.Context, string, []localfs.Entry) (map[string]string, error) {
 		return nil, errors.New("index unavailable")

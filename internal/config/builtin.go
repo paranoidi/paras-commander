@@ -474,6 +474,10 @@ const (
 	// FileIndexColumnOrder is the meta order of the first fileindex column; the others follow
 	// one step each, all after meta.toml columns (default order 0).
 	FileIndexColumnOrder = 1000
+	// FileIndexCopiesWarn and FileIndexCopiesCritical are the meta alert rules of the fileindex
+	// copies column: the count includes the file itself, so 1 means no other copy.
+	FileIndexCopiesWarn     = ">1"
+	FileIndexCopiesCritical = ">2"
 	// FileIndexMaxWarnings caps the warning lines a scan or prune job keeps (per-file errors and
 	// pruning log lines); the rest are counted in one final line.
 	FileIndexMaxWarnings = 200
