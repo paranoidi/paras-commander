@@ -12,8 +12,8 @@ var fileIndexMenuGroups = leaderMenuViewSpec{
 	actions: map[string][]string{
 		"Browse":     {ActionFileIndexBrowseWith, ActionFileIndexBrowse, ActionFileIndexReveal},
 		"Tagging":    {ActionFileIndexTags},
-		"Tools":      {ActionFileIndexFind},
-		"Actions":    {ActionFileIndexScan, ActionFileIndexScanFast, ActionFileIndexPrune, ActionFileIndexReportDifferences},
+		"Tools":      {ActionFileIndexFind, ActionFileIndexReportDifferences},
+		"Actions":    {ActionFileIndexScan, ActionFileIndexScanFast, ActionFileIndexPrune},
 		"Duplicates": {ActionFileIndexFindDuplicates, ActionFileIndexCopies, ActionFileIndexCopiesOutside},
 	},
 	column: map[string]int{"Browse": 0, "Tagging": 1, "Tools": 1, "Actions": 2, "Duplicates": 3},
