@@ -705,6 +705,19 @@ func (h *Handler) handleJobsMaximizedKey(event *tcell.EventKey) {
 	h.scrollOperations(event.Key(), ui.JobsPanelContentRows(ui.JobsMaximizedRect(h.host.LayoutForTerminalSize(width, height))))
 }
 
+// ScrollKey reports whether event, a key the jobs view just handled, only moves its Queue
+// selection or scrolls a pane, so a held key's paints can be coalesced.
+func (h *Handler) ScrollKey(event *tcell.EventKey) bool {
+	if h.model.ViMotionMode {
+		event = keymap.RemapViMotionKey(event)
+	}
+	switch event.Key() {
+	case tcell.KeyUp, tcell.KeyDown, tcell.KeyPgUp, tcell.KeyPgDn, tcell.KeyHome, tcell.KeyEnd:
+		return h.model.ViewMode == ui.ViewJobs && !h.model.JobsResultFilterDialog.Open
+	}
+	return false
+}
+
 // scrollOperations scrolls the Operations pane (contentRows rows tall) by row within the
 // current view's display rows. OpsScroll counts from the newest row, so with the newest row at
 // the bottom ([jobs].operations_order = "newest_last") the keys move the other way.

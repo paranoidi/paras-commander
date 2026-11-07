@@ -22,6 +22,20 @@ import (
 
 type jobsHostStub struct{}
 
+func (jobsHostStub) Config() config.Config { return config.Default() }
+
+// debounceHost is a jobs host with its own key_repeat_debounce_ms.
+type debounceHost struct {
+	Host
+	ms int
+}
+
+func (h debounceHost) Config() config.Config {
+	cfg := config.Default()
+	cfg.UI.KeyRepeatDebounceMS = h.ms
+	return cfg
+}
+
 func (jobsHostStub) LayoutForTerminalSize(w, h int) ui.Layout {
 	return geom.CalculateLayout(w, h, true, geom.PanelWidthSplit{})
 }
@@ -766,12 +780,71 @@ func TestRefreshOpsWindowReadsSpilledRowsAsync(t *testing.T) {
 		log.Append(oplog.Record{Result: oplog.Done, Label: fmt.Sprintf("pebble-%04d.txt", i)})
 	}
 	model.JobsList[model.JobsView.Selected].Ops = log
+	h.RefreshOpsWindow()
+	if got := model.JobsOpsWindow.Rows[0]; got.Pending || got.Op.Label != "pebble-4999.txt" {
+		t.Fatalf("newest row = %+v, want it read from memory", got)
+	}
 	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
 	h.RefreshOpsWindow()
-	if !model.JobsOpsWindow.Rows[0].Pending {
-		t.Fatal("rows only in the spill file must render pending first")
+	if win := model.JobsOpsWindow; opsWindowPending(win) || win.Scroll != 0 {
+		t.Fatalf("scrolling must keep the shown rows until the spill read lands: %+v", win)
 	}
-	win := waitOpsWindow(t, h, model, func(w ui.JobsOpsWindow) bool { return len(w.Rows) > 0 && !w.Rows[0].Pending })
+	win := waitOpsWindow(t, h, model, func(w ui.JobsOpsWindow) bool { return w.Scroll > 0 })
+	if last := win.Rows[len(win.Rows)-1].Op.Label; last != "pebble-0000.txt" {
+		t.Fatalf("bottom row = %q, want the oldest record", last)
+	}
+}
+
+// spilledOpsHandler is a handler whose selected job's log has rows only in the spill file and
+// whose spill reads wait out key_repeat_debounce_ms from now, ms milliseconds.
+func spilledOpsHandler(t *testing.T, ms int) (*Handler, *ui.Model, *oplog.Log) {
+	t.Helper()
+	h, model, _ := newMaximizeTestHandler(t)
+	log := oplog.New("spill", oplog.Config{MemoryRows: 1000, Session: oplog.NewSession(t.TempDir())})
+	t.Cleanup(log.Close)
+	for i := range 5000 {
+		log.Append(oplog.Record{Result: oplog.Done, Label: fmt.Sprintf("pebble-%04d.txt", i)})
+	}
+	model.JobsList[model.JobsView.Selected].Ops = log
+	h.host = debounceHost{Host: h.host, ms: ms}
+	h.ops.lastFetch = time.Now()
+	return h, model, log
+}
+
+func TestOpsWindowFirstBuildShowsPendingRows(t *testing.T) {
+	t.Parallel()
+	h, model, _ := spilledOpsHandler(t, 0)
+	model.JobsView.OpsScroll = 4500
+	h.RefreshOpsWindow()
+	if !opsWindowPending(model.JobsOpsWindow) {
+		t.Fatal("with no rows to keep, spilled rows must render pending first")
+	}
+	waitOpsWindow(t, h, model, func(w ui.JobsOpsWindow) bool { return len(w.Rows) > 0 && !opsWindowPending(w) })
+}
+
+// TestOpsSpillReadsFollowKeyRepeatDebounce: a read right after another waits for the debounce
+// and its trailing wake, and the scroll position stays anchored on the rows while it waits.
+func TestOpsSpillReadsFollowKeyRepeatDebounce(t *testing.T) {
+	t.Parallel()
+	h, model, log := spilledOpsHandler(t, 60)
+	h.RefreshOpsWindow()
+	h.ops.lastFetch = time.Now()
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
+	h.RefreshOpsWindow()
+	start := model.JobsView.OpsScroll
+	if h.ops.fetchRunning {
+		t.Fatal("a spill read started inside the debounce")
+	}
+	if !h.ops.fetchWake.Armed() {
+		t.Fatal("no trailing wake armed for the held-back read")
+	}
+	log.Append(oplog.Record{Result: oplog.Done, Label: "pebble-5000.txt"})
+	h.RefreshOpsWindow()
+	h.RefreshOpsWindow()
+	if got := model.JobsView.OpsScroll; got != start+1 {
+		t.Fatalf("scroll = %d, want %d: one new row moves the anchor once", got, start+1)
+	}
+	win := waitOpsWindow(t, h, model, func(w ui.JobsOpsWindow) bool { return w.Scroll > 0 })
 	if last := win.Rows[len(win.Rows)-1].Op.Label; last != "pebble-0000.txt" {
 		t.Fatalf("bottom row = %q, want the oldest record", last)
 	}

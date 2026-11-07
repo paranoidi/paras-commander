@@ -43,6 +43,8 @@ type opsState struct {
 	scanCancel  context.CancelFunc
 
 	fetchRunning bool
+	lastFetch    time.Time // when the last fetch started
+	fetchWake    sched.Debouncer
 	doneLog      *oplog.Log // last finished fetch
 	doneNums     []uint32
 	doneRecs     []oplog.Record
@@ -77,7 +79,8 @@ type opsInputs struct {
 // Rebuilds driven only by job activity (new rows, scan progress) are rate limited to
 // [jobs].operations_refresh_interval_ms so the list stays readable; a trailing wake shows what
 // was held back. A changed job, filter, scroll or pane size, and rows still pending a spill
-// read, rebuild at once.
+// read, rebuild at once. While rows wait on a spill read the pane keeps the rows it shows
+// (opsKeepsRows), so scrolling never blanks them.
 func (h *Handler) RefreshOpsWindow() {
 	h.refreshOpsWindow(false)
 }
@@ -121,6 +124,7 @@ func (h *Handler) refreshOpsWindow(force bool) {
 		st.OpsScroll += win.DisplayTotal() - h.ops.lastDisplayTotal
 	}
 	st.OpsScroll = min(max(st.OpsScroll, 0), ui.JobsOpsMaxScroll(win.DisplayTotal(), rows))
+	win.Scroll = st.OpsScroll
 	offset, count := win.RecordSpan(st.OpsScroll, rows)
 	var nums []uint32
 	if query.Empty() {
@@ -134,6 +138,13 @@ func (h *Handler) refreshOpsWindow(force bool) {
 	recs, ok := key.log.RecordsInMemory(nums)
 	if !ok {
 		recs, ok = h.fetchFor(key.log, nums)
+	}
+	if !ok && h.opsKeepsRows(key, rows) {
+		if last := h.ops.lastInputs; last.jobID == sel.ID && last.key == key {
+			h.ops.lastDisplayTotal = win.DisplayTotal() // this frame's anchoring is already in OpsScroll
+		}
+		h.model.JobsOpsWindow.JobID = sel.ID
+		return
 	}
 	opts := search.Options{CaseInsensitive: key.ci}
 	win.Rows = make([]ui.JobOperationRow, len(nums))
@@ -203,6 +214,15 @@ func (h *Handler) opsThrottled(inputs opsInputs) bool {
 	return true
 }
 
+// opsKeepsRows reports whether the pane keeps showing its current rows while the rows of key
+// load: the same result filter and query at the same height, with whole rows to show.
+func (h *Handler) opsKeepsRows(key opsViewKey, rows int) bool {
+	last := h.ops.lastInputs
+	win := h.model.JobsOpsWindow
+	return last.ready && last.rows == rows && last.key.mask == key.mask && last.key.query == key.query &&
+		len(win.Rows) > 0 && !opsWindowPending(win)
+}
+
 func opsWindowPending(win ui.JobsOpsWindow) bool {
 	for _, r := range win.Rows {
 		if r.Pending {
@@ -268,7 +288,9 @@ func (h *Handler) startScanLocked(key opsViewKey, from uint32) {
 
 // fetchFor returns log's records nums when a background read of exactly them has finished.
 // Otherwise it starts one, unless a read is already running (its finish wakes the UI, and the
-// next frame asks for the rows it then needs), and reports ok=false.
+// next frame asks for the rows it then needs) or one started less than
+// [ui].key_repeat_debounce_ms ago, so a held scroll key reads the spill file at that pace and a
+// trailing wake reads where it stopped; it reports ok=false.
 func (h *Handler) fetchFor(log *oplog.Log, nums []uint32) ([]oplog.Record, bool) {
 	o := &h.ops
 	o.mu.Lock()
@@ -279,7 +301,14 @@ func (h *Handler) fetchFor(log *oplog.Log, nums []uint32) ([]oplog.Record, bool)
 	if o.fetchRunning {
 		return nil, false
 	}
-	o.fetchRunning = true
+	delay := time.Duration(h.host.Config().UI.KeyRepeatDebounceMS) * time.Millisecond
+	if wait := delay - time.Since(o.lastFetch); wait > 0 {
+		if !o.fetchWake.Armed() {
+			o.fetchWake.Arm(wait, h.postOpsWake)
+		}
+		return nil, false
+	}
+	o.fetchRunning, o.lastFetch = true, time.Now()
 	want := slices.Clone(nums)
 	go func() {
 		recs, err := log.ReadRecords(want)
@@ -312,6 +341,7 @@ func (h *Handler) stopOpsWork() {
 	o.doneLog, o.doneNums, o.doneRecs = nil, nil, nil
 	o.mu.Unlock()
 	o.trailing.Invalidate()
+	o.fetchWake.Invalidate()
 	o.lastInputs = opsInputs{}
 	h.model.JobsOpsWindow = ui.JobsOpsWindow{}
 }

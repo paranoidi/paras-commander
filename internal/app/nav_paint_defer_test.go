@@ -34,6 +34,32 @@ func pressDown(app *App) {
 	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 }
 
+// TestJobsViewScrollPaintDeferredWhenEventsQueued: a held scroll key in the jobs view coalesces
+// its paints like file-list nav, and a key that is not a scroll still paints at once.
+func TestJobsViewScrollPaintDeferredWhenEventsQueued(t *testing.T) {
+	app, screen := navDeferApp(t, true)
+	app.jobsCtrl.OpenJobsView()
+	app.render()
+	app.lastNavPaintAt = time.Now()
+	pressDown(app)
+	if !app.navPaintDeferred {
+		t.Fatal("navPaintDeferred = false, want the paint coalesced")
+	}
+	drainPendingEvents(screen)
+	app.flushDeferredNavPaint()
+	if app.navPaintDeferred {
+		t.Fatal("flush left the paint deferred")
+	}
+	if err := screen.PostEvent(tcell.NewEventInterrupt(nil)); err != nil {
+		t.Fatalf("PostEvent: %v", err)
+	}
+	app.lastNavPaintAt = time.Now()
+	app.handleKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
+	if app.navPaintDeferred {
+		t.Fatal("Tab deferred its paint")
+	}
+}
+
 func TestNavPaintNotDeferredOutsideRunLoop(t *testing.T) {
 	app, screen := navDeferApp(t, false)
 	before := ui.HashScreenLogical(screen)

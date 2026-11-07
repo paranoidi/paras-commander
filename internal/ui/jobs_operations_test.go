@@ -238,8 +238,8 @@ func TestDrawJobsOperationsPanelScrolledHidesActive(t *testing.T) {
 	screen := newOpsScreen(t)
 	rect := Rect{X: 0, Y: 0, Width: 70, Height: 5} // 3 content rows
 	win := opsWindowOf("orchard/kettle.bin", 5, 1, "pebble", "thistle", "marble")
-	st := JobsViewState{OpsScroll: 2}
-	drawJobsOperationsPanel(screen, rect, st, win, "", theme.Default(), false, true, false, false)
+	win.Scroll = 2
+	drawJobsOperationsPanel(screen, rect, JobsViewState{}, win, "", theme.Default(), false, true, false, false)
 	for i, want := range []string{"orchard/pebble.txt", "orchard/thistle.txt", "orchard/marble.txt"} {
 		if row := screenRowText(screen, rect, rect.Y+1+i); !strings.Contains(row, want) {
 			t.Fatalf("row %d = %q, want %q", i, row, want)

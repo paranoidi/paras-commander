@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -15,6 +16,8 @@ type jobsHost struct {
 func (h jobsHost) AdjustJobsThroughputChartColumnMS(deltaMS int) {
 	h.app.adjustJobsThroughputChartColumnMS(deltaMS)
 }
+
+func (h jobsHost) Config() config.Config { return h.app.config }
 
 func (h jobsHost) CopyToClipboard(text, done string) { h.app.setClipboard(text, done) }
 

@@ -843,6 +843,10 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	mode := a.inputMode()
 	if handler, ok := inputModeKeyHandlers[mode]; ok {
 		quit := handler(a, event)
+		if !quit && mode == InputModeJobsView && a.jobsCtrl.ScrollKey(event) && a.shouldDeferNavPaint() {
+			a.navPaintDeferred = true // not eligible for a partial paint, so the flush renders
+			return false, true
+		}
 		a.render()
 		return quit, true
 	}

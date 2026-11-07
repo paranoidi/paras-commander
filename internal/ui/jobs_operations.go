@@ -65,11 +65,12 @@ type JobOperationRow struct {
 // JobsOpsWindow is the part of the selected job's Operations rows the pane draws, prepared by
 // the jobs handler each frame (jobs.Handler.RefreshOpsWindow) so rendering never reads the
 // operation log or the disk. The pane's display rows are the active item (when Active is set)
-// followed by the records, newest first; JobsViewState.OpsScroll counts display rows from that
-// newest edge. Rows are the records Offset.. (record rows, not counting the active row); Total
+// followed by the records, newest first; Scroll is the JobsViewState.OpsScroll they were
+// prepared for, in display rows from that newest edge. Rows are the records Offset.. (record rows, not counting the active row); Total
 // is the record count of the current view (result filter and fuzzy query applied).
 type JobsOpsWindow struct {
 	JobID  string
+	Scroll int
 	Offset int
 	Total  int
 	Rows   []JobOperationRow
@@ -182,7 +183,7 @@ func drawJobsOperationsPanel(screen tcell.Screen, rect Rect, state JobsViewState
 	// Collect whole rows from the newest visible one until the pane is full.
 	var groups [][]jobOperationLine
 	lines := 0
-	for d := min(max(state.OpsScroll, 0), JobsOpsMaxScroll(win.DisplayTotal(), contentH)); d < win.DisplayTotal() && lines < contentH; d++ {
+	for d := min(max(win.Scroll, 0), JobsOpsMaxScroll(win.DisplayTotal(), contentH)); d < win.DisplayTotal() && lines < contentH; d++ {
 		var g []jobOperationLine
 		if d < win.activeRows() {
 			g = []jobOperationLine{jobOperationActiveLine(win.Active, lineW, styles, body, chromeBlocked)}

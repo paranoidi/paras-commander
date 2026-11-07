@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"github.com/paranoidi/paras-commander/internal/apphandler/host"
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -16,6 +17,8 @@ type Host interface {
 	RequestBothPanelsVolumeSpaceRefreshAsync()
 	SetJobFailedTransientMessage(err error, fallback string)
 	DevMode() bool
+	// Config is the live configuration, for settings that change at runtime.
+	Config() config.Config
 	// DiskUsagePainter is the disk-usage cache the panels paint sizes from (nil when disabled);
 	// AddTransferJob reads it for the enqueue-time size estimate.
 	DiskUsagePainter() ui.DiskUsagePainter
