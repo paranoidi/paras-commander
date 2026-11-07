@@ -30,11 +30,10 @@ Help, menus and footers show keys in this same notation: `C-`, `M-`, `S-` in tha
 
 ```toml
 [main]
-"file.copy" = ["F5", "C-c"]     # replaces the default list for this action
-"panel.jump-dialog" = ["M-m"]
+"<action>" = ["F5", "C-c"]     # replaces the default list for this action
 ```
 
-An action you list replaces its default chords entirely; list every chord you want. Actions you leave out keep their defaults.
+Take action names from the file `pc --config-stub` writes. An action you list replaces its default chords entirely; list every chord you want. Actions you leave out keep their defaults.
 
 ## Tables
 
@@ -56,7 +55,7 @@ Bindings are grouped by context. While a view or dialog has focus, its table is 
 
 Problems abort startup with a message naming the problem:
 
-- unknown action id, or an action placed in a table that does not allow it (`jobs.*` only under `[jobs]`, `commands.*` only under `[commands]`, `ui.input.*` only under `[dialog.input]`, dialog actions under their own `[dialog.*]` table)
+- unknown action name, or an action placed in a table that does not allow it (a view's actions belong in that view's table, text-input actions in `[dialog.input]`, dialog actions in their own `[dialog.*]` table)
 - one chord bound to two actions within a table, or listed twice for one action
 - an unknown key name, an empty key, or a multi-stroke value
 - values that are not lists of strings

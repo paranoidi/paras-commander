@@ -1,6 +1,6 @@
 package keymap
 
-// Action identifiers match docs/keybindings.md (single-stroke bindings only in v1).
+// Action identifiers are the keybindings.toml keys (single-stroke bindings only in v1).
 const (
 	ActionAppQuit          = "app.quit"
 	ActionAppQuitImmediate = "app.quit-immediate"

@@ -4,7 +4,7 @@ A panel can browse a remote host over SFTP and transfer files between local and 
 
 ## Connecting
 
-`M-r` (`remote.sftp-link`, rebindable in `keybindings.toml`) or Left/Right -> SFTP ... (`T`) opens the connect dialog for that panel. It lists the `Host` entries of your SSH config with a fuzzy filter, and has a location field for typing a URL by hand. Enter on a host fills in `sftp://<alias>/~`. URLs look like `sftp://user@host/path`; `~` stands for the remote home directory and a leading `/` is the server's filesystem root.
+`M-r` (rebindable in `keybindings.toml`) or Left/Right -> SFTP ... (`T`) opens the connect dialog for that panel. It lists the `Host` entries of your SSH config with a fuzzy filter, and has a location field for typing a URL by hand. Enter on a host fills in `sftp://<alias>/~`. URLs look like `sftp://user@host/path`; `~` stands for the remote home directory and a leading `/` is the server's filesystem root.
 
 The SSH config is read from `[sftp].ssh_config_file`, else `$SSH_CONFIG`, else `~/.ssh/config`, including `Include` files. `HostName`, `User`, `Port` and `IdentityFile` are applied; `Host` and `Match host` patterns with wildcards and `!` negations are honored. Panels keep the alias in their path; it is resolved when connecting.
 

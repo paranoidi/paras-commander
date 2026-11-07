@@ -8,9 +8,9 @@ Disk usage scans directory sizes in the background and draws a proportional bar 
 
 | Key | Action |
 |---|---|
-| `M-d` | `panel.disk-usage-scan`: scan the active panel's directory (leader `D`, Left/Right menu, Disk usage) |
-| `M-Space` | `panel.dir-size`: size only the directory under the cursor, then move down |
-| `C-M-d` | `panel.disk-usage-clear`: abort the scan and drop all the data |
+| `M-d` | Scan the active panel's directory (leader `D`, Left/Right menu, Disk usage) |
+| `M-Space` | Size only the directory under the cursor, then move down |
+| `C-M-d` | Abort the scan and drop all the data |
 
 Both are rebindable in `keybindings.toml`.
 

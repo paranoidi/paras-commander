@@ -6,10 +6,9 @@ summary: an icon with a count for each job state, a progress bar for the
 running job and, to its left, a pill with the current transfer speed while a
 transfer runs. A job waiting for your answer is shown as "N job(s) waiting".
 The completed and failed counts cover only jobs that finished since you last
-left the jobs view; those jobs stay listed in the view until cleared
-(`jobs.clear-finished`).
+left the jobs view; those jobs stay listed in the view until cleared.
 
-Open the jobs view with `M-j` (`jobs.open`, **Display -> Jobs**, Esc menu
+Open the jobs view with `M-j` (**Display -> Jobs**, Esc menu
 `j`). It has a Queue panel with Type, Status, ETA, Speed and Progress, plus
 Details and Operations panels for the selected job. When a job is
 waiting for an answer, opening the view selects it and focuses the conflict
@@ -20,7 +19,7 @@ first. Keys are rebindable under `[jobs]` in `keybindings.toml`.
 Operations spans the full width at the bottom of the screen, so long paths
 fit; the Queue and Details share the rows above it, as tall as Details needs
 (at least 15 rows).
-`C-Space` (`jobs.toggle-operations-layout`, **Jobs -> Operations layout**,
+`C-Space` (**Jobs -> Operations layout**,
 Esc menu `o`) moves Operations under Details in the right column, giving the
 Queue the full height; press it again to move it back. The toggle lasts for
 the session; set `operations_layout = "side"` under `[jobs]` in `config.toml`
@@ -28,9 +27,9 @@ to start with Operations in the right column. A terminal too short for the
 bottom layout uses the side layout.
 
 A job queued from several selected entries shows an expander icon after its
-type. `M-→` (`jobs.expand`) lists each of its sources in a tree under
+type. `M-→` lists each of its sources in a tree under
 the job, each with its own status icon (queued, running, completed, failed,
-canceled) and done / failed / skipped counts; `M-←` (`jobs.collapse`)
+canceled) and done / failed / skipped counts; `M-←`
 folds them away. With the cursor on a source, the Operations panel shows only
 that source's rows and names the source on its top border. The source being
 worked on is drawn in the job's status color and followed by the file it is
@@ -48,19 +47,19 @@ total `(estimated)` until the exact size is counted (see
 
 | Key | Action |
 |---|---|
-| `C-c` | Cancel the selected job (`jobs.cancel`) |
-| `C-s` | Soft stop the selected running job (`jobs.soft-stop`) |
-| `C-p` | Pause a queued job (`jobs.pause`) |
-| `C-r` | Resume a paused job or retry a failed or canceled one (`jobs.resume`) |
-| `C-↑` / `C-↓` | Move the job in the queue (`jobs.queue-up`, `jobs.queue-down`) |
-| `F8` | Clear finished jobs (`jobs.clear-finished`) |
-| `M-→` / `M-←` | Expand / collapse a multi-source job into its sources (`jobs.expand`, `jobs.collapse`) |
-| `F3` / `S-F3` | Filter the Operations panel by result / reset its filters (`jobs.result-filter`, `jobs.reset-filter`) |
+| `C-c` | Cancel the selected job |
+| `C-s` | Soft stop the selected running job |
+| `C-p` | Pause a queued job |
+| `C-r` | Resume a paused job or retry a failed or canceled one |
+| `C-↑` / `C-↓` | Move the job in the queue |
+| `F8` | Clear finished jobs |
+| `M-→` / `M-←` | Expand / collapse a multi-source job into its sources |
+| `F3` / `S-F3` | Filter the Operations panel by result / reset its filters |
 | `+` / `-` / `C-u` | Raise, lower or clear the transfer rate limit (Queue panel focused) |
 | `Tab` | Cycle the panels |
-| `C-Space` | Move the Operations panel between the right column and full width at the bottom (`jobs.toggle-operations-layout`) |
-| `Enter` | Maximize the focused Operations panel with wrapped lines (`jobs.maximize-pane`); `Esc`, `Enter` or `Left` restore it |
-| `Left` | Back to the file view (`jobs.close`) |
+| `C-Space` | Move the Operations panel between the right column and full width at the bottom |
+| `Enter` | Maximize the focused Operations panel with wrapped lines; `Esc`, `Enter` or `Left` restore it |
+| `Left` | Back to the file view |
 
 **Soft stop** asks a running job to stop once the file it is working on is
 complete: that file finishes normally, nothing further starts, and the job ends
@@ -206,7 +205,7 @@ When the selected job has warnings (non-fatal issues such as a symlink that
 had to be dereferenced, or fileindex scan problems), a **Messages (N)** panel
 lists them between Details and Operations. It is at most 8 rows tall and
 has a cursor line that moves with the arrow, `PgUp`/`PgDn` and `Home`/`End`
-keys while focused. `jobs.copy-message` (**Jobs -> Copy message**) copies the
+keys while focused. **Jobs -> Copy message** copies the
 selected message's full text to the clipboard.
 
 With the Details panel focused, `+` and `-` shorten or lengthen the transfer
@@ -219,8 +218,7 @@ in `[jobs]` to make it permanent.
 Some background tasks leave a result to look at, such as the file index
 [differences report](fileindex.md#report-differences). The Details panel shows
 it as `Results:` (for example "3 differences"), and the footer offers
-**Results** while such a job is selected. **Jobs -> Show results**
-(`jobs.show-results`) opens the result again, even after you closed it or when
+**Results** while such a job is selected. **Jobs -> Show results** opens the result again, even after you closed it or when
 it arrived while you were busy elsewhere. A picker opened this way returns to
 the jobs view on Esc; choosing a path in it switches to the file list. On a job
 without results, the action says so.
@@ -228,7 +226,7 @@ without results, the action says so.
 # Undoing a job
 
 A finished copy, move, rename or mass rename can be reversed from the jobs view
-with **Jobs → Undo job** (`jobs.undo`). Renames and mass renames done in the
+with **Jobs → Undo job**. Renames and mass renames done in the
 file view are listed as finished `rename` jobs, one job per rename (one per
 Apply in the mass rename dialog), so they can be undone the same way. Undo asks
 for confirmation (No is the default), then runs as its own `undo` job in the
@@ -318,7 +316,7 @@ target disk is too full the prompt offers Retry (`R`) and Abort (`B`).
 ### Answering from the file view
 
 You do not have to open the jobs view. `C-q` or `M-q`
-(`jobs.answer-blocker`, Esc menu `a`) opens the quick dialog for the job that
+(Esc menu `a`) opens the quick dialog for the job that
 has waited longest. Postpone dismisses it and the job keeps waiting. After you
 answer, the next waiting job's dialog opens automatically.
 

@@ -1,8 +1,8 @@
 # Paras Commander
 
-A Linux terminal twin-panel file manager inspired by Midnight Commander and fzf, written in Go using a TUI.
+A Linux terminal twin-panel file manager inspired by Midnight Commander and fzf, written in Go.
 
-⚠️ **Relatively stable** Use at your own risk.
+**Use at your own risk.**
 
 📖 **Documentation: <https://paranoidi.github.io/paras-commander/>** (sources in `docs/`; `task docs:serve` browses it locally, needs `uv`).
 

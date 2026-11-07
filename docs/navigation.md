@@ -6,9 +6,9 @@ Besides typing paths and pressing Enter, Paras Commander has several ways to get
 
 | | |
 |---|---|
-| Back / forward | `C-←` / `C-→` (`nav.backward`, `nav.forward`) |
-| History dialog | `M-h` (`panel.history-dialog`) or `C-h`; Left/Right -> History...; Esc, `h` |
-| Both panels | `F5` inside the dialog (`panel.history-both-panels`) |
+| Back / forward | `C-←` / `C-→` |
+| History dialog | `M-h` or `C-h`; Left/Right -> History...; Esc, `h` |
+| Both panels | `F5` inside the dialog |
 
 Each panel remembers every directory it visited (most recent first, up to 200). Back and forward move through that list without adding entries. A directory that no longer exists is skipped and a warning toast says so. Returning to a directory restores the previously highlighted entry.
 
@@ -18,19 +18,19 @@ If [zoxide](https://github.com/ajeetdsouza/zoxide) is installed, an **Include zo
 
 ## Pinned items
 
-`M-Insert` (`panel.pin-toggle`) pins or unpins the file or directory under the cursor; a pinned entry shows a pin icon and the menu bar shows a pin count. The same key pins the highlighted row in the Find, History, Bookmarks, Compare and Duplicates views. `M-n` (`panel.pin-dialog`, Esc then `N`) opens the pinned list.
+`M-Insert` pins or unpins the file or directory under the cursor; a pinned entry shows a pin icon and the menu bar shows a pin count. The same key pins the highlighted row in the Find, History, Bookmarks, Compare and Duplicates views. `M-n` (Esc then `N`) opens the pinned list.
 
 Pins last for the session and are not saved to disk. In the pin dialog Enter opens the entry in the active panel, `S-←` / `S-→` open it in a panel and keep the dialog open, `F3` previews it fullscreen and returns to the dialog on close, `F8` unpins and `S-F8` clears all.
 
 ## Latched panel sync
 
-`M-y` (`panel.toggle-sync`) makes the active panel the driver: moving the cursor onto a directory shows that directory in the other panel. The status line shows ` Sync -> ` or ` <- Sync `. Only one panel drives; pressing `M-y` on the other panel moves the role. Following does not touch the other panel's history. Cursor on a file does nothing.
+`M-y` makes the active panel the driver: moving the cursor onto a directory shows that directory in the other panel. The status line shows ` Sync -> ` or ` <- Sync `. Only one panel drives; pressing `M-y` on the other panel moves the role. Following does not touch the other panel's history. Cursor on a file does nothing.
 
 Sync turns itself off when you use "open directory in other panel" (`M-o`), "open directory in other panel and focus" (`C-M-o`), or "open current path in other panel" (`M-i`), when you enable quick view, and when you hide the inactive panel.
 
 ## Bookmarks and the path picker
 
-`C-b` (also `C-g`, `C-e`; `bookmark.open`, Esc then `B`) opens the bookmarks list. `C-M-b` (`bookmark.add`, Esc then `b`) adds the current directory under a name you type (empty names are rejected).
+`C-b` (also `C-g`, `C-e`; Esc then `B`) opens the bookmarks list. `C-M-b` (Esc then `b`) adds the current directory under a name you type (empty names are rejected).
 
 Bookmarks are compatible with [fzf-marks](https://github.com/urbainvaes/fzf-marks): marks are read from `[bookmarks].file`, else `$FZF_MARKS_FILE`, else `~/.fzf-marks`, as `name : path` lines, and new marks are appended there. GTK 3 bookmarks (`~/.config/gtk-3.0/bookmarks`) are listed after them, read-only. The Source column shows which one each row came from. `F8` deletes a mark (fzf-marks only). Enter opens in the active panel; `S-←` / `S-→` open in a panel and keep the dialog open.
 
@@ -38,7 +38,7 @@ The same list serves as a **path picker** in path fields (copy and move destinat
 
 ## Jump to directory
 
-`M-m` (`panel.jump-dialog`, Left/Right menu "Jump to directory", leader `t`) changes the panel's directory by typing part of its name. It is the [Find](find-files.md) dialog reduced to one job: fuzzy-type, press Enter, the panel changes to that directory.
+`M-m` (Left/Right menu "Jump to directory", leader `t`) changes the panel's directory by typing part of its name. It is the [Find](find-files.md) dialog reduced to one job: fuzzy-type, press Enter, the panel changes to that directory.
 
 Only directories are indexed, breadth-first: every directory directly under the panel's path first, then the next level down, and so on, so shallow targets show up immediately even in very large trees.
 

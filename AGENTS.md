@@ -88,6 +88,7 @@ CRITICAL:
 - Features should be documented for end-user under ./docs/
 - Each feature should live it's own file, update the file as feature evolves
 - Feature is a large functionality, not a simple button or a toggle. Examples: (terminal graphics, job queue, panel comparison)
+- User-facing docs under `./docs/` (everything except `docs/agents/`) never mention action ids (`panel.toggle-carousel`) or internal source paths. Describe commands by feature name, default key and menu entry. `keybindings.toml` examples use the `"<action>"` placeholder; users get real names from `pc --config-stub`.
 
 # Auto-commit
 
