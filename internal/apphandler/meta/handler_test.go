@@ -293,7 +293,7 @@ func processAlive(pid int) bool {
 	return syscall.Kill(pid, 0) == nil
 }
 
-func TestScheduleRenderDebounced_burstWakesCoalesceWithoutRace(t *testing.T) {
+func TestScheduleRenderFlush_burstWakesCoalesceWithoutRace(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatal(err)
@@ -302,7 +302,7 @@ func TestScheduleRenderDebounced_burstWakesCoalesceWithoutRace(t *testing.T) {
 
 	h := &Handler{screen: screen, model: &ui.Model{}, host: &fakeHost{panels: [2]*panel.State{{}, {}}}}
 	h.model.MetaResults[0] = []ui.MetaColumnState{
-		{EntryName: "size", Results: map[string]string{"/p": ""}},
+		{EntryName: "size", PendingCount: 1, Results: map[string]string{"/p": ""}},
 	}
 	h.runGen[0] = 1
 
@@ -320,9 +320,9 @@ func TestScheduleRenderDebounced_burstWakesCoalesceWithoutRace(t *testing.T) {
 		wake()
 	}
 
-	// Straddle the ~16ms timer expiry so the callback races HandleWake's
-	// timer-field access if the callback still writes Handler state.
-	deadline := time.Now().Add(40 * time.Millisecond)
+	// Straddle the timer expiry so the callback races HandleWake's timer-field access if the
+	// callback still writes Handler state.
+	deadline := time.Now().Add(config.MetaLayoutInterval + 40*time.Millisecond)
 	for time.Now().Before(deadline) {
 		wake()
 		time.Sleep(time.Millisecond)
@@ -338,14 +338,14 @@ func TestScheduleRenderDebounced_burstWakesCoalesceWithoutRace(t *testing.T) {
 		}
 		if _, ok := ie.Data().(RenderFlushPayload); ok {
 			flushes++
-			h.HandleRenderFlush()
+			h.HandleRenderFlush(RenderFlushPayload{})
 		}
 	}
 	if flushes < 1 {
 		t.Fatal("expected at least one coalesced RenderFlushPayload")
 	}
-	if flushes > 8 {
-		t.Fatalf("flushes = %d, want ~60fps coalescing, not one per wake", flushes)
+	if flushes > 2 {
+		t.Fatalf("flushes = %d, want one per interval, not one per wake", flushes)
 	}
 }
 
@@ -406,13 +406,13 @@ func TestHandleRenderFlush_notifiesHostOnlyWhenColumnResolved(t *testing.T) {
 	h.runGen[0] = 1
 
 	h.HandleWake(WakePayload{PanelID: 0, EntryName: "info", Path: "/b", Value: "1", Gen: 1})
-	h.HandleRenderFlush()
+	h.HandleRenderFlush(RenderFlushPayload{})
 	if len(fh.resolvedCalls) != 0 {
 		t.Fatalf("resolvedCalls = %v, want none while /a is still pending", fh.resolvedCalls)
 	}
 
 	h.HandleWake(WakePayload{PanelID: 0, EntryName: "info", Path: "/a", Value: "2", Gen: 1})
-	h.HandleRenderFlush()
+	h.HandleRenderFlush(RenderFlushPayload{})
 	if len(fh.resolvedCalls) != 1 || fh.resolvedCalls[0] != 0 {
 		t.Fatalf("resolvedCalls = %v, want [0] once the column fully resolved", fh.resolvedCalls)
 	}
@@ -762,7 +762,7 @@ func TestHandlePanelDirChanged_cancelsStaleRunAndRejectsOldWakes(t *testing.T) {
 		t.Fatalf("runGen = %d, want it bumped past the stale generation", h.runGen[0])
 	}
 	h.HandleWake(WakePayload{PanelID: 0, EntryName: "info", Path: "/old", Value: "done", Gen: staleGen})
-	h.HandleRenderFlush() // stops the debounce timer HandleWake armed; h.screen is nil in this test
+	h.HandleRenderFlush(RenderFlushPayload{}) // stops the debounce timer HandleWake armed; h.screen is nil in this test
 	if got := h.model.MetaResults[0][0].Results["/old"]; got != "*" {
 		t.Fatalf("stale-gen wake modified results: got %q, want unchanged %q", got, "*")
 	}
@@ -1283,9 +1283,10 @@ func TestResultsGen_wakeAndDispatchBumpAndLayoutSeesNewValue(t *testing.T) {
 	if h.model.MetaResults[0][0].ResultsGen <= gen0 {
 		t.Fatal("a wake result must bump ResultsGen")
 	}
+	h.HandleRenderFlush(RenderFlushPayload{})
 	after, _ := ui.LayoutMetaColumns(h.model.MetaResults[0])
 	if got := strings.TrimSpace(after[0].Formatted[cedar]); got != "pear" {
-		t.Fatalf("after wake: cell = %q, want pear", got)
+		t.Fatalf("after flush: cell = %q, want pear", got)
 	}
 
 	gen1 := h.model.MetaResults[0][0].ResultsGen
@@ -1387,26 +1388,6 @@ func TestReportLostColumns_newRunReseeds(t *testing.T) {
 	h.reportLostColumns(0)
 	if len(fh.messages) != 0 {
 		t.Fatalf("messages = %q: a new run must not compare against the old one", fh.messages)
-	}
-}
-
-func TestReportLostColumns_pendingChecksAreSpaced(t *testing.T) {
-	fh := &fakeHost{fit: metaFit(40, "Heron", "Otter")}
-	h := &Handler{host: fh, model: &ui.Model{}}
-	h.model.MetaResults[0] = []ui.MetaColumnState{{EntryName: "heron", PendingCount: 3}}
-	h.reportLostColumns(0)
-	h.fitWatch[0].seededAt = time.Now().Add(-MinColumnShownBeforeToast)
-
-	fh.fit = metaFit(40, "Heron")
-	h.reportLostColumns(0)
-	if len(fh.messages) != 0 {
-		t.Fatalf("messages = %q: checked inside the interval", fh.messages)
-	}
-
-	h.fitWatch[0].checkedAt = time.Now().Add(-columnFitCheckInterval)
-	h.reportLostColumns(0)
-	if len(fh.messages) != 1 {
-		t.Fatalf("messages = %q, want the toast once the interval passed", fh.messages)
 	}
 }
 

@@ -81,6 +81,10 @@ const (
 	// DefaultDirWatchDebounce is the throttle window of directory-watch wakeups: changes within
 	// it share one panel re-list, and a continuous stream still re-lists once per window.
 	DefaultDirWatchDebounce = 250 * time.Millisecond
+	// MetaLayoutInterval is how long a panel holds its meta column layout after a run starts, and
+	// the minimum gap between later layout updates while commands are running. Keep it below
+	// meta.MinColumnShownBeforeToast so the first layout of a run stays quiet.
+	MetaLayoutInterval = 250 * time.Millisecond
 	// DefaultDirWatchMaxPerPanel caps the directories watched per panel (the panel root first,
 	// then expanded tree directories); beyond it the periodic refresh covers the rest.
 	DefaultDirWatchMaxPerPanel = 512

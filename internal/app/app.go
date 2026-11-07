@@ -1157,7 +1157,7 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 	case metactrl.WakePayload:
 		a.metaCtrl.HandleWake(d)
 	case metactrl.RenderFlushPayload:
-		a.metaCtrl.HandleRenderFlush()
+		a.metaCtrl.HandleRenderFlush(d)
 		a.render()
 		out.didRender = true
 	case metactrl.LoadPayload:

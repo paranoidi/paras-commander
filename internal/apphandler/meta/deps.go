@@ -65,16 +65,19 @@ type Handler struct {
 	loadGen [2]uint64
 	// loadPending is true while an async meta.toml load is in flight for that panel.
 	loadPending [2]bool
-	// renderDebounce coalesces meta result renders at ~60 fps. The timer callback only
-	// posts RenderFlushPayload; HandleRenderFlush consumes it on the event loop.
-	renderDebounce sched.Debouncer
+	// renderDebounce paces each panel's flushes at config.MetaLayoutInterval. The timer callback
+	// only posts RenderFlushPayload; HandleRenderFlush consumes it on the event loop.
+	renderDebounce [2]sched.Debouncer
 	// resortPending marks panels whose SortMeta sort target column received a new value since
-	// the last render flush; HandleRenderFlush re-sorts those panels once, coalesced with the
-	// same 16ms debounce as the repaint itself.
+	// the last render flush; HandleRenderFlush signals those panels once, coalesced with the
+	// repaint itself.
 	resortPending [2]bool
 	// pendingReveal fires once per busy period after [panels].pending_marker_delay_ms and posts
 	// PendingRevealPayload; HandlePendingReveal then shows the markers (clears PendingHidden).
 	pendingReveal [2]sched.Debouncer
+	// layoutGuess holds each panel's last measured column layouts by EntryName, the Guess of its
+	// next run.
+	layoutGuess [2]map[string]ui.MetaLayoutGuess
 	// fitWatch tracks the drawn columns per panel so a column lost to incoming results is
 	// reported (reportLostColumns).
 	fitWatch [2]columnFitWatch
@@ -112,9 +115,9 @@ type WakePayload struct {
 	Gen    uint64
 }
 
-// RenderFlushPayload is posted by the debounced meta render timer to coalesce frequent
-// WakePayload renders into a single repaint (avoids one render per entry with large dirs).
-type RenderFlushPayload struct{}
+// RenderFlushPayload is posted by a panel's paced meta render timer to coalesce frequent
+// WakePayload events; the event loop publishes the panel's layout and repaints.
+type RenderFlushPayload struct{ PanelID int }
 
 // PendingRevealPayload is posted by the pendingReveal timer when a meta command has been running
 // for the pending marker delay; Gen is the panel's run generation when the timer was armed.

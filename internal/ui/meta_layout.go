@@ -48,6 +48,7 @@ type metaCellsCache struct {
 	rightAlign bool
 	numeric    bool
 	levels     map[string]panel.MetaAlertLevel
+	measured   bool // at least one cell held a value, so width and rightAlign reflect real data
 }
 
 // LayoutMetaColumns formats each active meta column and returns layouts plus total terminal width
@@ -60,27 +61,31 @@ func LayoutMetaColumns(cols []MetaColumnState) (layouts []MetaColumnLayout, tota
 	for i := range cols {
 		col := &cols[i]
 		c := col.layoutCache
-		if col.ResultsGen == 0 || c == nil || c.gen != col.ResultsGen {
+		if col.LayoutGen == 0 || c == nil || c.gen != col.LayoutGen {
 			w, formatted, rightAlign := layoutMetaCells(col.Results, col.Pending)
 			c = &metaCellsCache{
-				gen: col.ResultsGen, width: w, formatted: formatted, rightAlign: rightAlign,
+				gen: col.LayoutGen, width: w, formatted: formatted, rightAlign: rightAlign,
 				numeric: panel.MetaValuesNumeric(col.Results, col.Pending),
-				levels:  metaCellLevels(col),
+				levels:  metaCellLevels(col), measured: metaColumnHasValues(col),
 			}
-			if col.ResultsGen != 0 {
+			if col.LayoutGen != 0 {
 				col.layoutCache = c
 			}
 		}
 		w := c.width
 		// The title sets a floor so the header is not clipped while cells are still narrow
 		// (e.g. every row showing the pending icon).
-		w = max(w, min(runewidth.StringWidth(col.ColumnTitle), panelListMetaMax))
+		w = max(w, min(runewidth.StringWidth(col.ColumnTitle), panelListMetaMax), col.Guess.Width)
+		rightAlign := c.rightAlign
+		if !c.measured && col.Guess.Width > 0 {
+			rightAlign = col.Guess.RightAlign
+		}
 		layouts[i] = MetaColumnLayout{
 			EntryName:  col.EntryName,
 			Title:      col.ColumnTitle,
 			Width:      w,
 			Formatted:  c.formatted, // shared with later draws: read-only
-			RightAlign: c.rightAlign,
+			RightAlign: rightAlign,
 			Numeric:    c.numeric,
 			Pending:    col.Pending,
 
@@ -93,6 +98,26 @@ func LayoutMetaColumns(cols []MetaColumnState) (layouts []MetaColumnLayout, tota
 		totalWidth += w
 	}
 	return layouts, totalWidth
+}
+
+// MeasuredMetaLayout is the layout col's values last came to, without the title or col.Guess; ok
+// is false when no layout held a value (an empty listing, or one the column's command skips, says
+// nothing about the next one).
+func MeasuredMetaLayout(col *MetaColumnState) (guess MetaLayoutGuess, ok bool) {
+	if c := col.layoutCache; c != nil && c.measured {
+		return MetaLayoutGuess{Width: c.width, RightAlign: c.rightAlign}, true
+	}
+	return MetaLayoutGuess{}, false
+}
+
+// metaColumnHasValues reports whether any cell of col holds a real value.
+func metaColumnHasValues(col *MetaColumnState) bool {
+	for _, raw := range col.Results {
+		if raw != col.Pending && strings.TrimSpace(raw) != "" {
+			return true
+		}
+	}
+	return false
 }
 
 // metaCellLevels evaluates col's alert rules on its raw values; still-pending cells never alert.

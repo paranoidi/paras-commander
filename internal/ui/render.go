@@ -55,6 +55,14 @@ const (
 	SubFocusInactivePreview
 )
 
+// MetaLayoutGuess is a column's expected layout, taken from its last measured values, so a run
+// does not move the listing as the same kind of values arrive: Width is a floor on the drawn width
+// until every cell resolved, RightAlign the alignment until the first value arrives.
+type MetaLayoutGuess struct {
+	Width      int
+	RightAlign bool
+}
+
 // MetaColumnState is one active meta column on a panel.
 type MetaColumnState struct {
 	EntryName   string
@@ -76,12 +84,17 @@ type MetaColumnState struct {
 	PendingHidden bool
 	// Alerts are the column's warn and critical rules, evaluated on the raw Results values.
 	Alerts panel.MetaAlerts
-	// ResultsGen is bumped by whoever mutates Results or Pending (the meta handler), so
-	// LayoutMetaColumns can reuse its formatted cells while the generation is unchanged. It must
-	// only grow over the column's lifetime. 0 means unmanaged: never cached, so a column built as
-	// a literal always lays out its current Results.
+	// ResultsGen is bumped by whoever mutates Results or Pending (the meta handler). It must only
+	// grow over the column's lifetime.
 	ResultsGen uint64
-	// layoutCache is the layout LayoutMetaColumns last computed for ResultsGen. It is replaced,
+	// LayoutGen is the ResultsGen the meta handler last published: the drawn cells, width and
+	// alignment stay those of that generation until it publishes again, while Results keep
+	// feeding sort and filters. 0 means unmanaged: never cached, so a column built as a literal
+	// always lays out its current Results.
+	LayoutGen uint64
+	// Guess is what a running column expects its values to look like (zero: nothing to go on).
+	Guess MetaLayoutGuess
+	// layoutCache is the layout LayoutMetaColumns last computed for LayoutGen. It is replaced,
 	// never mutated, and only touched on the event loop; a copy of the column that misses it
 	// simply recomputes.
 	layoutCache *metaCellsCache
