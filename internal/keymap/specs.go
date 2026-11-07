@@ -1597,10 +1597,10 @@ func DefaultActionSpecs() []ActionSpec {
 		{
 			ID:             ActionPreviewToggleRaw,
 			Views:          HelpFilePreview,
-			Title:          "Toggle raw/rendered markdown",
+			Title:          "Toggle raw file view",
 			Section:        "Preview",
 			DefaultKeys:    nil, // overlay: DefaultFilePreviewOverlayKeys
-			Keywords:       []string{"markdown", "raw", "render", "source", "f6"},
+			Keywords:       []string{"markdown", "diff", "raw", "render", "source", "f6"},
 			PreviewMenuKey: "r",
 		},
 		{

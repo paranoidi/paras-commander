@@ -163,24 +163,17 @@ func FunctionKeysFilePreviewStylePicker() []FunctionKey {
 }
 
 // FunctionKeysFilePreviewView is the footer legend while the full-screen preview is active.
-// Esc is the primary exit key; Left also closes the view. rawMarkdown reflects
-// preview.toggle-raw's current state: the F6 hint reads "Raw" when showing rendered
-// markdown (F6 would switch to raw source) and "Render" when already showing raw source.
-// launchedAsFileViewer is true when the app was started directly via `pc <file>`, where Esc
+// Esc is the primary exit key; Left also closes the view. toggleRawHint labels the F6 entry
+// with what preview.toggle-raw would switch to; empty omits the entry rather than advertising
+// an action that does nothing. launchedAsFileViewer is true when the app was started directly via `pc <file>`, where Esc
 // quits the app just like F10 -- the separate "Esc Close" entry is omitted since it would
-// duplicate F10 Quit rather than describe a distinct action. showToggleRaw is false for files
-// preview.toggle-raw would no-op on (non-markdown, or a git diff), in which case the F6 entry
-// is omitted entirely rather than advertising an action that does nothing. F3 is reserved for
+// duplicate F10 Quit rather than describe a distinct action. F3 is reserved for
 // toggling direct-key chord hints in the `:` leader menu (menu.FunctionKeyLeaderMenuToggleChords),
 // matching the file-list view, so it is not listed here. F1 Help, / Search, and F10 Quit carry no
 // ActionID so their labels survive vi-motion mode: / is the standard search key, and
 // q in the preview is bound to preview.close via the leader-menu overlay, so labelling Quit
 // with a vi-motion letter would show a letter that doesn't actually quit.
-func FunctionKeysFilePreviewView(rawMarkdown, launchedAsFileViewer, showToggleRaw bool) []FunctionKey {
-	toggleHint := "Raw"
-	if rawMarkdown {
-		toggleHint = "Render"
-	}
+func FunctionKeysFilePreviewView(toggleRawHint string, launchedAsFileViewer bool) []FunctionKey {
 	out := []FunctionKey{}
 	if !launchedAsFileViewer {
 		out = append(out, FooterEscClose)
@@ -191,8 +184,8 @@ func FunctionKeysFilePreviewView(rawMarkdown, launchedAsFileViewer, showToggleRa
 		FunctionKey{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit", ActionID: keymap.ActionFileEdit},
 		FunctionKey{Key: tcell.KeyF5, KeyLabel: "F5", Hint: "Reload", ActionID: keymap.ActionPreviewReload},
 	)
-	if showToggleRaw {
-		out = append(out, FunctionKey{Key: tcell.KeyF6, KeyLabel: "F6", Hint: toggleHint, ActionID: keymap.ActionPreviewToggleRaw})
+	if toggleRawHint != "" {
+		out = append(out, FunctionKey{Key: tcell.KeyF6, KeyLabel: "F6", Hint: toggleRawHint, ActionID: keymap.ActionPreviewToggleRaw})
 	}
 	return append(out,
 		FunctionKey{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Delete this", ActionID: keymap.ActionFileDelete},

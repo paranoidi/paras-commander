@@ -381,7 +381,7 @@ func (h *Handler) TryDispatchFileView(actionID string) bool {
 	case keymap.ActionPreviewThemePicker:
 		h.toggleFilePreviewThemePicker()
 	case keymap.ActionPreviewToggleRaw:
-		h.toggleFilePreviewRawMarkdown()
+		h.toggleFilePreviewRaw()
 	case keymap.ActionPreviewDiffNextHunk:
 		h.hunkNavigate(previewTargetInactive, 1)
 	case keymap.ActionPreviewDiffPrevHunk:

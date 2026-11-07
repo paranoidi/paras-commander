@@ -417,9 +417,8 @@ func (a *App) auxiliaryViewFooterKeys() ([]menu.FunctionKey, bool) {
 			return menu.FunctionKeysFilePreviewStylePicker(), true
 		}
 		out := menu.FunctionKeysFilePreviewView(
-			a.model.FullscreenFilePreviewRawMarkdown,
+			a.previewCtrl.FilePreviewToggleRawHint(),
 			a.launchedFileViewer,
-			a.previewCtrl.FilePreviewToggleRawFooterEligible(),
 		)
 		if a.model.ViMotionMode {
 			out = viMotionFooterKeys(out, a.keys.PreviewMenuKey)

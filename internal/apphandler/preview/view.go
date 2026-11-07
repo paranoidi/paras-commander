@@ -14,17 +14,17 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
-// toggleFilePreviewRawMarkdown flips the fullscreen preview of a markdown file between
-// rendered markdown and raw Chroma-highlighted source. No-op for non-markdown files and
-// while showing a git diff (IsDiff), per preview.toggle-raw.
-func (h *Handler) toggleFilePreviewRawMarkdown() {
-	h.mu.RLock()
-	st := h.model.FullscreenFilePreview
-	h.mu.RUnlock()
-	if !st.Open || st.Path == "" || st.IsDiff || !previewrun.IsMarkdownPath(st.Path) {
+// toggleFilePreviewRaw flips the fullscreen preview between the file as it is and its git diff
+// or rendered markdown, per preview.toggle-raw. No-op when FilePreviewToggleRawHint is empty.
+func (h *Handler) toggleFilePreviewRaw() {
+	if h.FilePreviewToggleRawHint() == "" {
 		return
 	}
-	h.model.FullscreenFilePreviewRawMarkdown = !h.model.FullscreenFilePreviewRawMarkdown
+	h.mu.RLock()
+	isDiff := h.model.FullscreenFilePreview.IsDiff
+	h.mu.RUnlock()
+	h.model.FullscreenFilePreviewRaw = !h.model.FullscreenFilePreviewRaw
+	h.model.FullscreenFilePreviewRawFromDiff = h.model.FullscreenFilePreviewRaw && isDiff
 	h.patchFullscreenFilePreview(func(fp *ui.FilePreviewState) {
 		fp.Scroll = 0
 	})
@@ -36,14 +36,24 @@ func (h *Handler) toggleFilePreviewRawMarkdown() {
 	})
 }
 
-// FilePreviewToggleRawFooterEligible reports whether the footer should show F6 Raw/Render:
-// true when the fullscreen preview is open on a markdown file that isn't a git diff,
-// mirroring toggleFilePreviewRawMarkdown's own no-op guard.
-func (h *Handler) FilePreviewToggleRawFooterEligible() bool {
+// FilePreviewToggleRawHint names what preview.toggle-raw would switch the fullscreen preview to:
+// "Raw" from a git diff or rendered markdown, "Diff" or "Render" back from raw. Empty when the
+// toggle has nothing to switch between.
+func (h *Handler) FilePreviewToggleRawHint() string {
 	h.mu.RLock()
 	st := h.model.FullscreenFilePreview
 	h.mu.RUnlock()
-	return st.Open && st.Path != "" && !st.IsDiff && previewrun.IsMarkdownPath(st.Path)
+	switch {
+	case !st.Open || st.Path == "":
+		return ""
+	case h.model.FullscreenFilePreviewRawFromDiff:
+		return "Diff"
+	case h.model.FullscreenFilePreviewRaw:
+		return "Render"
+	case st.IsDiff || previewrun.IsMarkdownPath(st.Path):
+		return "Raw"
+	}
+	return ""
 }
 
 // closeOrQuitFilePreview closes the fullscreen preview back to the browser, or quits the
@@ -269,7 +279,7 @@ func (h *Handler) tryFilePreviewAction(nextAction string) (quit bool, handled bo
 		h.toggleFilePreviewThemePicker()
 		return false, true
 	case keymap.ActionPreviewToggleRaw:
-		h.toggleFilePreviewRawMarkdown()
+		h.toggleFilePreviewRaw()
 		return false, true
 	case keymap.ActionPreviewReload:
 		h.refreshFullscreenFilePreview()
@@ -452,7 +462,8 @@ func (h *Handler) OpenFullscreenFilePreviewAt(path string, isDir bool) error {
 	titleBase := filepath.Base(path)
 	h.captureFilePreviewHold(previewTargetFullscreen)
 	h.model.FilePreviewThemePicker = dialog.FilePreviewThemePickerState{}
-	h.model.FullscreenFilePreviewRawMarkdown = false
+	h.model.FullscreenFilePreviewRaw = false
+	h.model.FullscreenFilePreviewRawFromDiff = false
 	if h.model.ViewMode != ui.ViewFilePreview {
 		h.fullscreenReturnView, h.fullscreenReturnMenus = h.model.ViewMode, h.model.MenuDefinitions
 	}

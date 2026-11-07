@@ -40,7 +40,7 @@ The preview takes the whole screen (no menu bar; the filename is the top row). B
 | `n` / `N` | Next / previous match; stops at the last / first match with a warning |
 | `Down` / `Up`, `C-j` / `C-k` | Next / previous match, only while typing the query and when it has matches (so `C-k` jumps instead of killing the line); after Enter use `n` / `N`, and the arrows scroll and `C-j` / `C-k` page as usual; rebind in `[preview_search]` |
 | `F5` | Re-read the file from disk, keeping scroll and search |
-| `F6` | Markdown: switch between rendered and raw source |
+| `F6` | Git diff or markdown: switch to the raw file and back |
 | `F9` | Pick the syntax theme (live preview, Enter saves, Esc reverts) |
 | `:` | Preview menu |
 | `C-M-j` / `C-M-k` | Next / previous change in a diff (also in quick view) |
@@ -54,8 +54,8 @@ The scrollbar on the right shows where you are in long content.
 
 - **Text and source**: highlighted with Chroma. `[preview].style` selects the theme (default `catppuccin-frappe`); `[preview].line_numbers` toggles the gutter. Add your own Chroma XML styles to `~/.config/pc/themes/preview/*.xml` (they appear in the F9 picker; a custom style with a built-in's name overrides it, and the name `default` is reserved). Preview themes are separate from UI [themes](themes.md).
 - **Large files**: the visible part appears right away and you can scroll or jump to the end at once. Text further down may show plain for a moment until highlighting catches up; rendered Markdown fills in from the top. Moving on to another file stops the work for the previous one.
-- **Markdown**: rendered with headings, emphasis, lists, quotes, links, tables and highlighted code fences. `F6` shows the source. In external mode point `[preview].command` at `glow` instead.
-- **Git diff**: a file with uncommitted changes shows its diff (staged-only changes diff against the index, others against HEAD) with the whole file visible. Unmodified, new or ignored files show plain content; the fullscreen title then reads `<filename> (<status>)`.
+- **Markdown**: rendered with headings, emphasis, lists, quotes, links, tables and highlighted code fences. `F6` shows the source, the footer then offers `F6 Render` to go back. In external mode point `[preview].command` at `glow` instead.
+- **Git diff**: a file with uncommitted changes shows its diff (staged-only changes diff against the index, others against HEAD) with the whole file visible. Unmodified, new or ignored files show plain content; the fullscreen title then reads `<filename> (<status>)`. In the fullscreen preview `F6 Raw` shows the file as it is, and `F6 Diff` returns to the diff; a markdown file then shows its source rather than the rendered page.
 - **Images**: drawn through Sixel, Kitty or Ueberzug++; see [Terminal graphics](graphics.md) for protocols, tmux and troubleshooting. A caption under the image carries format, size and EXIF metadata at the level set by `[preview].image_metadata` (`off`, `basic`, `essentials`, `full`). EXIF orientation is applied to the picture. Formats the Go library cannot decode (such as `.psd`) go through ImageMagick if `magick` or `convert` is installed.
 - **Video and audio**: ffprobe metadata, and for video a thumbnail grid made with ffmpeg (`video_thumb_cols`, `video_thumb_rows`, `video_metadata`). Thumbnails are cached under `$XDG_CACHE_HOME/pc/video-thumbs/`.
 - **Directories**: listed in quick view and the carousel child column; F3 on a directory only works when an external rule handles it.

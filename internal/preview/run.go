@@ -65,7 +65,7 @@ func WillRenderMarkdown(req Request) bool {
 	if strings.ToLower(strings.TrimSpace(req.Preview.Mode)) == config.PreviewModeExternal {
 		return false
 	}
-	if !IsMarkdownPath(req.Path) || req.RawMarkdown {
+	if !IsMarkdownPath(req.Path) || req.Raw {
 		return false
 	}
 	if req.GitDiff {
@@ -99,9 +99,8 @@ type Request struct {
 	// GitDiff, when true, shows git diff output instead of file content.
 	GitDiff   bool
 	GitStatus *gitstatus.Cell // nil when not in a git repo or file is unmodified
-	// RawMarkdown, when true, skips rendered markdown and shows raw Chroma-highlighted
-	// source for a markdown path instead. Ignored for non-markdown paths.
-	RawMarkdown bool
+	// Raw, when true, shows the file as it is: no git diff and no rendered markdown.
+	Raw bool
 	// Image, when true, runs the in-process image preview path instead of text/diff/markdown.
 	Image bool
 	// Media, when true, runs the in-process media (ffprobe + optional video thumbs) path.
@@ -202,7 +201,7 @@ func Run(ctx context.Context, req Request) Result {
 	if f, ok := archive.FormatForName(req.Path); ok && f.Listable() {
 		return runArchiveList(ctx, req, f)
 	}
-	if req.GitDiff {
+	if req.GitDiff && !req.Raw {
 		return runGitDiff(ctx, req)
 	}
 	mode := strings.ToLower(strings.TrimSpace(req.Preview.Mode))
@@ -210,7 +209,7 @@ func Run(ctx context.Context, req Request) Result {
 	case config.PreviewModeExternal:
 		return runExternal(ctx, req)
 	default:
-		if IsMarkdownPath(req.Path) && !req.RawMarkdown {
+		if IsMarkdownPath(req.Path) && !req.Raw {
 			return runMarkdown(ctx, req)
 		}
 		return runInternal(ctx, req)

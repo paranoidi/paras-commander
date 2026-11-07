@@ -534,7 +534,7 @@ func TestFunctionKeysFilePreviewStylePickerShowsEnterSave(t *testing.T) {
 
 func TestFunctionKeysFilePreviewViewShowsStyleF9(t *testing.T) {
 	t.Parallel()
-	keys := FunctionKeysFilePreviewView(false, false, true)
+	keys := FunctionKeysFilePreviewView("Raw", false)
 	if len(keys) != 9 {
 		t.Fatalf("FunctionKeysFilePreviewView len = %d, want Esc + F1 Help + / Search + F4 Edit + F5 Reload + F6 Raw + F8 Delete this + F9 Style + F10", len(keys))
 	}
@@ -575,7 +575,7 @@ func TestFunctionKeysFilePreviewViewShowsStyleF9(t *testing.T) {
 
 func TestFunctionKeysFilePreviewViewOmitsEscCloseWhenLaunchedAsFileViewer(t *testing.T) {
 	t.Parallel()
-	keys := FunctionKeysFilePreviewView(false, true, true)
+	keys := FunctionKeysFilePreviewView("Raw", true)
 	if len(keys) != 8 {
 		t.Fatalf("FunctionKeysFilePreviewView(launched) len = %d, want 8 (no Esc Close entry)", len(keys))
 	}
@@ -585,7 +585,7 @@ func TestFunctionKeysFilePreviewViewOmitsEscCloseWhenLaunchedAsFileViewer(t *tes
 		}
 	}
 
-	keys = FunctionKeysFilePreviewView(false, false, true)
+	keys = FunctionKeysFilePreviewView("Raw", false)
 	if keys[0] != FooterEscClose {
 		t.Fatalf("footer[0] = %+v, want Esc Close when not launched as a standalone file viewer", keys[0])
 	}
@@ -593,7 +593,7 @@ func TestFunctionKeysFilePreviewViewOmitsEscCloseWhenLaunchedAsFileViewer(t *tes
 
 func TestFunctionKeysFilePreviewViewShowsRenderWhenRaw(t *testing.T) {
 	t.Parallel()
-	keys := FunctionKeysFilePreviewView(true, false, true)
+	keys := FunctionKeysFilePreviewView("Render", false)
 	for i := range keys {
 		if keys[i].Key == tcell.KeyF6 {
 			if keys[i].Hint != "Render" {
@@ -607,10 +607,10 @@ func TestFunctionKeysFilePreviewViewShowsRenderWhenRaw(t *testing.T) {
 
 func TestFunctionKeysFilePreviewViewHidesRawWhenNotEligible(t *testing.T) {
 	t.Parallel()
-	eligible := FunctionKeysFilePreviewView(false, false, true)
-	ineligible := FunctionKeysFilePreviewView(false, false, false)
+	eligible := FunctionKeysFilePreviewView("Raw", false)
+	ineligible := FunctionKeysFilePreviewView("", false)
 	if len(ineligible) != len(eligible)-1 {
-		t.Fatalf("FunctionKeysFilePreviewView(showToggleRaw=false) len = %d, want %d (eligible minus F6)", len(ineligible), len(eligible)-1)
+		t.Fatalf("FunctionKeysFilePreviewView(empty hint) len = %d, want %d (eligible minus F6)", len(ineligible), len(eligible)-1)
 	}
 	for _, k := range ineligible {
 		if k.Key == tcell.KeyF6 {

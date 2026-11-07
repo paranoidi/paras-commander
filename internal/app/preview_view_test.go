@@ -313,7 +313,7 @@ func TestFilePreviewOverlayMapsF5ToReload(t *testing.T) {
 	}
 }
 
-func TestToggleFilePreviewRawMarkdownFlipsAndResetsScrollForMarkdown(t *testing.T) {
+func TestToggleFilePreviewRawFlipsAndResetsScrollForMarkdown(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "notes.md")
 	writeFile(t, path)
@@ -330,8 +330,8 @@ func TestToggleFilePreviewRawMarkdownFlipsAndResetsScrollForMarkdown(t *testing.
 
 	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone))
 
-	if !app.model.FullscreenFilePreviewRawMarkdown {
-		t.Fatal("FullscreenFilePreviewRawMarkdown = false, want true after F6 on a markdown file")
+	if !app.model.FullscreenFilePreviewRaw {
+		t.Fatal("FullscreenFilePreviewRaw = false, want true after F6 on a markdown file")
 	}
 	app.commandsMu.RLock()
 	scroll := app.model.FullscreenFilePreview.Scroll
@@ -341,7 +341,7 @@ func TestToggleFilePreviewRawMarkdownFlipsAndResetsScrollForMarkdown(t *testing.
 	}
 }
 
-func TestToggleFilePreviewRawMarkdownNoOpForNonMarkdown(t *testing.T) {
+func TestToggleFilePreviewRawNoOpForNonMarkdown(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "notes.txt")
 	writeFile(t, path)
@@ -358,8 +358,8 @@ func TestToggleFilePreviewRawMarkdownNoOpForNonMarkdown(t *testing.T) {
 
 	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
 
-	if app.model.FullscreenFilePreviewRawMarkdown {
-		t.Fatal("FullscreenFilePreviewRawMarkdown = true, want false for a non-markdown file")
+	if app.model.FullscreenFilePreviewRaw {
+		t.Fatal("FullscreenFilePreviewRaw = true, want false for a non-markdown file")
 	}
 	app.commandsMu.RLock()
 	scroll := app.model.FullscreenFilePreview.Scroll
@@ -369,9 +369,9 @@ func TestToggleFilePreviewRawMarkdownNoOpForNonMarkdown(t *testing.T) {
 	}
 }
 
-func TestToggleFilePreviewRawMarkdownNoOpForDiff(t *testing.T) {
+func TestToggleFilePreviewRawLeavesDiffAndComesBack(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "notes.md")
+	path := filepath.Join(dir, "lantern.txt")
 	writeFile(t, path)
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
@@ -385,31 +385,41 @@ func TestToggleFilePreviewRawMarkdownNoOpForDiff(t *testing.T) {
 	app.model.FullscreenFilePreview.Scroll = 5
 	app.commandsMu.Unlock()
 
-	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
-
-	if app.model.FullscreenFilePreviewRawMarkdown {
-		t.Fatal("FullscreenFilePreviewRawMarkdown = true, want false while showing a diff")
+	if got := app.previewCtrl.FilePreviewToggleRawHint(); got != "Raw" {
+		t.Fatalf("hint on a diff = %q, want Raw", got)
 	}
-	app.commandsMu.RLock()
-	scroll := app.model.FullscreenFilePreview.Scroll
-	app.commandsMu.RUnlock()
-	if scroll != 5 {
-		t.Fatalf("Scroll = %d, want unchanged 5 (no-op)", scroll)
+	f6 := tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone)
+	app.previewCtrl.HandleFilePreviewViewKey(f6)
+
+	if !app.model.FullscreenFilePreviewRaw || !app.model.FullscreenFilePreviewRawFromDiff {
+		t.Fatalf("Raw = %v, RawFromDiff = %v, want both true after F6 on a diff",
+			app.model.FullscreenFilePreviewRaw, app.model.FullscreenFilePreviewRawFromDiff)
+	}
+	if got := app.previewCtrl.FilePreviewToggleRawHint(); got != "Diff" {
+		t.Fatalf("hint while raw = %q, want Diff", got)
+	}
+
+	app.previewCtrl.HandleFilePreviewViewKey(f6)
+
+	if app.model.FullscreenFilePreviewRaw || app.model.FullscreenFilePreviewRawFromDiff {
+		t.Fatalf("Raw = %v, RawFromDiff = %v, want both false after the second F6",
+			app.model.FullscreenFilePreviewRaw, app.model.FullscreenFilePreviewRawFromDiff)
 	}
 }
 
-func TestOpenFilePreviewFullscreenResetsRawMarkdownFlag(t *testing.T) {
+func TestOpenFilePreviewFullscreenResetsRawFlags(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "notes.md")
 	writeFile(t, path)
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	app.model.FullscreenFilePreviewRawMarkdown = true
+	app.model.FullscreenFilePreviewRaw = true
+	app.model.FullscreenFilePreviewRawFromDiff = true
 
 	app.previewCtrl.OpenFilePreviewFullscreen()
 
-	if app.model.FullscreenFilePreviewRawMarkdown {
-		t.Fatal("FullscreenFilePreviewRawMarkdown = true, want reset to false on a fresh fullscreen preview")
+	if app.model.FullscreenFilePreviewRaw || app.model.FullscreenFilePreviewRawFromDiff {
+		t.Fatal("raw state still set, want reset on a fresh fullscreen preview")
 	}
 }
 

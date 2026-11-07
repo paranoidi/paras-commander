@@ -137,7 +137,7 @@ func (h *Handler) refreshFullscreenFilePreview() {
 		return
 	}
 	req := h.previewRequest(st.Path, tw, contentH, h.host.ActivePanel().PathString(), h.model.PanelsChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetFullscreen, st.IsDir)
-	req.RawMarkdown = h.model.FullscreenFilePreviewRawMarkdown
+	req.Raw = h.model.FullscreenFilePreviewRaw
 	ctx, gen := h.beginPreviewRun(previewTargetFullscreen)
 	h.postRenderWake()
 	go h.runPreview(ctx, req, previewTargetFullscreen, gen)
@@ -294,9 +294,9 @@ func (h *Handler) fullscreenPreviewRendersMarkdown() bool {
 		return false
 	}
 	req := previewrun.Request{
-		Path:        path,
-		Preview:     h.host.Config().Preview,
-		RawMarkdown: h.model.FullscreenFilePreviewRawMarkdown,
+		Path:    path,
+		Preview: h.host.Config().Preview,
+		Raw:     h.model.FullscreenFilePreviewRaw,
 	}
 	if gitStatus := h.gitStatusForPath(path); gitStatus != nil {
 		req.GitDiff = true

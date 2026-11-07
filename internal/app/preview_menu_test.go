@@ -152,7 +152,7 @@ func TestPreviewMenuToggleRawLetter(t *testing.T) {
 
 	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone))
 	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModNone))
-	if !app.model.FullscreenFilePreviewRawMarkdown {
+	if !app.model.FullscreenFilePreviewRaw {
 		t.Fatal("'r' should toggle raw markdown on")
 	}
 }

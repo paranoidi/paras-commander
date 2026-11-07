@@ -115,7 +115,7 @@ func TestRunMarkdownExtensionCaseInsensitive(t *testing.T) {
 	}
 }
 
-func TestRunRawMarkdownRoutesToInternalHighlighting(t *testing.T) {
+func TestRunRawRoutesMarkdownToInternalHighlighting(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "meadow.md")
 	if err := os.WriteFile(path, []byte("# Wandering Otters\n\nA calm river story.\n"), 0o644); err != nil {
@@ -137,7 +137,7 @@ func TestRunRawMarkdownRoutesToInternalHighlighting(t *testing.T) {
 		t.Fatalf("rendered GutterWidth = %d, want 0 (markdown never gets a gutter)", rendered.GutterWidth)
 	}
 
-	req.RawMarkdown = true
+	req.Raw = true
 	raw := preview.Run(t.Context(), req)
 	if raw.ErrorMsg != "" {
 		t.Fatalf("ErrorMsg = %q", raw.ErrorMsg)
@@ -220,6 +220,51 @@ func TestRunGitDiffShowsWholeFileWithMarkers(t *testing.T) {
 	}
 	if len(res.DiffHunkLines) != 1 {
 		t.Fatalf("DiffHunkLines = %v, want one change-chunk start (not @@-only)", res.DiffHunkLines)
+	}
+}
+
+func TestRunRawShowsFileInsteadOfDiff(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not in PATH")
+	}
+	root := t.TempDir()
+	runGit(t, root, "init")
+	runGit(t, root, "config", "user.email", "t@example.com")
+	runGit(t, root, "config", "user.name", "test")
+
+	path := filepath.Join(root, "meadow.md")
+	if err := os.WriteFile(path, []byte(fmtLine(1, "alpha")), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, root, "add", "meadow.md")
+	runGit(t, root, "commit", "-m", "init")
+	if err := os.WriteFile(path, []byte(fmtLine(1, "bravo")), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cell := gitstatus.Cell{Unstaged: gitstatus.Modified}
+	res := preview.Run(t.Context(), preview.Request{
+		Path:      path,
+		TextWidth: 80,
+		WorkDir:   root,
+		Preview: config.PreviewConfig{
+			Mode:  config.PreviewModeInternal,
+			Style: config.DefaultPreviewStyle,
+		},
+		BaseStyle: tcell.StyleDefault,
+		GitDiff:   true,
+		GitStatus: &cell,
+		Raw:       true,
+	})
+	if res.ErrorMsg != "" {
+		t.Fatalf("ErrorMsg = %q", res.ErrorMsg)
+	}
+	if res.IsDiff || res.IsMarkdown {
+		t.Fatalf("IsDiff = %v, IsMarkdown = %v, want neither for raw", res.IsDiff, res.IsMarkdown)
+	}
+	flat := cellsString(res.HighlightedCells)
+	if !strings.Contains(flat, "line-01-bravo") || strings.Contains(flat, "line-01-alpha") {
+		t.Fatalf("expected the working-tree file with no diff, got %q", flat)
 	}
 }
 
