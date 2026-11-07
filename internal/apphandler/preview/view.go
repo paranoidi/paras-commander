@@ -2,6 +2,7 @@ package preview
 
 import (
 	"fmt"
+	"math"
 	"path/filepath"
 	"strings"
 
@@ -25,14 +26,64 @@ func (h *Handler) toggleFilePreviewRaw() {
 	h.mu.RUnlock()
 	h.model.FullscreenFilePreviewRaw = !h.model.FullscreenFilePreviewRaw
 	h.model.FullscreenFilePreviewRawFromDiff = h.model.FullscreenFilePreviewRaw && isDiff
-	h.patchFullscreenFilePreview(func(fp *ui.FilePreviewState) {
-		fp.Scroll = 0
-	})
+	h.captureRawToggleScroll()
 	h.refreshFullscreenFilePreview()
 	h.patchFullscreenFilePreview(func(fp *ui.FilePreviewState) {
 		if fp.Search.Active {
 			fp.RecomputeSearch()
 		}
+	})
+}
+
+// rawToggleAnchor is where the fullscreen preview was when preview.toggle-raw ran. Rows of a diff,
+// the raw file and rendered markdown don't line up, so it holds the text on screen to locate in
+// the new body, plus how far through the scroll range the view was. That fraction picks among
+// repeated lines and stands in when none of the text survives.
+type rawToggleAnchor struct {
+	texts    []string
+	fraction float64
+}
+
+// captureRawToggleScroll records the view's anchor. A toggle made before the last one landed keeps
+// the anchor it already holds, since the body on screen is still the one it came from.
+func (h *Handler) captureRawToggleScroll() {
+	if h.rawToggleScroll != nil {
+		return
+	}
+	tw, ch, lc := h.fullscreenFilePreviewScrollMetrics()
+	h.mu.RLock()
+	st := h.model.FullscreenFilePreview
+	h.mu.RUnlock()
+	maxStart := lc - ch
+	if maxStart <= 0 || st.Scroll <= 0 {
+		return
+	}
+	scroll := min(st.Scroll, maxStart)
+	base := ui.FilePreviewBodyStyle(h.host.Styles(), h.model.PanelsChromeBlocked())
+	h.rawToggleScroll = &rawToggleAnchor{
+		texts:    st.ScrollAnchors(scroll, ch, tw, base),
+		fraction: float64(scroll) / float64(maxStart),
+	}
+}
+
+// restoreRawToggleScroll puts the anchor's line at the top of the fullscreen preview's final body.
+func (h *Handler) restoreRawToggleScroll() {
+	h.mu.RLock()
+	st := h.model.FullscreenFilePreview
+	h.mu.RUnlock()
+	anchor := h.rawToggleScroll
+	if anchor == nil || st.Phase == ui.FilePreviewPhasePending || st.Phase == ui.FilePreviewPhaseRunning {
+		return
+	}
+	h.rawToggleScroll = nil
+	tw, ch, lc := h.fullscreenFilePreviewScrollMetrics()
+	scroll := int(math.Round(anchor.fraction * float64(max(0, lc-ch))))
+	base := ui.FilePreviewBodyStyle(h.host.Styles(), h.model.PanelsChromeBlocked())
+	if row, ok := st.LocateAnchor(anchor.texts, scroll, tw, base); ok {
+		scroll = row
+	}
+	h.patchFullscreenFilePreview(func(fp *ui.FilePreviewState) {
+		fp.Scroll = scroll
 	})
 }
 
@@ -464,6 +515,7 @@ func (h *Handler) OpenFullscreenFilePreviewAt(path string, isDir bool) error {
 	h.model.FilePreviewThemePicker = dialog.FilePreviewThemePickerState{}
 	h.model.FullscreenFilePreviewRaw = false
 	h.model.FullscreenFilePreviewRawFromDiff = false
+	h.rawToggleScroll = nil
 	if h.model.ViewMode != ui.ViewFilePreview {
 		h.fullscreenReturnView, h.fullscreenReturnMenus = h.model.ViewMode, h.model.MenuDefinitions
 	}

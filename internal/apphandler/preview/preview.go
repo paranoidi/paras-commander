@@ -1355,7 +1355,7 @@ func (h *Handler) runPreview(ctx context.Context, req previewrun.Request, target
 	partialShown := false
 	req.OnPartial = func(res previewrun.Result) {
 		partialShown = true
-		h.applyPreviewResult(req, target, runGen, res)
+		h.applyPreviewPartial(req, target, runGen, res)
 	}
 	res := previewrun.Run(ctx, req)
 	if partialShown {
@@ -1433,16 +1433,30 @@ func mediaThumbWarm(req previewrun.Request) bool {
 }
 
 func (h *Handler) applyPreviewResult(req previewrun.Request, target previewTarget, runGen uint64, res previewrun.Result) {
-	h.applyPreviewBody(req, target, runGen, res, false)
+	h.applyPreviewBody(req, target, runGen, res, previewBodyFinal)
+}
+
+// applyPreviewPartial shows a run's early body, which refinePreviewResult replaces.
+func (h *Handler) applyPreviewPartial(req previewrun.Request, target previewTarget, runGen uint64, res previewrun.Result) {
+	h.applyPreviewBody(req, target, runGen, res, previewBodyPartial)
 }
 
 // refinePreviewResult replaces a run's partial body with its final one. When the flat cells line
 // up, offsets into the body stay valid, so the selection and search position survive.
 func (h *Handler) refinePreviewResult(req previewrun.Request, target previewTarget, runGen uint64, res previewrun.Result) {
-	h.applyPreviewBody(req, target, runGen, res, true)
+	h.applyPreviewBody(req, target, runGen, res, previewBodyRefine)
 }
 
-func (h *Handler) applyPreviewBody(req previewrun.Request, target previewTarget, runGen uint64, res previewrun.Result, refine bool) {
+// previewBodyKind says where a body stands in its run.
+type previewBodyKind int
+
+const (
+	previewBodyFinal   previewBodyKind = iota // the run's only body
+	previewBodyPartial                        // early body, a refine follows
+	previewBodyRefine                         // final body replacing a partial one
+)
+
+func (h *Handler) applyPreviewBody(req previewrun.Request, target previewTarget, runGen uint64, res previewrun.Result, kind previewBodyKind) {
 	gen := h.previewRunGenFor(target)
 	path := req.Path
 	if runGen != gen.Load() {
@@ -1450,7 +1464,7 @@ func (h *Handler) applyPreviewBody(req previewrun.Request, target previewTarget,
 	}
 	doneApplied := false
 	h.patchPreviewState(target, func(st *ui.FilePreviewState) {
-		sameOffsets := refine && res.ErrorMsg == "" && st.Source == res.Source &&
+		sameOffsets := kind == previewBodyRefine && res.ErrorMsg == "" && st.Source == res.Source &&
 			len(st.HighlightedCells) == len(res.HighlightedCells)
 		if !sameOffsets {
 			st.ClearSelection()
@@ -1513,6 +1527,10 @@ func (h *Handler) applyPreviewBody(req previewrun.Request, target previewTarget,
 		doneApplied = true
 	})
 	if doneApplied && runGen == gen.Load() {
+		if kind == previewBodyPartial {
+			h.postPreviewPartialClamp(target)
+			return
+		}
 		h.postPreviewClamp(target)
 	}
 }

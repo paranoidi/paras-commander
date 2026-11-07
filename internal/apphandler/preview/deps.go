@@ -62,6 +62,10 @@ type Handler struct {
 
 	// filePreviewRunGen invalidates in-flight inactive-column (quick view) preview completions.
 	filePreviewRunGen atomic.Uint64
+	// rawToggleScroll is the fullscreen preview's position, waiting for the body
+	// preview.toggle-raw asked for. Nil when none is waiting. Main goroutine only.
+	rawToggleScroll *rawToggleAnchor
+
 	// fullscreenReturnView/fullscreenReturnMenus are the view and menu bar the F3 fullscreen
 	// preview was opened from (browser, dedup, ...), restored on close.
 	fullscreenReturnView  ui.ViewMode
@@ -209,15 +213,25 @@ func (h *Handler) postRenderWake() {
 // PreviewClampPayload asks the main goroutine to clamp a preview's scroll to its content and
 // repaint, after a background preview run has landed new content. Clamping reads layout state
 // (pane split, screen size) that only the main goroutine may touch, so the goroutine posts this
-// instead of clamping itself.
-type PreviewClampPayload struct{ target previewTarget }
+// instead of clamping itself. partial marks an early body that a final one will replace.
+type PreviewClampPayload struct {
+	target  previewTarget
+	partial bool
+}
 
 func (h *Handler) postPreviewClamp(target previewTarget) {
 	_ = h.screen.PostEvent(tcell.NewEventInterrupt(PreviewClampPayload{target: target}))
 }
 
+func (h *Handler) postPreviewPartialClamp(target previewTarget) {
+	_ = h.screen.PostEvent(tcell.NewEventInterrupt(PreviewClampPayload{target: target, partial: true}))
+}
+
 // ApplyPreviewClamp handles PreviewClampPayload on the main goroutine.
 func (h *Handler) ApplyPreviewClamp(p PreviewClampPayload) {
+	if p.target == previewTargetFullscreen && !p.partial {
+		h.restoreRawToggleScroll()
+	}
 	h.clampPreviewScroll(p.target)
 }
 

@@ -313,7 +313,7 @@ func TestFilePreviewOverlayMapsF5ToReload(t *testing.T) {
 	}
 }
 
-func TestToggleFilePreviewRawFlipsAndResetsScrollForMarkdown(t *testing.T) {
+func TestToggleFilePreviewRawFlipsForMarkdown(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "notes.md")
 	writeFile(t, path)
@@ -332,12 +332,6 @@ func TestToggleFilePreviewRawFlipsAndResetsScrollForMarkdown(t *testing.T) {
 
 	if !app.model.FullscreenFilePreviewRaw {
 		t.Fatal("FullscreenFilePreviewRaw = false, want true after F6 on a markdown file")
-	}
-	app.commandsMu.RLock()
-	scroll := app.model.FullscreenFilePreview.Scroll
-	app.commandsMu.RUnlock()
-	if scroll != 0 {
-		t.Fatalf("Scroll = %d, want 0 after toggling raw/rendered", scroll)
 	}
 }
 

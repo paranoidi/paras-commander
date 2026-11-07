@@ -2,9 +2,12 @@ package preview
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
@@ -12,6 +15,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	previewrun "github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 )
 
 func writeFileForPreviewView(t *testing.T, path string) {
@@ -374,5 +378,76 @@ func TestOpenFilePreviewFullscreenAllowsEmptyFile(t *testing.T) {
 	h.mu.RUnlock()
 	if path != emptyPath {
 		t.Fatalf("FullscreenFilePreview.Path = %q, want %q", path, emptyPath)
+	}
+}
+
+func TestRawToggleKeepsTopLineOnFinalBody(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "harbor.txt")
+	writeFileForPreviewView(t, path)
+	body := func(first, n int, prefix string) string {
+		var b strings.Builder
+		for i := first; i < first+n; i++ {
+			fmt.Fprintf(&b, "%slantern row %04d\n", prefix, i)
+		}
+		return b.String()
+	}
+	diff := "@@ -1,300 +1,300 @@\n" + body(0, 40, " ") + "-removed meadow\n" + body(40, 260, " ")
+	orig := currentPreviewExec()
+	t.Cleanup(func() { setPreviewExec(orig) })
+	setPreviewExec(func(_ context.Context, req previewrun.Request) previewrun.Result {
+		if req.Raw {
+			return previewrun.Result{Source: previewpanel.SourceExternalANSI, CombinedText: body(0, 300, "")}
+		}
+		return previewrun.Result{Source: previewpanel.SourceExternalANSI, CombinedText: diff, IsDiff: true}
+	})
+
+	h, _ := newTestHandler(t, 80, 24)
+	if err := h.OpenFullscreenFilePreviewAt(path, false); err != nil {
+		t.Fatal(err)
+	}
+	waitPreviewBody := func(isDiff bool) {
+		t.Helper()
+		deadline := time.Now().Add(2 * time.Second)
+		for time.Now().Before(deadline) {
+			h.mu.RLock()
+			st := h.model.FullscreenFilePreview
+			h.mu.RUnlock()
+			if st.Phase == ui.FilePreviewPhaseDone && st.IsDiff == isDiff {
+				return
+			}
+			time.Sleep(time.Millisecond)
+		}
+		t.Fatalf("preview body with IsDiff=%v did not land", isDiff)
+	}
+	scroll := func() int {
+		h.mu.RLock()
+		defer h.mu.RUnlock()
+		return h.model.FullscreenFilePreview.Scroll
+	}
+	waitPreviewBody(true)
+	h.fullscreenFilePreviewScrollMetrics()
+	h.fullscreenPreviewScrollTo(41) // the removed line, so the anchor is the row below it
+
+	h.toggleFilePreviewRaw()
+	waitPreviewBody(false)
+
+	final := PreviewClampPayload{target: previewTargetFullscreen}
+	h.ApplyPreviewClamp(PreviewClampPayload{target: previewTargetFullscreen, partial: true})
+	if h.rawToggleScroll == nil {
+		t.Fatal("a partial body consumed the position meant for the final one")
+	}
+	h.ApplyPreviewClamp(final)
+	if h.rawToggleScroll != nil {
+		t.Fatal("rawToggleScroll still set after the final body")
+	}
+	if got := scroll(); got != 40 {
+		t.Fatalf("raw Scroll = %d, want 40 (row 0040 at the top)", got)
+	}
+
+	h.toggleFilePreviewRaw()
+	waitPreviewBody(true)
+	h.ApplyPreviewClamp(final)
+	if got := scroll(); got != 42 {
+		t.Fatalf("diff Scroll = %d, want 42 (row 0040 at the top)", got)
 	}
 }
