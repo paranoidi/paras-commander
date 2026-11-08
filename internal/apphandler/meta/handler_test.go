@@ -17,12 +17,13 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
+	"github.com/paranoidi/paras-commander/internal/columnprofile"
 	"github.com/paranoidi/paras-commander/internal/config"
-	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
@@ -36,9 +37,11 @@ type fakeHost struct {
 	resortCalls []int
 	// resolvedCalls records NoteMetaColumnResolved panelIDs, in call order.
 	resolvedCalls []int
-	// saveCalls records SaveDefaultColumns arguments; saveErr is returned from each call.
-	saveCalls [][]string
-	saveErr   error
+	// saveCalls records SaveDefaultProfile arguments; saveErr is returned from each call.
+	saveCalls []string
+	// reloads records ReloadPanelListing panelIDs.
+	reloads []int
+	saveErr error
 	// errMessages records SetErrorMessage errors; transient records urgencies by message.
 	errMessages []error
 	urgencies   []ui.MessageUrgency
@@ -54,9 +57,23 @@ func (f *fakeHost) SetTransientMessage(text string, u ui.MessageUrgency) {
 	f.urgencies = append(f.urgencies, u)
 }
 func (f *fakeHost) SetErrorMessage(_ string, err error) { f.errMessages = append(f.errMessages, err) }
-func (f *fakeHost) SaveDefaultColumns(names []string) error {
-	f.saveCalls = append(f.saveCalls, names)
+func (f *fakeHost) SaveDefaultProfile(name string) error {
+	f.saveCalls = append(f.saveCalls, name)
 	return f.saveErr
+}
+func (f *fakeHost) ReloadPanelListing(panelID int) { f.reloads = append(f.reloads, panelID) }
+func (f *fakeHost) PickerSearchIcon() string       { return "" }
+func (f *fakeHost) SyncFilteredListRanks(lines []string, query string, slots int, _ bool) ([]int, [][]search.Range) {
+	ranked := []int{}
+	for i, line := range lines {
+		if strings.Contains(line, query) {
+			ranked = append(ranked, i)
+		}
+	}
+	return ranked, make([][]search.Range, slots)
+}
+func (f *fakeHost) ClampFilteredListSelection(selected *int, rankedLen int) {
+	*selected = min(max(*selected, 0), max(rankedLen-1, 0))
 }
 func (f *fakeHost) PanelByID(id int) *panel.State {
 	if id < 0 || id > 1 {
@@ -548,7 +565,7 @@ func TestActivateSelection_doesNotReadMetaOnEventLoop(t *testing.T) {
 
 	fh := &fakeHost{panels: [2]*panel.State{testPanel(t, dir, nil)}}
 	h := &Handler{host: fh, model: &ui.Model{}, config: config.Default()}
-	h.model.MetaDialog = dialog.MetaDialogState{
+	h.model.ColumnsDialog = dialog.ColumnsDialogState{
 		Open:    true,
 		PanelID: 0,
 		Entries: []dialog.MetaEntry{{Name: "size", Description: "Size"}},
@@ -623,7 +640,7 @@ func TestActivateSelection_invalidatesPendingLoad(t *testing.T) {
 	h.loadGen[0] = 1
 	h.activeEntries[0] = []string{"old-col"}
 	h.model.MetaResults[0] = []ui.MetaColumnState{{EntryName: "old-col"}}
-	h.model.MetaDialog = dialog.MetaDialogState{
+	h.model.ColumnsDialog = dialog.ColumnsDialogState{
 		Open:    true,
 		PanelID: 0,
 		Entries: []dialog.MetaEntry{{Name: "new-col", Description: "New"}},
@@ -651,8 +668,8 @@ func TestActivateSelection_invalidatesPendingLoad(t *testing.T) {
 
 func TestActivateSelection_sortOnActivation(t *testing.T) {
 	dir := t.TempDir()
-	newDialog := func() dialog.MetaDialogState {
-		return dialog.MetaDialogState{
+	newDialog := func() dialog.ColumnsDialogState {
+		return dialog.ColumnsDialogState{
 			Open:    true,
 			PanelID: 0,
 			Entries: []dialog.MetaEntry{
@@ -664,9 +681,11 @@ func TestActivateSelection_sortOnActivation(t *testing.T) {
 
 	fh := &fakeHost{panels: [2]*panel.State{testPanel(t, dir, nil)}}
 	h := &Handler{host: fh, model: &ui.Model{}, config: config.Default()}
-	h.model.MetaDialog = newDialog()
+	h.model.ColumnsDialog = newDialog()
+	mf := &metacmds.MetaFile{Entries: []metacmds.MetaEntry{{Name: "score", Description: "Score", SortOnActivation: true, SortReverse: true}}}
 
 	h.ActivateSelection()
+	h.HandleLoad(LoadPayload{PanelID: 0, LoadGen: h.loadGen[0], Path: fh.panels[0].PathString(), ActiveNames: h.activeEntries[0], MF: mf})
 
 	p := fh.panels[0]
 	if p.Sort.Mode != panel.SortMeta || p.Sort.MetaColumn != "score" || !p.Sort.Reverse {
@@ -679,9 +698,10 @@ func TestActivateSelection_sortOnActivation(t *testing.T) {
 	// Re-activating with the column already active must not clobber a sort the user
 	// changed manually in the meantime.
 	p.Sort = panel.SortState{Mode: panel.SortName}
-	h.model.MetaDialog = newDialog()
+	h.model.ColumnsDialog = newDialog()
 
 	h.ActivateSelection()
+	h.HandleLoad(LoadPayload{PanelID: 0, LoadGen: h.loadGen[0], Path: fh.panels[0].PathString(), ActiveNames: h.activeEntries[0], MF: mf})
 
 	if p.Sort.Mode != panel.SortName {
 		t.Fatalf("Sort.Mode = %v after re-activation, want SortName (manual choice preserved)", p.Sort.Mode)
@@ -861,16 +881,16 @@ description = "Line count"
 file = "wc -l < %f"
 `
 	cases := []struct {
-		name       string
-		content    string // "" writes no meta.toml
-		perm       os.FileMode
-		wantNotice string // substring; "" means no notice
-		wantMsg    bool   // a transient message survives the open
+		name        string
+		content     string // "" writes no meta.toml
+		perm        os.FileMode
+		wantEntries int
+		wantMsg     bool // a transient message survives the open
 	}{
-		{name: "valid", content: valid, perm: 0o644},
-		{name: "missing", wantNotice: "no commands defined"},
-		{name: "world-writable", content: valid, perm: 0o646, wantNotice: "untrusted", wantMsg: true},
-		{name: "invalid", content: "[[entry]]\nname = \"x\"\n", perm: 0o644, wantNotice: "description is required", wantMsg: true},
+		{name: "valid", content: valid, perm: 0o644, wantEntries: 1},
+		{name: "missing"},
+		{name: "world-writable", content: valid, perm: 0o646, wantMsg: true},
+		{name: "invalid", content: "[[entry]]\nname = \"x\"\n", perm: 0o644, wantMsg: true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -891,16 +911,12 @@ file = "wc -l < %f"
 			h := &Handler{host: fh, model: &ui.Model{}, config: config.Default()}
 			h.OpenDialog(0)
 
-			st := h.model.MetaDialog
+			st := h.model.ColumnsDialog
 			if !st.Open {
 				t.Fatal("dialog not open")
 			}
-			if tc.wantNotice == "" {
-				if st.Notice != "" || len(st.Entries) != 1 {
-					t.Fatalf("Notice = %q, entries = %d; want no notice and 1 entry", st.Notice, len(st.Entries))
-				}
-			} else if !strings.Contains(st.Notice, tc.wantNotice) {
-				t.Fatalf("Notice = %q, want it to contain %q", st.Notice, tc.wantNotice)
+			if len(st.Entries) != tc.wantEntries {
+				t.Fatalf("entries = %d, want %d", len(st.Entries), tc.wantEntries)
 			}
 			if got := len(fh.messages) > 0; got != tc.wantMsg {
 				t.Fatalf("transient messages after open = %q, want present=%v", fh.messages, tc.wantMsg)
@@ -930,7 +946,7 @@ func TestHandlePanelDirChanged_fileIndexDefaultColumns(t *testing.T) {
 	// Columns picked by the user stay on after leaving.
 	fh.panels[0] = testPanel(t, "fileindex:///orchard", nil)
 	h.HandlePanelDirChanged(0)
-	h.autoColumns[0] = false // as ActivateSelection does
+	h.autoColumns[0] = nil // as ActivateSelection does
 	fh.panels[0] = testPanel(t, t.TempDir(), nil)
 	h.HandlePanelDirChanged(0)
 	if len(h.activeEntries[0]) != 1 {
@@ -959,7 +975,7 @@ func TestHandlePanelDirChanged_browseWithDefaultColumns(t *testing.T) {
 	// Columns picked by the user stay on after leaving.
 	fh.panels[0].WithIndex = true
 	h.HandlePanelDirChanged(0)
-	h.autoColumns[0] = false // as ActivateSelection does
+	h.autoColumns[0] = nil // as ActivateSelection does
 	fh.panels[0].WithIndex = false
 	h.HandlePanelDirChanged(0)
 	if len(h.activeEntries[0]) != 1 {
@@ -974,109 +990,8 @@ func TestHandlePanelDirChanged_browseWithDefaultColumns(t *testing.T) {
 	fh2.panels[0] = testPanel(t, t.TempDir(), nil)
 	fh2.panels[0].WithIndex = true
 	h2.HandlePanelDirChanged(0)
-	if len(h2.activeEntries[0]) != 1 || !h2.autoColumns[0] {
+	if len(h2.activeEntries[0]) != 1 || h2.autoColumns[0] == nil {
 		t.Fatalf("activeEntries = %v, autoColumns = %v, want columns and autoColumns kept", h2.activeEntries[0], h2.autoColumns[0])
-	}
-}
-
-func metaSaveHandler(t *testing.T, fh *fakeHost, entries []string, checked []bool) *Handler {
-	t.Helper()
-	keys, err := keymap.DefaultBundle()
-	if err != nil {
-		t.Fatalf("DefaultBundle: %v", err)
-	}
-	h := &Handler{host: fh, model: &ui.Model{}, config: config.Default(), keysMetaDialog: keys.MetaDialog}
-	h.activeEntries[0] = []string{"orchard"}
-	st := dialog.MetaDialogState{Open: true, PanelID: 0, Checked: checked, Focus: dialog.MetaEntryID(1)}
-	for _, n := range entries {
-		st.Entries = append(st.Entries, dialog.MetaEntry{Name: n, Description: n})
-	}
-	h.model.MetaDialog = st
-	return h
-}
-
-func TestSaveDefaultColumns_savesCheckedInOrder(t *testing.T) {
-	fh := &fakeHost{}
-	h := metaSaveHandler(t, fh, []string{"meadow", "lantern", "harbor"}, []bool{true, false, true})
-	h.autoColumns[0] = true
-
-	h.HandleDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
-
-	if len(fh.saveCalls) != 1 || strings.Join(fh.saveCalls[0], ",") != "meadow,harbor" {
-		t.Fatalf("saveCalls = %v, want [[meadow harbor]]", fh.saveCalls)
-	}
-	if got := strings.Join(h.config.FileIndex.DefaultColumns, ","); got != "meadow,harbor" {
-		t.Fatalf("config default columns = %q", got)
-	}
-	if len(fh.messages) != 1 || fh.messages[0] != "Saved 2 default columns" || fh.urgencies[0] != ui.MessageUrgencySuccess {
-		t.Fatalf("messages = %v urgencies = %v", fh.messages, fh.urgencies)
-	}
-	st := h.model.MetaDialog
-	if !st.Open || st.Focus != dialog.MetaEntryID(1) || !st.Checked[0] || st.Checked[1] || !st.Checked[2] {
-		t.Fatalf("dialog changed: %+v", st)
-	}
-	if got := h.activeEntries[0]; len(got) != 1 || got[0] != "orchard" || !h.autoColumns[0] {
-		t.Fatalf("panel columns changed: active=%v auto=%v", got, h.autoColumns[0])
-	}
-}
-
-func TestSaveDefaultColumns_singular(t *testing.T) {
-	fh := &fakeHost{}
-	h := metaSaveHandler(t, fh, []string{"meadow", "lantern"}, []bool{false, true})
-	h.saveDefaultColumns()
-	if len(fh.messages) != 1 || fh.messages[0] != "Saved 1 default column" {
-		t.Fatalf("messages = %v", fh.messages)
-	}
-}
-
-func TestSaveDefaultColumns_noneCheckedSavesEmptyList(t *testing.T) {
-	fh := &fakeHost{}
-	h := metaSaveHandler(t, fh, []string{"meadow"}, []bool{false})
-	h.saveDefaultColumns()
-	if len(fh.saveCalls) != 1 || fh.saveCalls[0] == nil || len(fh.saveCalls[0]) != 0 {
-		t.Fatalf("saveCalls = %#v, want one non-nil empty slice", fh.saveCalls)
-	}
-	if h.config.FileIndex.DefaultColumns == nil || len(h.config.FileIndex.DefaultColumns) != 0 {
-		t.Fatalf("config default columns = %#v", h.config.FileIndex.DefaultColumns)
-	}
-	if len(fh.messages) != 1 || fh.messages[0] != "Saved no default columns" {
-		t.Fatalf("messages = %v", fh.messages)
-	}
-}
-
-func TestSaveDefaultColumns_errorKeepsConfig(t *testing.T) {
-	fh := &fakeHost{saveErr: errors.New("disk full")}
-	h := metaSaveHandler(t, fh, []string{"meadow"}, []bool{true})
-	before := append([]string(nil), h.config.FileIndex.DefaultColumns...)
-	h.saveDefaultColumns()
-	if strings.Join(h.config.FileIndex.DefaultColumns, ",") != strings.Join(before, ",") {
-		t.Fatalf("config changed on error: %v -> %v", before, h.config.FileIndex.DefaultColumns)
-	}
-	if len(fh.errMessages) != 1 || len(fh.messages) != 0 {
-		t.Fatalf("errMessages = %v messages = %v", fh.errMessages, fh.messages)
-	}
-	if !h.model.MetaDialog.Open {
-		t.Fatal("dialog closed on error")
-	}
-}
-
-func TestSaveDefaultColumns_noEntriesDoesNothing(t *testing.T) {
-	fh := &fakeHost{}
-	h := metaSaveHandler(t, fh, nil, nil)
-	h.model.MetaDialog.Notice = "no commands defined"
-	h.HandleDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
-	if len(fh.saveCalls) != 0 || len(fh.messages) != 0 || len(fh.errMessages) != 0 {
-		t.Fatalf("unexpected host activity: %+v", fh)
-	}
-}
-
-func TestSaveDefaultColumns_nilKeymapIsNoBinding(t *testing.T) {
-	fh := &fakeHost{}
-	h := metaSaveHandler(t, fh, []string{"meadow"}, []bool{true})
-	h.keysMetaDialog = nil
-	h.HandleDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
-	if len(fh.saveCalls) != 0 {
-		t.Fatalf("saved without a binding: %v", fh.saveCalls)
 	}
 }
 
@@ -1095,8 +1010,8 @@ func TestHandlePanelDirChanged_defaultColumnsCapped(t *testing.T) {
 	fh := &fakeHost{}
 	fh.panels[0] = testPanel(t, "fileindex:///orchard", nil)
 	cfg := config.Default()
-	cfg.FileIndex.DefaultColumns = names
-	h := &Handler{host: fh, model: &ui.Model{}, config: cfg}
+	cfg.FileIndex.DefaultProfile = "orchard"
+	h := &Handler{host: fh, model: &ui.Model{}, config: cfg, profiles: []columnprofile.Profile{{Name: "orchard", Meta: names}}}
 
 	h.HandlePanelDirChanged(0)
 
@@ -1105,30 +1020,6 @@ func TestHandlePanelDirChanged_defaultColumnsCapped(t *testing.T) {
 	}
 	if len(fh.urgencies) != 1 || fh.urgencies[0] != ui.MessageUrgencyWarn {
 		t.Fatalf("messages = %v urgencies = %v, want one warning", fh.messages, fh.urgencies)
-	}
-}
-
-func TestSaveDefaultColumns_capsAtActiveLimit(t *testing.T) {
-	names := overLimitColumnNames(t)
-	checked := make([]bool, len(names))
-	for i := range checked {
-		checked[i] = true
-	}
-	fh := &fakeHost{}
-	h := metaSaveHandler(t, fh, names, checked)
-
-	h.HandleDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
-
-	want := strings.Join(names[:config.DefaultMetaMaxActiveColumns], ",")
-	if len(fh.saveCalls) != 1 || strings.Join(fh.saveCalls[0], ",") != want {
-		t.Fatalf("saveCalls = %v, want the first %d", fh.saveCalls, config.DefaultMetaMaxActiveColumns)
-	}
-	if got := strings.Join(h.config.FileIndex.DefaultColumns, ","); got != want {
-		t.Fatalf("config default columns = %q", got)
-	}
-	wantMsg := fmt.Sprintf("Saved first %d of %d default columns", config.DefaultMetaMaxActiveColumns, len(names))
-	if len(fh.messages) != 1 || fh.messages[0] != wantMsg || fh.urgencies[0] != ui.MessageUrgencyWarn {
-		t.Fatalf("messages = %v urgencies = %v", fh.messages, fh.urgencies)
 	}
 }
 

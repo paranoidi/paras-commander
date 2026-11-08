@@ -18,6 +18,7 @@ func EntryFromPath(path string) (Entry, error) {
 		return Entry{}, fmt.Errorf("stat %q: %w", abs, err)
 	}
 	dev, devOK := entryDevice(info)
+	attrs := entryAttrsFrom(info)
 	return Entry{
 		Name:       filepath.Base(abs),
 		Path:       abs,
@@ -27,5 +28,10 @@ func EntryFromPath(path string) (Entry, error) {
 		ModifiedAt: info.ModTime(),
 		Dev:        dev,
 		DevValid:   devOK,
+		Owner:      attrs.owner,
+		Group:      attrs.group,
+		Links:      attrs.links,
+		ChangedAt:  attrs.changedAt,
+		AccessedAt: attrs.accessedAt,
 	}, nil
 }

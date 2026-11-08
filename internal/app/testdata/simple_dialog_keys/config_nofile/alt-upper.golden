@@ -1,8 +1,8 @@
 == open ==
-focus=nerdfont nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=nerdfont nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == Alt+D ==
-focus=nerdfont nerd=false zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=nerdfont nerd=false zoom=true stacked=false mouse=false mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == Alt+Z ==
-focus=zoom nerd=false zoom=false stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=zoom nerd=false zoom=false stacked=false mouse=false mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == Alt+P ==
-focus=listing1 nerd=false zoom=false stacked=false mouse=false mode=edge bar=thumb format=1 split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=zoom nerd=false zoom=false stacked=false mouse=false mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""

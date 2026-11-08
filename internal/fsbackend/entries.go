@@ -22,6 +22,12 @@ func ToPanelEntry(e Entry) localfs.Entry {
 		AccessDenied: e.AccessDenied,
 		BrokenLink:   e.BrokenLink,
 		IndexStatus:  e.IndexStatus,
+		Owner:        e.Owner,
+		Group:        e.Group,
+		Links:        e.Links,
+		ChangedAt:    e.ChangedAt,
+		AccessedAt:   e.AccessedAt,
+		CreatedAt:    e.CreatedAt,
 	}
 }
 
@@ -49,6 +55,12 @@ func FromPanelEntry(e localfs.Entry) Entry {
 		AccessDenied: e.AccessDenied,
 		BrokenLink:   e.BrokenLink,
 		IndexStatus:  e.IndexStatus,
+		Owner:        e.Owner,
+		Group:        e.Group,
+		Links:        e.Links,
+		ChangedAt:    e.ChangedAt,
+		AccessedAt:   e.AccessedAt,
+		CreatedAt:    e.CreatedAt,
 	}
 }
 

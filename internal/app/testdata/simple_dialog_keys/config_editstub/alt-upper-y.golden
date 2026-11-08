@@ -1,6 +1,6 @@
 == open ==
-focus=nerdfont nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=nerdfont nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == F9 ==
 edit-stub-confirm focus=0
 == Alt+Y ==
-focus=nerdfont nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] cursors=[5|4|1] msg="config.toml reloaded"
+focus=nerdfont nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg="config.toml reloaded"

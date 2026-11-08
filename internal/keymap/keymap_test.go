@@ -245,7 +245,7 @@ func TestDefaultLookupMatchesSimulationKeys(t *testing.T) {
 		{tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModAlt|tcell.ModCtrl), ActionPanelOpenSelectedRoot, true},
 		{tcell.NewEventKey(tcell.KeyRune, ',', tcell.ModAlt|tcell.ModShift), ActionPanelMetaEdit, true},
 		{tcell.NewEventKey(tcell.KeyRune, ';', tcell.ModAlt), ActionPanelMetaEdit, true},
-		{tcell.NewEventKey(tcell.KeyRune, ',', tcell.ModAlt), ActionPanelMeta, true},
+		{tcell.NewEventKey(tcell.KeyRune, ',', tcell.ModAlt), ActionPanelColumns, true},
 		{tcell.NewEventKey(tcell.KeyCtrlSpace, 0, tcell.ModNone), ActionPanelToggleSplitOrientation, true},
 		{tcell.NewEventKey(tcell.KeyCtrlSpace, 0, tcell.ModCtrl), ActionPanelToggleSplitOrientation, true},
 		{tcell.NewEventKey(tcell.KeyNUL, 0, tcell.ModNone), ActionPanelToggleSplitOrientation, true},
@@ -702,7 +702,7 @@ func TestMenuBindingLabelUsesDefaultsAndPreferredKey(t *testing.T) {
 	if got := m.MenuBindingLabel(ActionPanelToggleHidden); got != "M-." {
 		t.Fatalf("toggle hidden = %q, want M-.", got)
 	}
-	if got := m.MenuBindingLabel(ActionPanelCycleListingFormat); got != "M-t" {
+	if got := m.MenuBindingLabel(ActionPanelCycleColumnProfile); got != "M-t" {
 		t.Fatalf("cycle listing format = %q, want M-t", got)
 	}
 	if got := m.MenuBindingLabel(ActionPanelToggleZoomActivePanel); got != "M-z" {

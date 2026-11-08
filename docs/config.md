@@ -38,6 +38,7 @@ These live alongside `config.toml` in the same config directory but are
 | `meta.toml` | Meta column command definitions. | `[meta].file` |
 | `pools.toml` | Worker pool definitions. | `[pools].file` |
 | `patterns.toml` | Saved mass-rename find/replace patterns. | `[mass_rename].file` |
+| `column-profiles.toml` | Saved [column profiles](columns.md). | `[columns].file` |
 | `status.toml` | Menu-bar [status commands](status-commands.md) and which are shown. See [`status.toml`](#statustoml). | — |
 | `themes/*.toml` | Color themes. | top-level `theme` key |
 
@@ -88,7 +89,7 @@ File panel browsing, sorting, and listing.
 | `show_hidden` | bool | `false` | Show dotfiles and other hidden entries in panel listings on startup. |
 | `respect_gitignore` | bool | `true` | Hide files matched by `.gitignore` in panel listings. |
 | `default_sort` | string | `"name"` | Default panel sort order: `"name"`, `"extension"`, `"size"`, or `"mtime"`. Panels can also be sorted by an active meta column (see `[meta]`) from the in-app Sort dialog, showing up to 4 active columns; this is not settable here since meta columns are only known once a panel activates them (a meta.toml entry can request it automatically via `sort_on_activation`, see `[meta]`). A meta-column value is compared numerically when it parses as a number, and sorts last when empty, missing, or still running. A column whose values are all numeric sorts high-first (e.g. a 0–10 score lists 10 first); other columns sort A→Z. The header sort arrow points toward the larger values: `↓` when they grow down the list, `↑` when they shrink. Once every value for the sorted column has arrived, the panel re-sorts after `[disk_usage] idle_sort_delay_ms` of inactivity rather than reshuffling live as results stream in. |
-| `default_listing_format` | string | `"brief"` | Default listing column layout: `"mtime"` (modified time), `"perm"` (permissions), or `"brief"` (minimal columns). |
+| `default_column_profile` | string | `"brief"` | [Column profile](columns.md) both panels start with: a built-in (`"modified"`, `"permissions"`, `"brief"`, `"index"`) or a saved profile. An unknown name shows a warning and uses `"brief"`. Set from the Columns dialog's profile list with `F6`. |
 | `sort_reverse` | bool | `false` | Reverse the default sort order (for meta columns, relative to each column's own default: high-first for numeric, A→Z for text). |
 | `directories_first` | bool | `true` | List directories before files regardless of sort order. |
 | `refresh_interval_ms` | int | `2500` | How often panels re-read their directory from disk in the background. `0` disables automatic refresh; non-zero values are clamped to 200–60000. A panel's next refresh starts no sooner than 4x the duration of its previous one (start-to-start), so a slow network directory isn't re-read continuously; fast directories are unaffected. |
@@ -177,7 +178,7 @@ Active/inactive panel width zoom and twin-panel orientation.
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `active_panel` | bool | `true` | Widen the active panel and shrink the inactive one, sized by `active_percent` / `inactive_percent`. |
-| `disabled_above_name_width` | int | `60` | When greater than 0 and the active panel's file name column, measured at an even 50/50 split, is at least this many cells wide, panel zoom is suppressed in favor of the even split (zoom is for narrow name columns). The listing format, git column, icons and meta columns all count against the name column, so the mtime format or an extra meta column makes zoom apply up to a wider terminal. The default equals a 142-cell terminal with icons on, the default listing format and no meta columns. Applies to the side-by-side layout. `0` disables this gate. |
+| `disabled_above_name_width` | int | `60` | When greater than 0 and the active panel's file name column, measured at an even 50/50 split, is at least this many cells wide, panel zoom is suppressed in favor of the even split (zoom is for narrow name columns). File columns, the git column, icons and meta columns all count against the name column, so an extra column makes zoom apply up to a wider terminal. The default equals a 142-cell terminal with icons on, the default listing format and no meta columns. Applies to the side-by-side layout. `0` disables this gate. |
 | `disabled_above_height` | int | `45` | Same as above but for terminal height, applied when panels are stacked top/bottom. `0` disables this gate. |
 | `orientation` | string | `"side_by_side"` | Twin-panel layout: `"side_by_side"` or `"stacked"`. |
 | `active_percent` | int | `70` | Width share given to the active panel when `active_panel` is enabled. Must sum to 100 with `inactive_percent`. |
@@ -482,6 +483,14 @@ Worker pool definitions (used by "run for each" operations). A user menu entry w
 |---|---|---|---|
 | `file` | string | `""` | Path to the global `pools.toml`. Empty uses `<config dir>/pools.toml`. |
 
+## `[columns]`
+
+Where the saved [column profiles](columns.md) live.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `file` | string | `""` | Path of the profiles file. Empty uses `column-profiles.toml` in the config directory. |
+
 ## `[mass_rename]`
 
 Saved mass-rename find/replace patterns (F2 Load pattern / F5 Save pattern in the mass rename dialog; F5 again on the Name/Description save prompt opens **Overwrite existing**, a picker over the saved patterns whose selection writes the current find/replace over that entry, keeping its name; F8 deletes the selected saved pattern. F3 opens the in-memory pattern-history picker, which is session-only and not backed by this file). While the file does not exist, the Load picker lists built-in example patterns (*Pad last number to 2 digits* / *3 digits*); the first save or delete writes them into the file along with that change. An existing file is never re-seeded, so deleted examples stay deleted.
@@ -523,7 +532,7 @@ The built-in [fileindex](fileindex.md) feature. Which files a scan includes or s
 | `scan_commit_interval_ms` | int | `1000` | How often a scan commits what it hashed to the database, in milliseconds (clamped to 100–60000). Each commit also updates the index's full-text search data, so with many small files short intervals make the database the bottleneck and extra hash workers stop helping; long intervals delay the per-entry scanning marks and the work a cancel waits for. |
 | `browser_scan_max_depth` | int | `3` | Browser scan max depth: how many directory levels below an indexed directory the automatic check descends while browsing with fileindex. A difference within the depth shows the directory as `differs`; if none is found but deeper folders exist it shows `unchecked`. `-1` is unlimited (never `unchecked`), `0` turns the automatic check off, values below `-1` are treated as `-1`. Directory-size requests always check without a limit. |
 | `start_browse_with` | bool | `false` | Both panels start in [Browse with fileindex](fileindex.md#browsing-with-fileindex). A panel starting on a non-local path, or with no index database, shows its plain listing and no prompt to create the database. |
-| `default_columns` | string list | `["fileindex.tags"]` | [Meta columns](meta-columns.md) (`meta.toml` entry names or the [fileindex columns](fileindex.md#columns), e.g. `fileindex.status`) switched on when a panel with no meta columns enters an index view (`fileindex://` or Browse with fileindex). Leaving both switches them off again, unless they were changed from the meta-column picker meanwhile; `[]` switches none on. The picker's save action writes this list from the ticked columns; that rewrites `config.toml` through the partial writer, which does not preserve comments in the file. |
+| `default_profile` | string | `"index"` | [Column profile](columns.md) applied when a panel with no meta columns enters an index view (`fileindex://` or Browse with fileindex); leaving restores its previous columns unless you changed them. `""` applies none. |
 
 ## `status.toml`
 

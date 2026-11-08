@@ -116,7 +116,7 @@ func TestEntryFromDirEntrySkipsVanishedName(t *testing.T) {
 
 	var names []string
 	for _, de := range dirEntries {
-		entry, keepEntry, err := entryFromDirEntry(dir, de)
+		entry, keepEntry, err := entryFromDirEntry(dir, de, ListOptions{})
 		if err != nil {
 			t.Fatalf("entryFromDirEntry(%q): %v", de.Name(), err)
 		}

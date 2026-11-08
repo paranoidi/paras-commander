@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
-	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
@@ -40,19 +39,6 @@ func quitGoldenState(focus string, commands bool) QuitConfirmState {
 		st.WarnLine2 = "Quitting will cancel running subprocesses."
 	}
 	st.Focus = map[string]dlg.ID{"stay": QuitStay, "quit": QuitQuit}[focus]
-	return st
-}
-
-func listingFormatGoldenState(format panel.ListFormat, focus string) ListingFormatDialogState {
-	st := ListingFormatDialogState{Open: true, ListFormat: format}
-	switch focus {
-	case "ok":
-		st.Focus = dlg.OK
-	case "cancel":
-		st.Focus = dlg.Cancel
-	default:
-		st.Focus = dlg.ID(listingFormatPrefix + panel.ListFormatDialogRadios()[goldenIndex(focus)].Label)
-	}
 	return st
 }
 
@@ -90,10 +76,10 @@ func hostKeyGoldenState(fingerprint, focus string) HostKeyDialogState {
 	return st
 }
 
-func metaGoldenState(n int, checked, focus string) MetaDialogState {
+func metaGoldenState(n int, checked, focus string) ColumnsDialogState {
 	names := []string{"lantern", "orchard", "velvet", "timber", "ribbon"}
 	descs := []string{"Shows the lantern count", "", "Velvet rating", "", "Ribbon colour"}
-	st := MetaDialogState{Open: true}
+	st := ColumnsDialogState{Open: true}
 	for i := range n {
 		st.Entries = append(st.Entries, MetaEntry{Name: names[i], Description: descs[i]})
 		on := checked == "all" || (checked == "mixed" && i%2 == 0)

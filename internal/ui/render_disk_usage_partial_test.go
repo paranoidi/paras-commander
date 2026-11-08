@@ -49,7 +49,8 @@ func TestPaintDiskUsageBrowserPanelsOnlyScopedPanel(t *testing.T) {
 		ActivePanel:    PrimaryPanel,
 		ActiveSubFocus: SubFocusFileList,
 		Primary: panel.State{
-			Path: pathloc.MustParse(root),
+			Columns: panel.ColumnsBrief,
+			Path:    pathloc.MustParse(root),
 			Entries: []localfs.Entry{
 				{Name: "alpha", Path: scanned, Type: localfs.EntryDirectory},
 				{Name: "notes.txt", Path: root + "/notes.txt", Type: localfs.EntryFile, Size: 12},

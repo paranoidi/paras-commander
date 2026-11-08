@@ -102,12 +102,12 @@ func (a *App) activeDialog(event *tcell.EventKey) (activeDialog, bool) {
 	case InputModeIndexTagsDialog:
 		return found(fits(a.fileindexCtrl.TagDialogSpec), &m.IndexTagsDialog.Focus, noQuit(a.fileindexCtrl.ApplyTagEvent),
 			dialogButtons{OK: a.fileindexCtrl.TagDialogOK, Cancel: a.fileindexCtrl.CloseTagDialog, Esc: a.fileindexCtrl.TagDialogEsc})
-	case InputModeMetaDialog:
-		b := dialogButtons{OK: a.metaCtrl.ActivateSelection, Cancel: a.metaCtrl.CloseDialog}
+	case InputModeColumnsDialog:
+		b := dialogButtons{OK: a.metaCtrl.DialogOK, Cancel: a.metaCtrl.DialogCancel}
 		if event.Key() == tcell.KeyF9 {
-			b = dialogButtons{} // F9 edits the config from the meta dialog
+			b = dialogButtons{} // F9 edits meta.toml from the Columns dialog
 		}
-		return found(fits(func() dlg.Spec { return dialog.MetaDialogView(m.MetaDialog) }), &m.MetaDialog.Focus, noQuit(a.metaCtrl.ApplyDialogEvent), b)
+		return found(fits(func() dlg.Spec { return dialog.ColumnsDialogView(m.ColumnsDialog, layout().Height) }), &m.ColumnsDialog.Focus, noQuit(a.metaCtrl.ApplyDialogEvent), b)
 	case InputModeHelpView:
 		return found(func() (dlg.Spec, bool) {
 			spec, _, fit := dialog.HelpDialogView(m.HelpView, layout(), a.styles)
@@ -128,9 +128,6 @@ func (a *App) activeDialog(event *tcell.EventKey) (activeDialog, bool) {
 	case InputModeStatusCommandsDialog:
 		return found(fits(func() dlg.Spec { return dialog.StatusCommandsDialogView(m.StatusCommandsDialog) }), &m.StatusCommandsDialog.Focus, noQuit(a.applyStatusCommandsDialogEvent),
 			dialogButtons{OK: a.applyStatusCommandsDialog, Cancel: a.closeStatusCommandsDialog})
-	case InputModeListingFormatDialog:
-		return found(fits(func() dlg.Spec { return dialog.ListingFormatView(m.ListingFormatDialog) }), &m.ListingFormatDialog.Focus, noQuit(a.applyListingFormatEvent),
-			dialogButtons{OK: a.applyListingFormatDialog, Cancel: a.closeListingFormatDialog})
 	case InputModeConfigDialog:
 		return a.configActiveDialog(event)
 	case InputModePreviewSettingsDialog:

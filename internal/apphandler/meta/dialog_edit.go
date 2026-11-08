@@ -5,6 +5,8 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
+	"maps"
+	"slices"
 )
 
 func (h *Handler) resolveEditPath(panelID int) (string, error) {
@@ -19,7 +21,7 @@ func (h *Handler) resolveEditPath(panelID int) (string, error) {
 }
 
 func (h *Handler) editConfigFromDialog() {
-	st := &h.model.MetaDialog
+	st := &h.model.ColumnsDialog
 	if !st.Open {
 		return
 	}
@@ -34,16 +36,19 @@ func (h *Handler) editConfigFromDialog() {
 }
 
 func (h *Handler) refreshDialogAfterConfigEdit() {
-	st := &h.model.MetaDialog
+	st := &h.model.ColumnsDialog
 	if !st.Open {
 		return
 	}
 	panelID := st.PanelID
-	prevChecked := make(map[string]bool, len(st.Entries))
+	prevChecked := make(map[string]bool, len(st.Entries)+len(st.HiddenMeta))
 	for i, e := range st.Entries {
 		if i < len(st.Checked) && st.Checked[i] {
 			prevChecked[e.Name] = true
 		}
+	}
+	for _, name := range st.HiddenMeta {
+		prevChecked[name] = true
 	}
 	prevFocusName := focusedEntryName(st)
 	prevFocus := st.Focus
@@ -57,7 +62,7 @@ func (h *Handler) refreshDialogAfterConfigEdit() {
 
 	st.Entries = entries
 	st.Checked = checked
-	st.Notice = dialogNotice(res)
+	st.HiddenMeta = hiddenMetaNames(entries, slices.Collect(maps.Keys(prevChecked)))
 	st.Focus = refocusAfterEdit(entries, prevFocus, prevFocusName)
 }
 
@@ -74,7 +79,7 @@ func entryIndexByName(entries []dialog.MetaEntry, name string) int {
 }
 
 // focusedEntryName is the name of the entry row the dialog focus is on, "" when it is on a button.
-func focusedEntryName(st *dialog.MetaDialogState) string {
+func focusedEntryName(st *dialog.ColumnsDialogState) string {
 	for i, e := range st.Entries {
 		if st.Focus == dialog.MetaEntryID(i) {
 			return e.Name
@@ -91,6 +96,9 @@ func refocusAfterEdit(entries []dialog.MetaEntry, prev dlg.ID, prevName string) 
 	}
 	if i := entryIndexByName(entries, prevName); i >= 0 {
 		return dialog.MetaEntryID(i)
+	}
+	if _, isFile := dlg.IDIndex(prev, "file:"); isFile {
+		return prev
 	}
 	return ""
 }

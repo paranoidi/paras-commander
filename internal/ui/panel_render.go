@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/paranoidi/paras-commander/internal/quickfilter"
 	"math"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -21,11 +22,8 @@ import (
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
-// Layout after the name column: one space, size (panellist.SizeCells), optional two spaces + third column.
-// When meta is active the column order is: name | meta | size | (mtime | perm | none).
+// When meta is active the column order is: name | meta | file columns (panel.Columns order).
 const (
-	panelListModTimeCells = 16
-	panelListPermCells    = 10
 	// panelListMetaMax is the maximum display width (terminal cells) for the rendered Meta column
 	// (single-cell legacy or tab/newline multi-field layout; see layoutMetaCells).
 	panelListMetaMax = 20
@@ -33,41 +31,20 @@ const (
 	panelListMetaMinCells = 4
 )
 
-func panelListReservedAfterName(f panel.ListFormat, nameOnly bool) int {
+func panelListReservedAfterName(cols panel.ColumnSet, nameOnly bool) int {
 	if nameOnly {
 		return 0
 	}
-	switch panel.EffectiveListFormat(f) {
-	case panel.ListFormatBrief:
-		return 1 + panellist.SizeCells
-	case panel.ListFormatPerm:
-		return 1 + panellist.SizeCells + 2 + panelListPermCells
-	default:
-		return 1 + panellist.SizeCells + 2 + panelListModTimeCells
-	}
+	return cols.ReservedWidth()
 }
 
-func panelListThirdColumnWidth(f panel.ListFormat, nameOnly bool) int {
-	if nameOnly {
-		return 0
-	}
-	switch panel.EffectiveListFormat(f) {
-	case panel.ListFormatBrief:
-		return 0
-	case panel.ListFormatPerm:
-		return panelListPermCells
-	default:
-		return panelListModTimeCells
-	}
-}
-
-func panelListNameWidth(rowTextWidth int, f panel.ListFormat, nameOnly, showGit bool) int {
-	return max(1, rowTextWidth-panelListReservedBeforeName(showGit, nameOnly)-panelListReservedAfterName(f, nameOnly))
+func panelListNameWidth(rowTextWidth int, cols panel.ColumnSet, nameOnly, showGit bool) int {
+	return max(1, rowTextWidth-panelListReservedBeforeName(showGit, nameOnly)-panelListReservedAfterName(cols, nameOnly))
 }
 
 // panelListNameWidthWithMeta returns name width when the Meta column is shown.
-func panelListNameWidthWithMeta(rowTextWidth, metaColW int, f panel.ListFormat, nameOnly, showGit bool) int {
-	return max(1, rowTextWidth-panelListReservedBeforeName(showGit, nameOnly)-panelListReservedAfterName(f, nameOnly)-2-metaColW)
+func panelListNameWidthWithMeta(rowTextWidth, metaColW int, cols panel.ColumnSet, nameOnly, showGit bool) int {
+	return max(1, rowTextWidth-panelListReservedBeforeName(showGit, nameOnly)-panelListReservedAfterName(cols, nameOnly)-2-metaColW)
 }
 
 func truncateHeaderRunes(max int, s string) string {
@@ -79,15 +56,6 @@ func truncateHeaderRunes(max int, s string) string {
 		return s
 	}
 	return string(r[:max])
-}
-
-func panelListHeaderTitleWithSortArrow(nameTitle, sizeTitle, thirdTitle string) string {
-	for _, s := range []string{nameTitle, sizeTitle, thirdTitle} {
-		if strings.ContainsRune(s, '↑') || strings.ContainsRune(s, '↓') {
-			return strings.TrimSpace(s)
-		}
-	}
-	return strings.TrimSpace(nameTitle)
 }
 
 // PanelStyleConfig carries visual-presentation inputs to drawPanel.
@@ -321,13 +289,12 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	}
 	primitive.Text(screen, headerRow.X, headerY, headerRow.Width, headerRow.Text, headerStyle)
 
-	listFmt := panel.EffectiveListFormat(state.ListFormat)
-	nameWidth := panelNameColumnWidth(layoutRes, listFmt, showMetaEffective, metaTotalW)
+	nameWidth := panelNameColumnWidth(layoutRes, layoutRes.Columns, showMetaEffective, metaTotalW)
 	rowOpts := panelRowOpts{
 		ShowIcons: display.ShowIcons,
 		ShowMeta:  showMetaEffective,
 		MetaColW:  metaTotalW,
-		ListFmt:   listFmt,
+		Columns:   layoutRes.Columns,
 		NameOnly:  nameOnlyDisplay,
 		ShowGit:   showGit,
 	}
@@ -408,6 +375,8 @@ type panelColumnLayoutResult struct {
 	GitStart        int
 	IconStart       int
 	DiskDenom       int64
+	// Columns is the file columns that fit (fitPanelFileColumns), none when name-only.
+	Columns panel.ColumnSet
 }
 
 // panelRowParams carries drawPanel's locals needed to paint one row of the classic
@@ -685,14 +654,14 @@ func drawPanelRowIconStrip(screen tcell.Screen, p panelRowParams, rp panelRowPai
 }
 
 // panelNameColumnWidth is the file-name column width in cells: the row text left after the
-// listing format's trailing columns and, when showMeta is set, the meta columns (metaTotalW
-// plus their two-cell gap). drawPanel and PanelNameColumnWidth both use it.
-func panelNameColumnWidth(layoutRes panelColumnLayoutResult, f panel.ListFormat, showMeta bool, metaTotalW int) int {
+// file columns cols and, when showMeta is set, the meta columns (metaTotalW plus their two-cell
+// gap). drawPanel and PanelNameColumnWidth both use it.
+func panelNameColumnWidth(layoutRes panelColumnLayoutResult, cols panel.ColumnSet, showMeta bool, metaTotalW int) int {
 	// RowTextWidth already has the git strip excluded; pass false to avoid double-subtracting.
 	if showMeta {
-		return panelListNameWidthWithMeta(layoutRes.RowTextWidth, metaTotalW, f, layoutRes.NameOnlyDisplay, false)
+		return panelListNameWidthWithMeta(layoutRes.RowTextWidth, metaTotalW, cols, layoutRes.NameOnlyDisplay, false)
 	}
-	return panelListNameWidth(layoutRes.RowTextWidth, f, layoutRes.NameOnlyDisplay, false)
+	return panelListNameWidth(layoutRes.RowTextWidth, cols, layoutRes.NameOnlyDisplay, false)
 }
 
 // fitPanelMetaColumns lays out the meta columns a panel has room for: the rightmost go first
@@ -703,17 +672,16 @@ func fitPanelMetaColumns(layoutRes panelColumnLayoutResult, state panel.State, c
 		return nil, 0
 	}
 	layouts, totalW := LayoutMetaColumns(cols)
-	listFmt := panel.EffectiveListFormat(state.ListFormat)
 	rowTextWidth := layoutRes.RowTextWidth - panelTreeHeaderGutter(layoutRes, state)
-	for len(layouts) > 0 && panelListNameWidthWithMeta(rowTextWidth, totalW, listFmt, false, false) < config.MinPanelNameWidthWithMeta {
+	for len(layouts) > 0 && panelListNameWidthWithMeta(rowTextWidth, totalW, layoutRes.Columns, false, false) < config.MinPanelNameWidthWithMeta {
 		layouts, totalW = dropLastMetaColumn(layouts, totalW)
 	}
 	return layouts, totalW
 }
 
 // PanelNameColumnWidth is the file-name column width of a panel panelWidth cells wide with every
-// meta column shown (border, icon gutter/strip, git strip and listing format also counted), so it
-// tells the zoom gate whether the whole listing fits, not what fitPanelMetaColumns left of it. A
+// meta column and every selected file column shown (border, icon gutter/strip and git strip also
+// counted), so it tells the zoom gate whether the whole listing fits, not what the fits left. A
 // name-only (narrow) panel hides meta, so the name takes the whole row.
 // LayoutMetaColumns reuses each column's cached cells while its LayoutGen is unchanged, so
 // repeated calls (each layout, including mouse motion) are cheap.
@@ -724,7 +692,7 @@ func PanelNameColumnWidth(panelWidth int, state panel.State, showIcons, narrowPa
 	if showMeta {
 		_, metaTotalW = LayoutMetaColumns(metaCols)
 	}
-	return panelNameColumnWidth(layoutRes, panel.EffectiveListFormat(state.ListFormat), showMeta, metaTotalW)
+	return panelNameColumnWidth(layoutRes, state.Columns, showMeta, metaTotalW)
 }
 
 // PanelNameOnlyWidth is the name column width of a name-only listing in a panel panelWidth cells
@@ -758,8 +726,12 @@ func panelColumnLayout(rect Rect, state panel.State, display PanelDisplayConfig)
 		iconStrip = panelIconStripCells
 	}
 	baseListWidth := panelListBaseWidth(rect.Width, state, display.ShowIcons)
+	columns := fitPanelFileColumns(baseListWidth, state)
 	nameOnlyDisplay := (display.NarrowPanelsNameOnly && baseListWidth < config.NarrowPanelRowTextWidthThreshold) ||
-		panelListNameWidth(baseListWidth, state.ListFormat, false, panelListGitColumnActive(state, false)) < config.MinPanelNameWidth
+		panelListNameWidth(baseListWidth, columns, false, panelListGitColumnActive(state, false)) < config.MinPanelNameWidth
+	if nameOnlyDisplay {
+		columns = 0
+	}
 	showGit := panelListGitColumnActive(state, nameOnlyDisplay)
 	gitStrip := 0
 	if showGit {
@@ -775,8 +747,19 @@ func panelColumnLayout(rect Rect, state panel.State, display PanelDisplayConfig)
 	return panelColumnLayoutResult{
 		LeftGutter: leftGutter, IconStrip: iconStrip, NameOnlyDisplay: nameOnlyDisplay,
 		ShowGit: showGit, GitStrip: gitStrip, RowTextWidth: rowTextWidth,
-		GitStart: gitStart, IconStart: iconStart, DiskDenom: diskDenom,
+		GitStart: gitStart, IconStart: iconStart, DiskDenom: diskDenom, Columns: columns,
 	}
+}
+
+// fitPanelFileColumns drops the rightmost file columns until the name column reaches
+// config.MinPanelNameWidth; with none left a too narrow panel goes name-only.
+func fitPanelFileColumns(baseListWidth int, state panel.State) panel.ColumnSet {
+	columns := state.Columns
+	showGit := panelListGitColumnActive(state, false)
+	for columns != 0 && panelListNameWidth(baseListWidth, columns, false, showGit) < config.MinPanelNameWidth {
+		columns = columns.DropRightmost()
+	}
+	return columns
 }
 
 // carouselPanelPlan is the column set and meta-free fit widths of one carousel pass.
@@ -1097,7 +1080,7 @@ func newPanelHeaderRow(layoutRes panelColumnLayoutResult, state panel.State, sho
 	r.X = layoutRes.IconStart + layoutRes.IconStrip + r.TreeGutter
 	r.Width = layoutRes.RowTextWidth - r.TreeGutter
 	showMeta := len(metaLayouts) > 0
-	r.Text, r.Columns = panelListHeader(r.Width, state, showIcons, showMeta, metaLayouts, layoutRes.NameOnlyDisplay, layoutRes.ShowGit)
+	r.Text, r.Columns = panelListHeader(r.Width, state, layoutRes.Columns, showIcons, showMeta, metaLayouts, layoutRes.NameOnlyDisplay)
 	for i := range r.Columns {
 		r.Columns[i].X += r.X
 	}
@@ -1134,15 +1117,11 @@ func headerCells(s string) []rune {
 // panelListHeader returns the header text and its sortable column titles (x relative to the
 // text). The name-only header shows one title and has no columns: a click there opens the sort
 // dialog.
-func panelListHeader(rowTextWidth int, state panel.State, showIcons bool, showMeta bool, metaLayouts []MetaColumnLayout, nameOnly, showGit bool) (string, []PanelHeaderColumn) {
+func panelListHeader(rowTextWidth int, state panel.State, fileCols panel.ColumnSet, showIcons bool, showMeta bool, metaLayouts []MetaColumnLayout, nameOnly bool) (string, []PanelHeaderColumn) {
 	if nameOnly {
-		nameTitle, sizeTitle, thirdTitle := state.ListColumnTitles(showIcons)
-		title := panelListHeaderTitleWithSortArrow(nameTitle, sizeTitle, thirdTitle)
-		title = truncateHeaderRunes(rowTextWidth, title)
+		title := truncateHeaderRunes(rowTextWidth, strings.TrimSpace(state.SortedColumnTitle(showIcons)))
 		return fmt.Sprintf("%-*s", rowTextWidth, title), nil
 	}
-	listFmt := panel.EffectiveListFormat(state.ListFormat)
-	tw := panelListThirdColumnWidth(listFmt, false)
 	metaTotalW := 0
 	for i, lay := range metaLayouts {
 		if i > 0 {
@@ -1151,23 +1130,22 @@ func panelListHeader(rowTextWidth int, state panel.State, showIcons bool, showMe
 		metaTotalW += lay.Width
 	}
 	// rowTextWidth already has the git strip excluded; pass false to avoid double-subtracting.
-	nameWidth := panelListNameWidth(rowTextWidth, listFmt, false, false)
+	nameWidth := panelListNameWidth(rowTextWidth, fileCols, false, false)
 	if showMeta {
-		nameWidth = panelListNameWidthWithMeta(rowTextWidth, metaTotalW, listFmt, false, false)
+		nameWidth = panelListNameWidthWithMeta(rowTextWidth, metaTotalW, fileCols, false, false)
 	}
 	metaHdr, metaStarts := metaHeader(metaSortArrowLayouts(metaLayouts, state))
 	if showMeta && runewidth.StringWidth(metaHdr) > metaTotalW {
 		nameWidth-- // first meta column's sort arrow spills into the name→meta gap
 	}
-	nameTitle, sizeTitle, thirdTitle := state.ListColumnTitles(showIcons)
-	nameTitle = truncateHeaderRunes(nameWidth, nameTitle)
-	sizeTitle = truncateHeaderRunes(panellist.SizeCells, sizeTitle)
-	text := panellist.JoinRow(nameWidth, nameTitle, metaHdr, showMeta, sizeTitle, true)
+	nameTitle := truncateHeaderRunes(nameWidth, state.NameColumnTitle(showIcons))
+	sizeTitle := truncateHeaderRunes(panellist.SizeCells, state.SizeColumnTitle())
+	hasSize := fileCols.Has(panel.ColumnSize)
+	text := panellist.JoinRow(nameWidth, nameTitle, metaHdr, showMeta, sizeTitle, hasSize)
 	joinW := runewidth.StringWidth(text)
-	if tw > 0 {
-		thirdTitle = truncateHeaderRunes(tw, thirdTitle)
-		text = fmt.Sprintf("%s  %-*s", text, tw, thirdTitle)
-	}
+	text = appendFileColumns(text, fileCols, func(spec panel.ColumnSpec) string {
+		return truncateHeaderRunes(spec.Width, state.ColumnTitle(spec))
+	})
 	cells := headerCells(text)
 	var cols []PanelHeaderColumn
 	add := func(start, end int, mode panel.SortMode, metaColumn string) {
@@ -1186,11 +1164,35 @@ func panelListHeader(rowTextWidth int, state panel.State, showIcons bool, showMe
 			add(metaX+metaStarts[i], end, panel.SortMeta, lay.EntryName)
 		}
 	}
-	add(joinW-panellist.SizeCells, joinW, panel.SortSize, "")
-	if tw > 0 && panel.EffectiveListFormat(state.ListFormat) == panel.ListFormatMtime {
-		add(joinW+2, joinW+2+tw, panel.SortMtime, "")
+	if hasSize {
+		add(joinW-panellist.SizeCells, joinW, panel.SortSize, "")
+	}
+	x := joinW
+	for _, spec := range fileCols.Without(panel.ColumnSize).Specs() {
+		x += panel.ColumnGap
+		if spec.Sortable {
+			add(x, x+spec.Width, spec.SortMode, "")
+		}
+		x += spec.Width
 	}
 	return text, cols
+}
+
+// appendFileColumns appends every file column but size (which panellist.JoinRow lays out) to a
+// joined row or header: the one place their gaps, padding and alignment are decided.
+func appendFileColumns(row string, cols panel.ColumnSet, cell func(panel.ColumnSpec) string) string {
+	var b strings.Builder
+	b.WriteString(row)
+	for _, spec := range cols.Without(panel.ColumnSize).Specs() {
+		text := cell(spec)
+		b.WriteString(strings.Repeat(" ", panel.ColumnGap))
+		if spec.RightAlign {
+			b.WriteString(runewidth.FillLeft(text, spec.Width))
+		} else {
+			b.WriteString(runewidth.FillRight(text, spec.Width))
+		}
+	}
+	return b.String()
 }
 
 // panelRowOpts holds display options shared by formatEntry and matchSpans.
@@ -1199,7 +1201,7 @@ type panelRowOpts struct {
 	Suffix    panellist.RowSuffix
 	ShowMeta  bool
 	MetaColW  int
-	ListFmt   panel.ListFormat
+	Columns   panel.ColumnSet
 	NameOnly  bool
 	ShowGit   bool
 	// SizePending is true when the row's directory size is still being calculated (queued or
@@ -1210,11 +1212,9 @@ type panelRowOpts struct {
 }
 
 func formatEntry(entry localfs.Entry, width int, opts panelRowOpts, styles theme.Theme, painter DiskUsagePainter, metaText string) string {
-	listFmt := panel.EffectiveListFormat(opts.ListFmt)
-	tw := panelListThirdColumnWidth(listFmt, opts.NameOnly)
-	nameWidth := panelListNameWidth(width, listFmt, opts.NameOnly, false)
+	nameWidth := panelListNameWidth(width, opts.Columns, opts.NameOnly, false)
 	if opts.ShowMeta {
-		nameWidth = panelListNameWidthWithMeta(width, opts.MetaColW, listFmt, opts.NameOnly, false)
+		nameWidth = panelListNameWidthWithMeta(width, opts.MetaColW, opts.Columns, opts.NameOnly, false)
 	}
 	display := panellist.EntryDisplayRunes(entry, nameWidth, opts.ShowIcons, opts.Suffix, styles)
 	name := string(panellist.RunesFromDisplay(display))
@@ -1227,28 +1227,46 @@ func formatEntry(entry localfs.Entry, width int, opts panelRowOpts, styles theme
 	}
 	size := panellist.FormatListedSize(entry, painter, pendingIcon)
 	metaPadded := padMetaLineToWidth(metaText, opts.MetaColW, false)
-	if tw == 0 {
-		return panellist.JoinRow(nameWidth, name, metaPadded, opts.ShowMeta, size, true)
+	row := panellist.JoinRow(nameWidth, name, metaPadded, opts.ShowMeta, size, opts.Columns.Has(panel.ColumnSize))
+	return appendFileColumns(row, opts.Columns, func(spec panel.ColumnSpec) string {
+		return fileColumnCell(entry, spec)
+	})
+}
+
+// fileColumnCell is the text of a file column other than size, fitted to the column's width.
+func fileColumnCell(entry localfs.Entry, spec panel.ColumnSpec) string {
+	var text string
+	switch spec.ID {
+	case panel.ColumnModified:
+		text = formatTime(entry.ModifiedAt)
+	case panel.ColumnChanged:
+		text = formatTime(entry.ChangedAt)
+	case panel.ColumnAccessed:
+		text = formatTime(entry.AccessedAt)
+	case panel.ColumnCreated:
+		text = formatTime(entry.CreatedAt)
+	case panel.ColumnPermissions:
+		text = entry.Mode.String()
+	case panel.ColumnOwner:
+		text = entry.Owner
+	case panel.ColumnGroup:
+		text = entry.Group
+	case panel.ColumnLinks:
+		if entry.Links > 0 {
+			text = strconv.FormatUint(entry.Links, 10)
+		}
 	}
-	var third string
-	switch listFmt {
-	case panel.ListFormatPerm:
-		third = formatListedPerm(entry)
-	default:
-		third = formatTime(entry.ModifiedAt)
-	}
-	return fmt.Sprintf("%s  %-*s", panellist.JoinRow(nameWidth, name, metaPadded, opts.ShowMeta, size, true), tw, third)
+	return runewidth.Truncate(text, spec.Width, "…")
 }
 
 func matchSpans(entry localfs.Entry, rowWidth int, ranges []search.Range, highlightCursor bool, styles theme.Theme, opts panelRowOpts, nameBGAt func(displayIndex int) tcell.Style) []primitive.Span {
 	if len(ranges) == 0 {
 		return nil
 	}
-	listFmt := panel.EffectiveListFormat(opts.ListFmt)
 	// rowWidth already has the git strip excluded; pass false to avoid double-subtracting.
-	nameWidth := panelListNameWidth(rowWidth, listFmt, opts.NameOnly, false)
+	nameWidth := panelListNameWidth(rowWidth, opts.Columns, opts.NameOnly, false)
 	if opts.ShowMeta {
-		nameWidth = panelListNameWidthWithMeta(rowWidth, opts.MetaColW, listFmt, opts.NameOnly, false)
+		nameWidth = panelListNameWidthWithMeta(rowWidth, opts.MetaColW, opts.Columns, opts.NameOnly, false)
 	}
 	display := panellist.EntryDisplayRunes(entry, nameWidth, opts.ShowIcons, opts.Suffix, styles)
 	matchStyle := styles.FuzzyHighlight
@@ -1365,14 +1383,6 @@ func uint64ToListingSizeInt64(u uint64) int64 {
 // formatByteSizeListed renders a short right-aligned size for the panel column (see panellist.SizeCells).
 func formatByteSizeListed(n int64) string {
 	return panellist.FormatByteSizeCompact(n, panellist.SizeCells)
-}
-
-func formatListedPerm(entry localfs.Entry) string {
-	s := entry.Mode.String()
-	if len(s) > panelListPermCells {
-		s = s[:panelListPermCells]
-	}
-	return fmt.Sprintf("%-*s", panelListPermCells, s)
 }
 
 func formatTime(value time.Time) string {

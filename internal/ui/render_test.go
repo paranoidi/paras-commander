@@ -57,8 +57,8 @@ func TestFormatEntryPrefixesDirectoriesAndNonDirectories(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := formatEntry(tt.entry, 50, panelRowOpts{ListFmt: panel.ListFormatMtime}, theme.Default(), nil, "")
-			nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false, false)
+			got := formatEntry(tt.entry, 50, panelRowOpts{Columns: panel.ColumnsModified}, theme.Default(), nil, "")
+			nameWidth := panelListNameWidth(50, panel.ColumnsModified, false, false)
 			if nameColumn := strings.TrimRight(got[:nameWidth], " "); nameColumn != tt.want {
 				t.Fatalf("name column = %q, want %q", nameColumn, tt.want)
 			}
@@ -68,8 +68,8 @@ func TestFormatEntryPrefixesDirectoriesAndNonDirectories(t *testing.T) {
 
 func TestFormatEntryFileIconsOmitsDirectorySlash(t *testing.T) {
 	entry := localfs.Entry{Name: "src", Type: localfs.EntryDirectory}
-	got := formatEntry(entry, 50, panelRowOpts{ShowIcons: true, ListFmt: panel.ListFormatMtime}, theme.Default(), nil, "")
-	nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false, false)
+	got := formatEntry(entry, 50, panelRowOpts{ShowIcons: true, Columns: panel.ColumnsModified}, theme.Default(), nil, "")
+	nameWidth := panelListNameWidth(50, panel.ColumnsModified, false, false)
 	nameColumn := strings.TrimRight(got[:nameWidth], " ")
 	if nameColumn != " src" {
 		t.Fatalf("icons mode name column = %q, want space-prefixed dir name without slash", nameColumn)
@@ -80,13 +80,13 @@ func TestFormatEntrySubtreeSelectionMark(t *testing.T) {
 	th := theme.Default()
 	mark := string(th.IconFilelistSelectionSubtree())
 	entry := localfs.Entry{Name: "sub", Path: "/tmp/p/sub", Type: localfs.EntryDirectory}
-	got := formatEntry(entry, 50, panelRowOpts{Suffix: panellist.RowSuffix{SubtreeSelection: true}, ListFmt: panel.ListFormatMtime}, th, nil, "")
-	nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false, false)
+	got := formatEntry(entry, 50, panelRowOpts{Suffix: panellist.RowSuffix{SubtreeSelection: true}, Columns: panel.ColumnsModified}, th, nil, "")
+	nameWidth := panelListNameWidth(50, panel.ColumnsModified, false, false)
 	nameColumn := strings.TrimRight(got[:nameWidth], " ")
 	if nameColumn != "/sub "+mark {
 		t.Fatalf("name column = %q, want trailing mark after dir slash prefix", nameColumn)
 	}
-	gotIcons := formatEntry(entry, 50, panelRowOpts{ShowIcons: true, Suffix: panellist.RowSuffix{SubtreeSelection: true}, ListFmt: panel.ListFormatMtime}, th, nil, "")
+	gotIcons := formatEntry(entry, 50, panelRowOpts{ShowIcons: true, Suffix: panellist.RowSuffix{SubtreeSelection: true}, Columns: panel.ColumnsModified}, th, nil, "")
 	nameColumn = strings.TrimRight(gotIcons[:nameWidth], " ")
 	if nameColumn != " sub "+mark {
 		t.Fatalf("icons mode name column = %q, want dirname then trailing mark", nameColumn)
@@ -97,8 +97,8 @@ func TestFormatEntryJobQueueMark(t *testing.T) {
 	th := theme.Default()
 	entry := localfs.Entry{Name: "file.txt", Path: "/tmp/file.txt", Type: localfs.EntryFile}
 	icon := th.IconFilelistJob()
-	got := formatEntry(entry, 50, panelRowOpts{Suffix: panellist.RowSuffix{JobSuffix: panellist.JobSuffix{JobIcon: icon}}, ListFmt: panel.ListFormatMtime}, th, nil, "")
-	nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false, false)
+	got := formatEntry(entry, 50, panelRowOpts{Suffix: panellist.RowSuffix{JobSuffix: panellist.JobSuffix{JobIcon: icon}}, Columns: panel.ColumnsModified}, th, nil, "")
+	nameWidth := panelListNameWidth(50, panel.ColumnsModified, false, false)
 	nameColumn := strings.TrimRight(got[:nameWidth], " ")
 	want := " file.txt " + string(icon)
 	if nameColumn != want {
@@ -108,8 +108,8 @@ func TestFormatEntryJobQueueMark(t *testing.T) {
 
 func TestFormatEntryOpenInOtherPanelNoSuffixWhenIconsOff(t *testing.T) {
 	entry := localfs.Entry{Name: "sub", Path: "/tmp/p/sub", Type: localfs.EntryDirectory}
-	got := formatEntry(entry, 50, panelRowOpts{ListFmt: panel.ListFormatMtime}, theme.Default(), nil, "")
-	nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false, false)
+	got := formatEntry(entry, 50, panelRowOpts{Columns: panel.ColumnsModified}, theme.Default(), nil, "")
+	nameWidth := panelListNameWidth(50, panel.ColumnsModified, false, false)
 	nameColumn := strings.TrimRight(got[:nameWidth], " ")
 	if nameColumn != "/sub" {
 		t.Fatalf("name column = %q, want /sub without suffix when icons off", nameColumn)
@@ -152,8 +152,8 @@ func TestFormatEntryJobQueueMarkBeforeSubtreeSelectionMark(t *testing.T) {
 	mark := string(th.IconFilelistSelectionSubtree())
 	entry := localfs.Entry{Name: "sub", Path: "/tmp/p/sub", Type: localfs.EntryDirectory}
 	icon := th.IconFilelistJob()
-	got := formatEntry(entry, 50, panelRowOpts{Suffix: panellist.RowSuffix{JobSuffix: panellist.JobSuffix{JobIcon: icon}, SubtreeSelection: true}, ListFmt: panel.ListFormatMtime}, th, nil, "")
-	nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false, false)
+	got := formatEntry(entry, 50, panelRowOpts{Suffix: panellist.RowSuffix{JobSuffix: panellist.JobSuffix{JobIcon: icon}, SubtreeSelection: true}, Columns: panel.ColumnsModified}, th, nil, "")
+	nameWidth := panelListNameWidth(50, panel.ColumnsModified, false, false)
 	nameColumn := strings.TrimRight(got[:nameWidth], " ")
 	want := "/sub " + string(icon) + " " + mark
 	if nameColumn != want {
@@ -167,20 +167,20 @@ func TestFormatEntryListingFormats(t *testing.T) {
 		Name: "x.go", Path: "/tmp/x.go", Type: localfs.EntryFile,
 		Size: 100, Mode: 0o644, ModifiedAt: time.Date(2020, 1, 2, 15, 4, 0, 0, time.UTC),
 	}
-	mtimeRow := formatEntry(e, rowW, panelRowOpts{ListFmt: panel.ListFormatMtime}, theme.Default(), nil, "")
+	mtimeRow := formatEntry(e, rowW, panelRowOpts{Columns: panel.ColumnsModified}, theme.Default(), nil, "")
 	if !strings.Contains(mtimeRow, formatTime(e.ModifiedAt)) {
 		t.Fatalf("mtime format row = %q, want modified time substring", mtimeRow)
 	}
-	briefRow := formatEntry(e, rowW, panelRowOpts{ListFmt: panel.ListFormatBrief}, theme.Default(), nil, "")
+	briefRow := formatEntry(e, rowW, panelRowOpts{Columns: panel.ColumnsBrief}, theme.Default(), nil, "")
 	if strings.Contains(briefRow, "2020") {
 		t.Fatalf("brief format should omit date: %q", briefRow)
 	}
-	permRow := formatEntry(e, rowW, panelRowOpts{ListFmt: panel.ListFormatPerm}, theme.Default(), nil, "")
+	permRow := formatEntry(e, rowW, panelRowOpts{Columns: panel.ColumnsPermissions}, theme.Default(), nil, "")
 	if !strings.Contains(permRow, "-rw") && !strings.Contains(permRow, "rw-") {
 		t.Fatalf("perm format row = %q, want mode substring", permRow)
 	}
-	nwBrief := panelListNameWidth(rowW, panel.ListFormatBrief, false, false)
-	nwMtime := panelListNameWidth(rowW, panel.ListFormatMtime, false, false)
+	nwBrief := panelListNameWidth(rowW, panel.ColumnsBrief, false, false)
+	nwMtime := panelListNameWidth(rowW, panel.ColumnsModified, false, false)
 	if nwBrief <= nwMtime {
 		t.Fatalf("brief name width %d should exceed mtime name width %d", nwBrief, nwMtime)
 	}
@@ -189,7 +189,7 @@ func TestFormatEntryListingFormats(t *testing.T) {
 func TestFormatEntryShrunkenNameOnly(t *testing.T) {
 	e := localfs.Entry{Name: "readme.md", Type: localfs.EntryFile, Size: 999, ModifiedAt: time.Date(2020, 1, 2, 3, 4, 0, 0, time.UTC)}
 	const rowW = 35
-	got := formatEntry(e, rowW, panelRowOpts{ListFmt: panel.ListFormatMtime, NameOnly: true}, theme.Default(), nil, "")
+	got := formatEntry(e, rowW, panelRowOpts{Columns: panel.ColumnsModified, NameOnly: true}, theme.Default(), nil, "")
 	if strings.Contains(got, "2020") || strings.Contains(got, "999") {
 		t.Fatalf("name-only row should omit date/size: %q", got)
 	}
@@ -223,11 +223,11 @@ func (testDiskUsageMap) IsKnownExcluded(string) bool { return false }
 
 func TestFormatEntryDirectorySizeUsesDiskUsageCache(t *testing.T) {
 	const rowW = 50
-	nameWidth := panelListNameWidth(rowW, panel.ListFormatMtime, false, false)
+	nameWidth := panelListNameWidth(rowW, panel.ColumnsModified, false, false)
 	dir := localfs.Entry{Name: "projects", Path: "/home/u/projects", Type: localfs.EntryDirectory}
 	cache := testDiskUsageMap{"/home/u/projects": 5000}
-	got := formatEntry(dir, rowW, panelRowOpts{ListFmt: panel.ListFormatMtime}, theme.Default(), cache, "")
-	want := fmt.Sprintf("%-*s %*s  %-*s", nameWidth, "/projects", panellist.SizeCells, formatByteSizeListed(5000), panelListModTimeCells, "")
+	got := formatEntry(dir, rowW, panelRowOpts{Columns: panel.ColumnsModified}, theme.Default(), cache, "")
+	want := fmt.Sprintf("%-*s %*s  %-*s", nameWidth, "/projects", panellist.SizeCells, formatByteSizeListed(5000), panel.ColumnTimeCells, "")
 	if got != want {
 		t.Fatalf("full row = %q, want %q", got, want)
 	}
@@ -235,10 +235,10 @@ func TestFormatEntryDirectorySizeUsesDiskUsageCache(t *testing.T) {
 
 func TestFormatEntryDirectorySizeEmptyWithoutCache(t *testing.T) {
 	const rowW = 50
-	nameWidth := panelListNameWidth(rowW, panel.ListFormatMtime, false, false)
+	nameWidth := panelListNameWidth(rowW, panel.ColumnsModified, false, false)
 	dir := localfs.Entry{Name: "empty", Path: "/tmp/empty", Type: localfs.EntryDirectory}
-	got := formatEntry(dir, rowW, panelRowOpts{ListFmt: panel.ListFormatMtime}, theme.Default(), nil, "")
-	want := fmt.Sprintf("%-*s %*s  %-*s", nameWidth, "/empty", panellist.SizeCells, "", panelListModTimeCells, "")
+	got := formatEntry(dir, rowW, panelRowOpts{Columns: panel.ColumnsModified}, theme.Default(), nil, "")
+	want := fmt.Sprintf("%-*s %*s  %-*s", nameWidth, "/empty", panellist.SizeCells, "", panel.ColumnTimeCells, "")
 	if got != want {
 		t.Fatalf("full row = %q, want %q", got, want)
 	}
@@ -246,12 +246,12 @@ func TestFormatEntryDirectorySizeEmptyWithoutCache(t *testing.T) {
 
 func TestFormatEntryDirectorySizePendingShowsRunningIcon(t *testing.T) {
 	const rowW = 50
-	nameWidth := panelListNameWidth(rowW, panel.ListFormatMtime, false, false)
+	nameWidth := panelListNameWidth(rowW, panel.ColumnsModified, false, false)
 	dir := localfs.Entry{Name: "orchard", Path: "/home/u/orchard", Type: localfs.EntryDirectory}
 	styles := theme.Default()
-	got := formatEntry(dir, rowW, panelRowOpts{ListFmt: panel.ListFormatMtime, SizePending: true}, styles, nil, "")
+	got := formatEntry(dir, rowW, panelRowOpts{Columns: panel.ColumnsModified, SizePending: true}, styles, nil, "")
 	// Right-aligned in the size column.
-	want := fmt.Sprintf("%-*s %*s  %-*s", nameWidth, "/orchard", panellist.SizeCells, styles.IconMetaRunning(), panelListModTimeCells, "")
+	want := fmt.Sprintf("%-*s %*s  %-*s", nameWidth, "/orchard", panellist.SizeCells, styles.IconMetaRunning(), panel.ColumnTimeCells, "")
 	if got != want {
 		t.Fatalf("full row = %q, want %q", got, want)
 	}
@@ -439,33 +439,6 @@ func TestRenderUsesBlockedPanelFrameWhenSortDialogOpen(t *testing.T) {
 		Secondary:   panel.State{Path: pathloc.MustParse("/tmp")},
 		ActivePanel: PrimaryPanel,
 		SortDialog: dialog.SortDialogState{
-			Open:    true,
-			PanelID: PrimaryPanel,
-		},
-	}
-
-	styles := theme.Default()
-	Render(screen, model, styles)
-
-	_, cornerStyle, _ := screen.Get(0, 1)
-	if cornerStyle != styles.PanelBlockedFrame {
-		t.Fatalf("left panel border style = %v, want panel blocked frame %v", cornerStyle, styles.PanelBlockedFrame)
-	}
-}
-
-func TestRenderUsesBlockedPanelFrameWhenListingFormatDialogOpen(t *testing.T) {
-	screen := tcell.NewSimulationScreen("UTF-8")
-	if err := screen.Init(); err != nil {
-		t.Fatalf("Init() error = %v", err)
-	}
-	defer screen.Fini()
-	screen.SetSize(80, 24)
-
-	model := Model{
-		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
-		Secondary:   panel.State{Path: pathloc.MustParse("/tmp")},
-		ActivePanel: PrimaryPanel,
-		ListingFormatDialog: dialog.ListingFormatDialogState{
 			Open:    true,
 			PanelID: PrimaryPanel,
 		},

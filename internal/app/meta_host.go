@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
@@ -49,17 +50,33 @@ func (h metaHost) OpenFileInExternalEditor(path string) error {
 	return h.app.openFileInExternalEditor(path)
 }
 
-func (h metaHost) SaveDefaultColumns(names []string) error {
+func (h metaHost) SaveDefaultProfile(name string) error {
 	if !h.app.paths.CanPersist() {
 		return errors.New("config.toml location is unknown; cannot save")
 	}
-	patch := map[string]interface{}{"fileindex": map[string]interface{}{"default_columns": names}}
+	patch := map[string]interface{}{"panels": map[string]interface{}{"default_column_profile": name}}
 	if err := h.app.persistPartial(patch); err != nil {
 		return err
 	}
-	h.app.config.FileIndex.DefaultColumns = names
+	h.app.config.Panels.DefaultColumnProfile = name
 	return nil
 }
+
+func (h metaHost) ReloadPanelListing(panelID int) {
+	if err := h.app.panelByID(panelID).Refresh(h.app.panelViewportRows(panelID)); err != nil {
+		h.app.setErrorMessage("Refresh failed", err)
+	}
+}
+
+func (h metaHost) SyncFilteredListRanks(lines []string, query string, matchRangeSlots int, caseInsensitive bool) (ranked []int, matchRanges [][]search.Range) {
+	return syncFilteredListRanks(lines, query, matchRangeSlots, caseInsensitive)
+}
+
+func (h metaHost) ClampFilteredListSelection(selected *int, rankedLen int) {
+	clampFilteredListSelection(selected, rankedLen)
+}
+
+func (h metaHost) PickerSearchIcon() string { return h.app.styles.IconSearchIcon() }
 
 func (h metaHost) MessageLogWrapCols() int { return h.app.messageLogWrapCols() }
 

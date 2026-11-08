@@ -3,6 +3,7 @@ package dialog
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
@@ -61,7 +62,7 @@ func (h *Handler) applyFileDialogEvent(ev dlg.Event) {
 // through applyFileDialogEvent like the keys.
 func (h *Handler) ApplyFileDialogEvent(ev dlg.Event) {
 	if b, ok := h.openPickerBinding(); ok {
-		applyPickerEvent(ev, b)
+		scrollquery.ApplyPickerEvent(ev, b)
 		return
 	}
 	if ev.Kind != dlg.EventCaret {

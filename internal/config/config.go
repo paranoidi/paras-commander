@@ -23,18 +23,14 @@ const (
 	fileName                = "config.toml"
 	keybindingsFileBaseName = "keybindings.toml"
 
-	ThemeDefault  = "default"
-	SortName      = "name"
-	SortExtension = "extension"
-	SortSize      = "size"
-	SortMtime     = "mtime"
-	// Listing format root keys (default_listing_format).
-	ListingFormatMtime = "mtime"
-	ListingFormatPerm  = "perm"
-	ListingFormatBrief = "brief"
-	SortDiskUsage      = "disk_usage"
-	FilterModeFuzzy    = "fuzzy"
-	FilterSyntaxFZF    = "subset-fzf"
+	ThemeDefault    = "default"
+	SortName        = "name"
+	SortExtension   = "extension"
+	SortSize        = "size"
+	SortMtime       = "mtime"
+	SortDiskUsage   = "disk_usage"
+	FilterModeFuzzy = "fuzzy"
+	FilterSyntaxFZF = "subset-fzf"
 	// FilterCycleMatchesVisual orders ↑/↓ among matches by panel row (basename sort order).
 	FilterCycleMatchesVisual = "visual"
 	// FilterCycleMatchesRanked orders ↑/↓ by fuzzy rank (best match first).
@@ -112,6 +108,8 @@ type Config struct {
 	Pools PoolsConfig `toml:"pools"`
 	// MassRename configures discovery of the separate patterns.toml saved mass-rename patterns file.
 	MassRename MassRenameConfig `toml:"mass_rename"`
+	// Columns configures discovery of the separate column-profiles.toml saved column profiles file.
+	Columns ColumnsConfig `toml:"columns"`
 	// Compare configures twin-panel directory compare (content hash diff).
 	Compare CompareConfig `toml:"compare"`
 	// Dedup configures find-duplicates within a single directory.
@@ -122,10 +120,11 @@ type Config struct {
 
 // PanelsConfig controls file panel browsing, sorting, and listing.
 type PanelsConfig struct {
-	ShowHidden           bool   `toml:"show_hidden"`
-	RespectGitignore     bool   `toml:"respect_gitignore"`
-	DefaultSort          string `toml:"default_sort"`
-	DefaultListingFormat string `toml:"default_listing_format"`
+	ShowHidden       bool   `toml:"show_hidden"`
+	RespectGitignore bool   `toml:"respect_gitignore"`
+	DefaultSort      string `toml:"default_sort"`
+	// DefaultColumnProfile names the column profile both panels start with.
+	DefaultColumnProfile string `toml:"default_column_profile"`
 	SortReverse          bool   `toml:"sort_reverse"`
 	DirectoriesFirst     bool   `toml:"directories_first"`
 	// RefreshIntervalMS re-reads both panel directories on this interval in background goroutines (0 disables).
@@ -206,10 +205,10 @@ type FileIndexConfig struct {
 	// Workers is the number of hash workers a scan uses. Zero uses config.ini's
 	// parallel_workers (auto-scaling when that is unset or "auto").
 	Workers int `toml:"workers"`
-	// DefaultColumns are the meta column names (meta.toml entries or Go providers) switched on
-	// when a panel with no active meta columns enters fileindex:// or Browse with fileindex. Empty
-	// switches none on.
-	DefaultColumns []string `toml:"default_columns"`
+	// DefaultProfile names the column profile applied when a panel with no active meta columns
+	// enters fileindex:// or Browse with fileindex; leaving restores the panel's columns. Empty
+	// applies none.
+	DefaultProfile string `toml:"default_profile"`
 	// BrowserScanMaxDepth is how many directory levels the automatic check of indexed folders
 	// descends while browsing with fileindex: N levels, -1 unlimited, 0 off (see AutoDriftDepth).
 	BrowserScanMaxDepth int `toml:"browser_scan_max_depth"`
@@ -276,6 +275,14 @@ type PoolsConfig struct {
 type MassRenameConfig struct {
 	// File is an absolute path to the global patterns.toml. Empty uses
 	// filepath.Join(configDir, DefaultMassRenamePatternsFileName) after paths are resolved.
+	File string `toml:"file"`
+}
+
+// ColumnsConfig controls discovery of the separate column-profiles.toml file (saved column
+// profiles).
+type ColumnsConfig struct {
+	// File is an absolute path to the column profiles file. Empty uses
+	// filepath.Join(configDir, DefaultColumnProfilesFileName) after paths are resolved.
 	File string `toml:"file"`
 }
 
@@ -461,7 +468,7 @@ type UIConfig struct {
 	// LeaderMenuShowDirectKeys shows the preferred global keybind after each action name in the Esc function menu.
 	LeaderMenuShowDirectKeys bool `toml:"leader_menu_show_direct_keys"`
 	// NarrowPanelsNameOnly: when true, narrow panels hide trailing listing columns and show only names
-	// (sort and default_listing_format are unchanged; see NarrowPanelRowTextWidthThreshold in builtin.go).
+	// (sort and the panel's columns are unchanged; see NarrowPanelRowTextWidthThreshold in builtin.go).
 	NarrowPanelsNameOnly bool `toml:"narrow_panels_name_only"`
 	// OtherPanelMatchMarks: when true, each panel marks rows whose name also exists in the other
 	// panel's directory (cyan for the active cursor's name).
@@ -701,7 +708,7 @@ func Default() Config {
 			ShowHidden:            false,
 			RespectGitignore:      true,
 			DefaultSort:           SortName,
-			DefaultListingFormat:  DefaultListingFormat,
+			DefaultColumnProfile:  DefaultColumnProfile,
 			SortReverse:           false,
 			DirectoriesFirst:      true,
 			RefreshIntervalMS:     DefaultRefreshIntervalMS,
@@ -910,7 +917,7 @@ func Default() Config {
 		FileIndex: FileIndexConfig{
 			Database:             DefaultFileIndexDatabase,
 			Workers:              DefaultFileIndexWorkers,
-			DefaultColumns:       DefaultFileIndexColumns(),
+			DefaultProfile:       DefaultFileIndexProfile,
 			BrowserScanMaxDepth:  DefaultFileIndexBrowserScanMaxDepth,
 			Hash:                 DefaultFileIndexHash,
 			ScanCommitIntervalMS: DefaultFileIndexScanCommitIntervalMS,
@@ -1237,8 +1244,8 @@ func (c *Config) validateSortAndDelete(builtin *Config) {
 	if !c.sortModeValid(c.Panels.DefaultSort) {
 		c.Panels.DefaultSort = builtin.Panels.DefaultSort
 	}
-	if !c.listingFormatValid(c.Panels.DefaultListingFormat) {
-		c.Panels.DefaultListingFormat = DefaultListingFormat
+	if strings.TrimSpace(c.Panels.DefaultColumnProfile) == "" {
+		c.Panels.DefaultColumnProfile = DefaultColumnProfile
 	}
 }
 
@@ -1670,15 +1677,6 @@ func (c Config) panelScrollbarValid(value string) bool {
 func (c Config) paneSplitOrientationValid(value string) bool {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case PaneSplitSideBySide, PaneSplitStacked:
-		return true
-	default:
-		return false
-	}
-}
-
-func (c Config) listingFormatValid(value string) bool {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case ListingFormatMtime, "modified", ListingFormatPerm, "permissions", "mode", ListingFormatBrief, "minimal":
 		return true
 	default:
 		return false

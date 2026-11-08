@@ -37,7 +37,7 @@ var overlayRegistry = []OverlaySpec{
 	{TableName: DialogHelpShortcutsTable, Defaults: DefaultHelpDialogOverlayKeys, Allowed: AllowedInHelpDialogOverlay},
 	{TableName: DialogUserMenuShortcutsTable, Defaults: DefaultUserMenuOverlayKeys, Allowed: AllowedInUserMenuOverlay},
 	{TableName: DialogCommandOutputShortcutsTable, Defaults: DefaultCommandOutputDialogOverlayKeys, Allowed: AllowedInCommandOutputDialogOverlay},
-	{TableName: DialogMetaShortcutsTable, Defaults: DefaultMetaDialogOverlayKeys, Allowed: AllowedInMetaDialogOverlay},
+	{TableName: DialogColumnsShortcutsTable, Defaults: DefaultColumnsDialogOverlayKeys, Allowed: AllowedInColumnsDialogOverlay},
 	{TableName: FilePreviewSearchShortcutsTable, Defaults: DefaultFilePreviewSearchOverlayKeys, Allowed: AllowedInFilePreviewSearchOverlay},
 }
 

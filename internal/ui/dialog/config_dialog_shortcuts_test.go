@@ -16,7 +16,7 @@ type configDialogMnemonic struct {
 // configDialogMnemonics lists the dialog's widget mnemonics in spec order, read from the spec.
 func configDialogMnemonics() []configDialogMnemonic {
 	var out []configDialogMnemonic
-	for _, g := range ConfigDialogView(ConfigDialogState{}, 80).Groups {
+	for _, g := range ConfigDialogView(ConfigDialogState{}).Groups {
 		for _, col := range g.Columns {
 			for _, it := range col {
 				for _, w := range append([]dlg.Item{it}, it.Cells...) {
@@ -55,14 +55,14 @@ func TestConfigDialogMnemonicsUniqueAndVisible(t *testing.T) {
 			t.Fatalf("%q: shortcut %q does not appear in label %q", m.label, string(m.shortcut), m.label)
 		}
 	}
-	if len(seen) != 13 {
-		t.Fatalf("got %d mnemonics, want 13", len(seen))
+	if len(seen) != 10 {
+		t.Fatalf("got %d mnemonics, want 10", len(seen))
 	}
 }
 
 func TestConfigDialogMnemonicsExpectedSet(t *testing.T) {
 	t.Parallel()
-	want := "dzhineutrmpbs"
+	want := "dzhineutrs"
 	var got strings.Builder
 	for _, m := range configDialogMnemonics() {
 		got.WriteRune(unicode.ToLower(m.shortcut))

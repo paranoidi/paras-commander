@@ -307,13 +307,6 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 		a.openFindDuplicates()
 	case keymap.ActionPanelExternalBrowser:
 		a.openPanelPathInExternalBrowser(panelScope)
-	case keymap.ActionPanelListingFormatDialog:
-		p := a.panelByID(panelScope)
-		if p.CarouselMode {
-			a.setTransientMessage("Listing format is not available in carousel view", ui.MessageUrgencyInfo)
-			break
-		}
-		a.openListingFormatDialogForPanel(panelScope)
 	case keymap.ActionPanelToggleCarousel:
 		a.toggleCarousel(panelScope, true)
 	case keymap.ActionPanelFolderColorMenu:
@@ -323,7 +316,7 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 		if a.toggleTreeForPanel(p, a.panelViewportRows(panelScope)) {
 			a.setTransientMessage(panelLabel(panelScope)+" tree view is not available in carousel view", ui.MessageUrgencyInfo)
 		}
-	case keymap.ActionPanelMeta:
+	case keymap.ActionPanelColumns:
 		a.metaCtrl.OpenDialog(panelScope)
 	case keymap.ActionFileQuickView:
 		a.previewCtrl.HandleQuickViewToggle()

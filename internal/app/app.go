@@ -27,6 +27,7 @@ import (
 	metactrl "github.com/paranoidi/paras-commander/internal/apphandler/meta"
 	pinctrl "github.com/paranoidi/paras-commander/internal/apphandler/pin"
 	previewctrl "github.com/paranoidi/paras-commander/internal/apphandler/preview"
+	"github.com/paranoidi/paras-commander/internal/columnprofile"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/dirwatch"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
@@ -577,7 +578,12 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		return nil, fmt.Errorf("get working directory: %w", err)
 	}
 	sortMode, _ := panel.ParseSortMode(cfg.Panels.DefaultSort)
-	listingFormat, _ := panel.ParseListFormat(cfg.Panels.DefaultListingFormat)
+	savedProfiles, profilesErr := columnprofile.Load(columnprofile.ResolveFile(cfg.Columns.File, opts.Paths.WithResolvedLocations().ConfigDir))
+	startupProfile, startupProfileFound := columnprofile.Find(savedProfiles, cfg.Panels.DefaultColumnProfile)
+	if !startupProfileFound {
+		startupProfile, _ = columnprofile.Find(nil, config.DefaultColumnProfile)
+	}
+	startupColumns, _ := startupProfile.Set()
 	listOptions := localfs.ListOptions{
 		ShowHidden: cfg.Panels.ShowHidden,
 	}
@@ -593,7 +599,8 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		gitignore:  giCache,
 		cfg:        cfg,
 		sortMode:   sortMode,
-		listFormat: listingFormat,
+		columns:    startupColumns,
+		profile:    startupProfile.Name,
 		scrollMode: scrollModeFromConfig(cfg.UI.Scroll.Mode),
 		diskEngine: duEngine,
 	}
@@ -772,7 +779,9 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		ConfigDir: resolvedPaths.ConfigDir,
 		Providers: app.fileIndex.Providers(),
 
-		KeysMetaDialog: keys.MetaDialog,
+		KeysColumnsDialog: keys.ColumnsDialog,
+		KeysDialogInput:   keys.DialogInput,
+		Profiles:          savedProfiles,
 	})
 	app.commandsCtrl = commandsctrl.New(commandsctrl.Deps{
 		Host:                    commandsHost{appShellHost: appShellHost{app: app}},
@@ -920,6 +929,13 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		app.model.Primary.CarouselMode = true
 		app.model.Primary.SetListLayout(panel.ListLayoutFlat, app.panelViewportRows(ui.PrimaryPanel))
 	}
+	if profilesErr != nil {
+		app.setErrorMessage("Column profiles", profilesErr)
+	}
+	if !startupProfileFound {
+		app.setTransientMessage(fmt.Sprintf("Unknown column profile %q, using %s", cfg.Panels.DefaultColumnProfile, startupProfile.Name), ui.MessageUrgencyWarn)
+	}
+	app.metaCtrl.ActivateStartupMeta(startupProfile.Meta)
 	return app, nil
 }
 
@@ -964,7 +980,7 @@ func resolveKeymapBundle(opts Options) (*keymap.Bundle, error) {
 		{&rk.BookmarkDialog, keymap.DefaultBookmarkDialogOverlayKeys, "bookmark dialog overlay"},
 		{&rk.FindDialog, keymap.DefaultFindDialogOverlayKeys, "find dialog overlay"},
 		{&rk.HistoryDialog, keymap.DefaultHistoryDialogOverlayKeys, "history dialog overlay"},
-		{&rk.MetaDialog, keymap.DefaultMetaDialogOverlayKeys, "meta dialog overlay"},
+		{&rk.ColumnsDialog, keymap.DefaultColumnsDialogOverlayKeys, "columns dialog overlay"},
 		{&rk.HelpDialog, keymap.DefaultHelpDialogOverlayKeys, "help dialog overlay"},
 		{&rk.UserMenu, keymap.DefaultUserMenuOverlayKeys, "user menu overlay"},
 		{&rk.FilePreview, keymap.DefaultFilePreviewOverlayKeys, "preview overlay"},
@@ -1025,7 +1041,8 @@ type browserPanelOptions struct {
 	gitignore  *gitignore.Cache
 	cfg        config.Config
 	sortMode   panel.SortMode
-	listFormat panel.ListFormat
+	columns    panel.ColumnSet
+	profile    string
 	scrollMode panel.ScrollMode
 	diskEngine *diskusage.Engine
 }
@@ -1043,7 +1060,8 @@ func newBrowserPanel(path string, opts browserPanelOptions) (panel.State, error)
 	p.Sort.DirectoriesFirst = opts.cfg.Panels.DirectoriesFirst
 	p.Sort.DiskUsageIdleSizeSort = opts.cfg.DiskUsage.IdleSizeSort
 	p.DiskUsageIdleSortActivated = opts.cfg.DiskUsage.IdleSizeSort
-	p.ListFormat = opts.listFormat
+	p.Columns = opts.columns
+	p.ColumnProfile = opts.profile
 	p.DiskSorter = opts.diskEngine.Size
 	p.DiskExcluded = opts.diskEngine.IsKnownExcluded
 	p.ApplySort()

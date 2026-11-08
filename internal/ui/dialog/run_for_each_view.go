@@ -107,12 +107,18 @@ func pickerListHeight(layoutHeight int) int { return min(max(layoutHeight-12, 4)
 // drawn.
 const pickerMinListRows = 4
 
-// pickerView is the spec of a picker sub-screen: a search input steering the ranked list below it,
-// and OK / Cancel with plain letters. line returns the text of the item at an index into the
-// state's items; ranked, ranges, selected and offset are the picker state.
+// pickerView is the spec of a file dialog picker sub-screen (see pickerSpec).
 func pickerView(st FileDialogState, ctx FileDialogViewContext, count int, line func(i int) string, ranked []int, ranges [][]search.Range, query string, cursor, scroll, selected, offset int) dlg.Spec {
+	return pickerSpec(fileDialogOuterTitle(st), fileDialogWidth(ctx.Layout.Width, st, ctx.IconLead), ctx.Layout.Height, ctx.Styles.IconSearchIcon(),
+		count, line, ranked, ranges, query, cursor, scroll, selected, offset)
+}
+
+// pickerSpec is the spec of a picker screen: a search input steering the ranked list below it, and
+// OK / Cancel with plain letters. line returns the text of the item at an index into the state's
+// items; ranked, ranges, selected and offset are the picker state.
+func pickerSpec(title string, width, screenH int, searchIcon string, count int, line func(i int) string, ranked []int, ranges [][]search.Range, query string, cursor, scroll, selected, offset int) dlg.Spec {
 	list := dlg.Item{
-		ID: PickerList, Kind: dlg.KindList, Driven: true, Cursor: selected, Offset: offset, Height: pickerListHeight(ctx.Layout.Height),
+		ID: PickerList, Kind: dlg.KindList, Driven: true, Cursor: selected, Offset: offset, Height: pickerListHeight(screenH),
 	}
 	for _, ent := range ranked {
 		var row dlg.ListRow
@@ -125,11 +131,11 @@ func pickerView(st FileDialogState, ctx FileDialogViewContext, count int, line f
 		list.Rows = append(list.Rows, row)
 	}
 	filter := dlg.Item{
-		ID: PickerFilter, Kind: dlg.KindInput, Drives: PickerList, LeadingIcon: ctx.Styles.IconSearchIcon(),
+		ID: PickerFilter, Kind: dlg.KindInput, Drives: PickerList, LeadingIcon: searchIcon,
 		Value: query, Cursor: cursor, Scroll: scroll,
 	}
 	return dlg.Spec{
-		Title: fileDialogOuterTitle(st), Width: fileDialogWidth(ctx.Layout.Width, st, ctx.IconLead), Unclamped: true,
+		Title: title, Width: width, Unclamped: true,
 		Groups:  []dlg.Group{{Columns: [][]dlg.Item{{filter, {Kind: dlg.KindSeparator}, list}}}},
 		Buttons: dlg.OKCancelButtons(),
 	}

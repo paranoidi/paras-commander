@@ -1,0 +1,14 @@
+== open ==
+focus=item0 phase=0 files=[size] checked=[false true false]
+== Alt+s ==
+focus=file0 phase=0 files=[] checked=[false true false]
+== Alt+m ==
+focus=file1 phase=0 files=[modified] checked=[false true false]
+== Alt+w ==
+focus=file6 phase=0 files=[modified owner] checked=[false true false]
+== Alt+g ==
+focus=file7 phase=0 files=[modified owner group] checked=[false true false]
+== Alt+n ==
+focus=file8 phase=0 files=[modified owner group links] checked=[false true false]
+== Alt+o ==
+CLOSED: meta columns=[orchard] file columns=[modified owner group links] profile="" message=""

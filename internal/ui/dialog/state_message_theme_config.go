@@ -60,7 +60,6 @@ type ConfigDialogState struct {
 	ScrollMode             panel.ScrollMode
 	PanelScrollbar         uiscrollbar.Style
 	PanelScrollbarInactive bool
-	ListFormat             panel.ListFormat
 	Mouse                  bool               // [ui].mouse
 	Split                  [3]FileDialogField // [carousel].split tokens: parent / center / child
 	// Focus is the focused widget of ConfigDialogView ("" = the first checkbox): ConfigNerdfont,
@@ -134,14 +133,6 @@ func (s SortDialogState) MetaCount() int {
 		n = cap
 	}
 	return n
-}
-
-// ListingFormatDialogState is the renderable state for the panel listing format modal.
-type ListingFormatDialogState struct {
-	Open       bool
-	ListFormat panel.ListFormat
-	Focus      dlg.ID
-	PanelID    int // PrimaryPanel or SecondaryPanel
 }
 
 // GroupSelectState is the renderable state for the group selection input modal.

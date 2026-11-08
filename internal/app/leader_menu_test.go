@@ -304,7 +304,7 @@ func TestBuiltinLeaderMenuViewGroup(t *testing.T) {
 		if it.Key == '.' && it.Label == "Toggle hidden files" {
 			hiddenKey = true
 		}
-		if it.Key == ',' && it.Label == "Meta column" {
+		if it.Key == ',' && it.Label == "Columns" {
 			metaKey = true
 		}
 	}
@@ -333,7 +333,7 @@ func TestBuiltinLeaderMenuPeriodTogglesHidden(t *testing.T) {
 	}
 }
 
-func TestBuiltinLeaderMenuCommaOpensMetaDialog(t *testing.T) {
+func TestBuiltinLeaderMenuCommaOpensColumnsDialog(t *testing.T) {
 	app := testLeaderMenuApp(t)
 	app.model.ViewMode = ui.ViewBrowser
 	app.openBuiltinLeaderMenu()
@@ -343,8 +343,8 @@ func TestBuiltinLeaderMenuCommaOpensMetaDialog(t *testing.T) {
 	if app.model.LeaderMenu.Open {
 		t.Fatal("leader menu should close after ,")
 	}
-	if !app.model.MetaDialog.Open {
-		t.Fatal("expected meta dialog after , key")
+	if !app.model.ColumnsDialog.Open {
+		t.Fatal("expected columns dialog after , key")
 	}
 }
 

@@ -229,7 +229,7 @@ func PanelMetaFitAt(file Rect, model *Model, panelID int, hideInactive bool) Pan
 		}
 	}
 	layoutRes := panelColumnLayout(file, state, PanelDisplayConfig{ShowIcons: model.UseNerdfontIcons, NarrowPanelsNameOnly: model.NarrowPanelsNameOnly})
-	fit.NameRoom = panelNameColumnWidth(layoutRes, panel.EffectiveListFormat(state.ListFormat), false, 0)
+	fit.NameRoom = panelNameColumnWidth(layoutRes, layoutRes.Columns, false, 0)
 	fit.Drawn, _ = fitPanelMetaColumns(layoutRes, state, cols)
 	return fit
 }

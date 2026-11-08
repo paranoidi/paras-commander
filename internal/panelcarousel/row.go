@@ -238,7 +238,7 @@ func MeasureFitColumnWidths(layout Layout, parent Column, center panel.State, sh
 		} else {
 			entries = center.Entries
 			c = Column{Kind: ColumnCenter, Populated: true, Active: true}
-			nameTitle, _, _ = center.ListColumnTitles(showIcons)
+			nameTitle = center.NameColumnTitle(showIcons)
 		}
 		if len(entries) == 0 {
 			continue

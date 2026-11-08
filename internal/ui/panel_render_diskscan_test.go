@@ -178,7 +178,8 @@ func TestDrawPanelSizeMarkerFollowsSizePendingDue(t *testing.T) {
 				t.Cleanup(screen.Fini)
 				screen.SetSize(100, 16)
 				state := panel.State{
-					Path: pathloc.MustParse("/mnt/pumpkin"),
+					Columns: panel.ColumnsBrief,
+					Path:    pathloc.MustParse("/mnt/pumpkin"),
 					Entries: []localfs.Entry{
 						{Name: "walnut", Path: "/mnt/pumpkin/walnut", Type: localfs.EntryDirectory},
 					},

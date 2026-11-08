@@ -4,7 +4,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
@@ -24,7 +23,6 @@ const (
 const (
 	configScrollModePrefix = "scroll-mode-"
 	configScrollbarPrefix  = "scrollbar-"
-	configListingPrefix    = "listing-"
 	configSplitPrefix      = "split-"
 )
 
@@ -33,9 +31,6 @@ func ConfigScrollModeID(i int) dlg.ID { return dlg.IndexedID(configScrollModePre
 
 // ConfigScrollbarID names the scrollbar-style radio of row i of uiscrollbar.DialogRadios.
 func ConfigScrollbarID(i int) dlg.ID { return dlg.IndexedID(configScrollbarPrefix, i) }
-
-// ConfigListingID names the listing-format radio of row i of panel.ListFormatDialogRadios.
-func ConfigListingID(i int) dlg.ID { return dlg.IndexedID(configListingPrefix, i) }
 
 // ConfigSplitID names carousel split input i (0 parent, 1 center, 2 child).
 func ConfigSplitID(i int) dlg.ID { return dlg.IndexedID(configSplitPrefix, i) }
@@ -58,28 +53,10 @@ const (
 )
 
 // ConfigDialogView is the Configuration modal's widget spec: view checkboxes, the scroll-mode /
-// scrollbar-style radio block, the default listing format, the mouse checkbox, the three carousel
-// split inputs and OK / Cancel. The scrollbar column and the gaps between the split inputs share
-// the spare width (Grow cells), so they stay centered at any dialog width. The listing-format
-// radios share one row when the dialog, placed on a screenW-wide screen, has room for all three
-// in full, and stack one per row otherwise.
-func ConfigDialogView(st ConfigDialogState, screenW int) dlg.Spec {
-	spec := configDialogSpec(st, true)
-	if p, ok := dlg.Place(screenW, configDialogFitProbeH, spec); ok {
-		for i, r := range panel.ListFormatDialogRadios() {
-			if it, found := p.Item(ConfigListingID(i)); !found || it.Rect.Width < draw.DialogOptionWidth(r.Label) {
-				return configDialogSpec(st, false)
-			}
-		}
-	}
-	return spec
-}
-
-// configDialogFitProbeH is a screen height that never shrinks the dialog, for the listing-row fit
-// test (only the width decides it).
-const configDialogFitProbeH = 1000
-
-func configDialogSpec(st ConfigDialogState, listingRow bool) dlg.Spec {
+// scrollbar-style radio block, the mouse checkbox, the three carousel split inputs and OK / Cancel.
+// The scrollbar column and the gaps between the split inputs share the spare width (Grow cells), so
+// they stay centered at any dialog width.
+func ConfigDialogView(st ConfigDialogState) dlg.Spec {
 	check := func(id dlg.ID, label string, m rune, on bool) dlg.Item {
 		return dlg.Item{ID: id, Kind: dlg.KindCheckbox, Label: label, Mnemonic: m, On: on}
 	}
@@ -118,21 +95,6 @@ func configDialogSpec(st ConfigDialogState, listingRow bool) dlg.Spec {
 	}
 	scroll = append(scroll, sep)
 
-	lf := panel.EffectiveListFormat(st.ListFormat)
-	var formats []dlg.Item
-	for i, r := range panel.ListFormatDialogRadios() {
-		formats = append(formats, dlg.Item{ID: ConfigListingID(i), Kind: dlg.KindRadio, Label: r.Label, Mnemonic: r.Shortcut, On: lf == r.Format, Gap: 2})
-	}
-	listing := []dlg.Item{text("Default listing format:")}
-	if listingRow {
-		listing = append(listing, dlg.Item{Kind: dlg.KindRow, Cells: formats})
-	} else {
-		for _, f := range formats {
-			f.Gap = 0
-			listing = append(listing, f)
-		}
-	}
-	listing = append(listing, sep)
 	mouse := []dlg.Item{check(ConfigMouse, "Mouse support", 's', st.Mouse), sep}
 
 	var inputs []dlg.Item
@@ -155,7 +117,6 @@ func configDialogSpec(st ConfigDialogState, listingRow bool) dlg.Spec {
 		Groups: []dlg.Group{
 			{Columns: [][]dlg.Item{view}},
 			{Columns: [][]dlg.Item{scroll}},
-			{Columns: [][]dlg.Item{listing}},
 			{Columns: [][]dlg.Item{mouse}},
 			{Columns: [][]dlg.Item{split}},
 		},
@@ -180,8 +141,6 @@ func (st *ConfigDialogState) Apply(ev dlg.Event) {
 			st.ScrollMode = panel.ScrollModeDialogRadios()[i].Mode
 		} else if i, ok := dlg.IDIndex(ev.ID, configScrollbarPrefix); ok && i < len(uiscrollbar.DialogRadios()) {
 			st.PanelScrollbar = uiscrollbar.DialogRadios()[i].Style
-		} else if i, ok := dlg.IDIndex(ev.ID, configListingPrefix); ok && i < len(panel.ListFormatDialogRadios()) {
-			st.ListFormat = panel.ListFormatDialogRadios()[i].Format
 		}
 	}
 }

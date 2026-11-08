@@ -21,7 +21,7 @@ var (
 	cachedFindDialogKeys         = sync.OnceValue(DefaultFindDialogOverlayKeys)
 	cachedHistoryDialogKeys      = sync.OnceValue(DefaultHistoryDialogOverlayKeys)
 	cachedFlattenDialogKeys      = sync.OnceValue(DefaultFlattenDialogOverlayKeys)
-	cachedMetaDialogKeys         = sync.OnceValue(DefaultMetaDialogOverlayKeys)
+	cachedColumnsDialogKeys      = sync.OnceValue(DefaultColumnsDialogOverlayKeys)
 )
 
 // Binding pairs a parsed chord with its action ID and original string form.
@@ -182,7 +182,7 @@ func sortMenuBindingKeys(actionID string, keys []string) []string {
 		cachedFindDialogKeys(),
 		cachedHistoryDialogKeys(),
 		cachedFlattenDialogKeys(),
-		cachedMetaDialogKeys(),
+		cachedColumnsDialogKeys(),
 	} {
 		chords, ok := reg[actionID]
 		if !ok {

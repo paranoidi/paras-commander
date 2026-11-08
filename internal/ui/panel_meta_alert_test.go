@@ -56,7 +56,7 @@ func metaAlertRowWith(t *testing.T, state panel.State, results map[string]string
 }
 
 func metaAlertState(names ...string) panel.State {
-	state := panel.State{Path: pathloc.MustParse("/tmp"), ListFormat: panel.ListFormatBrief}
+	state := panel.State{Path: pathloc.MustParse("/tmp"), Columns: panel.ColumnsBrief}
 	for _, n := range names {
 		state.Entries = append(state.Entries, localfs.Entry{Name: n, Path: "/tmp/" + n, Type: localfs.EntryFile})
 	}

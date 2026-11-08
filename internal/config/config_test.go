@@ -603,11 +603,11 @@ func TestLoadFromPathsClampsUnsupportedValuesToDefaults(t *testing.T) {
 			},
 		},
 		{
-			name:    "listing format invalid",
-			content: "[panels]\ndefault_listing_format = \"wide\"\n",
+			name:    "default column profile blank",
+			content: "[panels]\ndefault_column_profile = \"  \"\n",
 			testFn: func(t *testing.T, cfg Config) {
-				if cfg.Panels.DefaultListingFormat != ListingFormatBrief {
-					t.Fatalf("Panels.DefaultListingFormat = %q, want clamped to %q", cfg.Panels.DefaultListingFormat, ListingFormatBrief)
+				if cfg.Panels.DefaultColumnProfile != DefaultColumnProfile {
+					t.Fatalf("Panels.DefaultColumnProfile = %q, want %q", cfg.Panels.DefaultColumnProfile, DefaultColumnProfile)
 				}
 			},
 		},

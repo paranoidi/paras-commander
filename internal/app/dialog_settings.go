@@ -29,7 +29,6 @@ func (a *App) openSortDialog() {
 }
 
 func (a *App) openSortDialogForPanel(panelID int) {
-	a.closeListingFormatDialog()
 	target := a.panelByID(panelID)
 	cols := a.model.MetaResults[panelID]
 	n := min(len(cols), len(panel.SortDialogRadios()))
@@ -105,56 +104,8 @@ func (a *App) applySortDialogEvent(ev dlg.Event) {
 	}
 }
 
-func (a *App) handleListingFormatDialogKey(event *tcell.EventKey) {
-	st := &a.model.ListingFormatDialog
-	if ev, ok := dlg.HandleKey(dialog.ListingFormatView(*st), &st.Focus, event); ok {
-		a.applyListingFormatEvent(ev)
-	}
-}
-
-// applyListingFormatEvent acts on a widget event of the listing format dialog (key or click).
-func (a *App) applyListingFormatEvent(ev dlg.Event) {
-	st := &a.model.ListingFormatDialog
-	switch ev.ID {
-	case dlg.OK:
-		a.applyListingFormatDialog()
-	case dlg.Cancel:
-		a.closeListingFormatDialog()
-	default:
-		st.Apply(ev)
-	}
-}
-
-func (a *App) openListingFormatDialog() {
-	a.openListingFormatDialogForPanel(a.model.ActivePanel)
-}
-
-func (a *App) openListingFormatDialogForPanel(panelID int) {
-	a.closeSortDialog()
-	a.clearTransientMessage()
-	target := a.panelByID(panelID)
-	a.model.ListingFormatDialog = dialog.ListingFormatDialogState{
-		Open:       true,
-		ListFormat: panel.EffectiveListFormat(target.ListFormat),
-		PanelID:    panelID,
-	}
-}
-
-func (a *App) closeListingFormatDialog() {
-	a.model.ListingFormatDialog.Open = false
-}
-
-func (a *App) applyListingFormatDialog() {
-	st := a.model.ListingFormatDialog
-	target := a.panelByID(st.PanelID)
-	target.ListFormat = panel.EffectiveListFormat(st.ListFormat)
-	a.setTransientMessage(fmt.Sprintf("%s listing: %s", panelLabel(st.PanelID), target.ListFormat.String()), ui.MessageUrgencyInfo)
-	a.closeListingFormatDialog()
-}
-
 func (a *App) openConfigDialog() {
 	a.clearTransientMessage()
-	lf, _ := panel.ParseListFormat(a.config.Panels.DefaultListingFormat)
 	sm, _ := panel.ParseScrollMode(a.config.UI.Scroll.Mode)
 	sb, _ := uiscrollbar.ParseStyle(a.config.UI.Scroll.Scrollbar)
 	a.model.ConfigDialog = dialog.ConfigDialogState{
@@ -165,7 +116,6 @@ func (a *App) openConfigDialog() {
 		ScrollMode:             panel.EffectiveScrollMode(sm),
 		PanelScrollbar:         uiscrollbar.EffectiveStyle(sb),
 		PanelScrollbarInactive: a.config.UI.Scroll.ScrollbarInactive,
-		ListFormat:             panel.EffectiveListFormat(lf),
 		Mouse:                  a.config.UI.Mouse,
 	}
 	def := config.DefaultCarouselSplit()
@@ -204,22 +154,18 @@ func (a *App) applyConfigDialog() {
 	}
 	scrollMode := panel.ScrollModeTOMLValue(a.model.ConfigDialog.ScrollMode)
 	sb := uiscrollbar.TOMLValue(a.model.ConfigDialog.PanelScrollbar)
-	lf := panel.EffectiveListFormat(a.model.ConfigDialog.ListFormat)
 	a.config.UI.UseNerdfontIcons = val
 	a.setStyles(a.styles)
 	a.config.UI.Zoom.ActivePanel = zoom
 	a.config.UI.Zoom.Orientation = paneSplit
 	a.config.UI.Scroll.Mode = scrollMode
 	a.config.UI.Scroll.Scrollbar = sb
-	a.config.Panels.DefaultListingFormat = panel.ListingFormatTOMLValue(lf)
 	a.config.UI.Mouse = a.model.ConfigDialog.Mouse
 	a.applyMouseConfig()
 	a.config.Carousel.Split = split
 	a.model.CarouselLayout = carouselLayoutFromConfig(a.config.Carousel)
 	a.model.UseNerdfontIcons = val
 	a.model.PanelScrollbar = uiscrollbar.EffectiveStyle(a.model.ConfigDialog.PanelScrollbar)
-	a.model.Primary.ListFormat = lf
-	a.model.Secondary.ListFormat = lf
 	a.syncScrollFromConfig()
 	a.closeConfigDialog()
 	msg := "Configuration saved"
@@ -236,9 +182,6 @@ func (a *App) applyConfigDialog() {
 				"scrollbar": sb,
 			},
 		},
-		"panels": map[string]any{
-			"default_listing_format": panel.ListingFormatTOMLValue(lf),
-		},
 		"carousel": map[string]any{"split": split},
 	}
 	if err := a.persistPartial(patch); err != nil {
@@ -248,10 +191,9 @@ func (a *App) applyConfigDialog() {
 	a.ensurePanelsVisible()
 }
 
-// configDialogScreen is the Configuration dialog's screen on top for the current screen.
+// configDialogScreen is the Configuration dialog's screen on top.
 func (a *App) configDialogScreen() dialog.DialogScreen {
-	w, _ := a.screen.Size()
-	return a.model.ConfigDialog.Screen(w)
+	return a.model.ConfigDialog.Screen()
 }
 
 func (a *App) handleConfigDialogKey(event *tcell.EventKey) {

@@ -1,0 +1,6 @@
+== open ==
+focus=item0 phase=0 files=[size] checked=[false true false]
+== Space ==
+focus=item0 phase=0 files=[size] checked=[true true false]
+== Esc ==
+CLOSED: meta columns=[] file columns=[size] profile="brief" message=""

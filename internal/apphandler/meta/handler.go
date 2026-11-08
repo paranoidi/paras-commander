@@ -17,14 +17,11 @@ import (
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/jobbridge"
-	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
-	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
 func (h *Handler) postResult(panelID int, entryName, path, value string, gen uint64) {
@@ -202,24 +199,6 @@ func (h *Handler) loadMetaFile(panelID int) loadedMetaFile {
 		h.host.SetTransientMessage(res.LoadErr, ui.MessageUrgencyCritical)
 	}
 	return res
-}
-
-// dialogNotice explains why the meta picker has no entries: the load error, else the last
-// skipped-file warning (e.g. an untrusted meta.toml), else that no commands are defined.
-// Empty when res has entries.
-func dialogNotice(res loadedMetaFile) string {
-	if res.MF != nil && len(res.MF.Entries) > 0 {
-		return ""
-	}
-	editHint := menu.FunctionKeyEditConfig.KeyLabel + " edits meta.toml."
-	switch {
-	case res.LoadErr != "":
-		return res.LoadErr + "\n" + editHint
-	case len(res.Warns) > 0:
-		return res.Warns[len(res.Warns)-1]
-	default:
-		return "meta: no commands defined. " + editHint
-	}
 }
 
 func (h *Handler) startAsyncLoad(panelID int, activeNames []string) {
@@ -404,37 +383,8 @@ func (h *Handler) EditMetaFile() {
 	h.OpenFileEditor(path)
 }
 
-// OpenDialog opens the checkbox meta command picker for the given panel.
-func (h *Handler) OpenDialog(panelID int) {
-	if h.model.ViewMode != ui.ViewBrowser {
-		return
-	}
-	// Clear before loading so the load's own warnings (untrusted or invalid meta.toml) stay up.
-	h.host.ClearTransientMessage()
-	res := h.loadMetaFile(panelID)
-	entries := entriesFromFile(res.MF)
-
-	activeSet := make(map[string]struct{}, len(h.activeEntries[panelID]))
-	for _, n := range h.activeEntries[panelID] {
-		activeSet[n] = struct{}{}
-	}
-	checked := make([]bool, len(entries))
-	for i, e := range entries {
-		_, checked[i] = activeSet[e.Name]
-	}
-
-	h.model.MetaDialog = dialog.MetaDialogState{
-		Open:        true,
-		PanelID:     panelID,
-		Entries:     entries,
-		Checked:     checked,
-		MarkerWidth: h.host.DialogMarkerWidth(),
-		Notice:      dialogNotice(res),
-	}
-}
-
 func (h *Handler) CloseDialog() {
-	h.model.MetaDialog = dialog.MetaDialogState{}
+	h.model.ColumnsDialog = dialog.ColumnsDialogState{}
 }
 
 // entriesFromFile returns MetaEntry slice sorted by section, then order+name, from a MetaFile
@@ -462,52 +412,6 @@ func entriesFromFile(mf *metacmds.MetaFile) []dialog.MetaEntry {
 	// Sectioned providers go below the meta.toml entries, grouped by section.
 	slices.SortStableFunc(out, func(a, b dialog.MetaEntry) int { return strings.Compare(a.Section, b.Section) })
 	return out
-}
-
-// ActivateSelection applies the checked set from the open meta dialog: (re)runs the
-// selected commands for the dialog's panel, or clears the panel's meta columns when
-// nothing is checked.
-func (h *Handler) ActivateSelection() {
-	st := h.model.MetaDialog
-	panelID := st.PanelID
-	prevActive := append([]string(nil), h.activeEntries[panelID]...)
-	checked := append([]bool(nil), st.Checked...)
-	entries := append([]dialog.MetaEntry(nil), st.Entries...)
-	h.CloseDialog()
-
-	activeNames := checkedNames(entries, checked)
-
-	h.autoColumns[panelID] = false
-	if len(activeNames) == 0 {
-		h.deactivate(panelID)
-		return
-	}
-
-	activeNames = h.limitActiveNames(activeNames)
-
-	if p := h.host.PanelByID(panelID); p != nil {
-		wasActive := make(map[string]bool, len(prevActive))
-		for _, n := range prevActive {
-			wasActive[n] = true
-		}
-	nameLoop:
-		for _, name := range activeNames {
-			if wasActive[name] {
-				continue
-			}
-			for _, e := range entries {
-				if e.Name == name && e.SortOnActivation {
-					p.Sort.Mode = panel.SortMeta
-					p.Sort.MetaColumn = name
-					p.Sort.Reverse = e.SortReverse
-					h.host.ResortPanel(panelID)
-					break nameLoop
-				}
-			}
-		}
-	}
-
-	h.activate(panelID, activeNames)
 }
 
 // limitActiveNames returns the names a panel may have active at once (the first
@@ -570,8 +474,8 @@ func (h *Handler) activate(panelID int, activeNames []string) {
 // HandlePanelDirChanged re-runs active meta commands when the panel navigates to a new directory.
 // The meta file is resolved and loaded off the UI goroutine to avoid blocking on disk I/O.
 // A panel with no active columns entering an index view (fileindex:// or Browse with fileindex)
-// switches on [fileindex].default_columns, and leaving the index views switches them off again
-// unless the picker changed the columns meanwhile. Moving between the two views is not an edge.
+// applies [fileindex].default_profile, and leaving the index views restores the panel's columns
+// unless the user changed them meanwhile. Moving between the two views is not an edge.
 func (h *Handler) HandlePanelDirChanged(panelID int) {
 	p := h.host.PanelByID(panelID)
 	if p == nil {
@@ -581,17 +485,11 @@ func (h *Handler) HandlePanelDirChanged(panelID int) {
 	entered := inIndex && !h.inIndexView[panelID]
 	left := !inIndex && h.inIndexView[panelID]
 	h.inIndexView[panelID] = inIndex
-	if entered && len(h.activeEntries[panelID]) == 0 && len(h.config.FileIndex.DefaultColumns) > 0 {
-		h.activate(panelID, h.limitActiveNames(h.config.FileIndex.DefaultColumns))
-		h.autoColumns[panelID] = true
+	if entered && len(h.activeEntries[panelID]) == 0 && h.applyIndexProfile(panelID, p) {
 		return
 	}
-	if left && h.autoColumns[panelID] {
-		h.autoColumns[panelID] = false
-		h.deactivate(panelID)
-		return
-	}
-	if len(h.model.MetaResults[panelID]) == 0 {
+	if left && h.autoColumns[panelID] != nil {
+		h.restoreAutoColumns(panelID, p)
 		return
 	}
 	if len(h.activeEntries[panelID]) == 0 {
@@ -636,7 +534,7 @@ func (h *Handler) HandleLoad(d LoadPayload) {
 	}
 	// Without a file, columns the user picked stay until a load works again; default columns
 	// fall through and are dropped (an index view with no index database and no meta.toml).
-	if d.MF == nil && !h.autoColumns[d.PanelID] {
+	if d.MF == nil && h.autoColumns[d.PanelID] == nil {
 		return
 	}
 	panel := h.host.PanelByID(d.PanelID)
@@ -651,12 +549,16 @@ func (h *Handler) HandleLoad(d LoadPayload) {
 	}
 	sorted := metacmds.SortEntriesForDisplay(d.ActiveNames, d.MF)
 	if len(sorted) == 0 {
-		// None of the names exist (e.g. a stale [fileindex].default_columns, or no entries at
-		// all): drop the placeholder columns rather than leaving empty headers.
+		// None of the names exist here: drop the placeholder columns rather than leaving empty
+		// headers. The names stay active, so a directory that offers them (a local meta.toml)
+		// shows them again; default columns have no such pull and go.
 		h.model.MetaResults[d.PanelID] = nil
-		h.activeEntries[d.PanelID] = nil
+		if h.autoColumns[d.PanelID] != nil {
+			h.activeEntries[d.PanelID] = nil
+		}
 		return
 	}
+	h.sortOnActivation(panel, d.PanelID, sorted)
 	cols := make([]ui.MetaColumnState, len(sorted))
 	for i, e := range sorted {
 		cols[i] = newColumn(e)
@@ -1134,35 +1036,6 @@ func runCommand(ctx context.Context, cmd, path, dir string) (string, error) {
 		}
 	}
 	return strings.TrimRight(string(res.Stdout), "\r\n"), nil
-}
-
-// HandleDialogKey routes a key event to the open meta checkbox dialog.
-func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
-	st := &h.model.MetaDialog
-	if event.Key() == tcell.KeyF9 {
-		h.editConfigFromDialog()
-		return
-	}
-	if id, ok := h.keysMetaDialog.Lookup(event); ok && id == keymap.ActionPanelMetaSave {
-		h.saveDefaultColumns()
-		return
-	}
-	if ev, ok := dlg.HandleKey(dialog.MetaDialogView(*st), &st.Focus, event); ok {
-		h.ApplyDialogEvent(ev)
-	}
-}
-
-// ApplyDialogEvent acts on a widget event of the open meta dialog (key or click).
-func (h *Handler) ApplyDialogEvent(ev dlg.Event) {
-	st := &h.model.MetaDialog
-	switch ev.ID {
-	case dlg.OK:
-		h.ActivateSelection()
-	case dlg.Cancel:
-		h.CloseDialog()
-	default:
-		st.Apply(ev)
-	}
 }
 
 // CancelAll cancels every in-flight per-panel meta run. Called on quit.

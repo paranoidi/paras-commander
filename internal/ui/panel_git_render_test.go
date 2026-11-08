@@ -22,8 +22,8 @@ func TestPanelListGitColumnActiveVisibleWhilePending(t *testing.T) {
 
 func TestPanelListNameWidthReservesGitColumn(t *testing.T) {
 	const rowW = 40
-	noGit := panelListNameWidth(rowW, panel.ListFormatMtime, false, false)
-	withGit := panelListNameWidth(rowW, panel.ListFormatMtime, false, true)
+	noGit := panelListNameWidth(rowW, panel.ColumnsModified, false, false)
+	withGit := panelListNameWidth(rowW, panel.ColumnsModified, false, true)
 	want := panelListGitCells + panelListGitGap
 	if noGit-withGit != want {
 		t.Fatalf("name width delta = %d, want %d (git cells + gap)", noGit-withGit, want)

@@ -86,7 +86,7 @@ func TestRenderShrunkenNameOnlyOmitsMtimeOnFirstListRow(t *testing.T) {
 
 func TestPanelNameColumnWidth(t *testing.T) {
 	cols := []MetaColumnState{{EntryName: "pebble", ColumnTitle: "Pebble", Results: map[string]string{"/harbor/a": "abcdefghij"}}}
-	st := panel.State{ListFormat: panel.ListFormatBrief}
+	st := panel.State{Columns: panel.ColumnsBrief}
 
 	// 70 cells: 2 border + 1 icon gutter + 2 icon strip leaves 65; brief reserves 6 after the name.
 	if got := PanelNameColumnWidth(70, st, true, true, nil); got != 59 {

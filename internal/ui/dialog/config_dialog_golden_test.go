@@ -23,7 +23,7 @@ func configGoldenField(value, prefill string) FileDialogField {
 
 func configGoldenState(focus string) ConfigDialogState {
 	st := ConfigDialogState{
-		Open: true, ScrollMode: panel.ScrollModeEdge, PanelScrollbar: uiscrollbar.StyleThumb, ListFormat: panel.ListFormatMtime,
+		Open: true, ScrollMode: panel.ScrollModeEdge, PanelScrollbar: uiscrollbar.StyleThumb,
 		Split: [3]FileDialogField{configGoldenField("<<22%", "<<22%"), configGoldenField("<44%", "<44%"), configGoldenField("*", "*")},
 	}
 	configGoldenSetFocus(&st, focus)
@@ -48,8 +48,6 @@ func configGoldenSetFocus(st *ConfigDialogState, name string) {
 			st.Focus = ConfigScrollModeID(n)
 		} else if c, _ := fmt.Sscanf(name, "bar%d", &n); c == 1 {
 			st.Focus = ConfigScrollbarID(n)
-		} else if c, _ := fmt.Sscanf(name, "listing%d", &n); c == 1 {
-			st.Focus = ConfigListingID(n)
 		} else if c, _ := fmt.Sscanf(name, "split%d", &n); c == 1 {
 			st.Focus = ConfigSplitID(n)
 		} else {
@@ -72,10 +70,10 @@ func TestConfigDialogGoldenRender(t *testing.T) {
 
 	allOn := configGoldenState("zoom")
 	allOn.UseNerdfontIcons, allOn.ZoomActivePanel, allOn.PaneSplitStacked = true, true, true
-	allOn.ScrollMode, allOn.PanelScrollbar, allOn.ListFormat = panel.ScrollModeCenter, uiscrollbar.StyleBar, panel.ListFormatBrief
+	allOn.ScrollMode, allOn.PanelScrollbar = panel.ScrollModeCenter, uiscrollbar.StyleBar
 	add("all_on", 80, 30, allOn)
-	other := configGoldenState("listing1")
-	other.ScrollMode, other.PanelScrollbar, other.ListFormat = panel.ScrollModeMinimal, uiscrollbar.StyleNone, panel.ListFormatPerm
+	other := configGoldenState("zoom")
+	other.ScrollMode, other.PanelScrollbar = panel.ScrollModeMinimal, uiscrollbar.StyleNone
 	add("other_options", 80, 30, other)
 
 	invalid := configGoldenState("split1")
@@ -100,7 +98,7 @@ func TestConfigDialogGoldenRender(t *testing.T) {
 	add("w53", 53, 30, configGoldenState("mode1"))
 	add("w52", 52, 30, configGoldenState("bar1"))
 	add("w45", 45, 30, configGoldenState("split1"))
-	add("w44_odd", 44, 30, configGoldenState("listing0"))
+	add("w44_odd", 44, 30, configGoldenState("mode0"))
 	add("w40", 40, 30, configGoldenState("cancel"))
 	add("w38", 38, 30, configGoldenState("ok"))
 	add("w37_refused", 37, 30, configGoldenState("ok"))

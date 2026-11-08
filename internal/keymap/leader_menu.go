@@ -78,7 +78,7 @@ var leaderMenuGroupActions = map[string][]string{
 	},
 	LeaderMenuGroupView: {
 		ActionPanelToggleHidden,
-		ActionPanelMeta,
+		ActionPanelColumns,
 		ActionPanelSortDialog,
 		ActionPanelFilterDialog,
 		ActionPanelDiskUsageScan,

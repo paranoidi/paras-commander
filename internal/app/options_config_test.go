@@ -2,14 +2,17 @@ package app
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/columnprofile"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
@@ -93,7 +96,7 @@ func TestNewWithOptionsSetsUseNerdfontIconsFromConfig(t *testing.T) {
 	}
 }
 
-func TestNewWithOptionsAppliesDefaultListingFormatFromConfig(t *testing.T) {
+func TestNewWithOptionsAppliesDefaultColumnProfileFromConfig(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))
 
@@ -105,7 +108,7 @@ func TestNewWithOptionsAppliesDefaultListingFormatFromConfig(t *testing.T) {
 	screen.SetSize(80, 20)
 
 	cfg := config.Default()
-	cfg.Panels.DefaultListingFormat = config.ListingFormatBrief
+	cfg.Panels.DefaultColumnProfile = config.ColumnProfileBrief
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
@@ -116,8 +119,11 @@ func TestNewWithOptionsAppliesDefaultListingFormatFromConfig(t *testing.T) {
 		Config: cfg,
 		Theme:  theme.Default(),
 	})
-	if app.model.Primary.ListFormat != panel.ListFormatBrief || app.model.Secondary.ListFormat != panel.ListFormatBrief {
-		t.Fatalf("panels ListFormat = %v/%v, want brief", app.model.Primary.ListFormat, app.model.Secondary.ListFormat)
+	if app.model.Primary.Columns != panel.ColumnsBrief || app.model.Secondary.Columns != panel.ColumnsBrief {
+		t.Fatalf("panel columns = %v/%v, want brief", app.model.Primary.Columns.Names(), app.model.Secondary.Columns.Names())
+	}
+	if app.model.Primary.ColumnProfile != config.ColumnProfileBrief {
+		t.Fatalf("panel profile = %q", app.model.Primary.ColumnProfile)
 	}
 }
 
@@ -168,7 +174,7 @@ func TestOptionsMenuOpensConfigurationDialog(t *testing.T) {
 	screen.SetSize(80, 20)
 
 	cfg := config.Default()
-	cfg.Panels.DefaultListingFormat = config.ListingFormatPerm
+	cfg.Panels.DefaultColumnProfile = config.ColumnProfilePermissions
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
@@ -197,8 +203,8 @@ func TestOptionsMenuOpensConfigurationDialog(t *testing.T) {
 	if !app.model.ConfigDialog.UseNerdfontIcons {
 		t.Fatal("working copy UseNerdfontIcons = false, want default true")
 	}
-	if app.model.ConfigDialog.ListFormat != panel.ListFormatPerm {
-		t.Fatalf("ConfigDialog.ListFormat = %v, want perm", app.model.ConfigDialog.ListFormat)
+	if app.model.Primary.Columns != panel.ColumnsPermissions {
+		t.Fatalf("panel columns = %v, want permissions", app.model.Primary.Columns.Names())
 	}
 }
 
@@ -379,46 +385,6 @@ func TestConfigDialogApplyPersistsScrollMode(t *testing.T) {
 	}
 }
 
-func TestConfigDialogApplyPersistsDefaultListingFormat(t *testing.T) {
-	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "a.txt"))
-
-	screen := tcell.NewSimulationScreen("UTF-8")
-	if err := screen.Init(); err != nil {
-		t.Fatalf("Init() error = %v", err)
-	}
-	defer screen.Fini()
-	screen.SetSize(80, 20)
-
-	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "persist-cfg-lf")}.WithResolvedLocations()
-	app := newTestApp(t, screen, Options{
-		CWD: func() (string, error) {
-			return dir, nil
-		},
-		Config: config.Default(),
-		Paths:  appPaths,
-		Theme:  theme.Default(),
-	})
-
-	app.openConfigDialog()
-	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'p', tcell.ModAlt))
-	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt))
-
-	if quit {
-		t.Fatal("handleKey() quit = true, want false")
-	}
-	if app.model.Primary.ListFormat != panel.ListFormatPerm || app.model.Secondary.ListFormat != panel.ListFormatPerm {
-		t.Fatalf("panels ListFormat = %v/%v, want perm", app.model.Primary.ListFormat, app.model.Secondary.ListFormat)
-	}
-	reloaded, err := config.LoadFromPaths(appPaths)
-	if err != nil {
-		t.Fatalf("LoadFromPaths after persist: %v", err)
-	}
-	if reloaded.Panels.DefaultListingFormat != config.ListingFormatPerm {
-		t.Fatalf("persisted default_listing_format = %q, want %q", reloaded.Panels.DefaultListingFormat, config.ListingFormatPerm)
-	}
-}
-
 func TestOptionsMenuOpensThemeDialog(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))
@@ -518,5 +484,58 @@ func TestConfigDialogApplyCarouselSplit(t *testing.T) {
 	}
 	if reloaded.Carousel.Split[1] != "<30%" {
 		t.Fatalf("persisted split = %v", reloaded.Carousel.Split)
+	}
+}
+
+func TestStartupProfileActivatesItsMetaColumnsAndSavedFile(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := t.TempDir()
+	saved := []columnprofile.Profile{{Name: "orchard", Columns: []string{"size", "owner"}, Meta: []string{config.FileIndexTagsColumn}}}
+	if err := columnprofile.Save(filepath.Join(cfgDir, config.DefaultColumnProfilesFileName), saved); err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Default()
+	cfg.Panels.DefaultColumnProfile = "orchard"
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(120, 30)
+	app := newTestApp(t, screen, Options{
+		CWD:    func() (string, error) { return dir, nil },
+		Config: cfg,
+		Paths:  config.Paths{ConfigDir: cfgDir},
+		Theme:  theme.Default(),
+	})
+	want := panel.ColumnsBrief.With(panel.ColumnOwner)
+	if app.model.Primary.Columns != want || app.model.Secondary.Columns != want || app.model.Primary.ColumnProfile != "orchard" {
+		t.Fatalf("columns = %v/%v, profile = %q", app.model.Primary.Columns.Names(), app.model.Secondary.Columns.Names(), app.model.Primary.ColumnProfile)
+	}
+	if got := app.model.MetaResults[ui.PrimaryPanel]; len(got) != 1 || got[0].EntryName != config.FileIndexTagsColumn {
+		t.Fatalf("meta columns = %+v", got)
+	}
+}
+
+func TestUnknownStartupProfileWarnsAndFallsBack(t *testing.T) {
+	cfg := config.Default()
+	cfg.Panels.DefaultColumnProfile = "lantern"
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(120, 30)
+	dir := t.TempDir()
+	app := newTestApp(t, screen, Options{
+		CWD:    func() (string, error) { return dir, nil },
+		Config: cfg,
+		Theme:  theme.Default(),
+	})
+	if app.model.Primary.ColumnProfile != config.DefaultColumnProfile || app.model.Primary.Columns != panel.ColumnsBrief {
+		t.Fatalf("profile = %q, columns = %v", app.model.Primary.ColumnProfile, app.model.Primary.Columns.Names())
+	}
+	if !strings.Contains(app.model.Message, "lantern") {
+		t.Fatalf("message = %q, want the unknown name", app.model.Message)
 	}
 }

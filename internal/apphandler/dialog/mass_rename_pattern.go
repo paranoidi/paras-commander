@@ -8,6 +8,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ops"
+	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
@@ -274,7 +275,7 @@ func (h *Handler) removeMassRenameHistoryEntry(p ops.MassRenamePattern) {
 }
 
 // openMassRenameLoadPicker opens the fuzzy load-pattern picker, lazily loading patterns.toml (no
-// caching, mirroring the bookmarks / meta dialogs).
+// caching, mirroring the bookmarks / columns dialogs).
 func (h *Handler) openMassRenameLoadPicker() {
 	d := &h.model.FileDialog
 	items, err := ops.LoadMassRenamePatterns(h.massRenamePatternsPath())
@@ -485,11 +486,11 @@ func (h *Handler) handleMassRenamePickerKey(event *tcell.EventKey) bool {
 	return false
 }
 
-func (h *Handler) massRenamePickerBinding() pickerBinding {
+func (h *Handler) massRenamePickerBinding() scrollquery.PickerBinding {
 	st := h.currentMassRenamePickerState()
-	return pickerBinding{
-		focus: &st.Focus, query: &st.Query, cursor: &st.QueryCursor, scroll: &st.QueryScroll,
-		selected: &st.Selected, offset: &st.ListScroll, count: func() int { return len(st.Ranked) },
-		resync: h.syncMassRenamePickerRanks, activate: h.activateMassRenamePickerSelection, closePicker: h.closeMassRenamePicker,
+	return scrollquery.PickerBinding{
+		Focus: &st.Focus, Query: &st.Query, Cursor: &st.QueryCursor, Scroll: &st.QueryScroll,
+		Selected: &st.Selected, Offset: &st.ListScroll, Count: func() int { return len(st.Ranked) },
+		Resync: h.syncMassRenamePickerRanks, Activate: h.activateMassRenamePickerSelection, ClosePicker: h.closeMassRenamePicker,
 	}
 }

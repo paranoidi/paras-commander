@@ -195,6 +195,12 @@ func localEntryToBackend(loc pathloc.Path, e localfs.Entry) fsbackend.Entry {
 		DevValid:     e.DevValid,
 		AccessDenied: e.AccessDenied,
 		BrokenLink:   e.BrokenLink,
+		Owner:        e.Owner,
+		Group:        e.Group,
+		Links:        e.Links,
+		ChangedAt:    e.ChangedAt,
+		AccessedAt:   e.AccessedAt,
+		CreatedAt:    e.CreatedAt,
 	}
 }
 

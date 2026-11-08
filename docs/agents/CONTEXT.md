@@ -26,8 +26,11 @@ _Avoid_: selection panel, basket
 A single per-panel slot where a selection can be parked and later restored.
 _Avoid_: clipboard, saved selection
 
-**Listing format**:
-Which columns a panel shows beside each name (size, mtime, permissions, meta columns).
+**File column**:
+A built-in column a panel can show beside each name (size, modified, owner, ...), as opposed to a meta column.
+
+**Column profile**:
+A named set of file and meta columns a panel can apply; built-in or saved in `column-profiles.toml`.
 
 **Meta column**:
 An extra listing column whose values come from a user-configured per-entry command.

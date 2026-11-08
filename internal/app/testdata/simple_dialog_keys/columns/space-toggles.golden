@@ -1,0 +1,18 @@
+== open ==
+focus=item0 phase=0 files=[size] checked=[false true false]
+== Space ==
+focus=item0 phase=0 files=[size] checked=[true true false]
+== Down ==
+focus=item1 phase=0 files=[size] checked=[true true false]
+== Space ==
+focus=item1 phase=0 files=[size] checked=[true false false]
+== Down ==
+focus=item2 phase=0 files=[size] checked=[true false false]
+== Space ==
+focus=item2 phase=0 files=[size] checked=[true false true]
+== Space ==
+focus=item2 phase=0 files=[size] checked=[true false false]
+== Up ==
+focus=item1 phase=0 files=[size] checked=[true false false]
+== Space ==
+focus=item1 phase=0 files=[size] checked=[true true false]

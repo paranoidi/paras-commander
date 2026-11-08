@@ -8,7 +8,7 @@ func NewSideListing(driver, follower *State) State {
 		Sort:                       driver.Sort,
 		Filter:                     driver.Filter,
 		ShowHidden:                 driver.ShowHidden,
-		ListFormat:                 driver.ListFormat,
+		Columns:                    driver.Columns,
 		ScrollMode:                 driver.ScrollMode,
 		ScrollEdgeMargin:           driver.ScrollEdgeMargin,
 		Gitignore:                  follower.Gitignore,

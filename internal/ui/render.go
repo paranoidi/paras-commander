@@ -290,7 +290,6 @@ type Model struct {
 	DebounceCalibrateDialog dialog.DebounceCalibrateDialogState
 	SortDialog              dialog.SortDialogState
 	StatusCommandsDialog    dialog.StatusCommandsDialogState
-	ListingFormatDialog     dialog.ListingFormatDialogState
 	GroupSelect             dialog.GroupSelectState
 	FilterDialog            dialog.FilterDialogState
 	PathPicker              dialog.PathPickerState
@@ -302,10 +301,10 @@ type Model struct {
 	FindRelocate            dialog.FindRelocateState
 	// PinnedItems is the ad-hoc, session-only pin list (most-recently-pinned first),
 	// shared by the main panel, Find dialog, Compare view, and Dedup view. Never persisted.
-	PinnedItems []PinnedItem
-	PinDialog   dialog.PinDialogState
-	MetaDialog  dialog.MetaDialogState
-	LeaderMenu  LeaderMenuState
+	PinnedItems   []PinnedItem
+	PinDialog     dialog.PinDialogState
+	ColumnsDialog dialog.ColumnsDialogState
+	LeaderMenu    LeaderMenuState
 	// MetaResults holds per-panel active meta columns (nil/empty = meta not active).
 	MetaResults [2][]MetaColumnState
 	// FilePreview is the live inactive-panel preview state (mutate only under App.commandsMu).
@@ -417,9 +416,9 @@ func (m *Model) PrimaryModal() dialog.PrimaryModal {
 // "a dialog owns the keyboard" checks.
 func (m *Model) AnyModalOpen() bool {
 	return m.PrimaryModal() != dialog.PrimaryModalNone ||
-		m.SortDialog.Open || m.StatusCommandsDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open ||
+		m.SortDialog.Open || m.StatusCommandsDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open ||
 		m.FileDialog.Open || m.SFTPConnectDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open ||
-		m.FindDialog.Open || m.IndexFindDialog.Open || m.IndexTagsDialog.Open || m.MetaDialog.Open || m.LeaderMenu.Open || m.CompareMergeDialog.Open || m.PinDialog.Open
+		m.FindDialog.Open || m.IndexFindDialog.Open || m.IndexTagsDialog.Open || m.ColumnsDialog.Open || m.LeaderMenu.Open || m.CompareMergeDialog.Open || m.PinDialog.Open
 }
 
 // FindParkedOn reports whether Find or Find in index is parked (hidden, state kept) from panelID.
@@ -715,7 +714,7 @@ func (m *Model) nonLeaderModalOpen() bool {
 	if m.PrimaryModal() != dialog.PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.StatusCommandsDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.IndexFindDialog.Open || m.IndexTagsDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.IconLegendDialog.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.StashRestoreDialog.Open || m.CompareSelection.Open || m.CommandOutputDialog.Open || m.PinDialog.Open {
+	if m.SortDialog.Open || m.StatusCommandsDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.IndexFindDialog.Open || m.IndexTagsDialog.Open || m.ColumnsDialog.Open || m.HelpView.Open || m.IconLegendDialog.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.StashRestoreDialog.Open || m.CompareSelection.Open || m.CommandOutputDialog.Open || m.PinDialog.Open {
 		return true
 	}
 	return false
@@ -728,8 +727,7 @@ func (m *Model) QuickFilterStartBlocked() bool {
 		return true
 	}
 	return m.MessageDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.IndexFindDialog.Open || m.IndexTagsDialog.Open || m.PinDialog.Open ||
-		m.MetaDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open || m.StatusCommandsDialog.Open ||
-		m.ListingFormatDialog.Open ||
+		m.ColumnsDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open || m.StatusCommandsDialog.Open ||
 		m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open ||
 		m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.CompareSelection.Open || m.LeaderMenu.Open ||
 		m.CommandOutputDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.DedupEmptyDirsConfirm.Open || m.UndoConfirm.Open || m.FindRelocate.Open
@@ -1116,9 +1114,6 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 	if model.StatusCommandsDialog.Open {
 		dialog.DrawStatusCommandsDialog(screen, layout, model.StatusCommandsDialog, styles)
 	}
-	if model.ListingFormatDialog.Open {
-		dialog.DrawListingFormatDialog(screen, layout, model.ListingFormatDialog, styles)
-	}
 	if model.PathPicker.Open {
 		rowMarks := rowMarksResolver(model.PinnedItems, model.JobPathMarks)
 		if model.PathPicker.IndexPanel {
@@ -1155,8 +1150,8 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 	if model.FilterDialog.Open {
 		dialog.DrawFilterDialog(screen, layout, model.FilterDialog, styles)
 	}
-	if model.MetaDialog.Open {
-		dialog.DrawMetaDialog(screen, layout, model.MetaDialog, styles)
+	if model.ColumnsDialog.Open {
+		dialog.DrawColumnsDialog(screen, layout, model.ColumnsDialog, styles)
 	}
 	if model.FileDialog.Open {
 		out[OverlayFile] = dialog.DrawFileDialog(screen, layout, model.FileDialog, dialogRenderContext(model, styles), PaintDeleteDialogRowIcon)

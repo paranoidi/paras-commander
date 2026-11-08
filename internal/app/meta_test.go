@@ -31,8 +31,8 @@ file = "echo meta"
 		t.Fatal(err)
 	}
 
-	app := testMetaDialogApp(t, dir, cfgDir)
-	app.model.MetaDialog = dialog.MetaDialogState{
+	app := testColumnsDialogApp(t, dir, cfgDir)
+	app.model.ColumnsDialog = dialog.ColumnsDialogState{
 		Open:    true,
 		PanelID: ui.PrimaryPanel,
 		Entries: []dialog.MetaEntry{{Name: "mkvinfo", Description: "MKV info"}},
@@ -48,7 +48,7 @@ file = "echo meta"
 	}
 
 	app.metaCtrl.OpenDialog(ui.PrimaryPanel)
-	if c := app.model.MetaDialog.Checked; len(c) != 1 || !c[0] {
+	if c := app.model.ColumnsDialog.Checked; len(c) != 1 || !c[0] {
 		t.Fatalf("reopen Checked = %v, want [true]", c)
 	}
 }
@@ -68,7 +68,7 @@ file = "wc -l"
 		t.Fatal(err)
 	}
 
-	app := testMetaDialogApp(t, dir, cfgDir)
+	app := testColumnsDialogApp(t, dir, cfgDir)
 
 	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
 		if path != metaPath {
@@ -91,7 +91,7 @@ func TestMetaResultWideningColumnToastsLostColumn(t *testing.T) {
 	sim.SetSize(120, 30)
 	app.config.UI.Zoom.ActivePanel = false
 	app.model.UseNerdfontIcons = false
-	app.model.Primary.ListFormat = panel.ListFormatMtime
+	app.model.Primary.Columns = panel.ColumnsModified
 	// A 60-cell panel leaves 34 cells for name and meta: two 5-cell titles leave exactly 20.
 	const path = "/harbor/lantern"
 	app.model.MetaResults[ui.PrimaryPanel] = []ui.MetaColumnState{

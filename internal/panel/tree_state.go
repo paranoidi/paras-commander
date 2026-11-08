@@ -60,9 +60,7 @@ var ErrExpandAllRowLimit = errors.New("expand all row limit")
 // Entries are never mutated by tree mode, and the cursor lands on the same depth-0 ancestor
 // CollapseAllTree/CollapseTreeCursorRow would leave it on (treeRootAncestorID), not wherever a
 // nested expanded row's numeric index happened to fall in the flat listing. Returns false (no-op)
-// when CarouselMode is active, matching the existing carousel/listing-format mutual-exclusion
-// guard used elsewhere (see ActionPanelListingFormatDialog / ActionPanelCycleListingFormat
-// dispatch).
+// when CarouselMode is active.
 func (s *State) SetListLayout(layout ListLayout, viewportRows int) bool {
 	if layout == ListLayoutTree && s.CarouselMode {
 		return false

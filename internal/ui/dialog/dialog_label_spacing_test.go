@@ -231,7 +231,7 @@ func TestDialogLabelsAreFollowedByContentRow(t *testing.T) {
 			draw: func(screen tcell.Screen) {
 				DrawConfigDialog(screen, layout, ConfigDialogState{Open: true, Split: [3]FileDialogField{{Value: "<<22%"}, {Value: "<44%"}, {Value: "*"}}}, styles)
 			},
-			labels: []string{"View options:", "Scroll mode:", "Default listing format:", configDialogSplitLabel},
+			labels: []string{"View options:", "Scroll mode:", configDialogSplitLabel},
 		},
 		{
 			name: "compare merge",

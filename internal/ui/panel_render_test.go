@@ -2,9 +2,12 @@ package ui
 
 import (
 	"fmt"
+	"github.com/mattn/go-runewidth"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -86,9 +89,9 @@ func TestPanelVolumeFreeSpaceTitle(t *testing.T) {
 
 func TestPanelListHeaderWidthMatchesFormatEntryLayout(t *testing.T) {
 	rowText := 50
-	hdr, _ := panelListHeader(rowText, panel.State{}, false, false, nil, false, false)
-	nameW := panelListNameWidth(rowText, panel.ListFormatMtime, false, false)
-	wantLen := nameW + panelListReservedAfterName(panel.ListFormatMtime, false)
+	hdr, _ := panelListHeader(rowText, panel.State{}, panel.State{}.Columns, false, false, nil, false)
+	nameW := panelListNameWidth(rowText, panel.ColumnsModified, false, false)
+	wantLen := nameW + panelListReservedAfterName(panel.ColumnsModified, false)
 	if utf8.RuneCountInString(hdr) != wantLen {
 		t.Fatalf("header display width = %d, want %d", utf8.RuneCountInString(hdr), wantLen)
 	}
@@ -96,8 +99,8 @@ func TestPanelListHeaderWidthMatchesFormatEntryLayout(t *testing.T) {
 
 func TestPanelListHeaderIconsLeadingSpaceMatchesNamePrefix(t *testing.T) {
 	const rowText = 50
-	nameW := panelListNameWidth(rowText, panel.ListFormatMtime, false, false)
-	hdr, _ := panelListHeader(rowText, panel.State{}, true, false, nil, false, false)
+	nameW := panelListNameWidth(rowText, panel.ColumnsModified, false, false)
+	hdr, _ := panelListHeader(rowText, panel.State{}, panel.State{}.Columns, true, false, nil, false)
 	nameField := strings.TrimRight(hdr[:nameW], " ")
 	want := "↓Name"
 	if len(want) > nameW {
@@ -184,8 +187,8 @@ func TestPaintPanelTopTitleRowEndLabelCases(t *testing.T) {
 
 func TestPanelListHeaderColumnsCoverTitles(t *testing.T) {
 	layouts := []MetaColumnLayout{{EntryName: "lantern", Title: "Lantern", Width: 9}}
-	st := panel.State{Sort: panel.SortState{Mode: panel.SortMeta, MetaColumn: "lantern"}}
-	hdr, cols := panelListHeader(60, st, false, true, layouts, false, false)
+	st := panel.State{Columns: panel.ColumnsModified, Sort: panel.SortState{Mode: panel.SortMeta, MetaColumn: "lantern"}}
+	hdr, cols := panelListHeader(60, st, st.Columns, false, true, layouts, false)
 	cells := headerCells(hdr)
 	var got []string
 	for _, c := range cols {
@@ -194,5 +197,45 @@ func TestPanelListHeaderColumnsCoverTitles(t *testing.T) {
 	want := []string{"Name=Name/", "↓Lantern=Meta/lantern", "Size=Size/", "Modified=Modified/"}
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Fatalf("columns = %v, want %v (header %q)", got, want, hdr)
+	}
+}
+
+func TestFormatEntryAndHeaderAlignForMixedColumns(t *testing.T) {
+	stamp := time.Date(2024, 3, 9, 14, 5, 0, 0, time.UTC)
+	entry := localfs.Entry{
+		Name: "orchard.txt", Path: "/tmp/orchard.txt", Mode: 0o640, ModifiedAt: stamp,
+		Owner: "wrenwithaverylongname", Group: "heron", Links: 12,
+	}
+	cols := panel.ColumnSet(0).With(panel.ColumnModified).With(panel.ColumnPermissions).With(panel.ColumnOwner).With(panel.ColumnGroup).With(panel.ColumnLinks)
+	const width = 90
+	row := formatEntry(entry, width, panelRowOpts{Columns: cols}, theme.Default(), nil, "")
+	hdr, _ := panelListHeader(width, panel.State{}, cols, false, false, nil, false)
+	if runewidth.StringWidth(row) != runewidth.StringWidth(hdr) {
+		t.Fatalf("row and header widths differ\n%q\n%q", row, hdr)
+	}
+	for _, want := range []string{"2024-03-09 14:05", "-rw-r-----", "wrenwitha…", "heron", "12"} {
+		if !strings.Contains(row, want) {
+			t.Fatalf("row %q misses %q", row, want)
+		}
+	}
+	nameW := panelListNameWidth(width, cols, false, false)
+	if !strings.HasPrefix(row[nameW:], "  2024") {
+		t.Fatalf("hidden size must leave only the two-cell gap: %q", row[nameW:])
+	}
+}
+
+func TestPanelHeaderSortableColumnsWithHiddenSize(t *testing.T) {
+	cols := panel.ColumnSet(0).With(panel.ColumnModified).With(panel.ColumnOwner)
+	_, hit := panelListHeader(60, panel.State{}, cols, false, false, nil, false)
+	if len(hit) != 2 || hit[0].Mode != panel.SortName || hit[1].Mode != panel.SortMtime {
+		t.Fatalf("columns = %+v, want Name and Modified only", hit)
+	}
+}
+
+func TestZoomGateCountsAllSelectedColumns(t *testing.T) {
+	st := panel.State{Columns: panel.ColumnsModified.With(panel.ColumnPermissions).With(panel.ColumnOwner)}
+	// Too narrow to show them all: the drawn listing drops some, the gate still counts them.
+	if got := PanelNameColumnWidth(40, st, false, false, nil); got != 1 {
+		t.Fatalf("name width = %d, want the clamped 1", got)
 	}
 }

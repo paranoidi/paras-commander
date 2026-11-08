@@ -1,0 +1,8 @@
+== open ==
+focus=item0 phase=0 files=[size] checked=[false true false]
+== F5 ==
+focus=first phase=3 files=[size] checked=[false true false]
+== Esc ==
+focus=first phase=0 files=[size] checked=[false true false]
+== Esc ==
+CLOSED: meta columns=[] file columns=[size] profile="brief" message=""

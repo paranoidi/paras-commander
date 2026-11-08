@@ -22,8 +22,8 @@ import (
 var configKeyEditorCalls perApp[*int]
 
 func configFocusName(st dialog.ConfigDialogState) string {
-	id := dlg.Focused(dialog.ConfigDialogView(st, 80), st.Focus)
-	for _, p := range []struct{ prefix, name string }{{"scroll-mode-", "mode"}, {"scrollbar-", "bar"}, {"listing-", "listing"}, {"split-", "split"}} {
+	id := dlg.Focused(dialog.ConfigDialogView(st), st.Focus)
+	for _, p := range []struct{ prefix, name string }{{"scroll-mode-", "mode"}, {"scrollbar-", "bar"}, {"split-", "split"}} {
 		if rest, ok := strings.CutPrefix(string(id), p.prefix); ok {
 			return p.name + rest
 		}
@@ -47,17 +47,17 @@ func configKeyState(app *App) string {
 	case st.ResetDefaultsConfirm:
 		return fmt.Sprintf("reset-confirm focus=%d", configConfirmIndex(st.ResetDefaultsConfirmFocus))
 	}
-	return fmt.Sprintf("focus=%s nerd=%v zoom=%v stacked=%v mouse=%v mode=%s bar=%s format=%d split=[%s|%s|%s] cursors=[%d|%d|%d] msg=%q",
-		configFocusName(st), st.UseNerdfontIcons, st.ZoomActivePanel, st.PaneSplitStacked, st.Mouse, st.ScrollMode, st.PanelScrollbar, st.ListFormat,
+	return fmt.Sprintf("focus=%s nerd=%v zoom=%v stacked=%v mouse=%v mode=%s bar=%s split=[%s|%s|%s] cursors=[%d|%d|%d] msg=%q",
+		configFocusName(st), st.UseNerdfontIcons, st.ZoomActivePanel, st.PaneSplitStacked, st.Mouse, st.ScrollMode, st.PanelScrollbar,
 		st.Split[0].Value, st.Split[1].Value, st.Split[2].Value, st.Split[0].Cursor, st.Split[1].Cursor, st.Split[2].Cursor, app.model.Message)
 }
 
 func configKeyOutcome(app *App, quit bool) string {
 	c := app.config
 	_, statErr := os.Stat(app.paths.ConfigFile)
-	return fmt.Sprintf("quit=%v nerd=%v zoom=%v orientation=%s mouse=%v mode=%s bar=%s format=%s split=%v editor-calls=%d file-exists=%v message=%q",
+	return fmt.Sprintf("quit=%v nerd=%v zoom=%v orientation=%s mouse=%v mode=%s bar=%s split=%v editor-calls=%d file-exists=%v message=%q",
 		quit, c.UI.UseNerdfontIcons, c.UI.Zoom.ActivePanel, c.UI.Zoom.Orientation, c.UI.Mouse, c.UI.Scroll.Mode, c.UI.Scroll.Scrollbar,
-		c.Panels.DefaultListingFormat, c.Carousel.Split, *configKeyEditorCalls.get(app), statErr == nil, app.model.Message)
+		c.Carousel.Split, *configKeyEditorCalls.get(app), statErr == nil, app.model.Message)
 }
 
 func configKeyDialog(name string, withFile bool) keyGoldenDialog {
@@ -101,10 +101,9 @@ func TestConfigDialogKeyScripts(t *testing.T) {
 		{"enter-checkbox", "Enter Down Enter"},
 		{"space-scroll-radios", "Down Down Down Space Right Space Down Space Left Down Space"},
 		{"enter-radio", "Down Down Down Down Enter Right Enter"},
-		{"space-listing", "Down Down Down Down Down Down Right Space Right Space Down Space"},
-		{"enter-ok", "Down Down Down Down Down Down Down Down Down Down Enter"},
-		{"space-ok", "Space Down Space Tab Tab Tab Tab Tab Tab Tab Space"},
-		{"enter-cancel", "Space Down Down Down Down Down Down Down Down Down Down Down Right Enter"},
+		{"enter-ok", "Down Down Down Down Down Down Down Down Down Enter"},
+		{"space-ok", "Space Down Space Tab Tab Tab Tab Tab Tab Space"},
+		{"enter-cancel", "Space Down Down Down Down Down Down Down Down Down Down Right Enter"},
 		{"space-cancel", "Space Backtab Right Space"},
 		{"alt-d", "Down Down Down Alt+d"},
 		{"alt-z", "Alt+z"},
@@ -113,10 +112,9 @@ func TestConfigDialogKeyScripts(t *testing.T) {
 		{"alt-i", "Alt+i"},
 		{"alt-e", "Alt+e Alt+t"},
 		{"alt-t-n-u-r", "Alt+t Alt+n Alt+u Alt+r"},
-		{"alt-m-p-b", "Alt+p Alt+b Alt+m"},
 		{"alt-upper", "Alt+D Alt+Z Alt+P"},
 		{"alt-unknown", "Alt+x Alt+q Alt+y Down"},
-		{"alt-from-input", "Down Down Down Down Down Down Down Down Down Alt+d Alt+p Alt+u"},
+		{"alt-from-input", "Down Down Down Down Down Down Down Down Alt+d Alt+p Alt+u"},
 		{"alt-o-applies", "Alt+d Alt+z Alt+o"},
 		{"alt-c-cancels", "Alt+d Alt+c"},
 		{"esc", "Alt+d Esc"},
@@ -124,21 +122,21 @@ func TestConfigDialogKeyScripts(t *testing.T) {
 		{"plain-o", "Alt+d o"},
 		{"plain-c", "Alt+d c"},
 		{"plain-letters", "d z h i e t n u r m p b x Down"},
-		{"plain-o-c-in-input", "Down Down Down Down Down Down Down Down o c"},
-		{"input-typing", "Down Down Down Down Down Down Down Down Down x y z Backspace"},
-		{"input-typing-replaces-default", "Tab Tab Tab Tab a"},
-		{"input-cursor", "Tab Tab Tab Tab Left Left Right Home End Delete Backspace"},
-		{"input-second", "Tab Tab Tab Tab Tab 5 0 %"},
-		{"input-third", "Tab Tab Tab Tab Tab Tab Backspace x"},
-		{"input-invalid-ok", "Tab Tab Tab Tab x Alt+o"},
-		{"input-invalid-enter", "Tab Tab Tab Tab Tab Tab Tab x Enter"},
-		{"input-enter-applies", "Tab Tab Tab Tab Enter"},
-		{"input-valid-edit-ok", "Tab Tab Tab Tab Tab Tab Backspace Backspace 3 0 % Alt+o"},
-		{"input-ctrl-keys", "Tab Tab Tab Tab Ctrl+K a b Ctrl+W"},
-		{"input-ctrl-u", "Tab Tab Tab Tab Ctrl+U a"},
-		{"input-ctrl-y", "Tab Tab Tab Tab Home Ctrl+K Ctrl+Y Ctrl+Y"},
-		{"input-home-end", "Tab Tab Tab Tab Home End"},
-		{"input-restore-default", "Tab Tab Tab Tab Backspace Backspace Backspace Ctrl+L"},
+		{"plain-o-c-in-input", "Down Down Down Down Down Down Down o c"},
+		{"input-typing", "Down Down Down Down Down Down Down Down x y z Backspace"},
+		{"input-typing-replaces-default", "Tab Tab Tab a"},
+		{"input-cursor", "Tab Tab Tab Left Left Right Home End Delete Backspace"},
+		{"input-second", "Tab Tab Tab Tab 5 0 %"},
+		{"input-third", "Tab Tab Tab Tab Tab Backspace x"},
+		{"input-invalid-ok", "Tab Tab Tab x Alt+o"},
+		{"input-invalid-enter", "Tab Tab Tab Tab Tab Tab x Enter"},
+		{"input-enter-applies", "Tab Tab Tab Enter"},
+		{"input-valid-edit-ok", "Tab Tab Tab Tab Tab Backspace Backspace 3 0 % Alt+o"},
+		{"input-ctrl-keys", "Tab Tab Tab Ctrl+K a b Ctrl+W"},
+		{"input-ctrl-u", "Tab Tab Tab Ctrl+U a"},
+		{"input-ctrl-y", "Tab Tab Tab Home Ctrl+K Ctrl+Y Ctrl+Y"},
+		{"input-home-end", "Tab Tab Tab Home End"},
+		{"input-restore-default", "Tab Tab Tab Backspace Backspace Backspace Ctrl+L"},
 		{"f8-nofile", "F8"},
 		{"f9-stub-confirm", "F9"},
 		{"all-options-then-ok", "Space Down Space Down Space Down Space Down Down Space Down Down Down Space Alt+o"},

@@ -1,0 +1,10 @@
+== open ==
+focus=item0 phase=0 files=[size] checked=[false true false]
+== l ==
+focus=item0 phase=0 files=[size] checked=[true true false]
+== r ==
+focus=file4 phase=0 files=[size created] checked=[true true false]
+== v ==
+focus=item2 phase=0 files=[size created] checked=[true true true]
+== x ==
+focus=item2 phase=0 files=[size created] checked=[true true true]

@@ -3,6 +3,7 @@ package dialog
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
@@ -85,12 +86,12 @@ func (h *Handler) activateRunForEachHistorySelection() {
 }
 
 // runForEachHistoryPickerBinding binds the open command-history picker to handlePickerKey and
-// applyPickerEvent.
-func (h *Handler) runForEachHistoryPickerBinding() pickerBinding {
+// scrollquery.ApplyPickerEvent.
+func (h *Handler) runForEachHistoryPickerBinding() scrollquery.PickerBinding {
 	st := &h.model.FileDialog.RunForEachHistoryPicker
-	return pickerBinding{
-		focus: &st.Focus, query: &st.Query, cursor: &st.QueryCursor, scroll: &st.QueryScroll,
-		selected: &st.Selected, offset: &st.ListScroll, count: func() int { return len(st.Ranked) },
-		resync: h.syncRunForEachHistoryPickerRanks, activate: h.activateRunForEachHistorySelection, closePicker: h.closeRunForEachHistoryPicker,
+	return scrollquery.PickerBinding{
+		Focus: &st.Focus, Query: &st.Query, Cursor: &st.QueryCursor, Scroll: &st.QueryScroll,
+		Selected: &st.Selected, Offset: &st.ListScroll, Count: func() int { return len(st.Ranked) },
+		Resync: h.syncRunForEachHistoryPickerRanks, Activate: h.activateRunForEachHistorySelection, ClosePicker: h.closeRunForEachHistoryPicker,
 	}
 }

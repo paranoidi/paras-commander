@@ -6,17 +6,9 @@ Each panel lists one directory. This page covers what a listing shows, how to ch
 
 Directories load in the background. A slow directory (network mount, SFTP) keeps showing the old listing and the target row gets a working icon until the new one arrives.
 
-## Listing formats and columns
+## Columns
 
-Press `M-t` to cycle the active panel through the three layouts, or use Left/Right menu, Listing format.
-
-| Format | Columns |
-|---|---|
-| `brief` | name, meta columns, size |
-| `mtime` | name, meta columns, size, modified time |
-| `perm` | as `mtime` plus permissions |
-
-`default_listing_format` in [config.md](config.md#panels) picks the startup format. A narrow panel can show only the name column (`[ui].shrunken_shows_name_only`, see [config.md](config.md#ui)). `M-z` zooms the active panel for the session (unless its file name column is already wide, see [`[ui.zoom]`](config.md#uizoom)), and `S-Tab` hides the inactive one. See [Layout](layout.md).
+Each panel shows the name plus the columns you pick in the Columns dialog (`M-,`), and `M-t` cycles through saved [column profiles](columns.md). A narrow panel can show only the name column (`[ui].shrunken_shows_name_only`, see [config.md](config.md#ui)). `M-z` zooms the active panel for the session (unless its file name column is already wide, see [`[ui.zoom]`](config.md#uizoom)), and `S-Tab` hides the inactive one. See [Layout](layout.md).
 
 ### Long names
 

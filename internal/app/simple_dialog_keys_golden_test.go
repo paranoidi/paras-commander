@@ -225,66 +225,6 @@ func TestQuitConfirmKeyScripts(t *testing.T) {
 	})
 }
 
-// ---- listing format ----
-
-func listingName(st dialog.ListingFormatDialogState) string {
-	switch st.Focus {
-	case dlg.OK:
-		return "ok"
-	case dlg.Cancel:
-		return "cancel"
-	}
-	for i, r := range panel.ListFormatDialogRadios() {
-		if st.Focus == dlg.ID("format:"+r.Label) {
-			return fmt.Sprintf("radio%d", i)
-		}
-	}
-	return "radio0" // an unset focus is the first widget
-}
-
-var listingKeyDialog = keyGoldenDialog{
-	name: "listing_format",
-	setup: func(t *testing.T, dir string) *App {
-		app := newApp(t, newScreen(t, 80, 24), dir)
-		app.model.ActivePanel = ui.PrimaryPanel
-		app.model.Message = ""
-		app.openListingFormatDialog()
-		return app
-	},
-	state: func(app *App) string {
-		st := app.model.ListingFormatDialog
-		return fmt.Sprintf("focus=%s format=%v", listingName(st), st.ListFormat)
-	},
-	open: func(app *App) bool { return app.model.ListingFormatDialog.Open },
-	outcome: func(app *App, _ bool) string {
-		return fmt.Sprintf("message=%q panel format=%v", app.model.Message, app.model.Primary.ListFormat)
-	},
-}
-
-func TestListingFormatKeyScripts(t *testing.T) {
-	runKeyGoldenScripts(t, listingKeyDialog, []simpleKeyScript{
-		{"space-radios", "Down Space Down Space Up Up Space"},
-		{"enter-radios", "Down Down Enter Up Enter"},
-		{"space-ok", "Down Space Tab Space"},
-		{"enter-ok", "Down Space Tab Enter"},
-		{"space-cancel", "Down Space Tab Right Space"},
-		{"enter-cancel", "Down Space Tab Right Enter"},
-		{"mnemonics", "Alt+p Alt+b Alt+m Alt+P Alt+B Alt+M"},
-		{"mnemonics-from-button", "Tab Right Alt+b Down Alt+m"},
-		{"mnemonic-unknown", "Alt+x Alt+q Down"},
-		{"mnemonic-then-ok", "Alt+b Tab Enter"},
-		{"plain-o", "Down Space o"},
-		{"plain-c", "Down Space c"},
-		{"plain-upper-o", "Down Space O"},
-		{"plain-upper-c", "Down Space C"},
-		{"plain-radio-letters", "m p b x"},
-		{"esc", "Down Space Esc"},
-		{"alt-o", "Down Space Alt+o"},
-		{"alt-c", "Down Space Alt+c"},
-		{"alt-enter", "Alt+b Alt+Enter"},
-	})
-}
-
 // ---- compare filter ----
 
 func compareFilterName(st dialog.CompareFilterDialogState) string {
@@ -471,7 +411,7 @@ func TestHostKeyKeyScripts(t *testing.T) {
 
 // ---- meta ----
 
-func metaName(st dialog.MetaDialogState) string {
+func metaName(st dialog.ColumnsDialogState) string {
 	switch st.Focus {
 	case dlg.OK:
 		return "ok"
@@ -483,7 +423,13 @@ func metaName(st dialog.MetaDialogState) string {
 			return fmt.Sprintf("item%d", i)
 		}
 	}
-	return "item0" // an unset focus is the first widget
+	if i, ok := dlg.IDIndex(st.Focus, "file:"); ok {
+		return fmt.Sprintf("file%d", i)
+	}
+	if st.Focus != "" {
+		return string(st.Focus)
+	}
+	return "first" // an unset focus is the first widget
 }
 
 const metaGoldenBody = `[[entry]]
@@ -503,7 +449,7 @@ file = "echo meta"
 `
 
 var metaKeyDialog = keyGoldenDialog{
-	name: "meta",
+	name: "columns",
 	setup: func(t *testing.T, dir string) *App {
 		cfgDir := filepath.Join(dir, "config")
 		if err := os.MkdirAll(cfgDir, 0o755); err != nil {
@@ -512,35 +458,37 @@ var metaKeyDialog = keyGoldenDialog{
 		if err := os.WriteFile(filepath.Join(cfgDir, config.DefaultMetaFileName), []byte(metaGoldenBody), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		app := testMetaDialogApp(t, dir, cfgDir)
+		app := testColumnsDialogApp(t, dir, cfgDir)
 		app.model.Message = ""
 		app.runExternalEditor = func(context.Context, string, bool) error { return nil }
-		app.model.MetaDialog = dialog.MetaDialogState{
+		app.model.ColumnsDialog = dialog.ColumnsDialogState{
 			Open: true, PanelID: ui.PrimaryPanel,
 			Entries: []dialog.MetaEntry{
 				{Name: "lantern", Description: "Shows the lantern count"},
 				{Name: "orchard", Description: "Orchard yield"},
 				{Name: "velvet", Description: "Velvet rating"},
 			},
-			Checked: []bool{false, true, false},
+			Checked:     []bool{false, true, false},
+			FileColumns: panel.ColumnsBrief,
+			Focus:       dialog.MetaEntryID(0),
 		}
 		return app
 	},
 	state: func(app *App) string {
-		st := app.model.MetaDialog
-		return fmt.Sprintf("focus=%s checked=%v", metaName(st), st.Checked)
+		st := app.model.ColumnsDialog
+		return fmt.Sprintf("focus=%s phase=%d files=%v checked=%v", metaName(st), st.Phase, st.FileColumns.Names(), st.Checked)
 	},
-	open: func(app *App) bool { return app.model.MetaDialog.Open },
+	open: func(app *App) bool { return app.model.ColumnsDialog.Open },
 	outcome: func(app *App, _ bool) string {
 		var names []string
 		for _, c := range app.model.MetaResults[ui.PrimaryPanel] {
 			names = append(names, c.EntryName)
 		}
-		return fmt.Sprintf("meta columns=%v message=%q", names, app.model.Message)
+		return fmt.Sprintf("meta columns=%v file columns=%v profile=%q message=%q", names, app.model.Primary.Columns.Names(), app.model.Primary.ColumnProfile, app.model.Message)
 	},
 }
 
-func TestMetaDialogKeyScripts(t *testing.T) {
+func TestColumnsDialogKeyScripts(t *testing.T) {
 	runKeyGoldenScripts(t, metaKeyDialog, []simpleKeyScript{
 		{"space-toggles", "Space Down Space Down Space Space Up Space"},
 		{"enter-toggles", "Enter Down Enter Down Enter"},
@@ -548,7 +496,13 @@ func TestMetaDialogKeyScripts(t *testing.T) {
 		{"enter-ok", "Space Down Down Down Enter"},
 		{"space-cancel", "Space Down Down Down Right Space"},
 		{"enter-cancel", "Space Down Down Down Right Enter"},
-		{"mnemonics", "Alt+l Alt+r Alt+v Alt+L Alt+R"},
+		{"mnemonics", "Alt+l Alt+d Alt+v Alt+L Alt+D"},
+		{"file-mnemonics", "Alt+s Alt+m Alt+w Alt+g Alt+n Alt+o"},
+		{"file-up-from-entry", "Up Up Space"},
+		{"f2-load-esc", "F2 Esc Esc"},
+		{"f2-load-brief-ok", "F2 b r i e f Enter Alt+o"},
+		{"f5-save-esc", "F5 Esc Esc"},
+		{"f5-overwrite-no-saved", "F5 F5 Esc"},
 		{"mnemonic-from-button", "Down Down Down Alt+v Down Down Down Alt+l"},
 		{"mnemonic-unknown", "Alt+x Alt+q Down"},
 		{"plain-o", "Space o"},

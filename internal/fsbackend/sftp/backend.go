@@ -8,7 +8,9 @@ import (
 	"io/fs"
 	"net"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -349,7 +351,7 @@ func entryFromInfo(loc pathloc.Path, info os.FileInfo) fsbackend.Entry {
 	case !mode.IsRegular():
 		t = fsbackend.EntryOther
 	}
-	return fsbackend.Entry{
+	e := fsbackend.Entry{
 		Name:       info.Name(),
 		Loc:        loc,
 		Type:       t,
@@ -357,6 +359,15 @@ func entryFromInfo(loc pathloc.Path, info os.FileInfo) fsbackend.Entry {
 		Mode:       mode,
 		ModifiedAt: info.ModTime(),
 	}
+	// SFTP v3 attributes carry numeric ids and atime only; remote names would need a remote lookup.
+	if st, ok := info.Sys().(*pkgsftp.FileStat); ok {
+		e.Owner = strconv.FormatUint(uint64(st.UID), 10)
+		e.Group = strconv.FormatUint(uint64(st.GID), 10)
+		if st.Atime != 0 {
+			e.AccessedAt = time.Unix(int64(st.Atime), 0)
+		}
+	}
+	return e
 }
 
 // TouchConn exposes pool touch for tests.

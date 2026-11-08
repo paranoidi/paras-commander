@@ -37,20 +37,20 @@ func TestFitPanelMetaColumns(t *testing.T) {
 	tests := []struct {
 		name   string
 		width  int
-		format panel.ListFormat
+		format panel.ColumnSet
 		want   string
 	}{
 		// Each column takes 12 + 2 gap. Brief reserves 6 after the name, mtime 24.
-		{"all fit", 100, panel.ListFormatBrief, "meadow0 meadow1 meadow2 meadow3"},
+		{"all fit", 100, panel.ColumnsBrief, "meadow0 meadow1 meadow2 meadow3"},
 		// 62 left: four columns would leave 6, three leave exactly 20.
-		{"rightmost dropped first", 70, panel.ListFormatBrief, "meadow0 meadow1 meadow2"},
+		{"rightmost dropped first", 70, panel.ColumnsBrief, "meadow0 meadow1 meadow2"},
 		// 29 left: one column would leave 15.
-		{"name keeps the row", 55, panel.ListFormatMtime, ""},
-		{"name-only shows none", 30, panel.ListFormatBrief, ""},
+		{"name keeps the row", 55, panel.ColumnsModified, ""},
+		{"name-only shows none", 30, panel.ColumnsBrief, ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st := panel.State{ListFormat: tt.format}
+			st := panel.State{Columns: tt.format}
 			layoutRes := panelColumnLayout(Rect{Width: tt.width}, st, PanelDisplayConfig{NarrowPanelsNameOnly: true})
 			kept, totalW := fitPanelMetaColumns(layoutRes, st, cols)
 			if got := metaTitles(kept); got != tt.want {
@@ -69,15 +69,22 @@ func TestFitPanelMetaColumns(t *testing.T) {
 	}
 }
 
-func TestPanelColumnLayoutFloorOverridesNarrowOption(t *testing.T) {
-	st := panel.State{ListFormat: panel.ListFormatMtime}
+func TestPanelColumnLayoutDropsFileColumnsThenGoesNameOnly(t *testing.T) {
+	st := panel.State{Columns: panel.ColumnsModified}
 	display := PanelDisplayConfig{NarrowPanelsNameOnly: false}
-	// mtime reserves 25 cells: 37 row text leaves 12, 33 leaves 8.
-	if panelColumnLayout(Rect{Width: 39}, st, display).NameOnlyDisplay {
-		t.Fatal("a legible name should keep the columns while the option is off")
+	// Size and Modified reserve 25 cells: 37 row text leaves 12, 33 leaves 8. Size alone reserves
+	// 7: 15 row text leaves 8, and the 15 cells of name alone pass the floor; 9 do not.
+	if got := panelColumnLayout(Rect{Width: 39}, st, display); got.NameOnlyDisplay || got.Columns != panel.ColumnsModified {
+		t.Fatalf("a legible name should keep the columns, got name-only=%v %v", got.NameOnlyDisplay, got.Columns.Names())
 	}
-	if !panelColumnLayout(Rect{Width: 35}, st, display).NameOnlyDisplay {
-		t.Fatal("a name below the floor should go name-only even with the option off")
+	if got := panelColumnLayout(Rect{Width: 35}, st, display); got.NameOnlyDisplay || got.Columns != panel.ColumnsBrief {
+		t.Fatalf("a name below the floor should drop the rightmost column first, got name-only=%v %v", got.NameOnlyDisplay, got.Columns.Names())
+	}
+	if got := panelColumnLayout(Rect{Width: 17}, st, display); got.NameOnlyDisplay || got.Columns != 0 {
+		t.Fatalf("with no room for size the name keeps the row, got name-only=%v %v", got.NameOnlyDisplay, got.Columns.Names())
+	}
+	if got := panelColumnLayout(Rect{Width: 11}, st, display); !got.NameOnlyDisplay || got.Columns != 0 {
+		t.Fatalf("a name below the floor with no column left should go name-only, got name-only=%v %v", got.NameOnlyDisplay, got.Columns.Names())
 	}
 }
 
@@ -96,7 +103,7 @@ func TestPanelNameOnlyWidth(t *testing.T) {
 }
 
 func TestPanelNameColumnWidthCountsEveryMetaColumn(t *testing.T) {
-	st := panel.State{ListFormat: panel.ListFormatBrief}
+	st := panel.State{Columns: panel.ColumnsBrief}
 	// The zoom gate must see the crushed name, not the fitted one.
 	if got := PanelNameColumnWidth(70, st, false, true, wideMetaColumns(4)); got != 6 {
 		t.Fatalf("got %d, want 6", got)
@@ -106,7 +113,7 @@ func TestPanelNameColumnWidthCountsEveryMetaColumn(t *testing.T) {
 func TestPanelHeaderColumnAtSkipsDroppedMetaColumn(t *testing.T) {
 	file := Rect{X: 0, Y: 0, Width: 70, Height: 20}
 	model := &Model{
-		Primary:              panel.State{ListFormat: panel.ListFormatBrief},
+		Primary:              panel.State{Columns: panel.ColumnsBrief},
 		MetaResults:          [2][]MetaColumnState{PrimaryPanel: wideMetaColumns(4)},
 		NarrowPanelsNameOnly: true,
 	}

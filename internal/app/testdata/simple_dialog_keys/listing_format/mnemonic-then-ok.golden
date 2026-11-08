@@ -1,8 +1,0 @@
-== open ==
-focus=radio0 format=Name and size only
-== Alt+b ==
-focus=radio2 format=Name and size only
-== Tab ==
-focus=ok format=Name and size only
-== Enter ==
-CLOSED: message="Primary panel listing: Name and size only" panel format=Name and size only

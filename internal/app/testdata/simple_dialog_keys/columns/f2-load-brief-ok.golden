@@ -1,0 +1,18 @@
+== open ==
+focus=item0 phase=0 files=[size] checked=[false true false]
+== F2 ==
+focus=first phase=1 files=[size] checked=[false true false]
+== b ==
+focus=picker-filter phase=1 files=[size] checked=[false true false]
+== r ==
+focus=picker-filter phase=1 files=[size] checked=[false true false]
+== i ==
+focus=picker-filter phase=1 files=[size] checked=[false true false]
+== e ==
+focus=picker-filter phase=1 files=[size] checked=[false true false]
+== f ==
+focus=picker-filter phase=1 files=[size] checked=[false true false]
+== Enter ==
+focus=first phase=0 files=[size] checked=[false false false]
+== Alt+o ==
+CLOSED: meta columns=[] file columns=[size] profile="brief" message=""

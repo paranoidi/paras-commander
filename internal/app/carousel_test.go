@@ -54,13 +54,13 @@ func TestToggleCarouselFlipsActivePanel(t *testing.T) {
 	}
 }
 
-func TestCycleListingFormatBlockedInCarousel(t *testing.T) {
+func TestCycleColumnProfileWorksInCarousel(t *testing.T) {
 	app := testAppMinimal(t)
 	app.model.Primary.CarouselMode = true
-	before := app.model.Primary.ListFormat
-	app.dispatchActionLikeKeyboardShortcut(keymap.ActionPanelCycleListingFormat)
-	if app.model.Primary.ListFormat != before {
-		t.Fatal("listing format should not change in carousel mode")
+	app.model.Primary.ColumnProfile = config.ColumnProfileModified
+	app.dispatchActionLikeKeyboardShortcut(keymap.ActionPanelCycleColumnProfile)
+	if app.model.Primary.ColumnProfile != config.ColumnProfilePermissions || app.model.Primary.Columns != panel.ColumnsPermissions {
+		t.Fatalf("profile = %q columns = %v", app.model.Primary.ColumnProfile, app.model.Primary.Columns.Names())
 	}
 }
 

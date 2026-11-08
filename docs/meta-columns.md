@@ -4,17 +4,17 @@ Meta columns add computed columns to a panel by running a shell command per entr
 
 ## Open
 
-`M-,` (leader `,`, Left/Right menu, Meta) opens a checkbox picker of the defined entries; tick any subset. `M-;` (also `M-S-,`) opens `meta.toml` in `$EDITOR`; `F9` in the picker does the same and reloads the list. Both are rebindable in `keybindings.toml`. A per-directory `meta.toml` (name from `[meta].local_names`) is preferred over the global one.
+`M-,` (leader `,`, Left/Right menu, Columns...) opens the [Columns dialog](columns.md), which lists the defined entries in its Meta section; tick any subset. `M-;` (also `M-S-,`) opens `meta.toml` in `$EDITOR`; `F9` in the dialog does the same and reloads the list. Both are rebindable in `keybindings.toml`. A per-directory `meta.toml` (name from `[meta].local_names`) is preferred over the global one.
 
 Because its commands run as you, a `meta.toml` is loaded only when it is a regular file owned by you (or root) that no one else can write: not world-writable, and group-writable only when its group is your own private group (named after your user, the usual setup with umask `0002`). An untrusted file is skipped with a warning. When the picker has nothing to offer it says why in place of the list: the file was skipped (with a `chmod` hint), it failed to parse, or no commands are defined yet.
 
-## Saving default columns
+## Saving columns
 
-`F5` in the picker (rebindable under `[dialog.meta]` in `keybindings.toml`) writes the currently ticked columns to `[fileindex].default_columns` in `config.toml`, so the choice survives restarts. Those columns switch on whenever a panel with no meta columns enters an index view (`fileindex://` or Browse with fileindex) and, unless changed from the picker meanwhile, switch off again when it leaves. Saving does not change the panel's columns (`OK` does that) and leaves the dialog open; with nothing ticked it saves an empty list (no defaults). With more ticked than a panel can show, only the first 8 are saved and the toast warns. A toast confirms the save or shows the error. The file is rewritten through the partial config writer, which keeps other settings but not comments. The action is unavailable while the picker lists no columns.
+A [column profile](columns.md#profiles) saves ticked meta columns together with file columns, and can be the startup default or the default for [index views](fileindex.md#columns).
 
 ## Built-in columns
 
-Some features add their own columns to the picker, each feature in its own section below your
+Some features add their own columns to the dialog, each feature in its own section below your
 `meta.toml` entries, under a separator headed by the feature's name (for example **Status**, **Tags** and
 **Tree files** under **File Index**, the [fileindex](fileindex.md#columns) columns, listed only while the fileindex database
 opens). They are computed inside pc once per directory listing instead of

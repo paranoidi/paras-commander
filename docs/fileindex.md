@@ -290,8 +290,7 @@ root itself has nothing outside it.
 
 ## Columns
 
-The index adds columns to the meta-column picker (see
-[Meta columns](meta-columns.md)), in its **File Index** section, listed only
+The index adds columns to the [Columns dialog](columns.md), in its **File Index** section, listed only
 while the index database exists and opens. They work on local panels and in
 index views, and sort and filter like any meta column:
 
@@ -309,10 +308,11 @@ Tree files adds up the whole subtree, which at the index root is the whole
 index. A directory's indexed size shows in the size column of an index view
 (see Browsing the index).
 
-A panel with no meta columns switches on the columns in
-`[fileindex] default_columns` ([config.toml](config.md); the tags column by
-default) when it enters an index view (a `fileindex://` panel or Browse with
-fileindex), and switches them off again when it leaves both.
+A panel with no meta columns applies the [column profile](columns.md#profiles)
+named by `[fileindex] default_profile` ([config.toml](config.md); by default
+`index`, which is Size and the tags column) when it enters an index view (a
+`fileindex://` panel or Browse with fileindex). When it leaves both, its previous
+columns come back, unless you changed the columns in between.
 
 ## Tags
 

@@ -172,8 +172,12 @@ type State struct {
 	// carousel child column instead of its directory listing. nil means never.
 	PreviewDirRule func(dirPath string) bool
 	Sort           SortState
-	// ListFormat controls trailing columns after size (Modified / Permissions / none). Per-panel; see config default_listing_format.
-	ListFormat ListFormat
+	// Columns is the file columns the panel shows after the name and meta columns.
+	Columns ColumnSet
+	// ColumnProfile names the column profile last applied, "" after a dialog change that matches
+	// none. It is tracked rather than derived, because a profile whose meta columns the current
+	// directory does not offer would never compare equal to what the panel shows.
+	ColumnProfile string
 	// ScrollMode mirrors [ui.scroll].mode: minimal, center, or edge scroll policy.
 	ScrollMode ScrollMode
 	// ScrollEdgeMargin mirrors [ui.scroll].edge_margin for edge mode.
@@ -380,6 +384,7 @@ func newState(opts localfs.ListOptions, gitignoreCache *gitignore.Cache) State {
 		ShowHidden:   opts.ShowHidden,
 		Gitignore:    gitignoreCache,
 		matchNames:   &matchNamesCache{},
+		Columns:      ColumnsModified,
 		Sort: SortState{
 			Mode:             SortName,
 			Reverse:          false,
@@ -2480,20 +2485,6 @@ func (s *State) CycleSort(viewportRows int) {
 		}
 	}
 	s.SetSortMode(modes[next], s.Sort.Reverse, s.Sort.DirectoriesFirst, viewportRows)
-}
-
-// CycleListingFormat cycles listing format: mtime → perm → brief → mtime.
-func (s *State) CycleListingFormat() {
-	formats := IterateListFormats()
-	cur := EffectiveListFormat(s.ListFormat)
-	next := 0
-	for i, f := range formats {
-		if f == cur {
-			next = (i + 1) % len(formats)
-			break
-		}
-	}
-	s.ListFormat = formats[next]
 }
 
 // ToggleSortReverse flips the reverse flag and re-sorts.

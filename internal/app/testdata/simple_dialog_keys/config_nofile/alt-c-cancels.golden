@@ -1,6 +1,6 @@
 == open ==
-focus=nerdfont nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=nerdfont nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == Alt+d ==
-focus=nerdfont nerd=false zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=nerdfont nerd=false zoom=true stacked=false mouse=false mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == Alt+c ==
-CLOSED: quit=false nerd=true zoom=true orientation=side_by_side mouse=false mode=edge bar=thumb format=brief split=[<<22% <44% *] editor-calls=0 file-exists=false message=""
+CLOSED: quit=false nerd=true zoom=true orientation=side_by_side mouse=false mode=edge bar=thumb split=[<<22% <44% *] editor-calls=0 file-exists=false message=""

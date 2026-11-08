@@ -40,20 +40,3 @@ func TestSortDialogRadioAlignsWithDialogTextX(t *testing.T) {
 	}
 	assertOptionMarkerAtDialogTextX(t, screen, rect, rect.Y+1)
 }
-
-func TestListingFormatDialogRadioAlignsWithDialogTextX(t *testing.T) {
-	const w, h = 80, 24
-	screen := tcell.NewSimulationScreen("UTF-8")
-	if err := screen.Init(); err != nil {
-		t.Fatalf("Init() error = %v", err)
-	}
-	defer screen.Fini()
-	screen.SetSize(w, h)
-	layout := Layout{Width: w, Height: h}
-	DrawListingFormatDialog(screen, layout, ListingFormatDialogState{Open: true}, asciiDialogStyles())
-	rect, ok := draw.ClampCenteredDialogRect(layout, 44, 7, 28, 7)
-	if !ok {
-		t.Fatal("listing format dialog rect not drawable")
-	}
-	assertOptionMarkerAtDialogTextX(t, screen, rect, rect.Y+1)
-}

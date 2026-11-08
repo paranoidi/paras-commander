@@ -19,7 +19,7 @@ New here? Start with [Getting started](getting-started.md), then
 - **Selections** — across multiple paths, group select, stash and restore. See [Selections](selections.md).
 - **Navigation** — history, pins, bookmarks (`~/.fzf-marks`, GTK), panel sync, jump to directory, recursive find over millions of files. See [Navigation](navigation.md), [Find files](find-files.md).
 - **Tools** — [disk usage](disk-usage.md), [directory compare](compare-directories.md), [find duplicates](find-duplicates.md), [mass rename](mass-rename.md).
-- **Commands** — run a command for each selected file, user menu with background and worker-pool commands, [meta columns](meta-columns.md) fed by external commands. See [Commands](commands.md).
+- **Commands** — run a command for each selected file, user menu with background and worker-pool commands, [meta columns](meta-columns.md) fed by external commands, [column profiles](columns.md). See [Commands](commands.md).
 - **Remote** — browse SFTP hosts from `~/.ssh/config`. See [SFTP](sftp.md).
 - **fileindex** — browse a [fileindex](fileindex.md) content-hash index as `fileindex://`, show and edit its tags as a column, scan and prune it as background jobs.
 - **Subshell** — `C-o` shell with selected filenames at hand. See [Subshell](subshell.md).

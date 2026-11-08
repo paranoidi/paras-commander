@@ -3,6 +3,7 @@ package meta
 import (
 	"github.com/paranoidi/paras-commander/internal/apphandler/host"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -31,9 +32,18 @@ type Host interface {
 	// picker state at open so its two-column sections line up.
 	DialogMarkerWidth() int
 	OpenFileInExternalEditor(path string) error
-	// SaveDefaultColumns writes names to [fileindex].default_columns in config.toml and, on
+	// SaveDefaultProfile writes name to [panels].default_column_profile in config.toml and, on
 	// success, updates the app in-memory config. It fails when config cannot be persisted.
-	SaveDefaultColumns(names []string) error
+	SaveDefaultProfile(name string) error
+	// ReloadPanelListing re-reads the panel's directory: a change of columns needs a fact the
+	// current listing did not fetch.
+	ReloadPanelListing(panelID int)
+	// SyncFilteredListRanks and ClampFilteredListSelection rank the profile pickers like every
+	// other fuzzy-filtered list.
+	SyncFilteredListRanks(lines []string, query string, matchRangeSlots int, caseInsensitive bool) (ranked []int, matchRanges [][]search.Range)
+	ClampFilteredListSelection(selected *int, rankedLen int)
+	// PickerSearchIcon is the theme's search icon, cached in the dialog state at open.
+	PickerSearchIcon() string
 	MessageLogWrapCols() int
 	AppendTransientMessageLines(banner string, lines []string, urgency ui.MessageUrgency)
 	ClearTransientMessage()

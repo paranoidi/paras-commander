@@ -1,6 +1,8 @@
 -- text --
                                             
                                             
+                                            
+                                            
   ┌─────────── Configuration ────────────┐  
   │ View options:                        │  
   │ [ ] Use nerdfont icons               │  
@@ -12,11 +14,6 @@
   │ (*) Edge  (*) Thumb                  │  
   │ ( ) Cent… ( ) Bar                    │  
   ├──────────────────────────────────────┤  
-  │ Default listing format:              │  
-  │ (*) Modified time                    │  
-  │ ( ) Permissions                      │  
-  │ ( ) Brief                            │  
-  ├──────────────────────────────────────┤  
   │ [ ] Mouse support                    │  
   ├──────────────────────────────────────┤  
   │ Carousel split (parent / center / c… │  
@@ -27,15 +24,20 @@
   └──────────────────────────────────────┘  
                                             
                                             
+                                            
+                                            
+                                            
 -- legend --
 a fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
 b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-d fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-e fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aabbbbbbbbbbbbcccccccccccccccbbbbbbbbbbbbbaa
@@ -45,14 +47,9 @@ aabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbcbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbaa
-aabdddddcbbbbdddddbbcbbbbbbbbbbbbbbbbbbbbbaa
+aabddddddcdddbbbbbcbbbbbbbbbbbbbbbbbbbbbbbaa
+aabeeeeecbbbbeeeeebbcbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbcbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabdddddceeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
@@ -62,5 +59,8 @@ aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbfffgffffbbfffgffffffffbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

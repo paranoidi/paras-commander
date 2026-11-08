@@ -203,8 +203,8 @@ func TestDefaultBundleLeaderKey(t *testing.T) {
 
 func TestDefaultLeaderKeysAllowPunctuation(t *testing.T) {
 	keys := DefaultLeaderKeys()
-	if keys[ActionPanelToggleHidden] != "." || keys[ActionPanelMeta] != "," {
-		t.Fatalf("view keys = hidden %q meta %q, want . / ,", keys[ActionPanelToggleHidden], keys[ActionPanelMeta])
+	if keys[ActionPanelToggleHidden] != "." || keys[ActionPanelColumns] != "," {
+		t.Fatalf("view keys = hidden %q meta %q, want . / ,", keys[ActionPanelToggleHidden], keys[ActionPanelColumns])
 	}
 	if err := validateLeaderKeysPerScope(keys); err != nil {
 		t.Fatal(err)

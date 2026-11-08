@@ -1,6 +1,6 @@
-// Package meta owns the async per-entry metadata (meta.toml) feature: the checkbox
-// picker dialog, worker-pool command dispatch per panel, result caching, and the
-// F9 edit-config-from-dialog flow.
+// Package meta owns the async per-entry metadata (meta.toml) feature and the Columns dialog:
+// column profiles, worker-pool command dispatch per panel, result caching, and the F9
+// edit-config-from-dialog flow.
 package meta
 
 import (
@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/columnprofile"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -26,11 +27,16 @@ type Deps struct {
 	ConfigDir string
 	// Providers are the Go column providers offered beside the meta.toml entries.
 	Providers []*metacmds.Provider
-	// KeysMetaDialog is the [dialog.meta] overlay (save default columns); nil means no binding.
-	KeysMetaDialog *keymap.Map
+	// KeysColumnsDialog is the [dialog.columns] overlay (column profiles); nil means no binding.
+	KeysColumnsDialog *keymap.Map
+	// KeysDialogInput edits the Columns dialog's text inputs.
+	KeysDialogInput *keymap.Map
+	// Profiles are the saved column profiles, read at startup.
+	Profiles []columnprofile.Profile
 }
 
-// Handler owns meta.toml command dispatch and the meta checkbox dialog.
+// Handler owns meta.toml command dispatch, the Columns dialog and the application of column
+// profiles.
 type Handler struct {
 	host      Host
 	screen    tcell.Screen
@@ -38,8 +44,12 @@ type Handler struct {
 	config    config.Config
 	configDir string
 	providers []*metacmds.Provider
-	// keysMetaDialog resolves the picker overlay chords before the widget engine sees the key.
-	keysMetaDialog *keymap.Map
+	// keysColumnsDialog resolves the dialog overlay chords before the widget engine sees the key.
+	keysColumnsDialog *keymap.Map
+	keysDialogInput   *keymap.Map
+	// profiles are the saved column profiles: read at startup and whenever the dialog opens or
+	// changes them, so the profile cycle needs no I/O.
+	profiles []columnprofile.Profile
 
 	// activeEntries holds ordered entry names for active meta columns per panel.
 	activeEntries [2][]string
@@ -48,9 +58,13 @@ type Handler struct {
 	// inIndexView is whether the panel was in an index view (fileindex:// or Browse with
 	// fileindex) at the last dir-change check, so default columns switch on only when it enters one.
 	inIndexView [2]bool
-	// autoColumns is whether the panel's columns are the fileindex defaults switched on by
-	// entering an index view (cleared when the picker applies), so leaving it switches them off.
-	autoColumns [2]bool
+	// autoColumns is non-nil while the panel's columns are [fileindex].default_profile, applied
+	// on entering an index view (cleared when the user changes columns). It holds what leaving
+	// the index views restores.
+	autoColumns [2]*columnSnapshot
+	// sortCheck holds the meta names active before the last column change while its load is
+	// pending, so HandleLoad can apply sort_on_activation to the newly active ones.
+	sortCheck [2]map[string]bool
 	// run is the in-flight meta run per panel (nil if none), kept so ReconcileForPanel can
 	// dispatch only newly appeared entries into it.
 	run [2]*metaRun
@@ -106,7 +120,9 @@ func New(deps Deps) *Handler {
 		configDir: strings.TrimSpace(deps.ConfigDir),
 		providers: deps.Providers,
 
-		keysMetaDialog: deps.KeysMetaDialog,
+		keysColumnsDialog: deps.KeysColumnsDialog,
+		keysDialogInput:   deps.KeysDialogInput,
+		profiles:          deps.Profiles,
 	}
 }
 

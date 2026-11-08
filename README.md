@@ -22,6 +22,7 @@ A Linux terminal twin-panel file manager inspired by Midnight Commander and fzf,
 - Rename supports slugify and clean.
 - Read bookmarks from ~/.fzf-marks and gnome gtk files. Writes bookmarks to ~/.fzf-marks.
 - Find files / paths recursively. Can handle at least 2 million files.
+- Pick file, meta and fileindex columns in one dialog, save them as profiles and cycle through them.
 - Meta column(s) can be used to provide data from external commands. Panels can sort by an active meta column (numeric-aware), up to 4 shown in the Sort dialog.
 - Execute command for selected files.
 - User menu for commands. Supports interactive, background and worker pools.

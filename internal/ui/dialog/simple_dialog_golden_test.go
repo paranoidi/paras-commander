@@ -2,13 +2,15 @@ package dialog
 
 import (
 	"fmt"
+	"github.com/paranoidi/paras-commander/internal/columnprofile"
+	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/search"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
-	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 )
 
@@ -105,26 +107,6 @@ func TestQuitConfirmGoldenRender(t *testing.T) {
 	runSimpleGoldens(t, "quit_confirm", cases)
 }
 
-func TestListingFormatGoldenRender(t *testing.T) {
-	var cases []simpleGolden
-	add := func(w, h int, format panel.ListFormat, focus string) {
-		st := listingFormatGoldenState(format, focus)
-		cases = append(cases, simpleGolden{fmt.Sprintf("%dx%d_format%d_focus-%s", w, h, format, focus), w, h, func(s tcell.Screen, l Layout) {
-			DrawListingFormatDialog(s, l, st, asciiDialogStyles())
-		}})
-	}
-	for _, f := range panel.ListFormatDialogRadios() {
-		add(80, 24, f.Format, "radio0")
-	}
-	for _, focus := range []string{"radio1", "ok"} {
-		add(80, 24, panel.ListFormatPerm, focus)
-	}
-	add(36, 24, panel.ListFormatBrief, "radio2")
-	add(36, 24, panel.ListFormatMtime, "cancel")
-	add(30, 24, panel.ListFormatMtime, "radio0") // too narrow to draw
-	runSimpleGoldens(t, "listing_format", cases)
-}
-
 func TestCompareFilterGoldenRender(t *testing.T) {
 	var cases []simpleGolden
 	add := func(w, h int, mode CompareFilterDialogMode, secondary bool, filter comparepkg.Filter, focus string) {
@@ -192,12 +174,12 @@ func TestHostKeyGoldenRender(t *testing.T) {
 	runSimpleGoldens(t, "hostkey", cases)
 }
 
-func TestMetaDialogGoldenRender(t *testing.T) {
+func TestColumnsDialogGoldenRender(t *testing.T) {
 	var cases []simpleGolden
 	add := func(w, h, n int, checked, focus string) {
 		st := metaGoldenState(n, checked, focus)
 		cases = append(cases, simpleGolden{fmt.Sprintf("%dx%d_n%d_checked-%s_focus-%s", w, h, n, checked, focus), w, h, func(s tcell.Screen, l Layout) {
-			DrawMetaDialog(s, l, st, asciiDialogStyles())
+			DrawColumnsDialog(s, l, st, asciiDialogStyles())
 		}})
 	}
 	for _, checked := range []string{"none", "mixed", "all"} {
@@ -217,9 +199,29 @@ func TestMetaDialogGoldenRender(t *testing.T) {
 		sectioned.Checked = append(sectioned.Checked, i < 2)
 	}
 	cases = append(cases, simpleGolden{"80x24_n7_section_focus-item2", 80, 24, func(s tcell.Screen, l Layout) {
-		DrawMetaDialog(s, l, sectioned, asciiDialogStyles())
+		DrawColumnsDialog(s, l, sectioned, asciiDialogStyles())
 	}})
-	runSimpleGoldens(t, "meta", cases)
+	withFile := metaGoldenState(3, "mixed", "item0")
+	withFile.FileColumns = panel.ColumnsModified.With(panel.ColumnOwner)
+	cases = append(cases, simpleGolden{"80x24_file_columns_ticked", 80, 24, func(s tcell.Screen, l Layout) {
+		DrawColumnsDialog(s, l, withFile, asciiDialogStyles())
+	}})
+	noMeta := ColumnsDialogState{Open: true, FileColumns: panel.ColumnsBrief}
+	cases = append(cases, simpleGolden{"80x24_file_section_only", 80, 24, func(s tcell.Screen, l Layout) {
+		DrawColumnsDialog(s, l, noMeta, asciiDialogStyles())
+	}})
+	picker := ColumnsDialogState{Open: true, Phase: ColumnsPhaseLoadPicker, DefaultProfile: "brief", SearchIcon: "/", Picker: ColumnsProfilePicker{
+		Items:  append(columnprofile.Builtins(), columnprofile.Profile{Name: "orchard", Description: "owner and group"}),
+		Ranked: []int{0, 1, 2, 3, 4}, MatchRanges: make([][]search.Range, 5), Selected: 1,
+	}}
+	cases = append(cases, simpleGolden{"80x24_load_picker", 80, 24, func(s tcell.Screen, l Layout) {
+		DrawColumnsDialog(s, l, picker, asciiDialogStyles())
+	}})
+	prompt := ColumnsDialogState{Open: true, Phase: ColumnsPhaseSavePrompt, SaveName: ColumnsPromptField{Value: "orchard", Cursor: 7}}
+	cases = append(cases, simpleGolden{"80x24_save_prompt", 80, 24, func(s tcell.Screen, l Layout) {
+		DrawColumnsDialog(s, l, prompt, asciiDialogStyles())
+	}})
+	runSimpleGoldens(t, "columns", cases)
 }
 
 func TestStashRestoreGoldenRender(t *testing.T) {

@@ -41,6 +41,14 @@ type Entry struct {
 	BrokenLink bool
 	// IndexStatus is localfs.Entry.IndexStatus: the fileindex overlay's state for the row.
 	IndexStatus string
+	// Owner, Group, Links, ChangedAt, AccessedAt and CreatedAt are the localfs.Entry columns of
+	// the same names; zero values mean the source has no such fact (see localfs.Entry).
+	Owner      string
+	Group      string
+	Links      uint64
+	ChangedAt  time.Time
+	AccessedAt time.Time
+	CreatedAt  time.Time
 }
 
 // CreateOpts controls OpenWrite behavior (phase 2+).

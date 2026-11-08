@@ -63,6 +63,7 @@ func TestDrawPanelBottomCursorNameHintOnActiveSecondaryPanel(t *testing.T) {
 	longName := strings.Repeat("r", 30) + ".txt"
 	rect := Rect{X: 40, Y: 0, Width: 40, Height: 8}
 	state := panel.State{
+		Columns: panel.ColumnsModified,
 		Path:    pathloc.MustParse("/tmp"),
 		Entries: []localfs.Entry{{Name: longName, Path: "/tmp/" + longName}},
 		Cursor:  0,
@@ -106,6 +107,7 @@ func TestDrawPanelBottomCursorNameHintOnActivePanel(t *testing.T) {
 	longName := strings.Repeat("w", 30) + ".txt"
 	rect := Rect{X: 0, Y: 0, Width: 40, Height: 8}
 	state := panel.State{
+		Columns: panel.ColumnsModified,
 		Path:    pathloc.MustParse("/tmp"),
 		Entries: []localfs.Entry{{Name: longName, Path: "/tmp/" + longName}},
 		Cursor:  0,
@@ -134,6 +136,7 @@ func TestDrawPanelBottomCursorNameHintFallsBackWhenWiderThanOverlaySpan(t *testi
 	longName := strings.Repeat("q", 80) + ".txt"
 	rect := Rect{X: 0, Y: 0, Width: 40, Height: 8}
 	state := panel.State{
+		Columns: panel.ColumnsModified,
 		Path:    pathloc.MustParse("/tmp"),
 		Entries: []localfs.Entry{{Name: longName, Path: "/tmp/" + longName}},
 		Cursor:  0,
@@ -319,6 +322,7 @@ func TestDrawPanelBottomCursorNameHintLatchesPinnedWhenSettled(t *testing.T) {
 	rect := Rect{X: 0, Y: 0, Width: 40, Height: 8}
 	var pinned string
 	state := panel.State{
+		Columns: panel.ColumnsModified,
 		Path:    pathloc.MustParse("/tmp"),
 		Entries: []localfs.Entry{{Name: longName, Path: "/tmp/" + longName}},
 		Cursor:  0,
@@ -350,6 +354,7 @@ func TestDrawPanelBottomCursorNameHintHiddenOnInactivePanel(t *testing.T) {
 	longName := strings.Repeat("z", 30) + ".txt"
 	rect := Rect{X: 0, Y: 0, Width: 40, Height: 8}
 	state := panel.State{
+		Columns: panel.ColumnsModified,
 		Path:    pathloc.MustParse("/tmp"),
 		Entries: []localfs.Entry{{Name: longName, Path: "/tmp/" + longName}},
 		Cursor:  0,

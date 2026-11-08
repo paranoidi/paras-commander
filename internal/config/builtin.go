@@ -326,8 +326,16 @@ const (
 	// panel after a copy/move into that panel's cwd, when the user has not moved its cursor.
 	DefaultFocusOtherPanelAfterTransfer = true
 
-	// DefaultListingFormat is the persisted default_listing_format value (Name and size only).
-	DefaultListingFormat = ListingFormatBrief
+	// Built-in column profile names (columnprofile.Builtins).
+	ColumnProfileModified    = "modified"
+	ColumnProfilePermissions = "permissions"
+	ColumnProfileBrief       = "brief"
+	ColumnProfileIndex       = "index"
+
+	// DefaultColumnProfile is the default [panels].default_column_profile.
+	DefaultColumnProfile = ColumnProfileBrief
+	// DefaultFileIndexProfile is the default [fileindex].default_profile.
+	DefaultFileIndexProfile = ColumnProfileIndex
 
 	// Panel zoom: widen the active browser column when [ui.zoom].active_panel is true.
 	DefaultZoomActivePanel          = true
@@ -457,6 +465,8 @@ const (
 	// DefaultMassRenamePatternsFileName is the basename of the saved mass-rename patterns file
 	// under the config directory when [mass_rename].file is empty.
 	DefaultMassRenamePatternsFileName = "patterns.toml"
+	// DefaultColumnProfilesFileName is the basename of the saved column profiles file.
+	DefaultColumnProfilesFileName = "column-profiles.toml"
 
 	// DefaultFileIndexDatabase is [fileindex].database: empty uses fileindex's config.ini path.
 	DefaultFileIndexDatabase = ""
@@ -726,9 +736,3 @@ const (
 	DefaultFilterTypeAudio     = `(?i)\.(mp3|flac|wav|ogg|oga|opus|m4a|aac|wma|alac|aiff?|ape|mka|mid|midi|dsf|wv)$`
 	DefaultFilterTypeDocuments = `(?i)\.(pdf|docx?|odt|rtf|txt|md|xlsx?|ods|csv|pptx?|odp|epub|mobi|djvu|tex|pages|numbers|key)$`
 )
-
-// DefaultFileIndexColumns is [fileindex].default_columns: the meta columns switched on when a
-// panel enters fileindex:// or Browse with fileindex.
-func DefaultFileIndexColumns() []string {
-	return []string{FileIndexTagsColumn}
-}

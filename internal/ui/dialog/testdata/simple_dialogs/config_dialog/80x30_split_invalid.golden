@@ -2,6 +2,7 @@
                                                                                 
                                                                                 
                                                                                 
+                                                                                
              ┌────────────────── Configuration ───────────────────┐             
              │ View options:                                      │             
              │ [ ] Use nerdfont icons                             │             
@@ -13,9 +14,6 @@
              │ (*) Edge         (*) Thumb                         │             
              │ ( ) Center       ( ) Bar                           │             
              ├────────────────────────────────────────────────────┤             
-             │ Default listing format:                            │             
-             │ (*) Modified time   ( ) Permissions   ( ) Brief    │             
-             ├────────────────────────────────────────────────────┤             
              │ [ ] Mouse support                                  │             
              ├────────────────────────────────────────────────────┤             
              │ Carousel split (parent / center / child):          │             
@@ -24,6 +22,8 @@
              ├────────────────────────────────────────────────────┤             
              │                [ OK ]    [ Cancel ]                │             
              └────────────────────────────────────────────────────┘             
+                                                                                
+                                                                                
                                                                                 
                                                                                 
                                                                                 
@@ -42,6 +42,7 @@ j fg=0x100000005 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbcccccccccccccccbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
 aaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
 aaaaaaaaaaaaabbbbbbbbbbbbbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
@@ -53,9 +54,6 @@ aaaaaaaaaaaaabbbbbbbdbbbbbbbbbbbbbbbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
 aaaaaaaaaaaaabeeeeedbbbbbbbbbbbeeeeebbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
 aaaaaaaaaaaaabbbbbbbbbdbbbbbbbbbbbbbbbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
 aaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
-aaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
-aaaaaaaaaaaaabeeeeedbbbbbbbbbbbbbbbbbbbdbbbbbbbbbbbbbbbbbdbbbbbbbbbaaaaaaaaaaaaa
-aaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
 aaaaaaaaaaaaabbbbbbbbbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
 aaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
 aaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
@@ -64,6 +62,8 @@ aaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
 aaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
 aaaaaaaaaaaaabbbbbbbbbbbbbbbbiiijiiiibbiiijiiiiiiiibbbbbbbbbbbbbbbbaaaaaaaaaaaaa
 aaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

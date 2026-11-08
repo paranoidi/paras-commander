@@ -84,7 +84,7 @@ func drawCarouselHeader(screen tcell.Screen, hp carouselHeaderParams) {
 	p, cols, visibleRows := hp.Body, hp.Cols, hp.VisibleRows
 	headerY := p.Frame.Y + 1
 
-	centerName, centerSize, _ := p.Center.ListColumnTitles(p.ShowIcons)
+	centerName, centerSize := p.Center.NameColumnTitle(p.ShowIcons), p.Center.SizeColumnTitle()
 	sideNameTitle := listNameHeaderTitle(p.ShowIcons)
 	for i, col := range cols {
 		if col.Width <= 0 {

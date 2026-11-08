@@ -1,0 +1,12 @@
+== open ==
+focus=item0 phase=0 files=[size] checked=[false true false]
+== Alt+l ==
+focus=item0 phase=0 files=[size] checked=[true true false]
+== Alt+d ==
+focus=item0 phase=0 files=[size] checked=[true true false]
+== Alt+v ==
+focus=item2 phase=0 files=[size] checked=[true true true]
+== Alt+L ==
+focus=item0 phase=0 files=[size] checked=[false true true]
+== Alt+D ==
+focus=item0 phase=0 files=[size] checked=[false true true]

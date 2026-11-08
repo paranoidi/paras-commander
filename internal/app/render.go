@@ -651,7 +651,7 @@ func (a *App) effectiveZoomActivePanel() bool {
 // even 50/50 split of a width-cell terminal is at least [ui.zoom].disabled_above_name_width. The
 // even split (width/2, whichever panel is active) is measured, never the current zoomed width, so
 // the decision cannot oscillate with its own result nor flip when Tab swaps panels on odd widths.
-// Icons, git strip, listing format and meta columns all count against the name column.
+// Icons, git strip, file columns and meta columns all count against the name column.
 func (a *App) zoomActivePanelSuppressedByNameWidth(width int) bool {
 	n := a.config.UI.Zoom.DisabledAboveNameWidth
 	if n <= 0 {
@@ -691,7 +691,7 @@ func (a *App) effectiveZoomActivePanelLayout(width, height int, filePreviewOpen 
 
 // zoomLayoutChanged reports whether the zoom decision for the current terminal size differs from
 // the one the last full render stored in Model.PanelZoomEnabled. The decision depends on content
-// (meta and git columns, listing format), so it can change without a resize; a partial panel
+// (meta, git and file columns), so it can change without a resize; a partial panel
 // paint over a stale split would leave the other panel at the wrong rect and must fall back to
 // a full render.
 func (a *App) zoomLayoutChanged(w, h int) bool {

@@ -38,19 +38,19 @@ func TestSortEntries_MetaNumeric(t *testing.T) {
 	checkNames(t, entries, []string{"harbor.txt", "lantern.txt", "meadow.txt"})
 }
 
-// TestListColumnTitles_ArrowPointsToLargerValues: ascending shows ↓, descending ↑, and the
+// TestColumnTitles_ArrowPointsToLargerValues: ascending shows ↓, descending ↑, and the
 // largest-first disk-usage sort ↑.
-func TestListColumnTitles_ArrowPointsToLargerValues(t *testing.T) {
+func TestColumnTitles_ArrowPointsToLargerValues(t *testing.T) {
 	s := State{Sort: SortState{Mode: SortName}}
-	if name, _, _ := s.ListColumnTitles(false); name != "↓Name" {
+	if name := s.NameColumnTitle(false); name != "↓Name" {
 		t.Fatalf("ascending name = %q, want ↓Name", name)
 	}
 	s.Sort.Reverse = true
-	if name, _, _ := s.ListColumnTitles(false); name != "↑Name" {
+	if name := s.NameColumnTitle(false); name != "↑Name" {
 		t.Fatalf("reversed name = %q, want ↑Name", name)
 	}
 	s = State{Sort: SortState{DiskUsageIdleSizeSort: true}, IdleDiskTotalsSort: true}
-	if _, size, _ := s.ListColumnTitles(false); size != "↑Size" {
+	if size := s.SizeColumnTitle(); size != "↑Size" {
 		t.Fatalf("disk totals size = %q, want ↑Size", size)
 	}
 }
@@ -106,51 +106,51 @@ func TestSortEntries_MetaEmptyLast(t *testing.T) {
 	}
 }
 
-// Regression for bug: cycling listing formats left the sort arrow on an
-// unrelated column (Size/Permissions) when SortMtime is active in a format
-// that has no Modified column at all (Brief, Perm).
-func TestListColumnTitles_MtimeArrowOmittedWithoutModifiedColumn(t *testing.T) {
-	s := State{
-		Sort:       SortState{Mode: SortMtime},
-		ListFormat: ListFormatBrief,
+// columnSpec returns the spec of id for title assertions.
+func columnSpec(t *testing.T, id ColumnID) ColumnSpec {
+	t.Helper()
+	for _, spec := range Columns() {
+		if spec.ID == id {
+			return spec
+		}
 	}
+	t.Fatalf("no column %d", id)
+	return ColumnSpec{}
+}
 
-	name, size, third := s.ListColumnTitles(false)
-	if size != "Size" || third != "" {
-		t.Fatalf("Brief/SortMtime: want arrow-less Size and empty third column, got name=%q size=%q third=%q", name, size, third)
+// A sort by a column the panel does not show leaves no arrow on an unrelated column.
+func TestColumnTitles_MtimeArrowOmittedWithoutModifiedColumn(t *testing.T) {
+	s := State{Sort: SortState{Mode: SortMtime}, Columns: ColumnsPermissions}
+	if size := s.SizeColumnTitle(); size != "Size" {
+		t.Fatalf("size title = %q", size)
 	}
-
-	s.ListFormat = ListFormatPerm
-	name, size, third = s.ListColumnTitles(false)
-	if size != "Size" || third != "Permissions" {
-		t.Fatalf("Perm/SortMtime: want arrow-less Size and Permissions, got name=%q size=%q third=%q", name, size, third)
+	if perm := s.ColumnTitle(columnSpec(t, ColumnPermissions)); perm != "Permissions" {
+		t.Fatalf("permissions title = %q", perm)
+	}
+	if name := s.NameColumnTitle(false); name != "Name" {
+		t.Fatalf("name title = %q", name)
+	}
+	if title := s.SortedColumnTitle(false); title != "Name" {
+		t.Fatalf("name-only title = %q", title)
 	}
 }
 
-// SortMeta must never put an arrow on the built-in Name/Size/Modified/Permissions columns; the
-// arrow for a meta sort lives on the meta column's own header instead (see panelListHeader).
-func TestListColumnTitles_MetaArrowOmittedOnBuiltinColumns(t *testing.T) {
-	s := State{
-		Sort:       SortState{Mode: SortMeta, MetaColumn: "size"},
-		ListFormat: ListFormatMtime,
-	}
-	name, size, third := s.ListColumnTitles(false)
-	if name != "Name" || size != "Size" || third != "Modified" {
-		t.Fatalf("SortMeta: want arrow-less columns, got name=%q size=%q third=%q", name, size, third)
+// SortMeta must never put an arrow on the built-in columns; the arrow for a meta sort lives on the
+// meta column's own header instead (see panelListHeader).
+func TestColumnTitles_MetaArrowOmittedOnBuiltinColumns(t *testing.T) {
+	s := State{Sort: SortState{Mode: SortMeta, MetaColumn: "size"}, Columns: ColumnsModified}
+	if name, size, mod := s.NameColumnTitle(false), s.SizeColumnTitle(), s.ColumnTitle(columnSpec(t, ColumnModified)); name != "Name" || size != "Size" || mod != "Modified" {
+		t.Fatalf("SortMeta: want arrow-less columns, got name=%q size=%q modified=%q", name, size, mod)
 	}
 }
 
-// The default (Full/Long) format does have a Modified column, so SortMtime
-// should still place the arrow there.
-func TestListColumnTitles_MtimeArrowOnModifiedInDefaultFormat(t *testing.T) {
-	s := State{
-		Sort:       SortState{Mode: SortMtime},
-		ListFormat: ListFormatMtime,
+func TestColumnTitles_MtimeArrowOnModified(t *testing.T) {
+	s := State{Sort: SortState{Mode: SortMtime}, Columns: ColumnsModified}
+	if mod := s.ColumnTitle(columnSpec(t, ColumnModified)); mod != "↓Modified" {
+		t.Fatalf("modified title = %q", mod)
 	}
-
-	_, size, third := s.ListColumnTitles(false)
-	if size != "Size" || third != "↓Modified" {
-		t.Fatalf("Mtime format/SortMtime: want plain Size and arrowed Modified, got size=%q third=%q", size, third)
+	if title := s.SortedColumnTitle(false); title != "↓Modified" {
+		t.Fatalf("name-only title = %q", title)
 	}
 }
 

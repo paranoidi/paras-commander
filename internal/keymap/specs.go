@@ -968,14 +968,6 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:    "s",
 		},
 		{
-			ID:          ActionPanelListingFormatDialog,
-			Views:       HelpBrowser,
-			Title:       "Listing format dialog",
-			Section:     "View",
-			DefaultKeys: nil, // opened from Left/Right menu by default
-			Keywords:    []string{"columns", "listing", "mtime", "permissions", "brief", "radio"},
-		},
-		{
 			ID:          ActionPanelCycleSort,
 			Views:       HelpBrowser,
 			Title:       "Cycle sort mode",
@@ -984,12 +976,12 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"order"},
 		},
 		{
-			ID:          ActionPanelCycleListingFormat,
+			ID:          ActionPanelCycleColumnProfile,
 			Views:       HelpBrowser,
-			Title:       "Cycle listing format",
+			Title:       "Cycle column profile",
 			Section:     "View",
 			DefaultKeys: []string{"M-t"},
-			Keywords:    []string{"columns", "listing", "mtime", "permissions", "brief"},
+			Keywords:    []string{"columns", "profile", "listing", "modified", "permissions", "brief"},
 		},
 		{
 			ID:          ActionPanelToggleCarousel,
@@ -1139,12 +1131,12 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:   ".",
 		},
 		{
-			ID:          ActionPanelMeta,
+			ID:          ActionPanelColumns,
 			Views:       HelpBrowser,
-			Title:       "Meta column",
+			Title:       "Columns",
 			Section:     "View",
 			DefaultKeys: []string{"M-,"},
-			Keywords:    []string{"meta", "column", "command", "count"},
+			Keywords:    []string{"meta", "column", "profile", "listing", "owner", "group", "permissions", "modified", "fileindex"},
 			LeaderKey:   ",",
 		},
 		{
@@ -1158,11 +1150,32 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 
 		{
-			ID:          ActionPanelMetaSave,
-			Title:       "Save default meta columns",
+			ID:          ActionColumnsSaveProfile,
+			Title:       "Save column profile",
 			Section:     "View",
-			DefaultKeys: nil, // overlay: DefaultMetaDialogOverlayKeys
-			Keywords:    []string{"meta", "column", "save", "default", "fileindex", "picker"},
+			DefaultKeys: nil, // overlay: DefaultColumnsDialogOverlayKeys
+			Keywords:    []string{"column", "profile", "save", "overwrite"},
+		},
+		{
+			ID:          ActionColumnsLoadProfile,
+			Title:       "Load column profile",
+			Section:     "View",
+			DefaultKeys: nil, // overlay: DefaultColumnsDialogOverlayKeys
+			Keywords:    []string{"column", "profile", "load"},
+		},
+		{
+			ID:          ActionColumnsDeleteProfile,
+			Title:       "Delete column profile",
+			Section:     "View",
+			DefaultKeys: nil, // overlay: DefaultColumnsDialogOverlayKeys
+			Keywords:    []string{"column", "profile", "delete"},
+		},
+		{
+			ID:          ActionColumnsDefaultProfile,
+			Title:       "Set startup column profile",
+			Section:     "View",
+			DefaultKeys: nil, // overlay: DefaultColumnsDialogOverlayKeys
+			Keywords:    []string{"column", "profile", "default", "startup"},
 		},
 
 		// ── Bookmarks ──

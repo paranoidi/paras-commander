@@ -938,7 +938,7 @@ func (a *App) tryDispatchSelectionActions(actionID string) bool {
 	return true
 }
 
-// tryDispatchPanelLayout handles panel sort/listing-format/carousel/zoom/split/hidden-file actions.
+// tryDispatchPanelLayout handles panel sort/column-profile/carousel/zoom/split/hidden-file actions.
 func (a *App) tryDispatchPanelLayout(actionID string) bool {
 	viewportRows := a.activeViewportRows()
 	activePanel := a.activePanel()
@@ -947,22 +947,11 @@ func (a *App) tryDispatchPanelLayout(actionID string) bool {
 		a.toggleHideInactivePanel()
 	case keymap.ActionPanelSortDialog:
 		a.openSortDialog()
-	case keymap.ActionPanelListingFormatDialog:
-		if activePanel.CarouselMode {
-			a.setTransientMessage("Listing format is not available in carousel view", ui.MessageUrgencyInfo)
-			break
-		}
-		a.openListingFormatDialog()
 	case keymap.ActionPanelCycleSort:
 		activePanel.CycleSort(viewportRows)
 		a.setTransientMessage(fmt.Sprintf("Sort: %s", activePanel.Sort.Mode.String()), ui.MessageUrgencyInfo)
-	case keymap.ActionPanelCycleListingFormat:
-		if activePanel.CarouselMode {
-			a.setTransientMessage("Listing format is not available in carousel view", ui.MessageUrgencyInfo)
-			break
-		}
-		activePanel.CycleListingFormat()
-		a.setTransientMessage(fmt.Sprintf("Listing: %s", activePanel.ListFormat.String()), ui.MessageUrgencyInfo)
+	case keymap.ActionPanelCycleColumnProfile:
+		a.metaCtrl.CycleProfile(a.model.ActivePanel)
 	case keymap.ActionPanelToggleCarousel:
 		a.toggleCarousel(a.model.ActivePanel, false)
 	case keymap.ActionPanelToggleTree:

@@ -81,9 +81,8 @@ const (
 	ActionPanelClearSelection         = "panel.clear-selection"
 	ActionPanelStashToggle            = "panel.stash-toggle"
 	ActionPanelSortDialog             = "panel.sort-dialog"
-	ActionPanelListingFormatDialog    = "panel.listing-format-dialog"
 	ActionPanelCycleSort              = "panel.cycle-sort"
-	ActionPanelCycleListingFormat     = "panel.cycle-listing-format"
+	ActionPanelCycleColumnProfile     = "panel.cycle-column-profile"
 	ActionPanelToggleCarousel         = "panel.toggle-carousel"
 	ActionPanelToggleTree             = "panel.toggle-tree"
 	ActionPanelTreeExpand             = "panel.tree-expand"
@@ -118,9 +117,12 @@ const (
 	ActionPanelOpenDirInOtherFocus    = "panel.open-dir-in-other-focus"
 	ActionPanelOpenActivePathInOther  = "panel.open-active-path-in-other"
 	ActionPanelToggleSync             = "panel.toggle-sync"
-	ActionPanelMeta                   = "panel.meta"
+	ActionPanelColumns                = "panel.columns"
 	ActionPanelMetaEdit               = "panel.meta-edit"
-	ActionPanelMetaSave               = "panel.meta-save" // bound via [dialog.meta], not [main]
+	ActionColumnsSaveProfile          = "panel.columns.save-profile"    // bound via [dialog.columns], not [main]
+	ActionColumnsLoadProfile          = "panel.columns.load-profile"    // bound via [dialog.columns], not [main]
+	ActionColumnsDeleteProfile        = "panel.columns.delete-profile"  // bound via [dialog.columns], not [main]
+	ActionColumnsDefaultProfile       = "panel.columns.default-profile" // bound via [dialog.columns], not [main]
 	ActionPanelComparePanels          = "panel.compare-panels"
 	ActionPanelFindDuplicates         = "panel.find-duplicates"
 	ActionPanelFilterDialog           = "panel.filter-dialog"
@@ -444,9 +446,8 @@ var KnownActions = map[string]struct{}{
 	ActionPanelClearSelection:         {},
 	ActionPanelStashToggle:            {},
 	ActionPanelSortDialog:             {},
-	ActionPanelListingFormatDialog:    {},
 	ActionPanelCycleSort:              {},
-	ActionPanelCycleListingFormat:     {},
+	ActionPanelCycleColumnProfile:     {},
 	ActionPanelToggleCarousel:         {},
 	ActionPanelToggleTree:             {},
 	ActionPanelTreeExpand:             {},
@@ -481,9 +482,12 @@ var KnownActions = map[string]struct{}{
 	ActionPanelOpenDirInOtherFocus:    {},
 	ActionPanelOpenActivePathInOther:  {},
 	ActionPanelToggleSync:             {},
-	ActionPanelMeta:                   {},
+	ActionPanelColumns:                {},
 	ActionPanelMetaEdit:               {},
-	ActionPanelMetaSave:               {},
+	ActionColumnsSaveProfile:          {},
+	ActionColumnsLoadProfile:          {},
+	ActionColumnsDeleteProfile:        {},
+	ActionColumnsDefaultProfile:       {},
 	ActionPanelComparePanels:          {},
 	ActionPanelFindDuplicates:         {},
 	ActionPanelFilterDialog:           {},

@@ -21,7 +21,6 @@ const (
 	InputModeMessageDialog
 	InputModeThemeDialog
 	InputModeSortDialog
-	InputModeListingFormatDialog
 	InputModeConfigDialog
 	InputModePreviewSettingsDialog
 	InputModeDebounceCalibrateDialog
@@ -45,7 +44,7 @@ const (
 	InputModeFindDialog
 	InputModeIndexFindDialog
 	InputModeIndexTagsDialog
-	InputModeMetaDialog
+	InputModeColumnsDialog
 	InputModeLeaderMenu
 	InputModeHelpView
 	InputModeHelpKeyPrompt
@@ -93,8 +92,8 @@ func (a *App) inputMode() InputMode {
 		return InputModeIndexFindDialog
 	case a.model.IndexTagsDialog.Open:
 		return InputModeIndexTagsDialog
-	case a.model.MetaDialog.Open:
-		return InputModeMetaDialog
+	case a.model.ColumnsDialog.Open:
+		return InputModeColumnsDialog
 	case a.model.HelpView.KeyPrompt:
 		return InputModeHelpKeyPrompt
 	case a.model.HelpView.Open:
@@ -107,8 +106,6 @@ func (a *App) inputMode() InputMode {
 		return InputModeSortDialog
 	case a.model.StatusCommandsDialog.Open:
 		return InputModeStatusCommandsDialog
-	case a.model.ListingFormatDialog.Open:
-		return InputModeListingFormatDialog
 	case a.model.ConfigDialog.Open:
 		return InputModeConfigDialog
 	case a.model.PreviewSettingsDialog.Open:
@@ -216,7 +213,7 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		rest = append(pinDialogOverlayFooterKeys(a.keys.PinDialog), rest...)
 		return footerWithEscClose(rest)
 	}
-	if a.model.PathPicker.Open || a.model.MetaDialog.Open {
+	if a.model.PathPicker.Open || a.model.ColumnsDialog.Open {
 		return a.pathPickerMetaFooterKeys()
 	}
 	if a.model.CommandOutputDialog.Open {
@@ -284,17 +281,34 @@ func viMotionFooterKeys(fkeys []menu.FunctionKey, letters map[string]string) []m
 	return out
 }
 
-// pathPickerMetaFooterKeys builds footer hints for the PathPicker / MetaDialog overlay branch.
+// columnsDialogFooterKeys is the footer of the Columns dialog's current phase. KeyLabel only: a
+// footer click replays the binding, so a rebound chord still works.
+func (a *App) columnsDialogFooterKeys() []menu.FunctionKey {
+	var out []menu.FunctionKey
+	add := func(action, hint string) {
+		if lbl := a.keys.ColumnsDialog.MenuBindingLabel(action); lbl != "" {
+			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: hint})
+		}
+	}
+	switch a.model.ColumnsDialog.Phase {
+	case dialog.ColumnsPhaseMain:
+		add(keymap.ActionColumnsLoadProfile, "Load")
+		add(keymap.ActionColumnsSaveProfile, "Save")
+		out = append(out, menu.FunctionKeyEditConfig)
+	case dialog.ColumnsPhaseLoadPicker:
+		add(keymap.ActionColumnsDefaultProfile, "Default")
+		add(keymap.ActionColumnsDeleteProfile, "Delete")
+	case dialog.ColumnsPhaseSavePrompt:
+		add(keymap.ActionColumnsSaveProfile, "Overwrite")
+	}
+	return out
+}
+
+// pathPickerMetaFooterKeys builds footer hints for the PathPicker / ColumnsDialog overlay branch.
 func (a *App) pathPickerMetaFooterKeys() []menu.FunctionKey {
 	rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
-	if a.model.MetaDialog.Open {
-		rest = append([]menu.FunctionKey{menu.FunctionKeyEditConfig}, rest...)
-		if len(a.model.MetaDialog.Entries) > 0 {
-			// KeyLabel only: a footer click replays the binding, so a rebound chord still works.
-			if lbl := a.keys.MetaDialog.MenuBindingLabel(keymap.ActionPanelMetaSave); lbl != "" {
-				rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Save"}}, rest...)
-			}
-		}
+	if a.model.ColumnsDialog.Open {
+		rest = append(a.columnsDialogFooterKeys(), rest...)
 	}
 	if a.dialogCtrl.BookmarkDialogDeleteFooterEligible() {
 		if lbl := a.keys.BookmarkDialog.MenuBindingLabel(keymap.ActionBookmarkDelete); lbl != "" {
@@ -310,7 +324,7 @@ func (a *App) pathPickerMetaFooterKeys() []menu.FunctionKey {
 	return footerWithEscClose(rest)
 }
 
-// primaryModalFooterKeys builds footer hints for the primary-modal branch (sort/listing-format/config/
+// primaryModalFooterKeys builds footer hints for the primary-modal branch (sort/config/
 // group-select/file-dialog/SFTP-connect/path-picker/history/find/meta/user-menu/compare-merge dialogs).
 func (a *App) primaryModalFooterKeys() []menu.FunctionKey {
 	rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
@@ -734,7 +748,7 @@ var inputModeKeyHandlers = map[InputMode]func(*App, *tcell.EventKey) bool{
 		a.handleSFTPConnectDialogKey(ev)
 		return false
 	},
-	InputModeMetaDialog: func(a *App, ev *tcell.EventKey) bool {
+	InputModeColumnsDialog: func(a *App, ev *tcell.EventKey) bool {
 		a.metaCtrl.HandleDialogKey(ev)
 		return false
 	},
@@ -755,10 +769,6 @@ var inputModeKeyHandlers = map[InputMode]func(*App, *tcell.EventKey) bool{
 	},
 	InputModeSortDialog: func(a *App, ev *tcell.EventKey) bool {
 		a.handleSortDialogKey(ev)
-		return false
-	},
-	InputModeListingFormatDialog: func(a *App, ev *tcell.EventKey) bool {
-		a.handleListingFormatDialogKey(ev)
 		return false
 	},
 	InputModeConfigDialog: func(a *App, ev *tcell.EventKey) bool {
@@ -1261,7 +1271,7 @@ func (a *App) dispatch(actionID string) bool {
 		a.navigateToSelectedRoot()
 	case keymap.ActionPanelSelectParentDirs:
 		a.selectParentDirs()
-	case keymap.ActionPanelMeta:
+	case keymap.ActionPanelColumns:
 		a.metaCtrl.OpenDialog(a.model.ActivePanel)
 	case keymap.ActionPanelMetaEdit:
 		a.metaCtrl.EditMetaFile()

@@ -1,6 +1,7 @@
 package fsbackend
 
 import (
+	"io/fs"
 	"time"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -12,6 +13,11 @@ type listingEntryKey struct {
 	size       int64
 	modifiedAt time.Time
 	indexState string
+	mode       fs.FileMode
+	owner      string
+	group      string
+	links      uint64
+	changedAt  time.Time
 }
 
 // listingIndexState is the fileindex overlay state that counts when comparing listings. The
@@ -38,13 +44,20 @@ func listingEntryKeys(entries []Entry) map[string]listingEntryKey {
 			size:       e.Size,
 			modifiedAt: e.ModifiedAt,
 			indexState: listingIndexState(e),
+			mode:       e.Mode,
+			owner:      e.Owner,
+			group:      e.Group,
+			links:      e.Links,
+			changedAt:  e.ChangedAt,
 		}
 	}
 	return out
 }
 
 // EntriesListingEqual reports whether two directory snapshots have the same visible
-// membership and per-name metadata (type, size, modification time, fileindex overlay state).
+// membership and per-name metadata (type, size, modification time, mode, owner, group, links,
+// ctime, fileindex overlay state). Access time is left out: reading a file changes it, so it
+// would re-apply listings endlessly, and an Accessed column updates with the next change or reload.
 func EntriesListingEqual(a, b []Entry) bool {
 	if len(a) != len(b) {
 		return false
@@ -59,6 +72,9 @@ func EntriesListingEqual(a, b []Entry) bool {
 			return false
 		}
 		if other.entryType != e.Type || other.size != e.Size || !other.modifiedAt.Equal(e.ModifiedAt) || other.indexState != listingIndexState(e) {
+			return false
+		}
+		if other.mode != e.Mode || other.owner != e.Owner || other.group != e.Group || other.links != e.Links || !other.changedAt.Equal(e.ChangedAt) {
 			return false
 		}
 	}

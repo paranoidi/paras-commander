@@ -37,8 +37,8 @@ func TestDrawPanelInfoColumnUsesPanelRowInfoFG(t *testing.T) {
 		Entries: []localfs.Entry{
 			{Name: "harbor", Path: "/tmp/harbor", Type: localfs.EntryFile, Size: 5000},
 		},
-		ListFormat: panel.ListFormatBrief,
-		Cursor:     1, // non-cursor row keeps panel.row.file on the name
+		Columns: panel.ColumnsBrief,
+		Cursor:  1, // non-cursor row keeps panel.row.file on the name
 	}
 	rect := Rect{X: 0, Y: 0, Width: width, Height: height}
 	drawPanel(screen, rect, state,
@@ -47,7 +47,7 @@ func TestDrawPanelInfoColumnUsesPanelRowInfoFG(t *testing.T) {
 		PanelDisplayConfig{CarouselLayout: panelcarousel.DefaultLayout()})
 
 	listTextWidth := width - 2
-	nameWidth := panelListNameWidth(listTextWidth, panel.ListFormatBrief, false, false)
+	nameWidth := panelListNameWidth(listTextWidth, panel.ColumnsBrief, false, false)
 	rowY := rect.Y + 2
 	// EntryDisplayRunes prefixes files with a space when icons are off.
 	nameX := rect.X + 2

@@ -15,7 +15,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
-func testMetaDialogApp(t *testing.T, dir, cfgDir string) *App {
+func testColumnsDialogApp(t *testing.T, dir, cfgDir string) *App {
 	t.Helper()
 	th, _ := loadTestTheme(t)
 	cfg := config.Default()
@@ -34,7 +34,7 @@ func testMetaDialogApp(t *testing.T, dir, cfgDir string) *App {
 	return app
 }
 
-func TestActiveFooterKeysMetaDialogShowsF9EditConfig(t *testing.T) {
+func TestActiveFooterKeysColumnsDialogShowsF9EditConfig(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
 	metaPath := filepath.Join(cfgDir, config.DefaultMetaFileName)
@@ -50,25 +50,28 @@ file = "wc -l"
 		t.Fatal(err)
 	}
 
-	app := testMetaDialogApp(t, dir, cfgDir)
+	app := testColumnsDialogApp(t, dir, cfgDir)
 	app.metaCtrl.OpenDialog(ui.PrimaryPanel)
-	if !app.model.MetaDialog.Open {
-		t.Fatal("meta dialog should be open")
+	if !app.model.ColumnsDialog.Open {
+		t.Fatal("columns dialog should be open")
 	}
 
 	keys := app.activeFooterKeys()
-	if len(keys) != 4 {
-		t.Fatalf("meta dialog footer len = %d, want Esc + Save + F9 + F10", len(keys))
+	if len(keys) != 5 {
+		t.Fatalf("columns dialog footer len = %d, want Esc + Load + Save + F9 + F10", len(keys))
 	}
-	if keys[1].Hint != "Save" || keys[1].KeyLabel != "F5" {
-		t.Fatalf("second footer key = %+v, want F5 Save", keys[1])
+	if keys[1].Hint != "Load" || keys[1].KeyLabel != "F2" {
+		t.Fatalf("second footer key = %+v, want F2 Load", keys[1])
 	}
-	if keys[2].Key != tcell.KeyF9 || keys[2].Hint != menu.FunctionKeyEditConfig.Hint {
-		t.Fatalf("third footer key = %+v, want F9 Edit config", keys[2])
+	if keys[2].Hint != "Save" || keys[2].KeyLabel != "F5" {
+		t.Fatalf("third footer key = %+v, want F5 Save", keys[2])
+	}
+	if keys[3].Key != tcell.KeyF9 || keys[3].Hint != menu.FunctionKeyEditConfig.Hint {
+		t.Fatalf("fourth footer key = %+v, want F9 Edit config", keys[3])
 	}
 }
 
-func TestMetaDialogF9RefreshesDocumentationBeforeEditor(t *testing.T) {
+func TestColumnsDialogF9RefreshesDocumentationBeforeEditor(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
 	metaPath := filepath.Join(cfgDir, config.DefaultMetaFileName)
@@ -84,7 +87,7 @@ file = "wc -l"
 		t.Fatal(err)
 	}
 
-	app := testMetaDialogApp(t, dir, cfgDir)
+	app := testColumnsDialogApp(t, dir, cfgDir)
 	app.metaCtrl.OpenDialog(ui.PrimaryPanel)
 
 	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
@@ -114,7 +117,7 @@ file = "wc -l"
 	}
 }
 
-func TestMetaDialogF9ReloadsEntriesAfterEdit(t *testing.T) {
+func TestColumnsDialogF9ReloadsEntriesAfterEdit(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
 	metaPath := filepath.Join(cfgDir, config.DefaultMetaFileName)
@@ -130,11 +133,11 @@ file = "wc -l"
 		t.Fatal(err)
 	}
 
-	app := testMetaDialogApp(t, dir, cfgDir)
+	app := testColumnsDialogApp(t, dir, cfgDir)
 	app.metaCtrl.OpenDialog(ui.PrimaryPanel)
 	// No fileindex database, so the built-in tags column is not listed.
-	if len(app.model.MetaDialog.Entries) != 1 || app.model.MetaDialog.Entries[0].Name != "lines" {
-		t.Fatalf("entries = %+v, want only lines", app.model.MetaDialog.Entries)
+	if len(app.model.ColumnsDialog.Entries) != 1 || app.model.ColumnsDialog.Entries[0].Name != "lines" {
+		t.Fatalf("entries = %+v, want only lines", app.model.ColumnsDialog.Entries)
 	}
 
 	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
@@ -152,14 +155,14 @@ file = "wc -c"
 
 	app.metaCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 
-	if !app.model.MetaDialog.Open {
-		t.Fatal("meta dialog should stay open after F4 edit")
+	if !app.model.ColumnsDialog.Open {
+		t.Fatal("columns dialog should stay open after F4 edit")
 	}
-	if len(app.model.MetaDialog.Entries) != 2 {
-		t.Fatalf("entries len = %d, want lines + size", len(app.model.MetaDialog.Entries))
+	if len(app.model.ColumnsDialog.Entries) != 2 {
+		t.Fatalf("entries len = %d, want lines + size", len(app.model.ColumnsDialog.Entries))
 	}
-	if app.model.MetaDialog.Entries[1].Name != "size" {
-		t.Fatalf("second entry = %+v, want size", app.model.MetaDialog.Entries[1])
+	if app.model.ColumnsDialog.Entries[1].Name != "size" {
+		t.Fatalf("second entry = %+v, want size", app.model.ColumnsDialog.Entries[1])
 	}
 }
 
@@ -314,7 +317,7 @@ func TestUserMenuDisabledF9RecoversAfterFix(t *testing.T) {
 	}
 }
 
-func TestMetaDialogF9KeepsCheckedWhenFileInvalid(t *testing.T) {
+func TestColumnsDialogF9KeepsCheckedWhenFileInvalid(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
 	metaPath := filepath.Join(cfgDir, config.DefaultMetaFileName)
@@ -329,10 +332,10 @@ file = "wc -l"
 		t.Fatal(err)
 	}
 
-	app := testMetaDialogApp(t, dir, cfgDir)
+	app := testColumnsDialogApp(t, dir, cfgDir)
 	app.metaCtrl.OpenDialog(ui.PrimaryPanel)
-	app.model.MetaDialog.Checked[0] = true
-	app.model.MetaDialog.Focus = dialog.MetaEntryID(0)
+	app.model.ColumnsDialog.Checked[0] = true
+	app.model.ColumnsDialog.Focus = dialog.MetaEntryID(0)
 
 	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
 		return os.WriteFile(path, []byte("not valid meta\n"), 0o644)
@@ -340,11 +343,11 @@ file = "wc -l"
 
 	app.metaCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 
-	if !app.model.MetaDialog.Open {
-		t.Fatal("meta dialog should stay open")
+	if !app.model.ColumnsDialog.Open {
+		t.Fatal("columns dialog should stay open")
 	}
 	// No fileindex database: the built-in tags column is not offered either.
-	if e := app.model.MetaDialog.Entries; len(e) != 0 {
+	if e := app.model.ColumnsDialog.Entries; len(e) != 0 {
 		t.Fatalf("entries = %+v, want none after invalid meta.toml", e)
 	}
 }

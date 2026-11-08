@@ -1,18 +1,16 @@
 == open ==
-focus=nerdfont nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=nerdfont nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == Tab ==
-focus=mode0 nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=mode0 nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == Tab ==
-focus=listing0 nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=mouse nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == Tab ==
-focus=mouse nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
-== Tab ==
-focus=split0 nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=split0 nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == Backspace ==
-focus=split0 nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22|<44%|*] cursors=[4|4|1] msg=""
+focus=split0 nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb split=[<<22|<44%|*] cursors=[4|4|1] msg=""
 == Backspace ==
-focus=split0 nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<2|<44%|*] cursors=[3|4|1] msg=""
+focus=split0 nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb split=[<<2|<44%|*] cursors=[3|4|1] msg=""
 == Backspace ==
-focus=split0 nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<|<44%|*] cursors=[2|4|1] msg=""
+focus=split0 nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb split=[<<|<44%|*] cursors=[2|4|1] msg=""
 == Ctrl+L ==
-focus=split0 nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[|<44%|*] cursors=[0|4|1] msg=""
+focus=split0 nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb split=[|<44%|*] cursors=[0|4|1] msg=""

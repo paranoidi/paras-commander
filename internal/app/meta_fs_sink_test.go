@@ -34,7 +34,7 @@ func waitForMetaFSWake(t *testing.T, app *App) {
 
 func TestMetaFSSink_applyDoesNotPostSynchronously(t *testing.T) {
 	dir := t.TempDir()
-	app := testMetaDialogApp(t, dir, filepath.Join(dir, "config"))
+	app := testColumnsDialogApp(t, dir, filepath.Join(dir, "config"))
 	sink := &metaFSSink{app: app}
 
 	for range 3 {
@@ -71,8 +71,8 @@ func TestRefreshIndexViews_doesNotRerunShellColumns(t *testing.T) {
 	if err := os.WriteFile(harbor, nil, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	app := testMetaDialogApp(t, dir, cfgDir)
-	app.model.MetaDialog = dialog.MetaDialogState{
+	app := testColumnsDialogApp(t, dir, cfgDir)
+	app.model.ColumnsDialog = dialog.ColumnsDialogState{
 		Open:    true,
 		PanelID: ui.PrimaryPanel,
 		Entries: []dialog.MetaEntry{{Name: "words", Description: "Words"}},

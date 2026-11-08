@@ -20,6 +20,8 @@ type ListingRefreshSnapshot struct {
 	ClimbToExistingAncestor bool
 	// IndexOverlay, when set, merges the fileindex into a local listing (State.WithIndex).
 	IndexOverlay IndexOverlayFunc
+	// BirthTime asks a local listing for birth times: the panel shows the Created column.
+	BirthTime bool
 }
 
 // ListingRefreshSnapshot builds a snapshot for loc using the panel's current visibility options.
@@ -30,6 +32,7 @@ func (s *State) ListingRefreshSnapshot(loc pathloc.Path, listTimeout time.Durati
 		Gitignore:               s.Gitignore,
 		ListTimeout:             listTimeout,
 		ClimbToExistingAncestor: s.climbToExistingAncestor,
+		BirthTime:               s.Columns.Has(ColumnCreated),
 	}
 	if s.WithIndex {
 		snap.IndexOverlay = s.IndexOverlay
@@ -85,6 +88,7 @@ func fetchListingAt(ctx context.Context, snap ListingRefreshSnapshot, loc pathlo
 	entries, err := be.ListWithOptions(ctx, loc, localfs.ListOptions{
 		ShowHidden: snap.ShowHidden,
 		Gitignore:  gitMatcher,
+		BirthTime:  snap.BirthTime,
 	})
 	if err != nil {
 		return nil, pathloc.Path{}, false, false, err

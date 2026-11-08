@@ -25,7 +25,7 @@ type Bundle struct {
 	HelpDialog          *Map // F1 help dialog (switch to text-edit keys page)
 	UserMenu            *Map // F2 user menu strip (back to parent submenu)
 	CommandOutputDialog *Map // user-menu command output dialog (toggle path selection)
-	MetaDialog          *Map // meta columns picker (save default columns)
+	ColumnsDialog       *Map // Columns dialog (column profiles)
 	FilePreviewSearch   *Map // F3 preview search match-jump chords, consulted only while typing the search query; may be nil
 	// LeaderKey maps action ID → single-letter Esc function-menu leader key (merged defaults + user).
 	LeaderKey map[string]string
@@ -44,7 +44,7 @@ func (b *Bundle) Overlays() []*Map {
 		b.Jobs, b.Commands, b.Messages, b.FilePreview, b.DialogInput, b.RenameDialog, b.MkdirDialog,
 		b.BookmarkDialog, b.FindDialog, b.HistoryDialog, b.FlattenDialog, b.TransferDialog,
 		b.Compare, b.Dedup, b.Terminal, b.MassRenameDialog, b.RunForEachDialog, b.PinDialog,
-		b.HelpDialog, b.UserMenu, b.CommandOutputDialog, b.MetaDialog, b.FilePreviewSearch,
+		b.HelpDialog, b.UserMenu, b.CommandOutputDialog, b.ColumnsDialog, b.FilePreviewSearch,
 	}
 }
 

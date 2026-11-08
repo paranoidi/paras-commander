@@ -50,3 +50,26 @@ func TestEntriesListingEqualIndexState(t *testing.T) {
 		t.Fatal("directory ghost/new transition not detected")
 	}
 }
+
+func TestEntriesListingEqualSeesMetadataButNotAccessTime(t *testing.T) {
+	stamp := time.Unix(1700000000, 0)
+	base := Entry{Name: "orchard.txt", Mode: 0o644, Owner: "wren", Group: "wren", Links: 1, ChangedAt: stamp, AccessedAt: stamp}
+	for name, change := range map[string]func(*Entry){
+		"mode":    func(e *Entry) { e.Mode = 0o600 },
+		"owner":   func(e *Entry) { e.Owner = "heron" },
+		"group":   func(e *Entry) { e.Group = "heron" },
+		"links":   func(e *Entry) { e.Links = 2 },
+		"changed": func(e *Entry) { e.ChangedAt = stamp.Add(time.Second) },
+	} {
+		other := base
+		change(&other)
+		if EntriesListingEqual([]Entry{base}, []Entry{other}) {
+			t.Fatalf("%s change not detected", name)
+		}
+	}
+	other := base
+	other.AccessedAt = stamp.Add(time.Hour)
+	if !EntriesListingEqual([]Entry{base}, []Entry{other}) {
+		t.Fatal("an access time change must not count")
+	}
+}

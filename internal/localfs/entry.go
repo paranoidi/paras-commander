@@ -45,6 +45,19 @@ type Entry struct {
 	// IndexStatus is the fileindex state of the row (an IndexStatus* value), set only on
 	// listings of a panel browsing with the fileindex overlay; "" elsewhere.
 	IndexStatus string
+	// Owner and Group are the entry's owner and group, resolved to names during the listing
+	// fetch (numeric ids when unknown); the painters never look them up. "" when the source has
+	// no such fact, like fileindex:// rows.
+	Owner string
+	Group string
+	// Links is st_nlink; 0 when the source has no such fact.
+	Links uint64
+	// ChangedAt is ctime and AccessedAt atime; zero when the source has no such fact.
+	ChangedAt  time.Time
+	AccessedAt time.Time
+	// CreatedAt is the birth time. It takes a statx per entry, so it is set only when
+	// ListOptions.BirthTime asks for it.
+	CreatedAt time.Time
 }
 
 // Fileindex states a row can carry in Entry.IndexStatus. The fileindex.status column shows the
@@ -66,6 +79,8 @@ const (
 type ListOptions struct {
 	ShowHidden bool
 	Gitignore  *gitignore.Matcher // nil = no gitignore filtering
+	// BirthTime fills Entry.CreatedAt, at the cost of a statx per entry.
+	BirthTime bool
 }
 
 // DirectoryListing is a normalized local directory snapshot.
@@ -109,7 +124,7 @@ func ListDir(path string, opts ListOptions) (DirectoryListing, error) {
 			continue
 		}
 
-		entry, keep, err := entryFromDirEntry(cleanPath, dirEntry)
+		entry, keep, err := entryFromDirEntry(cleanPath, dirEntry, opts)
 		if err != nil {
 			return DirectoryListing{}, err
 		}
@@ -125,7 +140,7 @@ func ListDir(path string, opts ListOptions) (DirectoryListing, error) {
 // entryFromDirEntry stats one ReadDir result. When the name vanishes between ReadDir and Info
 // (e.g. a concurrent move/delete), keep is false and the caller skips it — aborting the whole
 // listing for that race would toast a transient lstat error and leave a stale panel.
-func entryFromDirEntry(cleanPath string, dirEntry os.DirEntry) (Entry, bool, error) {
+func entryFromDirEntry(cleanPath string, dirEntry os.DirEntry, opts ListOptions) (Entry, bool, error) {
 	name := dirEntry.Name()
 	path := filepath.Join(cleanPath, name)
 	info, err := dirEntry.Info()
@@ -138,6 +153,11 @@ func entryFromDirEntry(cleanPath string, dirEntry os.DirEntry) (Entry, bool, err
 
 	dev, devOK := entryDevice(info)
 	denied, brokenLink := entryAccess(path, info)
+	attrs := entryAttrsFrom(info)
+	var createdAt time.Time
+	if opts.BirthTime {
+		createdAt = entryBirthTime(path)
+	}
 	return Entry{
 		Name:         name,
 		Path:         path,
@@ -149,6 +169,12 @@ func entryFromDirEntry(cleanPath string, dirEntry os.DirEntry) (Entry, bool, err
 		DevValid:     devOK,
 		AccessDenied: denied,
 		BrokenLink:   brokenLink,
+		Owner:        attrs.owner,
+		Group:        attrs.group,
+		Links:        attrs.links,
+		ChangedAt:    attrs.changedAt,
+		AccessedAt:   attrs.accessedAt,
+		CreatedAt:    createdAt,
 	}, true, nil
 }
 

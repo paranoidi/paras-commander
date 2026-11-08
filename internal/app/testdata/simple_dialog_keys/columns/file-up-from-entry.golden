@@ -1,0 +1,8 @@
+== open ==
+focus=item0 phase=0 files=[size] checked=[false true false]
+== Up ==
+focus=file4 phase=0 files=[size] checked=[false true false]
+== Up ==
+focus=file3 phase=0 files=[size] checked=[false true false]
+== Space ==
+focus=file3 phase=0 files=[size accessed] checked=[false true false]

@@ -1,6 +1,7 @@
 package ops
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -68,9 +69,14 @@ func LoadMassRenamePatterns(path string) ([]MassRenamePattern, error) {
 	return f.Patterns, nil
 }
 
-// SaveMassRenamePatterns atomically writes patterns to path (temp file in the same directory,
-// synced and chmod 0o644, then renamed into place).
+// SaveMassRenamePatterns atomically writes patterns to path (see WriteTOMLAtomic).
 func SaveMassRenamePatterns(path string, patterns []MassRenamePattern) error {
+	return WriteTOMLAtomic(path, massRenamePatternsFile{Patterns: patterns})
+}
+
+// WriteTOMLAtomic encodes v to path through a temp file in the same directory, synced and chmod
+// 0o644, then renamed into place.
+func WriteTOMLAtomic(path string, v any) error {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("create %q: %w", dir, err)
@@ -80,7 +86,7 @@ func SaveMassRenamePatterns(path string, patterns []MassRenamePattern) error {
 		return fmt.Errorf("create temp file in %q: %w", dir, err)
 	}
 	tmpPath := tmp.Name()
-	encErr := toml.NewEncoder(tmp).Encode(massRenamePatternsFile{Patterns: patterns})
+	encErr := toml.NewEncoder(tmp).Encode(v)
 	syncErr := tmp.Sync()
 	closeErr := tmp.Close()
 	if encErr != nil || syncErr != nil || closeErr != nil {
@@ -88,7 +94,7 @@ func SaveMassRenamePatterns(path string, patterns []MassRenamePattern) error {
 		if encErr != nil {
 			return fmt.Errorf("encode %q: %w", path, encErr)
 		}
-		return fmt.Errorf("write %q: %w", path, syncErr)
+		return fmt.Errorf("write %q: %w", path, errors.Join(syncErr, closeErr))
 	}
 	if err := os.Chmod(tmpPath, 0o644); err != nil {
 		_ = os.Remove(tmpPath)

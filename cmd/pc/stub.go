@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/paranoidi/paras-commander/internal/columnprofile"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
@@ -34,6 +35,7 @@ func writeConfigDirStubs(dir string, stderr io.Writer) error {
 	metaPath := filepath.Join(dir, config.DefaultMetaFileName)
 	poolsPath := filepath.Join(dir, config.DefaultPoolsFileName)
 	patternsPath := filepath.Join(dir, config.DefaultMassRenamePatternsFileName)
+	profilesPath := filepath.Join(dir, config.DefaultColumnProfilesFileName)
 	statusPath := statuscmds.Path(dir)
 
 	type stub struct {
@@ -47,6 +49,7 @@ func writeConfigDirStubs(dir string, stderr io.Writer) error {
 		{metaPath, func() (bool, error) { return metacmds.WriteMetaStub(metaPath) }},
 		{poolsPath, func() (bool, error) { return pools.WritePoolsStub(poolsPath) }},
 		{patternsPath, func() (bool, error) { return writeEncodedStub(patternsPath, ops.EncodeDefaultMassRenamePatterns) }},
+		{profilesPath, func() (bool, error) { return writeEncodedStub(profilesPath, columnprofile.EncodeStub) }},
 		{statusPath, func() (bool, error) { return statuscmds.WriteStub(statusPath) }},
 	}
 
