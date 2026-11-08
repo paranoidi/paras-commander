@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 	"strconv"
-	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
@@ -40,7 +39,7 @@ func EntryUsageBytes(entry localfs.Entry, disk ByteSizer) int64 {
 
 // FormatListedSize renders entry's size cell: a directory shows its cached disk-usage size (via
 // disk, if non-nil and the cache has an entry), or pendingIcon while that size is still being
-// calculated (queued or walking, centered in SizeCells), or "" when
+// calculated (queued or walking, right-aligned in SizeCells), or "" when
 // neither applies; a file shows its compact byte size at SizeCells width.
 func FormatListedSize(entry localfs.Entry, disk ByteSizer, pendingIcon string) string {
 	if entry.Type == localfs.EntryDirectory {
@@ -52,8 +51,7 @@ func FormatListedSize(entry localfs.Entry, disk ByteSizer, pendingIcon string) s
 		if pendingIcon == "" {
 			return ""
 		}
-		left := (SizeCells - runewidth.StringWidth(pendingIcon)) / 2
-		return runewidth.FillRight(strings.Repeat(" ", max(left, 0))+pendingIcon, SizeCells)
+		return runewidth.FillLeft(pendingIcon, SizeCells)
 	}
 	return FormatByteSizeCompact(entry.Size, SizeCells)
 }

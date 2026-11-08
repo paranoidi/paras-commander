@@ -250,8 +250,8 @@ func TestFormatEntryDirectorySizePendingShowsRunningIcon(t *testing.T) {
 	dir := localfs.Entry{Name: "orchard", Path: "/home/u/orchard", Type: localfs.EntryDirectory}
 	styles := theme.Default()
 	got := formatEntry(dir, rowW, panelRowOpts{ListFmt: panel.ListFormatMtime, SizePending: true}, styles, nil, "")
-	// Centered in the size column.
-	want := fmt.Sprintf("%-*s   %s    %-*s", nameWidth, "/orchard", styles.IconMetaRunning(), panelListModTimeCells, "")
+	// Right-aligned in the size column.
+	want := fmt.Sprintf("%-*s %*s  %-*s", nameWidth, "/orchard", panellist.SizeCells, styles.IconMetaRunning(), panelListModTimeCells, "")
 	if got != want {
 		t.Fatalf("full row = %q, want %q", got, want)
 	}
