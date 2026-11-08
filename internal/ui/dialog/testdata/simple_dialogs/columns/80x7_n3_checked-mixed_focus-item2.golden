@@ -1,7 +1,7 @@
 -- text --
                                                                                 
             ┌────────────────────── Columns ───────────────────────┐            
-            ├──────────────────────── File ────────────────────────┤            
+            │ [ ] Size          [ ] Accessed      [ ] Owner        │            
             ├──────────────────────────────────────────────────────┤            
             │                 [ OK ]    [ Cancel ]                 │            
             └──────────────────────────────────────────────────────┘            
@@ -15,7 +15,7 @@ e fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbcccccccccbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbccccccbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
+aaaaaaaaaaaabbbbbbcbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbaaaaaaaaaaaa
 aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
 aaaaaaaaaaaabbbbbbbbbbbbbbbbbdddeddddbbdddeddddddddbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
 aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa

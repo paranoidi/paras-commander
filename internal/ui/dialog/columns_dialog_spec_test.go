@@ -10,7 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
-const columnsScreenH = 40
+const columnsScreenW, columnsScreenH = 120, 40
 
 func TestColumnsDialogShortcuts_fileColumnsArePinned(t *testing.T) {
 	got := dialog.ColumnsDialogShortcuts([]dialog.MetaEntry{{Name: "size-on-disk"}})
@@ -66,15 +66,15 @@ func TestColumnsDialogView_sectionsHideWhenEmpty(t *testing.T) {
 		entries []dialog.MetaEntry
 		want    []string
 	}{
-		{"file only", nil, []string{"File"}},
-		{"meta", []dialog.MetaEntry{{Name: "walnut"}}, []string{"File", "Meta"}},
-		{"index", []dialog.MetaEntry{{Name: "fileindex.tags", Label: "Tags", Section: "File Index"}}, []string{"File", "File Index"}},
-		{"both", []dialog.MetaEntry{{Name: "walnut"}, {Name: "fileindex.tags", Label: "Tags", Section: "File Index"}}, []string{"File", "Meta", "File Index"}},
+		{"file only", nil, nil},
+		{"meta", []dialog.MetaEntry{{Name: "walnut"}}, []string{"Meta"}},
+		{"index", []dialog.MetaEntry{{Name: "fileindex.tags", Label: "Tags", Section: "File Index"}}, []string{"File Index"}},
+		{"both", []dialog.MetaEntry{{Name: "walnut"}, {Name: "fileindex.tags", Label: "Tags", Section: "File Index"}}, []string{"Meta", "File Index"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			st := dialog.ColumnsDialogState{Entries: tc.entries, Checked: make([]bool, len(tc.entries))}
-			if got := sectionLabels(dialog.ColumnsDialogView(st, columnsScreenH)); !equalStrings(got, tc.want) {
+			if got := sectionLabels(dialog.ColumnsDialogView(st, columnsScreenW, columnsScreenH)); !equalStrings(got, tc.want) {
 				t.Fatalf("sections = %v, want %v", got, tc.want)
 			}
 		})
@@ -83,7 +83,7 @@ func TestColumnsDialogView_sectionsHideWhenEmpty(t *testing.T) {
 
 func TestColumnsDialogView_fileColumnsTickFromSet(t *testing.T) {
 	st := dialog.ColumnsDialogState{FileColumns: panel.ColumnsPermissions}
-	spec := dialog.ColumnsDialogView(st, columnsScreenH)
+	spec := dialog.ColumnsDialogView(st, columnsScreenW, columnsScreenH)
 	on := map[dlg.ID]bool{}
 	var walk func(items []dlg.Item)
 	walk = func(items []dlg.Item) {
@@ -124,39 +124,119 @@ func TestColumnsDialogApply_togglesFileColumnAndEntry(t *testing.T) {
 	}
 }
 
-func TestColumnsDialogView_sectionInTwoColumns(t *testing.T) {
-	st := dialog.ColumnsDialogState{Entries: []dialog.MetaEntry{{Name: "walnut", Description: "A long description that keeps one column"}}}
+// gridCells returns the placed x of every checkbox by ID.
+func gridCells(t *testing.T, spec dlg.Spec, w, h int) map[dlg.ID]int {
+	t.Helper()
+	p, ok := dlg.Place(w, h, spec)
+	if !ok {
+		t.Fatalf("dialog does not place at %dx%d: width %d min %d", w, h, spec.Width, spec.MinWidth)
+	}
+	xs := map[dlg.ID]int{}
+	for _, g := range spec.Groups {
+		for _, it := range g.Columns[0] {
+			for _, c := range it.Cells {
+				placed, found := p.Item(c.ID)
+				if !found || placed.Rect.Width == 0 {
+					t.Fatalf("%s not drawn", c.ID)
+				}
+				xs[c.ID] = placed.Rect.X
+			}
+		}
+	}
+	return xs
+}
+
+func gridState() dialog.ColumnsDialogState {
+	st := dialog.ColumnsDialogState{Entries: []dialog.MetaEntry{
+		{Name: "wordcount", Description: "Word count"},
+		{Name: "juniper"},
+	}}
 	for _, n := range []string{"Status", "Tags", "Copies", "First seen", "Last seen"} {
 		st.Entries = append(st.Entries, dialog.MetaEntry{Name: n, Label: n, Section: "File Index"})
 	}
 	st.Checked = make([]bool, len(st.Entries))
-	spec := dialog.ColumnsDialogView(st, columnsScreenH)
-	// File header, File rows, Meta header, Meta rows, File Index header, File Index rows.
-	if top := spec.Groups[3].Columns[0]; len(top) != 1 || top[0].Kind != dlg.KindCheckbox {
-		t.Fatalf("meta section = %+v, want one plain checkbox", top)
-	}
-	rows := spec.Groups[5].Columns[0]
-	if len(rows) != 3 || rows[0].Kind != dlg.KindRow || rows[2].Kind != dlg.KindCheckbox {
-		t.Fatalf("section = %+v, want two rows of two then the odd one out", rows)
-	}
-	// Filled column by column: Status beside First seen, Copies alone.
-	if l, r := rows[0].Cells[0], rows[0].Cells[1]; l.ID != dialog.MetaEntryID(1) || r.ID != dialog.MetaEntryID(4) {
-		t.Fatalf("first row = %v %v, want Status and First seen", l.Label, r.Label)
-	}
-	if rows[2].ID != dialog.MetaEntryID(3) {
-		t.Fatalf("last row = %v, want Copies", rows[2].Label)
-	}
+	return st
+}
 
-	// Right crosses to the second column, Down walks the first.
-	focus := dialog.MetaEntryID(1)
-	dlg.HandleKey(spec, &focus, tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
-	if focus != dialog.MetaEntryID(4) {
-		t.Fatalf("Right from Status focuses %q, want First seen", focus)
+func TestColumnsDialogView_threeColumnsAlignAcrossSections(t *testing.T) {
+	spec := dialog.ColumnsDialogView(gridState(), columnsScreenW, columnsScreenH)
+	xs := gridCells(t, spec, columnsScreenW, columnsScreenH)
+	// File fills column by column: three rows of three.
+	col0, col1, col2 := xs[dialog.ColumnsFileID(0)], xs[dialog.ColumnsFileID(3)], xs[dialog.ColumnsFileID(6)]
+	if col0 >= col1 || col1 >= col2 {
+		t.Fatalf("file columns at %d %d %d", col0, col1, col2)
 	}
-	focus = dialog.MetaEntryID(2)
+	for id, want := range map[dlg.ID]int{
+		dialog.ColumnsFileID(1): col0,
+		dialog.ColumnsFileID(4): col1,
+		dialog.ColumnsFileID(8): col2,
+		dialog.MetaEntryID(0):   col0, // Meta: wordcount, juniper side by side
+		dialog.MetaEntryID(1):   col1,
+		dialog.MetaEntryID(2):   col0, // File Index: Status, Tags / First seen, Last seen / Copies is alone
+		dialog.MetaEntryID(4):   col1,
+		dialog.MetaEntryID(6):   col2,
+	} {
+		if xs[id] != want {
+			t.Fatalf("%s at x=%d, want %d", id, xs[id], want)
+		}
+	}
+}
+
+func TestColumnsDialogView_narrowScreenDropsColumnsAndDrawsEveryBox(t *testing.T) {
+	st := gridState()
+	for _, w := range []int{60, 44, 32} {
+		spec := dialog.ColumnsDialogView(st, w, columnsScreenH)
+		xs := gridCells(t, spec, w, columnsScreenH)
+		if len(xs) != len(panel.Columns())+len(st.Entries) {
+			t.Fatalf("width %d: %d boxes", w, len(xs))
+		}
+	}
+}
+
+func TestColumnsDialogView_labelsAreClippedNotWidenedForever(t *testing.T) {
+	st := dialog.ColumnsDialogState{Entries: []dialog.MetaEntry{{Name: "a-meta-column-name-far-too-long-for-any-grid"}}, Checked: []bool{false}}
+	spec := dialog.ColumnsDialogView(st, columnsScreenW, columnsScreenH)
+	if spec.Width > 90 {
+		t.Fatalf("dialog width = %d", spec.Width)
+	}
+}
+
+func TestColumnsDialogView_descriptionFollowsFocusAndKeepsItsRow(t *testing.T) {
+	st := gridState()
+	label := func(st dialog.ColumnsDialogState) (string, bool) {
+		spec := dialog.ColumnsDialogView(st, columnsScreenW, columnsScreenH)
+		items := spec.Groups[len(spec.Groups)-1].Columns[0]
+		if len(items) != 2 || items[1].Kind != dlg.KindLabel {
+			return "", false
+		}
+		return items[1].Label, true
+	}
+	st.Focus = dialog.MetaEntryID(0)
+	if got, ok := label(st); !ok || got != "Word count" {
+		t.Fatalf("description = %q, row %v", got, ok)
+	}
+	st.Focus = dialog.ColumnsFileID(0)
+	if got, ok := label(st); !ok || got != "" {
+		t.Fatalf("file column: description = %q, row %v", got, ok)
+	}
+	st.Entries = []dialog.MetaEntry{{Name: "juniper"}}
+	st.Checked = []bool{false}
+	if _, ok := label(st); ok {
+		t.Fatal("no entry has a description: no row")
+	}
+}
+
+func TestColumnsDialogView_upDownStayInColumn(t *testing.T) {
+	spec := dialog.ColumnsDialogView(gridState(), columnsScreenW, columnsScreenH)
+	focus := dialog.ColumnsFileID(3)
 	dlg.HandleKey(spec, &focus, tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	if focus != dialog.MetaEntryID(3) {
-		t.Fatalf("Down from Tags focuses %q, want Copies", focus)
+	if focus != dialog.ColumnsFileID(4) {
+		t.Fatalf("Down from the second column focuses %q", focus)
+	}
+	focus = dialog.ColumnsFileID(0)
+	dlg.HandleKey(spec, &focus, tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	if focus != dialog.ColumnsFileID(3) {
+		t.Fatalf("Right from Size focuses %q", focus)
 	}
 }
 
@@ -177,7 +257,7 @@ func TestColumnsDialogView_phaseTitles(t *testing.T) {
 		dialog.ColumnsPhaseOverwritePicker: "Overwrite profile",
 		dialog.ColumnsPhaseSavePrompt:      "Save profile",
 	} {
-		if got := dialog.ColumnsDialogView(dialog.ColumnsDialogState{Phase: phase}, columnsScreenH).Title; got != want {
+		if got := dialog.ColumnsDialogView(dialog.ColumnsDialogState{Phase: phase}, columnsScreenW, columnsScreenH).Title; got != want {
 			t.Fatalf("phase %d title = %q, want %q", phase, got, want)
 		}
 	}

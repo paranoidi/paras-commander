@@ -3,10 +3,10 @@ focus=item0 phase=0 files=[size] checked=[false true false]
 == Alt+l ==
 focus=item0 phase=0 files=[size] checked=[true true false]
 == Alt+d ==
-focus=item0 phase=0 files=[size] checked=[true true false]
+focus=item1 phase=0 files=[size] checked=[true false false]
 == Alt+v ==
-focus=item2 phase=0 files=[size] checked=[true true true]
+focus=item2 phase=0 files=[size] checked=[true false true]
 == Alt+L ==
-focus=item0 phase=0 files=[size] checked=[false true true]
+focus=item0 phase=0 files=[size] checked=[false false true]
 == Alt+D ==
-focus=item0 phase=0 files=[size] checked=[false true true]
+focus=item1 phase=0 files=[size] checked=[false true true]

@@ -81,50 +81,57 @@ const (
 )
 
 const (
-	metaDialogWidth         = 56
-	columnsPickerWidth      = 70
-	columnsFileSectionLabel = "File"
+	columnsPromptWidth = 56
+	columnsPickerWidth = 70
+	columnsMinWidth    = 28
+	// columnsScreenMargin is the cells a dialog leaves free on the screen (draw.ClampCenteredDialogRect).
+	columnsScreenMargin     = 4
 	columnsMetaSectionLabel = "Meta"
+	// columnsGridColumns is how many checkbox columns the main screen has when the screen is wide
+	// enough for them.
+	columnsGridColumns = 3
+	columnsGridGap     = 2
+	// columnsGridMaxLabel caps the labels that widen the grid; a longer one is clipped.
+	columnsGridMaxLabel = 22
+	// columnsGridFrame is the dialog width around a row: the borders and the text column margins.
+	columnsGridFrame = 4
 )
 
-// metaColumnGap is the gap cells after a first-column box in a two-column section; the marker
-// width's trailing cell adds one more blank before the second column.
-const metaColumnGap = 2
-
-// ColumnsDialogView is the widget spec of the dialog's current phase on a screen screenH rows high.
-func ColumnsDialogView(s ColumnsDialogState, screenH int) dlg.Spec {
+// ColumnsDialogView is the widget spec of the dialog's current phase on a screenW by screenH screen.
+func ColumnsDialogView(s ColumnsDialogState, screenW, screenH int) dlg.Spec {
 	switch s.Phase {
 	case ColumnsPhaseLoadPicker, ColumnsPhaseOverwritePicker:
 		return columnsPickerView(s, screenH)
 	case ColumnsPhaseSavePrompt:
 		return columnsSaveView(s)
 	default:
-		return columnsMainView(s)
+		return columnsMainView(s, screenW)
 	}
 }
 
-// columnsMainView has one checkbox per column above OK / Cancel: the File section, then each meta
-// entry Section under a separator headed by its name (entries with no section under Meta). A
-// section with no entries is not shown. A section whose labels fit two side by side is laid out in
-// two columns (metaSectionGroup). Plain o / c press the buttons.
-func columnsMainView(s ColumnsDialogState) dlg.Spec {
+// columnsMainView has one checkbox per column above OK / Cancel: the file columns with no heading,
+// then each meta entry Section under a separator headed by its name (entries with no section under
+// Meta). A section with no entries is not shown. Every section uses one grid (newColumnsGrid), so the
+// columns line up across sections. Plain o / c press the buttons.
+func columnsMainView(s ColumnsDialogState, screenW int) dlg.Spec {
 	shortcuts := ColumnsDialogShortcuts(s.Entries)
 	specs := panel.Columns()
-	groups := []dlg.Group{columnsSectionHeader(columnsFileSectionLabel)}
+	grid := newColumnsGrid(s, screenW)
+	var groups []dlg.Group
 	items := make([]dlg.Item, 0, len(specs))
 	for i, spec := range specs {
 		items = append(items, dlg.Item{
 			ID: ColumnsFileID(i), Kind: dlg.KindCheckbox, Label: spec.Title, Mnemonic: shortcuts[i], On: s.FileColumns.Has(spec.ID),
 		})
 	}
-	section := columnsFileSectionLabel
+	section := ""
 	for i, e := range s.Entries {
 		label := e.Section
 		if label == "" {
 			label = columnsMetaSectionLabel
 		}
 		if label != section {
-			groups = append(groups, metaSectionGroup(items), columnsSectionHeader(label))
+			groups = append(groups, grid.group(items), columnsSectionHeader(label))
 			section, items = label, nil
 		}
 		items = append(items, dlg.Item{
@@ -132,11 +139,93 @@ func columnsMainView(s ColumnsDialogState) dlg.Spec {
 			On: i < len(s.Checked) && s.Checked[i],
 		})
 	}
+	groups = append(groups, grid.group(items))
+	if columnsHasDescriptions(s.Entries) {
+		groups = append(groups, dlg.Group{Columns: [][]dlg.Item{{
+			{Kind: dlg.KindSeparator},
+			{Kind: dlg.KindLabel, Label: columnsFocusedDescription(s)},
+		}}})
+	}
 	return dlg.Spec{
-		Title: "Columns", Width: metaDialogWidth, MinWidth: 28, MinHeight: 5,
-		Groups: append(groups, metaSectionGroup(items)), MarkerWidth: s.MarkerWidth,
+		Title: "Columns", Width: max(grid.dialogWidth(), columnsMinWidth), MinWidth: columnsMinWidth, MinHeight: 5,
+		Groups: groups, MarkerWidth: s.MarkerWidth,
 		Buttons: []dlg.Button{dlg.OKButton, dlg.CancelButton},
 	}
+}
+
+func columnsHasDescriptions(entries []MetaEntry) bool {
+	for _, e := range entries {
+		if e.Description != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// columnsFocusedDescription is the description of the entry under the focus; it has no room in the
+// grid. The row stays reserved while any entry has one, so the dialog does not change height.
+func columnsFocusedDescription(s ColumnsDialogState) string {
+	for i, e := range s.Entries {
+		if s.Focus == MetaEntryID(i) {
+			return e.Description
+		}
+	}
+	return ""
+}
+
+// columnsGrid is the checkbox grid every section of the main screen shares.
+type columnsGrid struct {
+	columns   int
+	cellWidth int
+}
+
+// newColumnsGrid sizes the grid from the longest label of all sections and the theme's marker, with
+// as many columns, up to columnsGridColumns, as fit on the screen.
+func newColumnsGrid(s ColumnsDialogState, screenW int) columnsGrid {
+	longest := 0
+	for _, spec := range panel.Columns() {
+		longest = max(longest, runewidth.StringWidth(spec.Title))
+	}
+	for _, e := range s.Entries {
+		longest = max(longest, runewidth.StringWidth(metaEntryDisplayLabel(e)))
+	}
+	marker := s.MarkerWidth
+	if marker == 0 {
+		marker = draw.DialogOptionWidth("") // 0 lays out for the ASCII marker
+	}
+	g := columnsGrid{columns: columnsGridColumns, cellWidth: marker + min(longest, columnsGridMaxLabel)}
+	for g.columns > 1 && g.dialogWidth() > screenW-columnsScreenMargin {
+		g.columns--
+	}
+	return g
+}
+
+func (g columnsGrid) dialogWidth() int {
+	return g.columns*g.cellWidth + (g.columns-1)*columnsGridGap + columnsGridFrame
+}
+
+// group lays out one section's checkboxes in fixed-width cells, filled column by column (the first
+// columns get the extra ones).
+func (g columnsGrid) group(items []dlg.Item) dlg.Group {
+	rows := (len(items) + g.columns - 1) / g.columns
+	out := make([]dlg.Item, rows)
+	for r := range rows {
+		var cells []dlg.Item
+		for c := range g.columns {
+			i := c*rows + r
+			if i >= len(items) {
+				break
+			}
+			cell := items[i]
+			cell.Width = g.cellWidth
+			if c < g.columns-1 {
+				cell.Gap = columnsGridGap // none after the last: it would count against the row's width
+			}
+			cells = append(cells, cell)
+		}
+		out[r] = dlg.Item{Kind: dlg.KindRow, Cells: cells}
+	}
+	return dlg.Group{Columns: [][]dlg.Item{out}}
 }
 
 func columnsSectionHeader(label string) dlg.Group {
@@ -174,7 +263,7 @@ func columnsSaveView(s ColumnsDialogState) dlg.Spec {
 		return dlg.Item{ID: id, Kind: dlg.KindInput, Value: f.Value, Cursor: f.Cursor, Scroll: f.Scroll}
 	}
 	return dlg.Spec{
-		Title: "Save profile", Width: metaDialogWidth, MinWidth: 28,
+		Title: "Save profile", Width: columnsPromptWidth, MinWidth: 28,
 		Groups: []dlg.Group{{Columns: [][]dlg.Item{{
 			{Kind: dlg.KindLabel, Label: "Name:"},
 			input(ColumnsSaveNameInput, s.SaveName),
@@ -183,37 +272,6 @@ func columnsSaveView(s ColumnsDialogState) dlg.Spec {
 		}}}},
 		Buttons: dlg.OKCancelButtons(),
 	}
-}
-
-// metaSectionGroup lays out one section's checkboxes: in rows of two, filled column by column
-// (the first column gets the extra one), when two of the longest label fit side by side within
-// the dialog; otherwise one per row. Each first-column box is padded to the longest
-// first-column label, so the second column lines up whatever the theme's marker width.
-func metaSectionGroup(items []dlg.Item) dlg.Group {
-	longest := 0
-	for _, it := range items {
-		longest = max(longest, runewidth.StringWidth(it.Label))
-	}
-	asciiMarker := draw.DialogOptionWidth("") // the widest marker, so the check holds for any theme
-	if len(items) < 2 || 2*(asciiMarker+longest)+metaColumnGap > metaDialogWidth-4 {
-		return dlg.Group{Columns: [][]dlg.Item{items}}
-	}
-	rows := (len(items) + 1) / 2
-	first := 0
-	for _, it := range items[:rows] {
-		first = max(first, runewidth.StringWidth(it.Label))
-	}
-	out := make([]dlg.Item, rows)
-	for r := range rows {
-		left := items[r]
-		if r+rows >= len(items) {
-			out[r] = left
-			continue
-		}
-		left.Gap = first - runewidth.StringWidth(left.Label) + metaColumnGap
-		out[r] = dlg.Item{Kind: dlg.KindRow, Cells: []dlg.Item{left, items[r+rows]}}
-	}
-	return dlg.Group{Columns: [][]dlg.Item{out}}
 }
 
 // Apply folds a checkbox activation from dlg.HandleKey into the state. OK and Cancel are the

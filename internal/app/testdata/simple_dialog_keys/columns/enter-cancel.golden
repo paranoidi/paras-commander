@@ -3,9 +3,9 @@ focus=item0 phase=0 files=[size] checked=[false true false]
 == Space ==
 focus=item0 phase=0 files=[size] checked=[true true false]
 == Down ==
-focus=item1 phase=0 files=[size] checked=[true true false]
+focus=ok phase=0 files=[size] checked=[true true false]
 == Down ==
-focus=item2 phase=0 files=[size] checked=[true true false]
+focus=ok phase=0 files=[size] checked=[true true false]
 == Down ==
 focus=ok phase=0 files=[size] checked=[true true false]
 == Right ==

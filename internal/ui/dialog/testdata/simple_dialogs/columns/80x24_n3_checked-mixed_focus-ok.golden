@@ -1,19 +1,19 @@
 -- text --
                                                                                 
+                                                                                
             ┌────────────────────── Columns ───────────────────────┐            
-            ├──────────────────────── File ────────────────────────┤            
-            │ [ ] Size       [ ] Permissions                       │            
-            │ [ ] Modified   [ ] Owner                             │            
-            │ [ ] Changed    [ ] Group                             │            
-            │ [ ] Accessed   [ ] Links                             │            
-            │ [ ] Created                                          │            
+            │ [ ] Size          [ ] Accessed      [ ] Owner        │            
+            │ [ ] Modified      [ ] Created       [ ] Group        │            
+            │ [ ] Changed       [ ] Permissions   [ ] Links        │            
             ├──────────────────────── Meta ────────────────────────┤            
-            │ [x] lantern — Shows the lantern count                │            
-            │ [ ] orchard                                          │            
-            │ [x] velvet — Velvet rating                           │            
+            │ [x] lantern       [ ] orchard       [x] velvet       │            
+            ├──────────────────────────────────────────────────────┤            
+            │                                                      │            
             ├──────────────────────────────────────────────────────┤            
             │                 [ OK ]    [ Cancel ]                 │            
             └──────────────────────────────────────────────────────┘            
+                                                                                
+                                                                                
                                                                                 
 -- legend --
 a fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
@@ -26,18 +26,18 @@ g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbcccccccccbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
+aaaaaaaaaaaabbbbbbcbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbaaaaaaaaaaaa
+aaaaaaaaaaaabbbbbbcbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbaaaaaaaaaaaa
+aaaaaaaaaaaabbbbbbbcbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbaaaaaaaaaaaa
 aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbccccccbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbbcbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbbcbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbbbcbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbbcbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbccccccbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabdddddcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabdddddcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
+aaaaaaaaaaaabdddddcbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbdddddcbbbbbbbbbbbbbaaaaaaaaaaaa
+aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
+aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
 aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
 aaaaaaaaaaaabbbbbbbbbbbbbbbbbeeefeeeebbggghggggggggbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
 aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

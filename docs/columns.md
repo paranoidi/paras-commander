@@ -6,7 +6,7 @@ Every panel shows the file name plus the columns you choose. Choose them in one 
 
 `M-,` (leader `,`, Left/Right menu, Columns...) opens the dialog for the active panel. Tick the columns you want and press OK; Cancel leaves the panel as it was.
 
-**File** is always shown:
+The file columns come first and are always shown:
 
 | Column | Shows |
 |---|---|
@@ -23,6 +23,8 @@ Every panel shows the file name plus the columns you choose. Choose them in one 
 **Meta** lists the [meta columns](meta-columns.md) from the `meta.toml` that applies to the panel's directory. It is hidden when there are none.
 
 **File Index** lists the [fileindex columns](fileindex.md#columns). It is hidden unless the index database exists and opens.
+
+The checkboxes sit in three aligned columns, or fewer on a narrow terminal. A meta column's description shows on the line below them while the checkbox has focus.
 
 `F9` opens `meta.toml` in `$EDITOR` and reloads the list. A `meta.toml` that is skipped as untrusted or fails to load is reported as a message.
 

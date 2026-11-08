@@ -3,10 +3,6 @@ focus=item0 phase=0 files=[size] checked=[false true false]
 == Enter ==
 focus=item0 phase=0 files=[size] checked=[true true false]
 == Down ==
-focus=item1 phase=0 files=[size] checked=[true true false]
+focus=ok phase=0 files=[size] checked=[true true false]
 == Enter ==
-focus=item1 phase=0 files=[size] checked=[true false false]
-== Down ==
-focus=item2 phase=0 files=[size] checked=[true false false]
-== Enter ==
-focus=item2 phase=0 files=[size] checked=[true false true]
+CLOSED: meta columns=[lantern orchard] file columns=[size] profile="" message=""

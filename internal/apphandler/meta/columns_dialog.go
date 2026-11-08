@@ -117,8 +117,8 @@ func (h *Handler) setPhase(phase dialog.ColumnsPhase) {
 }
 
 func (h *Handler) dialogSpec() dlg.Spec {
-	_, screenH := h.screen.Size()
-	return dialog.ColumnsDialogView(h.model.ColumnsDialog, screenH)
+	screenW, screenH := h.screen.Size()
+	return dialog.ColumnsDialogView(h.model.ColumnsDialog, screenW, screenH)
 }
 
 // HandleDialogKey routes a key event to the open Columns dialog.

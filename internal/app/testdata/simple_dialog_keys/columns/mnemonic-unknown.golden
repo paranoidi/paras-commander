@@ -5,4 +5,4 @@ focus=item0 phase=0 files=[size] checked=[false true false]
 == Alt+q ==
 focus=item0 phase=0 files=[size] checked=[false true false]
 == Down ==
-focus=item1 phase=0 files=[size] checked=[false true false]
+focus=ok phase=0 files=[size] checked=[false true false]

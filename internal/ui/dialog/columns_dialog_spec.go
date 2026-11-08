@@ -1,20 +1,14 @@
 package dialog
 
-import (
-	"fmt"
+import "github.com/paranoidi/paras-commander/internal/panel"
 
-	"github.com/paranoidi/paras-commander/internal/panel"
-)
-
+// metaEntryDisplayLabel is an entry's label in the checkbox grid; its description has its own row
+// (columnsFocusedDescription).
 func metaEntryDisplayLabel(e MetaEntry) string {
-	name := e.Name
 	if e.Label != "" {
-		name = e.Label
+		return e.Label
 	}
-	if e.Description != "" {
-		return fmt.Sprintf("%s — %s", name, e.Description)
-	}
-	return name
+	return e.Name
 }
 
 // ColumnsDialogShortcuts returns the Alt mnemonic of each checkbox: the file columns' pinned ones,
