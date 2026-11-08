@@ -11,6 +11,7 @@ In the file browser:
 | Left click on a row | Focuses that panel and moves its cursor to the row. |
 | Left click elsewhere in a panel | Focuses the panel. |
 | Double click on a row | Opens it, like Enter. |
+| Drag with the left button | Tints the rows between the pressed row and the pointer, and adds them to the selection on release. See [Drag select](#drag-select). |
 | Right click on a row | Focuses the panel, moves the cursor and toggles the row's selection. |
 | Wheel | Scrolls the panel under the pointer by a few rows. Focus does not change. |
 | Pointer over a row | Highlights the row in the inactive panel's cursor colors. The cursor does not move. A key press hides the highlight until the mouse moves again. |
@@ -23,6 +24,17 @@ In the file browser:
 A shortened element (`p` for `projects` in a narrow panel) opens the full directory it stands for. The path does not react while the panel's top border shows the quick filter or a quick-view directory.
 
 Panels in tree view behave the same as flat ones. A panel in carousel mode only takes focus on click. Picking a column turns the sort dialog's disk-usage size ordering off, so it does not take over again; while that ordering is in effect, Size counts as the sorted column. A narrow name-only panel shows one header title, so a click anywhere on its header opens the dialog. While quick view or a file preview fills the inactive column, clicks and the wheel there are ignored.
+
+### Drag select
+
+Press the left button on a row and move the pointer to another row. The cursor follows the pointer and the rows in between are tinted. Releasing the button adds those rows to the selection, the same as range select from the keyboard: rows already selected stay selected, and `..` is skipped. The cursor stays on the row where you let go.
+
+- Moving past the top or bottom of the list scrolls one row per pointer movement. The wheel also extends the range.
+- The drag stays with the panel it started in, even when the pointer crosses into the other panel. The menus and the footer do not react until you release.
+- Any key press cancels the drag and selects nothing. Esc is the plain way out.
+- A long list can scroll while you drag, so the cursor then follows the pointer's movement and may not sit exactly under it.
+- A drag only adds to the selection. To unselect a row, right click it.
+- A drag does not start in a panel in carousel mode, or from the path or the column header.
 
 In the menu bar and the footer:
 

@@ -13,7 +13,7 @@ A panel keeps a set of selected paths. File operations (copy, move, delete, run 
 | `M-k` | First press sets the start, second press selects everything between it and the cursor |
 | `C-u` | Clear the selection |
 
-All are rebindable in `keybindings.toml`. Leader menu (`:`) Selection group: `k` range, `g` group, `i` invert, `U` clear. While a range start is pending, its row shows a marker and the cursor row turns yellow. Range select also works in the carousel, [Compare](compare-directories.md) and [Find duplicates](find-duplicates.md).
+All are rebindable in `keybindings.toml`. Leader menu (`:`) Selection group: `k` range, `g` group, `i` invert, `U` clear. While a range start is pending, its row shows a marker, the cursor row turns yellow and the rows in between are tinted. With [mouse support](mouse.md) on, dragging with the left button selects a range too. Range select also works in the carousel, [Compare](compare-directories.md) and [Find duplicates](find-duplicates.md).
 
 Selecting a directory and one of its descendants cannot both stay selected: adding one removes the other and shows "Removed conflicting selections".
 

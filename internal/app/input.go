@@ -835,6 +835,9 @@ var inputModeKeyHandlers = map[InputMode]func(*App, *tcell.EventKey) bool{
 func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	a.mouse.keyed = true // hides every hover until the pointer reports again (mouseState.hovers)
 	a.clearPanelTitleHover()
+	if a.cancelPanelDrag() {
+		a.render() // the key may not paint, and the span must go
+	}
 	if a.inputMode() == InputModeHelpKeyPrompt { // ahead of every intercept: F10 or Esc is just the key asked about
 		a.filterHelpByKey(event)
 		a.render()

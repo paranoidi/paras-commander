@@ -117,6 +117,9 @@ type PanelContext struct {
 	// painted in the inactive panel cursor style (Model.PanelRowHover).
 	RowHover      bool
 	RowHoverEntry int
+	// RangeSpan is the panel's pending range select (panel.State.PendingRange); drawPanel sets it
+	// once per draw.
+	RangeSpan panel.RowSpan
 	// QuickViewIndicator marks this panel's cursor row with a one-cell arrow icon overlapping
 	// the border, pointing toward the quick-view preview panel. QuickViewIndicatorRight selects
 	// which border/icon: true draws U+E0B0 on the right border, false draws U+E0B2 on the left.
@@ -165,6 +168,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	if rect.Width <= 0 || rect.Height <= 0 {
 		return
 	}
+	ctx.RangeSpan = state.PendingRange()
 	chrome := panelStyle.Styles.PanelChrome(ctx.FileListActive, ctx.ChromeBlocked)
 	borderStyle := chrome.Frame
 	titleStyle := chrome.Title
@@ -488,7 +492,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		nameWidth = effNameWidth
 		listTextWidth = effTextWidth
 		listContentStart += treeGutterWidth
-		if display.ShowDiskUsage && display.Painter != nil && diskDenom > 0 {
+		if display.ShowDiskUsage && display.Painter != nil && diskDenom > 0 && !rowInRangeSpan(entryIndex, state, ctx) {
 			barMaxWidth := leftGutter + gitStrip + iconStrip + treeGutterWidth + nameWidth
 			fillCols = diskUsageFillColumns(entryDiskUsageBytes(entry, true, display.Painter), diskDenom, barMaxWidth)
 		}
@@ -595,8 +599,16 @@ func panelRowStyle(entry localfs.Entry, entryIndex int, state panel.State, ctx P
 		})
 	} else if rowHovered(entryIndex, state, ctx) {
 		style = styles.PanelListingCursorStyle(style, theme.PanelListingCursorOpts{Selected: selected})
+	} else if rowInRangeSpan(entryIndex, state, ctx) {
+		style = styles.PanelListingRangeStyle(style)
 	}
 	return style, selected
+}
+
+// rowInRangeSpan reports whether entryIndex is drawn on the range background: covered by the
+// pending range select, not the cursor row, and not while panel chrome is blocked.
+func rowInRangeSpan(entryIndex int, state panel.State, ctx PanelContext) bool {
+	return ctx.RangeSpan.Contains(entryIndex) && entryIndex != state.Cursor && !ctx.ChromeBlocked
 }
 
 // rowHovered reports whether entryIndex is the hovered row drawn in the inactive cursor style:

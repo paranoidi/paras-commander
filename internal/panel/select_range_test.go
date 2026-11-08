@@ -59,3 +59,22 @@ func TestMarkRangeStaleAnchorBecomesFresh(t *testing.T) {
 		t.Fatal("fresh anchor must not select")
 	}
 }
+
+func TestPendingRange(t *testing.T) {
+	s := rangeTestState("amber", "birch", "cedar", "dune")
+	if got := s.PendingRange(); got.Active || got.Contains(0) {
+		t.Fatalf("no anchor: %+v", got)
+	}
+	s.RangeAnchor, s.Cursor = "/tmp/dune", 1
+	got := s.PendingRange()
+	if !got.Active || got.Lo != 1 || got.Hi != 3 {
+		t.Fatalf("reverse span: %+v", got)
+	}
+	if got.Contains(0) || !got.Contains(1) || !got.Contains(3) {
+		t.Fatalf("contains: %+v", got)
+	}
+	s.RangeAnchor = "/tmp/gone"
+	if s.PendingRange().Active {
+		t.Fatal("anchor that is not visible must not span")
+	}
+}

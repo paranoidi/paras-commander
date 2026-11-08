@@ -165,6 +165,9 @@ type carouselColumnParams struct {
 	C           Column
 	Inactive    bool
 	ColIdx      int
+	// RangeSpan is the pending range select of the Active column; drawCarouselColumn sets it once
+	// per draw.
+	RangeSpan panel.RowSpan
 }
 
 // drawCarouselColumn paints one column's listing rows plus its scrollbar, moved verbatim out
@@ -180,6 +183,9 @@ func drawCarouselColumn(cp carouselColumnParams) {
 	showSB := columnActive || p.ScrollbarShowInactive
 	total, offset := columnListingMetrics(c, p.Center)
 	reserve := columnTextReserve(columnScrollbarReserve(hasLane, showSB, p.ScrollbarStyle, total, visibleRows, offset), colIdx, p.ShowChildColumn)
+	if c.Active {
+		cp.RangeSpan = p.Center.PendingRange()
+	}
 	var diskDenom int64
 	if p.DiskUsage.Active && p.DiskUsage.Source != nil {
 		var denomEntries []localfs.Entry
@@ -217,7 +223,7 @@ func drawCarouselColumn(cp carouselColumnParams) {
 		nameColOffset := listStart - col.X
 		nameWidth := nameWidthForColumn(col.Width, p.ShowIcons, reserve, showSize, metaW)
 		fillCols := 0
-		if !p.ChromeBlocked && diskDenom > 0 {
+		if !p.ChromeBlocked && diskDenom > 0 && (isCursor || !cp.RangeSpan.Contains(entryIndex)) {
 			fillCols = diskUsageFillColumns(panellist.EntryUsageBytes(entry, p.DiskUsage.Source), diskDenom, nameColOffset+nameWidth)
 		}
 		blendCell := func(absCol int) tcell.Style {
@@ -343,8 +349,13 @@ func resolveCarouselColumnEntry(cp carouselColumnParams, row int) (carouselColum
 			FilterUniqueMatch: p.FileListActive && !inactive && p.Center.FilterUniqueMatch(),
 			RangePending:      c.Active && p.Center.RangeAnchor != "",
 		})
-	} else if selected {
-		style = p.Styles.PanelListingSelectedStyle(p.ChromeBlocked)
+	} else {
+		if selected {
+			style = p.Styles.PanelListingSelectedStyle(p.ChromeBlocked)
+		}
+		if cp.RangeSpan.Contains(entryIndex) && !p.ChromeBlocked {
+			style = p.Styles.PanelListingRangeStyle(style)
+		}
 	}
 	return carouselColumnEntry{Entry: entry, SelState: selState, EntryIndex: entryIndex, IsCursor: isCursor, Selected: selected, Style: style}, true
 }
