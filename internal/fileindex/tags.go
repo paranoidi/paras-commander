@@ -21,12 +21,15 @@ func ParseTags(raw string) []string {
 	return out
 }
 
-// TagEdit is the outcome of EditTags: how many associations changed and how many paths the
-// index does not know.
+// TagEdit is the outcome of EditTags: how many associations changed, how many paths the index does
+// not know, the empty files an add skipped (all empty files are one content, so they can't be
+// tagged) and the copies outside the paths that the change also reached.
 type TagEdit struct {
-	Changed  int
-	Unknown  []string
-	Targeted int
+	Changed      int
+	Unknown      []string
+	Targeted     int
+	SkippedEmpty int
+	OtherCopies  int
 }
 
 // EditTags adds (add) or removes tags on paths (local or fileindex://), resolved in the index,
@@ -68,11 +71,22 @@ func (x *Index) EditTags(paths []string, tags []string, add, recursive bool) (Ta
 		return res, nil
 	}
 	if add {
-		res.Changed, err = d.AddTags(target, tags)
-		return res, err
+		if res.SkippedEmpty, err = d.EmptyInstances(target); err != nil {
+			return res, err
+		}
+		if res.Changed, err = d.AddTags(target, tags); err != nil {
+			return res, err
+		}
+	} else {
+		removed, err := d.RemoveTags(target, tags)
+		if err != nil {
+			return res, err
+		}
+		res.Changed = len(removed)
 	}
-	removed, err := d.RemoveTags(target, tags)
-	res.Changed = len(removed)
+	if res.Changed > 0 {
+		res.OtherCopies, err = d.OtherCopies(target)
+	}
 	return res, err
 }
 

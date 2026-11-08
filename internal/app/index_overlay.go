@@ -4,9 +4,13 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"slices"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/fileindex"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -42,10 +46,14 @@ func (a *App) explicitDriftFor(panelID int) *explicitDriftNames {
 	return ex
 }
 
-// indexChangedPayload asks the event loop to refresh what shows index data (refreshIndexViews),
+// indexChangedPayload asks the event loop to refresh what shows index data (refreshIndexViewsIn),
 // after the index changed (a scan or prune ended, a scan tagged a path, an entry was removed or
-// moved).
-type indexChangedPayload struct{}
+// moved). dirs names the directories changed; nil means anything may have.
+type indexChangedPayload struct{ dirs []string }
+
+// indexScanWakePayload is posted (throttled) after a running scan committed results; the directories
+// wait in asyncWakeQueues.indexScan.
+type indexScanWakePayload struct{}
 
 // indexDriftState is the per-panel cancel and directory of the drift passes: walks for
 // different subdirectories of one panel directory run side by side under one context, and a
@@ -67,31 +75,99 @@ func (a *App) wireIndexOverlay() {
 		p.WithIndex = a.config.FileIndex.StartBrowseWith
 	}
 	forget := a.disk.engine.ForgetSized
-	a.fileIndex.OnChange = func() {
+	a.fileIndex.OnChange = func(dirs []string) {
 		forget()
 		if a.screen != nil {
-			_ = a.screen.PostEvent(tcell.NewEventInterrupt(indexChangedPayload{}))
+			_ = a.screen.PostEvent(tcell.NewEventInterrupt(indexChangedPayload{dirs: dirs}))
+		}
+	}
+	a.fileIndex.OnScanCommit = a.queueIndexScanWake
+}
+
+// queueIndexScanWake records directories a running scan committed results for and, for the first of
+// a window, schedules the wake: it only adds to a queue, so the scan never waits on the UI. Safe
+// from any goroutine.
+func (a *App) queueIndexScanWake(dirs []string) {
+	first := false
+	for _, d := range dirs {
+		if asyncWakes(a).indexScan.push(d) {
+			first = true
+		}
+	}
+	if !first {
+		return
+	}
+	time.AfterFunc(config.DefaultIndexScanRefreshInterval, func() {
+		select {
+		case <-a.jobStopCh:
+			return
+		default:
+		}
+		postGuaranteedWake(a.screen, indexScanWakePayload{})
+	})
+}
+
+// handleIndexScanWake re-lists the panels showing a directory a running scan committed results for,
+// so rows change state as results land. Outside the browser or behind a modal the directories are
+// dropped: the scan's end refreshes everything (UI goroutine).
+func (a *App) handleIndexScanWake() {
+	dirs := asyncWakes(a).indexScan.drain()
+	if len(dirs) == 0 || a.model.ViewMode != ui.ViewBrowser || a.model.ModalDialogOpen() {
+		return
+	}
+	for _, id := range []int{ui.PrimaryPanel, ui.SecondaryPanel} {
+		p := a.panelByID(id)
+		if !p.ShowsIndex() {
+			continue
+		}
+		ids, matched := matchChangedDirs(p.Path, watchTreeIDs(p), dirs)
+		if shown := a.fileIndex.ShownDir(p.Path); shown != "" && slices.Contains(dirs, shown) && !slices.Contains(matched, shown) {
+			matched = append(matched, shown)
+		}
+		if len(matched) == 0 {
+			continue
+		}
+		if a.scheduleListingRefresh(id, listingRefreshOpts{treeIDs: ids, indexProgress: true}) {
+			a.queueIndexScanWake(matched) // transient skip: ask again after one more window
 		}
 	}
 }
 
-// reloadIndexPanels re-reads every panel that shows index data: browsing with fileindex, or
-// showing the index itself (fileindex://), whose listing is the index and so follows the changes
-// jobs make on disk through the fschange sink (UI goroutine).
-func (a *App) reloadIndexPanels() {
+// indexChangeAffects reports whether a change to dirs shows in the panel: at or above its directory,
+// or at one of its expanded tree directories. nil dirs means anything may have changed.
+func (a *App) indexChangeAffects(p *panel.State, dirs []string) bool {
+	if dirs == nil {
+		return true
+	}
+	shown := a.fileIndex.ShownDir(p.Path)
+	for _, d := range dirs {
+		if shown != "" && (shown == d || strings.HasPrefix(shown, strings.TrimSuffix(d, "/")+"/")) {
+			return true
+		}
+	}
+	ids, _ := matchChangedDirs(pathloc.Path{}, watchTreeIDs(p), dirs)
+	return len(ids) > 0
+}
+
+// refreshIndexViews re-reads what shows index data after a change anywhere in the index.
+func (a *App) refreshIndexViews() { a.refreshIndexViewsIn(nil) }
+
+// refreshIndexViewsIn re-reads the panels showing the index whose directory dirs affect (browsing
+// with fileindex, or showing the index itself, fileindex://, whose listing follows the changes jobs
+// make on disk through the fschange sink), and those panels' fileindex meta columns, so index state
+// and those columns follow an index change. A listing in flight may have read the index before the
+// change, so Refresh replaces it (it leaves a navigation alone). UI goroutine.
+func (a *App) refreshIndexViewsIn(dirs []string) {
 	for _, id := range []int{ui.PrimaryPanel, ui.SecondaryPanel} {
-		if p := a.panelByID(id); p.ShowsIndex() && !p.ListingPending {
+		p := a.panelByID(id)
+		if !a.indexChangeAffects(p, dirs) {
+			continue
+		}
+		if p.ShowsIndex() {
 			_ = p.Refresh(a.panelViewportRows(id))
 		}
+		a.metaCtrl.RefreshProviders(id)
 	}
-}
-
-// refreshIndexViews re-reads the panels browsing with fileindex and both panels' fileindex meta
-// columns, so index state and those columns follow an index change (UI goroutine).
-func (a *App) refreshIndexViews() {
-	a.reloadIndexPanels()
-	a.metaCtrl.RefreshProviders(ui.PrimaryPanel)
-	a.metaCtrl.RefreshProviders(ui.SecondaryPanel)
 }
 
 // indexDriftScheduler runs fileindex.Index.DirDrift on its own goroutine for panelID. Requests
@@ -171,7 +247,10 @@ func (a *App) handleIndexOverlayPayload(data any) (eventOutcome, bool) {
 		}
 		return eventOutcome{}, true
 	case indexChangedPayload:
-		a.refreshIndexViews()
+		a.refreshIndexViewsIn(d.dirs)
+		return eventOutcome{}, true
+	case indexScanWakePayload:
+		a.handleIndexScanWake()
 		return eventOutcome{}, true
 	}
 	return eventOutcome{}, false

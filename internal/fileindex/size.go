@@ -50,9 +50,12 @@ func (x *Index) SubtreeSize(ctx context.Context, raw string) (bytes, files int64
 	return rec.Size, 1, nil
 }
 
-// changed tells OnChange that what the index holds changed.
-func (x *Index) changed() {
+// changed tells OnChange that what the index holds changed, anywhere.
+func (x *Index) changed() { x.changedIn(nil) }
+
+// changedIn tells OnChange that the listings of dirs changed; nil means anything may have.
+func (x *Index) changedIn(dirs []string) {
 	if x != nil && x.OnChange != nil {
-		x.OnChange()
+		x.OnChange(dirs)
 	}
 }

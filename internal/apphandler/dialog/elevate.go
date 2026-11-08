@@ -5,17 +5,12 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/fschange"
 	"github.com/paranoidi/paras-commander/internal/ops"
-	"github.com/paranoidi/paras-commander/internal/panel"
 )
 
 // fsCtx returns a background context carrying the fschange sink of a dialog operation (ADR 0023):
-// the shared sink, and the fileindex when the active panel follows it (panel.FollowsIndex).
+// the shared sink and the fileindex (ADR 0028).
 func (h *Handler) fsCtx() context.Context {
-	sink := h.fsSink
-	if h.indexSink != nil && panel.FollowsIndex(h.host.ActivePanel()) {
-		sink = fschange.Multi(sink, h.indexSink)
-	}
-	return fschange.WithSink(context.Background(), sink)
+	return fschange.WithSink(context.Background(), fschange.Multi(h.fsSink, h.indexSink))
 }
 
 // elevatedCtx is fsCtx with an Elevator that asks the user (Deps.PromptElevate) whether a

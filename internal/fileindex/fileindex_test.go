@@ -260,7 +260,7 @@ func TestSubtreeSize(t *testing.T) {
 func TestBackendIsReadOnlyButRenamesAndRemovesInIndex(t *testing.T) {
 	x, root := scanned(t)
 	changes := 0
-	x.OnChange = func() { changes++ }
+	x.OnChange = func([]string) { changes++ }
 	b := NewBackend(x)
 	ctx := context.Background()
 	if err := b.Mkdir(ctx, at(t, filepath.Join(root, "pebble")), 0o755); !errors.Is(err, fsbackend.ErrReadOnly) {

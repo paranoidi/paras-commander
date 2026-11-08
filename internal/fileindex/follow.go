@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -28,17 +29,24 @@ const (
 
 // Apply makes the index follow filesystem changes pc made on disk (fschange.Sink, ADR 0023): a
 // removed path loses its record, a renamed one moves its record (a record at the target is
-// dropped first, as the rename replaced the file). Paths the index does not know, Created and Dirty
-// changes are ignored: new and changed content waits for a scan. Apply only queues the batch; one
-// goroutine applies queued batches in order, and it does nothing while the index is not
-// available (it never prompts or creates a database). OnChange fires once per pass that changed a
-// record. A nil Index ignores everything.
+// dropped first, as the rename replaced the file, also when the source has no record to move).
+// Paths the index does not know, Created and Dirty changes are ignored: new and changed content
+// waits for a scan. It receives every job's changes (ADR 0028), so it stays cheap on the caller's
+// side: without a database, or with nothing to follow, nothing is queued, and otherwise it only
+// queues the batch; one goroutine applies queued batches in order (it never prompts or creates a
+// database). OnChange fires once per pass that changed a record. Until a batch is applied, Overlay
+// shows no ghost row for what it took off the disk. A nil Index ignores everything.
 func (x *Index) Apply(batch []fschange.Change) {
-	if x == nil || len(batch) == 0 {
+	if x == nil || len(batch) == 0 || !x.Available() {
 		return
 	}
+	gone := gonePaths(batch)
+	if len(gone) == 0 {
+		return
+	}
+	x.holdGone(gone)
 	x.applyMu.Lock()
-	x.applyPending = append(x.applyPending, slices.Clone(batch))
+	x.applyPending = append(x.applyPending, queuedChanges{changes: slices.Clone(batch), gone: gone})
 	if x.applyDone != nil {
 		x.applyMu.Unlock()
 		return
@@ -63,22 +71,132 @@ func (x *Index) drainApplies(done chan struct{}) {
 			return
 		}
 		x.applyMu.Unlock()
-		d := x.openQuietly()
-		if d == nil {
-			continue // not available (or closed): nothing to follow
-		}
 		changed := false
-		x.writeMu.Lock() // pc's own index writes (Backend.Rename, Remove) do not overlap this
-		for _, b := range batches {
-			if applyBatch(d, b) {
-				changed = true
+		if d := x.openQuietly(); d != nil { // otherwise not available (or closed): nothing to follow
+			x.writeMu.Lock() // pc's own index writes (Backend.Rename, Remove) do not overlap this
+			for _, b := range batches {
+				if applyBatch(d, b.changes) {
+					changed = true
+				}
 			}
+			x.writeMu.Unlock()
 		}
-		x.writeMu.Unlock()
+		// After the commit and before OnChange: see goneNow.
+		for _, b := range batches {
+			x.releaseGone(b.gone)
+		}
 		if changed {
-			x.changed()
+			x.changedIn(batchDirs(batches))
 			time.Sleep(applyPause)
 		}
+	}
+}
+
+// queuedChanges is one reported batch waiting to be applied, with its gonePaths.
+type queuedChanges struct {
+	changes []fschange.Change
+	gone    []string
+}
+
+// batchDirs are the directories whose listings the batches can have changed: those a path left or
+// arrived in.
+func batchDirs(batches []queuedChanges) []string {
+	seen := map[string]bool{}
+	var dirs []string
+	add := func(dir string) {
+		if !seen[dir] {
+			seen[dir] = true
+			dirs = append(dirs, dir)
+		}
+	}
+	for _, b := range batches {
+		for _, p := range b.gone {
+			add(filepath.Dir(p))
+		}
+		for _, c := range b.changes {
+			if c.Kind == fschange.Renamed {
+				if p, err := indexedPath(c.Path); err == nil {
+					add(filepath.Dir(p))
+				}
+			}
+		}
+	}
+	return dirs
+}
+
+// gonePaths are the paths a batch took off the disk, as the index records them.
+func gonePaths(batch []fschange.Change) []string {
+	var paths []string
+	for _, c := range batch {
+		p := c.Path
+		switch c.Kind {
+		case fschange.Removed:
+		case fschange.Renamed:
+			p = c.From
+		default:
+			continue
+		}
+		if ip, err := indexedPath(p); err == nil {
+			paths = append(paths, ip)
+		}
+	}
+	return paths
+}
+
+func (x *Index) holdGone(paths []string) {
+	if len(paths) == 0 {
+		return
+	}
+	x.applyMu.Lock()
+	defer x.applyMu.Unlock()
+	if x.gone == nil {
+		x.gone = make(map[string]int, len(paths))
+	}
+	for _, p := range paths {
+		x.gone[p]++
+	}
+}
+
+func (x *Index) releaseGone(paths []string) {
+	if len(paths) == 0 {
+		return
+	}
+	x.applyMu.Lock()
+	defer x.applyMu.Unlock()
+	for _, p := range paths {
+		if x.gone[p]--; x.gone[p] <= 0 {
+			delete(x.gone, p)
+		}
+	}
+}
+
+// goneNow is a snapshot of the paths whose change still waits to be applied. A reader of the
+// records takes it first: a path released before the snapshot has already lost its record (the
+// drain releases after the commit), and one released later is still in the snapshot, so a record
+// read afterwards cannot show as a ghost either way.
+func (x *Index) goneNow() map[string]int {
+	x.applyMu.Lock()
+	defer x.applyMu.Unlock()
+	if len(x.gone) == 0 {
+		return nil
+	}
+	return maps.Clone(x.gone)
+}
+
+// goneAtOrAbove reports whether p or a directory above it is in the goneNow snapshot.
+func goneAtOrAbove(gone map[string]int, p string) bool {
+	if len(gone) == 0 {
+		return false
+	}
+	for {
+		if gone[p] > 0 {
+			return true
+		}
+		parent := filepath.Dir(p)
+		if parent == p {
+			return false
+		}
+		p = parent
 	}
 }
 
@@ -111,13 +229,21 @@ type move struct {
 	dir      bool
 }
 
-// applyBatch applies one batch of changes and reports whether a record changed. Errors leave the
-// records as they were: the next scan puts the index right.
+// applyBatch applies one batch of changes in the order they arrived and reports whether a record
+// changed. A run of renames applies together, as a chain among them needs (moveRecords). Errors
+// leave the records as they were: the next scan puts the index right.
 func applyBatch(d *db.DB, batch []fschange.Change) (changed bool) {
 	var moves []move
+	flush := func() {
+		if moveRecords(d, moves) {
+			changed = true
+		}
+		moves = nil
+	}
 	for _, c := range batch {
 		switch c.Kind {
 		case fschange.Removed:
+			flush()
 			if p, err := indexedPath(c.Path); err == nil && removeRecord(d, p, c.IsDir) {
 				changed = true
 			}
@@ -129,10 +255,17 @@ func applyBatch(d *db.DB, batch []fschange.Change) (changed bool) {
 			}
 			if dir, ok := recordKind(d, from, c.IsDir); ok {
 				moves = append(moves, move{from: from, to: to, dir: dir})
+			} else if !c.IsDir && !slices.ContainsFunc(moves, func(m move) bool { return m.to == from }) {
+				// An unindexed file replaced the target: its record describes content that is gone.
+				flush()
+				if removeRecord(d, to, false) {
+					changed = true
+				}
 			}
 		}
 	}
-	return moveRecords(d, moves) || changed
+	flush()
+	return changed
 }
 
 // indexedPath is the path the index records for host path p: its directory resolved as
@@ -239,5 +372,22 @@ func moveRecord(d *db.DB, from, to string, dir bool) bool {
 			return false
 		}
 	}
-	return retryBusy(func() error { _, err := d.Move(from, to, nil); return err }) == nil
+	move := func() error { return retryBusy(func() error { _, err := d.Move(from, to, nil); return err }) }
+	err := move()
+	if err == nil {
+		return true
+	}
+	if !dir || isBusy(err) {
+		return false
+	}
+	// rename(2) only lands a directory on an empty one, so records clashing at the target are stale.
+	if strings.Contains(err.Error(), "Cannot merge") {
+		removed := retryBusy(func() error { _, err := d.RemoveTree(to); return err })
+		if removed == nil && move() == nil {
+			return true
+		}
+	}
+	// The directory is gone from here whatever the records say: no ghost stays. A scan of the
+	// destination records it there.
+	return retryBusy(func() error { _, err := d.RemoveTree(from); return err }) == nil
 }

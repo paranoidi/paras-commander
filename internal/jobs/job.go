@@ -225,12 +225,6 @@ type Job struct {
 	// children (TypeFlatten only).
 	FlattenRecursive bool
 
-	// FollowIndex makes the job's filesystem changes also reach the fileindex (fschange sink): set at
-	// enqueue when the job was started from a Browse-with-fileindex or fileindex:// panel or names a
-	// fileindex:// path. Only changes made on the disk are reported; a fileindex:// path handled by
-	// the index backend updates the index itself. Undo and retry copy it.
-	FollowIndex bool
-
 	// DeleteOnDisk makes a delete job act on the disk for fileindex:// sources (TypeDelete only):
 	// those still on disk are deleted there and the index follows, those already gone only lose
 	// their record. Set for the dedup view's delete; without it a fileindex:// source is removed
@@ -426,7 +420,6 @@ func (j *Job) RetryClone() *Job {
 		FlattenRemoveEmpty:    j.FlattenRemoveEmpty,
 		FlattenRecursive:      j.FlattenRecursive,
 		DeleteRemoveEmptyDirs: j.DeleteRemoveEmptyDirs,
-		FollowIndex:           j.FollowIndex,
 		DeleteOnDisk:          j.DeleteOnDisk,
 		PromptDanglingDirs:    j.PromptDanglingDirs,
 		RemoveDanglingDirs:    j.RemoveDanglingDirs,

@@ -81,6 +81,9 @@ const (
 	// DefaultDirWatchDebounce is the throttle window of directory-watch wakeups: changes within
 	// it share one panel re-list, and a continuous stream still re-lists once per window.
 	DefaultDirWatchDebounce = 250 * time.Millisecond
+	// DefaultIndexScanRefreshInterval is how often a running fileindex scan re-lists a panel showing
+	// a directory it committed results for: results within it share one re-list.
+	DefaultIndexScanRefreshInterval = time.Second
 	// MetaFSChangeDebounce is the throttle window of filesystem changes reaching the meta columns:
 	// the reports of a busy job within it invalidate rows in one pass.
 	MetaFSChangeDebounce = 100 * time.Millisecond

@@ -1472,7 +1472,7 @@ func TestFileIndexDedupDeleteRemovesFileAndRecord(t *testing.T) {
 	})
 }
 
-func TestFileIndexNormalLocalPanelDeleteLeavesIndexAlone(t *testing.T) {
+func TestFileIndexNormalLocalPanelDeleteFollows(t *testing.T) {
 	a, screen, dir, _ := fileIndexApp(t)
 	cursorTo(t, a, "harbor.txt")
 	dispatchFileOp(t, a, keymap.ActionFileDelete)
@@ -1489,11 +1489,10 @@ func TestFileIndexNormalLocalPanelDeleteLeavesIndexAlone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The sink would have been queued by now: its drain ends before the check.
-	a.fileIndex.WaitApplied()
-	if _, found, _ := d.FileInfo(filepath.Join(dir, "harbor.txt")); !found {
-		t.Fatal("a delete from a normal local panel must leave the index to prune")
-	}
+	drainInterruptEventsUntil(t, a, screen, 5*time.Second, func() bool {
+		_, found, _ := d.FileInfo(filepath.Join(dir, "harbor.txt"))
+		return !found
+	})
 }
 
 // rescan records dir's files with their real size and mtime (the fixture records "now").
@@ -2009,5 +2008,28 @@ func TestFilePickerFooterAdvertisesActions(t *testing.T) {
 		if hints[hint] == "" {
 			t.Errorf("footer misses %q: %v", hint, hints)
 		}
+	}
+}
+
+// An index change during a same-directory listing must start a new one: the listing in flight may
+// have read the index before the change. A navigation in flight is left alone.
+func TestReloadIndexPanelsSupersedesListingInFlight(t *testing.T) {
+	dir := t.TempDir()
+	app := newApp(t, newScreen(t, 80, 24), dir)
+	p := &app.model.Primary
+	p.WithIndex = true
+
+	p.ListingPending, p.ListingPendingPath = true, p.Path.String()
+	before := app.panelAsyncLoadGen[ui.PrimaryPanel].Load()
+	app.refreshIndexViews()
+	if app.panelAsyncLoadGen[ui.PrimaryPanel].Load() == before {
+		t.Fatal("the refresh was dropped because a listing of the same directory was in flight")
+	}
+
+	p.ListingPending, p.ListingPendingPath = true, filepath.Join(dir, "elsewhere")
+	before = app.panelAsyncLoadGen[ui.PrimaryPanel].Load()
+	app.refreshIndexViews()
+	if app.panelAsyncLoadGen[ui.PrimaryPanel].Load() != before {
+		t.Fatal("the refresh replaced a navigation in flight")
 	}
 }

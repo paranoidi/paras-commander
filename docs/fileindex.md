@@ -76,10 +76,11 @@ The mode stays on while you navigate to other local directories and turns off
 when the panel leaves local paths (SFTP; on an SFTP panel the action says
 fileindex covers local paths only). On a `fileindex://` panel the action goes to
 the real location with the mode on. Scans, prunes, tag edits and index
-removals refresh the panel. Changes on disk show up as they happen too: the panel
+removals refresh the panel, and a running scan updates the rows of the directory
+shown about once a second. Changes on disk show up as they happen too: the panel
 is a local one, so [directory watching](panels.md#directory-watching) applies
-(deleting an indexed file turns its row into a ghost row; creating it again
-clears the ghost). A panel browsing the database directly (`fileindex://`) is
+(deleting an indexed file outside pc turns its row into a ghost row; creating it
+again clears the ghost). A panel browsing the database directly (`fileindex://`) is
 not watched.
 
 | State | Legend | Meaning |
@@ -393,16 +394,14 @@ icon as soon as its files are committed.
 
 ## Operations and the index
 
-The index follows the renames, moves and deletes that pc makes on disk, when
-the operation was started from a [Browse-with](#browsing-with-fileindex) panel.
-The same operations started from an ordinary local panel leave the index alone;
-a deleted file then shows as a ghost row until a prune. Undoing a job that
-followed the index follows it too. An index view (`fileindex://`) is the other
-way round: its operations change the index and never the disk.
+The index follows the renames, moves and deletes that pc makes on disk, from
+any panel, undo included. An index view (`fileindex://`) is the other way round:
+its operations change the index and never the disk. Changes made outside pc wait
+for a scan; a deleted file then shows as a ghost row until a prune.
 
 Following moves or removes records that already exist. It never adds any: new
 files, copies and extracted files wait for the next scan. A file moved by copy and delete (across
-file systems) loses its tags, because its record is removed rather than moved.
+file systems) has no record until a scan of the destination, which brings its tags back.
 Panels showing the index refresh when the records change.
 
 The [Find duplicates](find-duplicates.md) and Copies outside views are the

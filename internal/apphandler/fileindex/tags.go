@@ -200,6 +200,12 @@ func (h *Handler) HandleTags(p TagsPayload) {
 		targeted = max(targeted, p.RemoveRes.Targeted)
 	}
 	msg += fmt.Sprintf(" on %d %s", targeted, jobbridge.Plural(targeted, "entry", "entries"))
+	if n := max(p.AddRes.OtherCopies, p.RemoveRes.OtherCopies); n > 0 {
+		msg += fmt.Sprintf("; also %d other %s", n, jobbridge.Plural(n, "copy", "copies"))
+	}
+	if n := p.AddRes.SkippedEmpty; n > 0 {
+		msg += fmt.Sprintf("; skipped %d empty %s", n, jobbridge.Plural(n, "file", "files"))
+	}
 	urgency := ui.MessageUrgencySuccess
 	switch {
 	case len(p.AddRes.Unknown) > 0:

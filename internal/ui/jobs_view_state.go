@@ -35,6 +35,9 @@ func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool, queueE
 		var sourcePhases []jobs.SourcePhase
 		if expanded[j.ID] {
 			sourceStats, sourcePhases = j.Ops.SourceStats(), j.SourcePhases()
+			if len(sourcePhases) < 2 { // a lone task source has no per-source rows
+				sourcePhases = nil
+			}
 		}
 		queueETA := ""
 		if queueETAs != nil {

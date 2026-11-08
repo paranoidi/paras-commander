@@ -18,7 +18,8 @@ import (
 
 // Overlay merges the index into a local directory listing for "browse with fileindex": every
 // disk entry gets its IndexStatus, and entries only the index knows (deleted since the scan)
-// are appended as ghost rows (StatusMissing, a fileindex:// Loc, the indexed size and mtime).
+// are appended as ghost rows (StatusMissing, a fileindex:// Loc, the indexed size and mtime),
+// except what pc itself removed or renamed and Apply has yet to take off the records.
 // It does disk and database I/O, so it runs on the listing fetch goroutine. When the index is
 // unavailable, or dir is not a local path, entries come back unchanged.
 func (x *Index) Overlay(ctx context.Context, dir pathloc.Path, entries []fsbackend.Entry) ([]fsbackend.Entry, error) {
@@ -28,6 +29,9 @@ func (x *Index) Overlay(ctx context.Context, dir pathloc.Path, entries []fsbacke
 	host, err := indexPath(dir)
 	if err != nil {
 		return entries, nil
+	}
+	if raw, err := dir.FilePath(); err == nil && filepath.Clean(raw) != host {
+		x.linkedDirs.Store(dir.String(), host)
 	}
 	d, err := x.DB()
 	if err != nil {
@@ -58,14 +62,15 @@ func (x *Index) Overlay(ctx context.Context, dir pathloc.Path, entries []fsbacke
 		}
 		out[i] = e
 	}
+	gone := x.goneNow() // before the records are read: see goneNow
 	files, err := d.DirFiles(host)
 	if err != nil {
 		return out, err
 	}
 	// ghostOf adds an index-only name unless it exists on disk after all (hidden or git-ignored
-	// entries are missing from entries but not from the disk).
+	// entries are missing from entries but not from the disk) or its record is about to go.
 	ghostOf := func(name string, mk func(loc pathloc.Path) fsbackend.Entry) {
-		if onDisk[name] {
+		if onDisk[name] || goneAtOrAbove(gone, filepath.Join(host, name)) {
 			return
 		}
 		if _, err := os.Lstat(filepath.Join(host, name)); !errors.Is(err, fs.ErrNotExist) {
@@ -97,6 +102,30 @@ func (x *Index) Overlay(ctx context.Context, dir pathloc.Path, entries []fsbacke
 		}
 	}
 	return out, nil
+}
+
+// ShownDir is the directory a panel at dir shows, as the index records it, to compare with OnChange's
+// and OnScanCommit's directories; "" when dir is neither local nor fileindex://. It does no I/O, so it
+// suits the UI goroutine: a path through a symlink is known from the panel's last Overlay.
+func (x *Index) ShownDir(dir pathloc.Path) string {
+	switch dir.Scheme() {
+	case pathloc.SchemeFile:
+		if host, ok := x.linkedDirs.Load(dir.String()); ok {
+			return host.(string)
+		}
+		raw, err := dir.FilePath()
+		if err != nil {
+			return ""
+		}
+		return filepath.Clean(raw)
+	case pathloc.SchemeFileIndex:
+		host, err := pathloc.IndexHostPath(dir)
+		if err != nil {
+			return ""
+		}
+		return filepath.Clean(host)
+	}
+	return ""
 }
 
 // DirDrift checks each of host's indexed subdirectories (names) against the index and returns

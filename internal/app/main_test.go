@@ -14,11 +14,13 @@ func TestMain(m *testing.M) {
 	userMenuInteractiveRunner = func(context.Context, []string, string) error { return nil }
 	userMenuDetachRunner = func([]string, string) error { return nil }
 	runDetachedXDGOpen = func(string) error { return nil }
-	// Keep dedup's persistent hash cache and the user's zoxide database out of tests.
+	// Keep dedup's persistent hash cache, the user's zoxide database and their fileindex database
+	// (found through $HOME when a test's config names none) out of tests.
 	dir, err := os.MkdirTemp("", "pc-app-test-cache")
 	if err == nil {
 		_ = os.Setenv("XDG_CACHE_HOME", dir)
 		_ = os.Setenv("_ZO_DATA_DIR", dir)
+		_ = os.Setenv("HOME", dir)
 	}
 	code := m.Run()
 	if err == nil {

@@ -3,6 +3,8 @@ package jobs
 import (
 	"slices"
 	"testing"
+
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // TestDeferSourceStaysQueued: a deferred source is queued again, starting another source does
@@ -38,5 +40,29 @@ func TestDeferSourceStaysQueued(t *testing.T) {
 	j.DeferSource(1)
 	if v := j.SourceVersion(); v != versions[len(versions)-1]+1 {
 		t.Fatalf("deferring an already queued source moved the version: %d", v)
+	}
+}
+
+// A scan of one directory clears its row marks when the walk is done, as one of several does.
+func TestSingleSourceTaskTracksItsSource(t *testing.T) {
+	s := NewState()
+	job := NewTaskJob(&Task{Title: "scan", Lease: "scan"}, pathloc.PathsForTest("/orchard"))
+	s.AddJob(job)
+	job.StartAllSources()
+	if job.ActiveSource() != 0 {
+		t.Fatalf("active source = %d", job.ActiveSource())
+	}
+	before := job.SourceVersion()
+	job.FinishSource(0)
+	if got := job.SourcePhases(); len(got) != 1 || got[0] != SourceFinished {
+		t.Fatalf("phases = %v", got)
+	}
+	if job.SourceVersion() == before {
+		t.Fatal("a finished source must change the version, so the row marks repaint")
+	}
+	other := &Job{ID: "del", Type: TypeDelete, Status: StatusQueued, Sources: pathloc.PathsForTest("/orchard")}
+	s.AddJob(other)
+	if other.SourcePhases() != nil {
+		t.Fatal("a single-source job other than a task has no per-source phases")
 	}
 }
