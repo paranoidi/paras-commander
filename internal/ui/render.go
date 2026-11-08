@@ -206,7 +206,7 @@ type Model struct {
 	// PanelZoomEnabled mirrors effective zoom for layout (saved [ui.zoom].active_panel plus optional
 	// runtime-only override in App.render), suppressed while quick view / file preview uses the split,
 	// and suppressed when the active panel's file-name column at an even split is at least
-	// [ui.zoom].disabled_above_name_width (> 0).
+	// [ui.zoom].disabled_above_name_width (> 0) or holds every visible name.
 	// Carousel view on the active panel always enables zoom (ignores preference, override, and name-width gate).
 	// Layout uses it only in the file browser; see PanelZoomSplitsColumns.
 	PanelZoomEnabled bool

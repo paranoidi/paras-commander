@@ -648,7 +648,8 @@ func (a *App) effectiveZoomActivePanel() bool {
 }
 
 // zoomActivePanelSuppressedByNameWidth reports whether the active panel's file-name column at an
-// even 50/50 split of a width-cell terminal is at least [ui.zoom].disabled_above_name_width. The
+// even 50/50 split of a width-cell terminal is at least [ui.zoom].disabled_above_name_width or
+// every visible name already fits that column (zoom only helps cut-off names). The
 // even split (width/2, whichever panel is active) is measured, never the current zoomed width, so
 // the decision cannot oscillate with its own result nor flip when Tab swaps panels on odd widths.
 // Icons, git strip, file columns and meta columns all count against the name column.
@@ -660,7 +661,7 @@ func (a *App) zoomActivePanelSuppressedByNameWidth(width int) bool {
 	nameW := ui.PanelNameColumnWidth(width/2, *a.activePanel(), a.model.UseNerdfontIcons,
 		a.model.NarrowPanelsNameOnly, a.model.MetaResults[a.model.ActivePanel])
 	// Zoom only helps when names are cut off; if they all fit at the even split, keep it.
-	return nameW >= n || ui.PanelNamesFit(*a.activePanel(), nameW)
+	return nameW >= n || ui.PanelNamesFit(a.activePanel(), nameW)
 }
 
 func (a *App) zoomActivePanelSuppressedByTerminalHeight(height int) bool {
@@ -670,8 +671,8 @@ func (a *App) zoomActivePanelSuppressedByTerminalHeight(height int) bool {
 
 // effectiveZoomActivePanelLayout is the zoom flag used for layout and Model.PanelZoomEnabled:
 // preference from effectiveZoomActivePanel, disabled while preview/quick view owns the split,
-// disabled when the active panel's file-name column at an even split is wide enough (side by
-// side) or the terminal is tall enough (stacked) per the [ui.zoom] gates (> 0).
+// disabled when the active panel's file-name column at an even split is wide enough or holds
+// every visible name (side by side) or the terminal is tall enough (stacked) per the [ui.zoom] gates (> 0).
 // Carousel view on the active panel always enables zoom (ignores saved preference, runtime override, and size gates).
 func (a *App) effectiveZoomActivePanelLayout(width, height int, filePreviewOpen bool) bool {
 	if filePreviewOpen || ui.LayoutHideInactivePanel(a.model.ViewMode, a.model.HideInactivePanel) {

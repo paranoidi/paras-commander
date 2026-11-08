@@ -513,7 +513,8 @@ type UIZoomConfig struct {
 	ActivePanel bool `toml:"active_panel"`
 	// DisabledAboveNameWidth: when > 0 and the active panel's file-name column at an even 50/50
 	// split (after border, icons, git strip, listing format and meta columns) is >= this many
-	// cells, zoom is not applied (50/50 split). Zero disables this gate (zoom follows
+	// cells, or already holds every visible name, zoom is not applied (50/50 split). Zero
+	// disables this gate and the names-fit rule (zoom follows
 	// active_panel and runtime toggle only).
 	// Default DefaultZoomActivePanelDisabledAboveNameWidth.
 	DisabledAboveNameWidth int `toml:"disabled_above_name_width"`

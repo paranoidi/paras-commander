@@ -1118,10 +1118,7 @@ func (a *App) toggleZoomActivePanelGuarded() {
 			return
 		}
 	} else if a.zoomActivePanelSuppressedByNameWidth(tw) {
-		a.setTransientMessage(fmt.Sprintf(
-			"Panel zoom unavailable (file name column ≥ %d)",
-			a.config.UI.Zoom.DisabledAboveNameWidth,
-		), ui.MessageUrgencyInfo)
+		a.setTransientMessage("Panel zoom unavailable (file name column wide enough)", ui.MessageUrgencyInfo)
 		return
 	}
 	a.toggleRuntimeZoomActivePanel()

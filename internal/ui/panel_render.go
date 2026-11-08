@@ -729,12 +729,17 @@ func PanelNameColumnWidth(panelWidth int, state panel.State, showIcons, narrowPa
 	return panelNameColumnWidth(layoutRes, state.Columns, showMeta, metaTotalW)
 }
 
-// PanelNamesFit reports whether every visible entry name fits in nameW cells. It stops at the
+// PanelNamesFit reports whether the panel has visible entries and every name fits in nameW cells. It stops at the
 // first name that does not, so a long listing is rarely scanned in full.
 // ponytail: tree indentation is not counted; add it if tree panels zoom too rarely.
-func PanelNamesFit(state panel.State, nameW int) bool {
-	for i := 0; i < state.VisibleEntryCount(); i++ {
-		if e, _, ok := state.VisibleEntry(i); ok && runewidth.StringWidth(e.Name) > nameW {
+func PanelNamesFit(state *panel.State, nameW int) bool {
+	n := state.VisibleEntryCount()
+	if n == 0 {
+		return false // empty or still loading: nothing proves the names fit, so keep the width rule
+	}
+	for i := range n {
+		// Display width never exceeds byte length, so short names skip the width scan.
+		if e, _, ok := state.VisibleEntry(i); ok && len(e.Name) > nameW && runewidth.StringWidth(e.Name) > nameW {
 			return false
 		}
 	}

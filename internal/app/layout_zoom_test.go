@@ -358,8 +358,8 @@ func TestPanelToggleZoomNoOpWhenNameColumnWide(t *testing.T) {
 	if app.zoomActivePanelOverride != nil {
 		t.Fatalf("zoom override = %v, want nil (toggle ignored)", app.zoomActivePanelOverride)
 	}
-	if !strings.Contains(app.model.Message, "≥ 60") {
-		t.Fatalf("transient message = %q, want threshold mention", app.model.Message)
+	if !strings.Contains(app.model.Message, "file name column wide enough") {
+		t.Fatalf("transient message = %q, want wide-column mention", app.model.Message)
 	}
 }
 
