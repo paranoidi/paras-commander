@@ -78,8 +78,8 @@ fileindex covers local paths only). On a `fileindex://` panel the action goes to
 the real location with the mode on. Scans, prunes, tag edits and index
 removals refresh the panel. Changes on disk show up as they happen too: the panel
 is a local one, so [directory watching](panels.md#directory-watching) applies
-(deleting an indexed file turns its row into a ghost row; creating it again
-clears the ghost). A panel browsing the database directly (`fileindex://`) is
+(deleting an indexed file outside pc turns its row into a ghost row; creating it
+again clears the ghost). A panel browsing the database directly (`fileindex://`) is
 not watched.
 
 | State | Legend | Meaning |

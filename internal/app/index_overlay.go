@@ -77,10 +77,11 @@ func (a *App) wireIndexOverlay() {
 
 // reloadIndexPanels re-reads every panel that shows index data: browsing with fileindex, or
 // showing the index itself (fileindex://), whose listing is the index and so follows the changes
-// jobs make on disk through the fschange sink (UI goroutine).
+// jobs make on disk through the fschange sink (UI goroutine). A listing in flight may have read the
+// index before the change, so Refresh replaces it (it leaves a navigation alone).
 func (a *App) reloadIndexPanels() {
 	for _, id := range []int{ui.PrimaryPanel, ui.SecondaryPanel} {
-		if p := a.panelByID(id); p.ShowsIndex() && !p.ListingPending {
+		if p := a.panelByID(id); p.ShowsIndex() {
 			_ = p.Refresh(a.panelViewportRows(id))
 		}
 	}

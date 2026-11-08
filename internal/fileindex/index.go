@@ -17,7 +17,6 @@ import (
 	"github.com/paranoidi/fileindex/db"
 	"github.com/paranoidi/fileindex/scan"
 	"github.com/paranoidi/paras-commander/internal/config"
-	"github.com/paranoidi/paras-commander/internal/fschange"
 )
 
 // ErrNoIndex is wrapped by DB when no index database exists at the configured path.
@@ -62,8 +61,10 @@ type Index struct {
 
 	// Apply's queue (follow.go): batches waiting for the one goroutine that applies them.
 	applyMu      sync.Mutex
-	applyPending [][]fschange.Change
+	applyPending []queuedChanges
 	applyDone    chan struct{} // set while a drain runs, closed when it ends
+	// gone counts, per path as the index records it, the queued changes that took it off the disk.
+	gone map[string]int
 
 	// writeMu serializes pc's own index writes: Apply's drain and the backend's Rename and Remove.
 	writeMu sync.Mutex

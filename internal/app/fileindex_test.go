@@ -2011,3 +2011,26 @@ func TestFilePickerFooterAdvertisesActions(t *testing.T) {
 		}
 	}
 }
+
+// An index change during a same-directory listing must start a new one: the listing in flight may
+// have read the index before the change. A navigation in flight is left alone.
+func TestReloadIndexPanelsSupersedesListingInFlight(t *testing.T) {
+	dir := t.TempDir()
+	app := newApp(t, newScreen(t, 80, 24), dir)
+	p := &app.model.Primary
+	p.WithIndex = true
+
+	p.ListingPending, p.ListingPendingPath = true, p.Path.String()
+	before := app.panelAsyncLoadGen[ui.PrimaryPanel].Load()
+	app.reloadIndexPanels()
+	if app.panelAsyncLoadGen[ui.PrimaryPanel].Load() == before {
+		t.Fatal("the refresh was dropped because a listing of the same directory was in flight")
+	}
+
+	p.ListingPending, p.ListingPendingPath = true, filepath.Join(dir, "elsewhere")
+	before = app.panelAsyncLoadGen[ui.PrimaryPanel].Load()
+	app.reloadIndexPanels()
+	if app.panelAsyncLoadGen[ui.PrimaryPanel].Load() != before {
+		t.Fatal("the refresh replaced a navigation in flight")
+	}
+}
