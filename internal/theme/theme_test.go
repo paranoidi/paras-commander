@@ -190,8 +190,68 @@ func TestParseRejectsIconOnNonCursorStyle(t *testing.T) {
 		"menu.bar.active": `{ fg = "white", bg = "black", icon = "yellow" }`,
 	})
 	_, err := parse(data)
-	if err == nil || !strings.Contains(err.Error(), `field "icon" is only allowed on panel cursor row styles`) {
+	if err == nil || !strings.Contains(err.Error(), `field "icon" is only allowed on panel cursor row and disk-usage bar styles`) {
 		t.Fatalf("parse() error = %v, want reject icon on menu", err)
+	}
+}
+
+func TestDiskUsageBarIconKey(t *testing.T) {
+	cases := []struct {
+		active, cursor, selected bool
+		key                      string
+	}{
+		{false, false, false, "panel.usage.normal"},
+		{true, false, false, "panel.usage.normal"},
+		{true, false, true, "panel.usage.selected"},
+		{true, true, false, "panel.active.usage.cursor"},
+		{true, true, true, "panel.active.usage.cursor.selected"},
+		{false, true, false, "panel.inactive.usage.cursor"},
+		{false, true, true, "panel.inactive.usage.cursor.selected"},
+	}
+	for _, tc := range cases {
+		o := map[string]string{}
+		for _, k := range requiredStyleKeys {
+			if _, isOption := dialogSurfaceForegroundStyleKeys[k]; isOption {
+				o[k] = `{ fg = "white" }`
+			} else {
+				o[k] = `{ fg = "white", bg = "black" }`
+			}
+		}
+		plain, err := parse(testTheme(t, "baricon", nil, o))
+		if err != nil {
+			t.Fatalf("parse without icon: %v", err)
+		}
+		if got := plain.DiskUsageBarIconKey(tc.active, tc.cursor, tc.selected); got != "" {
+			t.Fatalf("%s without icon: key = %q, want empty", tc.key, got)
+		}
+		o[tc.key] = `{ fg = "white", bg = "black", icon = "yellow" }`
+		th, err := parse(testTheme(t, "baricon", nil, o))
+		if err != nil {
+			t.Fatalf("parse for %s: %v", tc.key, err)
+		}
+		if got := th.DiskUsageBarIconKey(tc.active, tc.cursor, tc.selected); got != tc.key {
+			t.Fatalf("key = %q, want %q", got, tc.key)
+		}
+		if got := th.PanelFileIconFG[tc.key]; got != tcell.NewRGBColor(255, 255, 0) {
+			t.Fatalf("%s: PanelFileIconFG = %v, want yellow", tc.key, got)
+		}
+	}
+}
+
+func TestDefaultThemeBarIconOnlyOnNonCursorBar(t *testing.T) {
+	th := Default()
+	black := th.PanelFileIconFG["panel.active.row.cursor"]
+	for _, selected := range []bool{false, true} {
+		if key := th.DiskUsageBarIconKey(true, false, selected); key == "" {
+			t.Errorf("selected=%v: non-cursor bar must set icon", selected)
+		} else if got := th.PanelFileIconFG[key]; got != black {
+			t.Errorf("%s icon = %v, want %v", key, got, black)
+		}
+		for _, active := range []bool{false, true} {
+			if key := th.DiskUsageBarIconKey(active, true, selected); key != "" {
+				t.Errorf("cursor bar active=%v selected=%v: key = %q, want none", active, selected, key)
+			}
+		}
 	}
 }
 

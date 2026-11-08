@@ -170,9 +170,9 @@ track = { fg = "bright_black" }
 thumb = { fg = "white" }
 match = { fg = "red" }
 
-[panel.usage]                 # disk usage bar colors
-normal = { fg = "white", bg = "bright_black" }
-selected = { fg = "yellow", bg = "bright_black" }
+[panel.usage]                 # disk usage bar colors; icon colors icons on bar cells only
+normal = { fg = "white", bg = "bright_black", icon = "black" }
+selected = { fg = "yellow", bg = "bright_black", icon = "black" }
 
 [terminal]
 text = { fg = "white" }

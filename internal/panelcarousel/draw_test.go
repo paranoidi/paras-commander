@@ -476,6 +476,83 @@ func TestDiskUsageBarStopsBeforeSizeColumn(t *testing.T) {
 	}
 }
 
+func TestDiskUsageBarIconKeyOnCarouselRows(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(screen.Fini)
+	const width, height = 120, 12
+	screen.SetSize(width, height)
+	styles := theme.Default()
+	barIcon := styles.PanelFileIconFG["panel.usage.normal"]
+	newFG, _, _ := styles.PanelRowMarkNew.Decompose()
+	if barIcon == newFG {
+		t.Fatal("test needs distinct bar icon and new-file mark colors")
+	}
+
+	const cursorName, longName, shortName = "acorn", "harbor", "pebble"
+	file := func(name string, size int64) localfs.Entry {
+		return localfs.Entry{Name: name, Path: "/vol/" + name, Type: localfs.EntryFile, Size: size}
+	}
+	center := panel.State{
+		Path:    pathloc.MustParse("/vol"),
+		Entries: []localfs.Entry{file(cursorName, 0), file(longName, 1000), file(shortName, 1)},
+	}
+	iconKeys := map[string]string{}
+	DrawBody(screen, BodyParams{
+		Frame:               geom.Rect{X: 0, Y: 0, Width: width, Height: height},
+		Center:              center,
+		Styles:              styles,
+		FileListActive:      true,
+		ShowIcons:           true,
+		HeaderStyle:         styles.PanelActiveHeader,
+		HeaderCarouselStyle: styles.PanelActiveHeaderCarousel,
+		SurfaceStyle:        styles.PanelActiveSurface,
+		Layout:              DefaultLayout(),
+		PaintIcon: func(_ tcell.Screen, _, _ int, entry localfs.Entry, _ tcell.Style, key string, _, _ bool) {
+			iconKeys[entry.Name] = key
+		},
+		NewFileMark: func(localfs.Entry) panellist.NewFileMarkTier { return panellist.NewFileMarkLatest },
+		DiskUsage: DiskUsage{
+			Active: true,
+			Source: fakeDiskUsageSource{},
+		},
+	})
+
+	if got := iconKeys[longName]; got != "panel.usage.normal" {
+		t.Errorf("long bar icon key = %q, want the bar's", got)
+	}
+	if got := iconKeys[shortName]; got != "" {
+		t.Errorf("short bar icon key = %q, want none: the bar stops before the icon", got)
+	}
+	if got := iconKeys[cursorName]; got != "panel.active.row.cursor" {
+		t.Errorf("cursor row icon key = %q, want the cursor row's", got)
+	}
+
+	markFG := func(name string) tcell.Color {
+		t.Helper()
+		col := SplitColumns(geom.Rect{X: 0, Y: 0, Width: width, Height: height}, false, DefaultLayout(), [3]int{})[1]
+		for y := range height {
+			line := rowText(screen, col.X, y, col.Width)
+			if i := strings.Index(line, name); i >= 0 {
+				_, st, _ := screen.Get(col.X+utf8.RuneCountInString(line[:i])+len(name)+1, y)
+				fg, _, _ := st.Decompose()
+				return fg
+			}
+		}
+		t.Fatalf("row %q not on screen", name)
+		return 0
+	}
+	if got := markFG(longName); got != barIcon {
+		t.Errorf("mark on the bar fg = %v, want %v", got, barIcon)
+	}
+	if got := markFG(shortName); got != newFG {
+		t.Errorf("mark past the bar end fg = %v, want %v", got, newFG)
+	}
+}
+
 // rowText reads one screen row into a string over [x, x+w).
 func rowText(screen tcell.Screen, x, y, w int) string {
 	var sb []rune

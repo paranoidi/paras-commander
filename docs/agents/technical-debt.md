@@ -40,16 +40,6 @@ The minimal (`default:`) branch of `ensureSelectionVisible` reimplements `panel.
 
 `Handler.ensureSelectionVisible` (`internal/apphandler/dedup/handler.go`) scrolls only the focused pane with its own height (Copies uses `DedupSecondaryRects`). The other pane gets `0`, which only clamps. Many other handler calls pass `0` with the same meaning. For: each pane is measured correctly, and an unfocused pane rarely needs scrolling. Against: after a resize or a `syncCopies` rebuild, the unfocused pane can sit outside the edge margin until it is focused, and the bare `0` hides intent. The fix is to compute both pane heights in the app caller, or to add an explicit `Clamp(total)`. Relevance: low–medium.
 
-## Other-match mark special-cased on the disk-usage bar, with hard-coded black
-
-`ListingSuffixSpans` (`internal/panellist/indicators.go`) forces `tcell.ColorBlack` only for the other-match glyph, and only when its `onBar` callback says the cell is on the bar. For: it fixes exactly the reported collision (bright_black on bright_black) without touching other marks, and black is what was asked for. Against:
-- Other marks can collide too; `no_permission` is also bright_black.
-- The function now has ten positional parameters, and the carousel passes a bare `nil`.
-- The `onBar` closure is allocated per row, per frame. The cheap `suffix.OtherMatch` check runs first, but the allocation stays.
-- The hard-coded colour bypasses the theme rule, so a light bar theme cannot override it.
-
-The fix is a theme key (e.g. `panel.usage.mark`, see `recipes/add-theme-key.md`) applied to every suffix icon whose cell lies on the bar, with `barEnd int` passed instead of a closure, inside a params struct. Relevance: medium. It is cheap now, while the code is fresh, and otherwise the collision gets rediscovered one mark at a time.
-
 ## File-op dialogs other than delete assume the active panel
 
 `OpenDeleteDialog(panelID int)` keeps its source panel, which Compare needs when deleting from a column that is not the active panel. Copy, move, rename and mkdir still resolve through `host.ActivePanel()`. For: in the browser view the active panel is always correct, and the delete-only fix kept the change focused. Against: these dialogs have the same latent bug for any Compare or Dedup entry point, and it will repeat when one is added. The fix is for every `Open*Dialog` to take an explicit panel ID kept in dialog state. Relevance: medium. It becomes high as soon as any of those dialogs is reachable from Compare or Dedup.

@@ -175,8 +175,9 @@ type Theme struct {
 	// PanelScrollbarMatch marks search-match rows on the scrollbar rail; optional, falls back to the
 	// fuzzy.highlight.cursor foreground.
 	PanelScrollbarMatch tcell.Style
-	// PanelFileIconFG maps cursor-row style keys (e.g. panel.active.row.cursor) to file-devicon FG
-	// when panel file icons are enabled. Absent keys use devicons' suggested hex.
+	// PanelFileIconFG maps cursor-row and disk-usage bar style keys (e.g. panel.active.row.cursor,
+	// panel.usage.normal) to file-devicon FG when panel file icons are enabled. Absent keys use
+	// devicons' suggested hex.
 	PanelFileIconFG map[string]tcell.Color
 
 	// PanelBlocked* is used for both file panels when a modal or pulldown menu
@@ -427,9 +428,9 @@ func (t Theme) DialogSearchIconStyle(base tcell.Style) tcell.Style {
 	return base
 }
 
-// PanelRowIconForeground returns the foreground for cursor-row adornment icons: file-list
-// suffix icons, folder icon strip, and file devicons when the matching panel.*.row.cursor
-// style defines icon; otherwise the base indicator style foreground is used.
+// PanelRowIconForeground returns the foreground for row adornment icons: file-list suffix icons,
+// folder icon strip, and file devicons when the matching panel cursor row or disk-usage bar style
+// defines icon; otherwise the base indicator style foreground is used.
 func (t Theme) PanelRowIconForeground(cursorStyleKey string, base tcell.Style) tcell.Color {
 	if cursorStyleKey != "" && t.PanelFileIconFG != nil {
 		if c, ok := t.PanelFileIconFG[cursorStyleKey]; ok {
@@ -1061,7 +1062,7 @@ func (t Theme) StatusStyleOn(status string, surface tcell.Style) tcell.Style {
 type styleSpec struct {
 	FG        string
 	BG        string
-	Icon      string // optional; only certain panel cursor styles, see parse()
+	Icon      string // optional; only panel cursor row and disk-usage bar styles, see parse()
 	Bold      bool
 	Underline bool
 	Reverse   bool
@@ -1747,13 +1748,19 @@ func parse(data []byte) (Theme, error) {
 		"panel.blocked.row.cursor.selected":           {},
 		"panel.row.cursor.range":                      {},
 		"panel.row.cursor.range.selected":             {},
+		"panel.usage.normal":                          {},
+		"panel.usage.selected":                        {},
+		"panel.active.usage.cursor":                   {},
+		"panel.active.usage.cursor.selected":          {},
+		"panel.inactive.usage.cursor":                 {},
+		"panel.inactive.usage.cursor.selected":        {},
 	}
 	for key, spec := range specs {
 		if spec.Icon == "" {
 			continue
 		}
 		if _, ok := allowedPanelIconStyles[key]; !ok {
-			return Theme{}, fmt.Errorf("style %q: field \"icon\" is only allowed on panel cursor row styles", key)
+			return Theme{}, fmt.Errorf("style %q: field \"icon\" is only allowed on panel cursor row and disk-usage bar styles", key)
 		}
 		iconColor, err := resolveColor(spec.Icon, palette)
 		if err != nil {

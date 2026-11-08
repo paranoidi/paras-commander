@@ -80,8 +80,9 @@ func indexRowState(entry localfs.Entry, jobMarks []JobPathMark) string {
 
 // paintIndexColumn paints a row's fileindex state icon in the git strip while the panel browses
 // with fileindex; the second cell stays blank. While panel chrome is blocked the icon takes the
-// [panel.blocked] text colour instead of its state colour.
-func paintIndexColumn(screen tcell.Screen, x, y int, state string, rowStyle tcell.Style, styles theme.Theme, cursorRow, chromeBlocked bool) {
+// [panel.blocked] text colour instead of its state colour. barIconKey (Theme.DiskUsageBarIconKey,
+// "" off the bar) overrides the icon colour on a disk-usage bar cell.
+func paintIndexColumn(screen tcell.Screen, x, y int, state string, rowStyle tcell.Style, styles theme.Theme, cursorRow, chromeBlocked bool, barIconKey string) {
 	_, rowBG, rowAttrs := rowStyle.Decompose()
 	icon := ' '
 	s := tcell.StyleDefault.Background(rowBG).Attributes(rowAttrs)
@@ -94,6 +95,9 @@ func paintIndexColumn(screen tcell.Screen, x, y int, state string, rowStyle tcel
 		if cursorRow {
 			fg, _, _ = rowStyle.Decompose()
 			attrs = rowAttrs
+		}
+		if barIconKey != "" {
+			fg = styles.PanelFileIconFG[barIconKey]
 		}
 		s = tcell.StyleDefault.Foreground(fg).Background(rowBG).Attributes(attrs)
 	}

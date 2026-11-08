@@ -271,16 +271,25 @@ func drawCarouselColumn(cp carouselColumnParams) {
 				RangePending:      c.Active && p.Center.RangeAnchor != "",
 			})
 		}
-		if suffixSpans := panellist.ListingSuffixSpans(entry, nameWidth, p.ShowIcons, rowSuffix, jobStatus, p.Styles, p.ChromeBlocked, cursorKey, func(di int) tcell.Style {
-			return blendCell(nameColOffset + di)
-		}, nil); len(suffixSpans) > 0 {
+		barIconKey := ""
+		if fillCols > 0 {
+			barIconKey = p.Styles.DiskUsageBarIconKey(p.FileListActive && c.Active && !inactive, isCursor, selected)
+		}
+		if suffixSpans := panellist.ListingSuffixSpans(panellist.SuffixSpanParams{
+			Entry: entry, NameWidth: nameWidth, ShowIcons: p.ShowIcons, Suffix: rowSuffix, JobStatus: jobStatus,
+			Theme: p.Styles, ChromeBlocked: p.ChromeBlocked, CursorStyleKey: cursorKey,
+			NameBGAt: func(di int) tcell.Style {
+				return blendCell(nameColOffset + di)
+			},
+			BarEnd: fillCols - nameColOffset, BarIconKey: barIconKey,
+		}); len(suffixSpans) > 0 {
 			spans = append(suffixSpans, spans...)
 		}
 		spans = append(spans, panellist.ListingCutSpans(panellist.EntryDisplayRunes(entry, nameWidth, p.ShowIcons, rowSuffix, p.Styles), func(di int) tcell.Style {
 			return blendCell(nameColOffset + di)
 		})...)
 		drawCarouselRowIconAndText(screen, cp, carouselRowPaintState{
-			Y: y, Entry: entry, CursorKey: cursorKey, BlendCell: blendCell,
+			Y: y, Entry: entry, CursorKey: cursorKey, BarIconKey: barIconKey, FillCols: fillCols, BlendCell: blendCell,
 			ListStart: listStart, ListW: listW, NameColOffset: nameColOffset, NameWidth: nameWidth,
 			Text: text, Spans: spans, MetaAlerts: metaAlerts, Styles: p.Styles,
 		})
@@ -366,6 +375,8 @@ type carouselRowPaintState struct {
 	Y             int
 	Entry         localfs.Entry
 	CursorKey     string
+	BarIconKey    string // Theme.DiskUsageBarIconKey of the row; applies to cells before FillCols
+	FillCols      int
 	BlendCell     func(int) tcell.Style
 	ListStart     int
 	ListW         int
@@ -388,6 +399,9 @@ func drawCarouselRowIconAndText(screen tcell.Screen, cp carouselColumnParams, rp
 		}
 		if p.PaintIcon != nil {
 			key := rp.CursorKey
+			if rp.BarIconKey != "" && leftGutter < rp.FillCols {
+				key = rp.BarIconKey
+			}
 			diskPending := false
 			diskExcluded := false
 			if p.DiskUsage.Active && p.DiskUsage.Source != nil && rp.Entry.Type == localfs.EntryDirectory {

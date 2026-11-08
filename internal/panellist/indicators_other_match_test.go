@@ -33,26 +33,60 @@ func TestOtherMatchSuffix(t *testing.T) {
 	if plain == cur {
 		t.Fatal("cursor mark must differ in color")
 	}
-	if len(ListingSuffixSpans(entry, 20, true, suffix, "", th, false, "", func(int) tcell.Style { return tcell.StyleDefault }, nil)) != 1 {
+	spans := ListingSuffixSpans(SuffixSpanParams{
+		Entry: entry, NameWidth: 20, ShowIcons: true, Suffix: suffix, Theme: th,
+		NameBGAt: func(int) tcell.Style { return tcell.StyleDefault },
+	})
+	if len(spans) != 1 {
 		t.Fatal("span missing")
 	}
 }
 
-func TestOtherMatchMarkBlackOnDiskUsageBar(t *testing.T) {
+func TestSuffixMarksTakeBarIconColorOnBarCellsOnly(t *testing.T) {
 	t.Parallel()
 	th := theme.Default()
-	entry := localfs.Entry{Name: "pebble", Type: localfs.EntryFile}
-	suffix := RowSuffix{OtherMatch: true}
+	barKey := th.DiskUsageBarIconKey(true, false, false)
+	if barKey == "" {
+		t.Fatal("default theme must set an icon color on the normal disk-usage bar")
+	}
+	barIcon := th.PanelFileIconFG[barKey]
 	bg := func(int) tcell.Style { return tcell.StyleDefault }
-	fg := func(onBar func(int) bool) tcell.Color {
-		spans := ListingSuffixSpans(entry, 20, true, suffix, "", th, false, "", bg, onBar)
-		c, _, _ := spans[0].Style.Decompose()
-		return c
+	cases := []struct {
+		name   string
+		entry  localfs.Entry
+		suffix RowSuffix
+		base   tcell.Style
+	}{
+		{"other match", localfs.Entry{Name: "pebble", Type: localfs.EntryFile}, RowSuffix{OtherMatch: true}, th.PanelRowMarkOtherMatch},
+		{"no permission", localfs.Entry{Name: "lantern", Type: localfs.EntryFile, AccessDenied: true}, RowSuffix{}, th.PanelRowMarkNoPermission},
 	}
-	if got := fg(func(int) bool { return true }); got != tcell.ColorBlack {
-		t.Fatalf("on bar fg = %v, want black", got)
-	}
-	if got := fg(func(int) bool { return false }); got == tcell.ColorBlack {
-		t.Fatal("off bar fg must keep the theme color")
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			fg := func(barEnd int, key string) tcell.Color {
+				spans := ListingSuffixSpans(SuffixSpanParams{
+					Entry: tc.entry, NameWidth: 20, ShowIcons: true, Suffix: tc.suffix, Theme: th,
+					NameBGAt: bg, BarEnd: barEnd, BarIconKey: key,
+				})
+				if len(spans) != 1 {
+					t.Fatalf("spans = %d, want 1", len(spans))
+				}
+				c, _, _ := spans[0].Style.Decompose()
+				return c
+			}
+			themed, _, _ := tc.base.Decompose()
+			if themed == barIcon {
+				t.Fatalf("test needs a mark color that differs from the bar icon color %v", barIcon)
+			}
+			if got := fg(40, barKey); got != barIcon {
+				t.Fatalf("on bar fg = %v, want %v", got, barIcon)
+			}
+			if got := fg(0, barKey); got != themed {
+				t.Fatalf("past bar end fg = %v, want %v", got, themed)
+			}
+			if got := fg(40, ""); got != themed {
+				t.Fatalf("no bar icon key fg = %v, want %v", got, themed)
+			}
+		})
 	}
 }

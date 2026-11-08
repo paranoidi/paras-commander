@@ -520,14 +520,28 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 	} else if hasEntry {
 		cursorIconKey = panelCursorIconThemeKey(ctx.CursorRowActive, ctx.ChromeBlocked, entryIndex, state.Cursor, selected, ctx.CursorRowActive && state.FilterUniqueMatch(), state.RangeAnchor != "")
 	}
+	barIconKey := ""
+	if !ctx.ChromeBlocked && fillCols > 0 {
+		barIconKey = panelStyle.Styles.DiskUsageBarIconKey(ctx.FileListActive, entryIndex == state.Cursor, selected)
+	}
+	// iconKeyAt is the icon style key of a row column: the bar's on bar cells, else the cursor row's.
+	iconKeyAt := func(absCol int) string {
+		if barIconKey != "" && absCol < fillCols {
+			return barIconKey
+		}
+		return cursorIconKey
+	}
 	if hasEntry {
 		spans = matchSpans(cur, listTextWidth, state.MatchRanges(entryIndex), entryIndex == state.Cursor, panelStyle.Styles, rowOpts, func(di int) tcell.Style {
 			return blendCell(di + leftGutter + gitStrip + iconStrip + treeGutterWidth)
 		})
-		if suffixSpans := panellist.ListingSuffixSpans(cur, nameWidth, display.ShowIcons, rowSuffix, jobStatus, panelStyle.Styles, ctx.ChromeBlocked, cursorIconKey, func(di int) tcell.Style {
-			return blendCell(di + leftGutter + gitStrip + iconStrip + treeGutterWidth)
-		}, func(di int) bool {
-			return !ctx.ChromeBlocked && di+leftGutter+gitStrip+iconStrip+treeGutterWidth < fillCols
+		if suffixSpans := panellist.ListingSuffixSpans(panellist.SuffixSpanParams{
+			Entry: cur, NameWidth: nameWidth, ShowIcons: display.ShowIcons, Suffix: rowSuffix, JobStatus: jobStatus,
+			Theme: panelStyle.Styles, ChromeBlocked: ctx.ChromeBlocked, CursorStyleKey: cursorIconKey,
+			NameBGAt: func(di int) tcell.Style {
+				return blendCell(di + leftGutter + gitStrip + iconStrip + treeGutterWidth)
+			},
+			BarEnd: fillCols - (leftGutter + gitStrip + iconStrip + treeGutterWidth), BarIconKey: barIconKey,
 		}); len(suffixSpans) > 0 {
 			spans = append(suffixSpans, spans...)
 		}
@@ -542,7 +556,6 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 			screen.SetContent(rect.X+1+i, y, ' ', nil, blendCell(i))
 		}
 	}
-	iconKey := cursorIconKey
 	var diskPending bool
 	var diskExcluded bool
 	if hasEntry {
@@ -557,13 +570,13 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 	if showGit {
 		drawPanelRowGitStrip(screen, p, panelRowPaintState{
 			Y: y, HasEntry: hasEntry, Entry: cur, EntryIndex: entryIndex, Selected: selected,
-			FillCols: fillCols, BlendCell: blendCell,
+			FillCols: fillCols, BlendCell: blendCell, BarIconKey: barIconKey,
 		})
 	}
 	if display.ShowIcons && state.ListLayout != panel.ListLayoutTree {
 		drawPanelRowIconStrip(screen, p, panelRowPaintState{
 			Y: y, HasEntry: hasEntry, Entry: cur, Style: style, BlendCell: blendCell,
-			IconKey: iconKey, DiskPending: diskPending, DiskExcluded: diskExcluded,
+			IconKey: iconKeyAt(leftGutter + gitStrip), DiskPending: diskPending, DiskExcluded: diskExcluded,
 		})
 	}
 	if treeGutterWidth > 0 {
@@ -574,8 +587,9 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		primitive.Text(screen, gutterX, y, connW, treeConnector, connectorStyle)
 		if hasEntry {
 			iconX := gutterX + connW
-			iconStripStyle := blendCell(leftGutter + gitStrip + iconStrip + connW)
-			iconCtx := panelIconStripContextFor(display, ctx, state, cur, iconKey, diskPending, diskExcluded)
+			iconCol := leftGutter + gitStrip + iconStrip + connW
+			iconStripStyle := blendCell(iconCol)
+			iconCtx := panelIconStripContextFor(display, ctx, state, cur, iconKeyAt(iconCol), diskPending, diskExcluded)
 			iconCtx.Folder.TreeExpanded = treeExpanded
 			iconCtx.Folder.TreeLoading = treeLoading
 			paintPanelIconStrip(screen, iconX, y, cur, iconStripStyle, panelStyle.Styles, iconCtx)
@@ -637,6 +651,7 @@ type panelRowPaintState struct {
 	Style        tcell.Style
 	FillCols     int
 	BlendCell    func(int) tcell.Style
+	BarIconKey   string // Theme.DiskUsageBarIconKey of the row; applies to cells before FillCols
 	IconKey      string
 	DiskPending  bool
 	DiskExcluded bool
@@ -652,7 +667,11 @@ func drawPanelRowGitStrip(screen tcell.Screen, p panelRowParams, rp panelRowPain
 		gitUsageAccent = p.PanelStyle.Styles.DiskUsageBarStyle(p.Ctx.FileListActive, rp.EntryIndex == p.State.Cursor, rp.Selected)
 	}
 	if rp.HasEntry && p.State.WithIndex {
-		paintIndexColumn(screen, p.GitStart, rp.Y, indexRowState(rp.Entry, p.Display.JobMarks), gitStyle, p.PanelStyle.Styles, rp.EntryIndex == p.State.Cursor, p.Ctx.ChromeBlocked)
+		barIconKey := ""
+		if gitUnderUsage {
+			barIconKey = rp.BarIconKey
+		}
+		paintIndexColumn(screen, p.GitStart, rp.Y, indexRowState(rp.Entry, p.Display.JobMarks), gitStyle, p.PanelStyle.Styles, rp.EntryIndex == p.State.Cursor, p.Ctx.ChromeBlocked, barIconKey)
 		paintGitRowTrailingGap(screen, p.GitStart, rp.Y, gitStyle)
 	} else if rp.HasEntry {
 		paintGitColumn(screen, p.GitStart, rp.Y, panelGitCell(rp.Entry, p.State.GitByPath), gitStyle, p.PanelStyle.Styles, rp.EntryIndex == p.State.Cursor, gitUnderUsage, gitUsageAccent)

@@ -279,20 +279,26 @@ func SuffixSpanStyle(r rune, suffix RowSuffix, entry localfs.Entry, jobStatus, c
 	}
 }
 
-// ListingSuffixSpans returns styled spans for trailing row suffix icons. onBar (nil ok) reports
-// whether a display cell sits on the disk-usage bar.
-func ListingSuffixSpans(
-	entry localfs.Entry,
-	nameWidth int,
-	showIcons bool,
-	suffix RowSuffix,
-	jobStatus string,
-	th theme.Theme,
-	chromeBlocked bool,
-	cursorStyleKey string,
-	nameBGAt func(displayIndex int) tcell.Style,
-	onBar func(displayIndex int) bool,
-) []primitive.Span {
+// SuffixSpanParams carries the inputs of ListingSuffixSpans.
+type SuffixSpanParams struct {
+	Entry          localfs.Entry
+	NameWidth      int
+	ShowIcons      bool
+	Suffix         RowSuffix
+	JobStatus      string
+	Theme          theme.Theme
+	ChromeBlocked  bool
+	CursorStyleKey string
+	NameBGAt       func(displayIndex int) tcell.Style
+	// BarEnd is the display index where the disk-usage bar stops. BarIconKey (Theme.DiskUsageBarIconKey)
+	// replaces CursorStyleKey on the cells before it; "" leaves every cell on CursorStyleKey.
+	BarEnd     int
+	BarIconKey string
+}
+
+// ListingSuffixSpans returns styled spans for trailing row suffix icons.
+func ListingSuffixSpans(p SuffixSpanParams) []primitive.Span {
+	entry, nameWidth, showIcons, suffix, th := p.Entry, p.NameWidth, p.ShowIcons, p.Suffix, p.Theme
 	subtree := suffix.SubtreeSelection && entry.Type == localfs.EntryDirectory
 	if suffix.JobIcon == 0 && suffix.JobQueuedIcon == 0 && suffix.JobOpIcon == 0 &&
 		suffix.NewFileTier == NewFileMarkNone && !suffix.RenameMark && !subtree &&
@@ -308,16 +314,16 @@ func ListingSuffixSpans(
 	var spans []primitive.Span
 	for i := decStart; i < len(display); i++ {
 		r := display[i].Rune
-		spanStyle, ok := SuffixSpanStyle(r, suffix, entry, jobStatus, cursorStyleKey, th, chromeBlocked)
+		iconKey := p.CursorStyleKey
+		if p.BarIconKey != "" && i < p.BarEnd {
+			iconKey = p.BarIconKey
+		}
+		spanStyle, ok := SuffixSpanStyle(r, suffix, entry, p.JobStatus, iconKey, th, p.ChromeBlocked)
 		if !ok {
 			continue
 		}
-		_, rowBG, _ := nameBGAt(i).Decompose()
+		_, rowBG, _ := p.NameBGAt(i).Decompose()
 		spanFG, _, _ := spanStyle.Decompose()
-		// The other-match mark is bright_black, same as the disk-usage bar background.
-		if suffix.OtherMatch && onBar != nil && r == th.IconFilelistOtherMatch() && onBar(i) {
-			spanFG = tcell.ColorBlack
-		}
 		spans = append(spans, primitive.Span{
 			Start: i,
 			End:   i + 1,
