@@ -17,11 +17,9 @@ func testLeaderMenuApp(t *testing.T) *App {
 	t.Helper()
 	dir := t.TempDir()
 	screen := newScreen(t, 80, 50)
-	app := newTestApp(t, screen, Options{
-		CWD:    func() (string, error) { return dir, nil },
-		Config: config.Default(),
-		Paths:  config.Paths{ConfigDir: filepath.Join(dir, "config")},
-	})
+	opts := testOptions(dir)
+	opts.Paths = config.Paths{ConfigDir: filepath.Join(dir, "config")}
+	app := newTestApp(t, screen, opts)
 	if err := app.model.Primary.Load(dir); err != nil {
 		t.Fatal(err)
 	}
@@ -454,11 +452,9 @@ func TestBuiltinLeaderMenuSetsDirectKey(t *testing.T) {
 func TestBuiltinLeaderMenuHiddenEntryStillActivatesByKey(t *testing.T) {
 	dir := t.TempDir()
 	screen := newScreen(t, 80, 14)
-	app := newTestApp(t, screen, Options{
-		CWD:    func() (string, error) { return dir, nil },
-		Config: config.Default(),
-		Paths:  config.Paths{ConfigDir: filepath.Join(dir, "config")},
-	})
+	opts := testOptions(dir)
+	opts.Paths = config.Paths{ConfigDir: filepath.Join(dir, "config")}
+	app := newTestApp(t, screen, opts)
 	if err := app.model.Primary.Load(dir); err != nil {
 		t.Fatal(err)
 	}
@@ -484,11 +480,9 @@ func TestBuiltinLeaderMenuHiddenEntryStillActivatesByKey(t *testing.T) {
 func TestBuiltinLeaderMenuOmitsDirectKeysWhenHeightConstrained(t *testing.T) {
 	dir := t.TempDir()
 	screen := newScreen(t, 80, 14)
-	app := newTestApp(t, screen, Options{
-		CWD:    func() (string, error) { return dir, nil },
-		Config: config.Default(),
-		Paths:  config.Paths{ConfigDir: filepath.Join(dir, "config")},
-	})
+	opts := testOptions(dir)
+	opts.Paths = config.Paths{ConfigDir: filepath.Join(dir, "config")}
+	app := newTestApp(t, screen, opts)
 	if err := app.model.Primary.Load(dir); err != nil {
 		t.Fatal(err)
 	}
@@ -511,11 +505,9 @@ func TestBuiltinLeaderMenuOmitsDirectKeysWhenHeightConstrained(t *testing.T) {
 func TestBuiltinLeaderMenuOmitsDirectKeysWhenWidthConstrained(t *testing.T) {
 	dir := t.TempDir()
 	screen := newScreen(t, 40, 50)
-	app := newTestApp(t, screen, Options{
-		CWD:    func() (string, error) { return dir, nil },
-		Config: config.Default(),
-		Paths:  config.Paths{ConfigDir: filepath.Join(dir, "config")},
-	})
+	opts := testOptions(dir)
+	opts.Paths = config.Paths{ConfigDir: filepath.Join(dir, "config")}
+	app := newTestApp(t, screen, opts)
 	if err := app.model.Primary.Load(dir); err != nil {
 		t.Fatal(err)
 	}
