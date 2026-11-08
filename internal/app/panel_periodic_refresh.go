@@ -35,6 +35,8 @@ type panelRefreshApplyPayload struct {
 	TreeFetched  map[string]panel.TreePrefetchResult
 	// TreeChanged: the root listing is unchanged but a prefetched nested directory differs.
 	TreeChanged bool
+	// Progress marks a re-list for a running fileindex scan's results (listingRefreshOpts).
+	Progress bool
 }
 
 // treeChildrenChanged reports whether any fetched child listing differs from its baseline.
@@ -86,6 +88,20 @@ func (a *App) handlePanelRefreshTick() {
 // flight), so a caller that must not lose the request can ask again shortly; a contended volume
 // is not transient (job reloads and the next tick cover it).
 func (a *App) schedulePanelListingRefresh(panelID int, treeIDs ...string) (retry bool) {
+	return a.scheduleListingRefresh(panelID, listingRefreshOpts{treeIDs: treeIDs})
+}
+
+// listingRefreshOpts tunes scheduleListingRefresh. indexProgress is a re-list for a running
+// fileindex scan's results: a scan hashes its volume by design, and this re-list is rate limited
+// and mostly reads the index, so the contention gate does not hold it back; the walk of a drift pass
+// waits for the scan's end.
+type listingRefreshOpts struct {
+	treeIDs       []string
+	indexProgress bool
+}
+
+func (a *App) scheduleListingRefresh(panelID int, opts listingRefreshOpts) (retry bool) {
+	treeIDs := opts.treeIDs
 	p := a.panelByID(panelID)
 	if p == nil || p.Path.IsZero() {
 		return false
@@ -96,7 +112,7 @@ func (a *App) schedulePanelListingRefresh(panelID int, treeIDs ...string) (retry
 	if panelID < 0 || panelID > ui.SecondaryPanel {
 		return false
 	}
-	if a.pathVolumeContendsWithActiveJob(p.PathString()) && !ui.PanelListsJobRemovedSources(p.PathString(), a.model.JobPathMarks) {
+	if !opts.indexProgress && a.pathVolumeContendsWithActiveJob(p.PathString()) && !ui.PanelListsJobRemovedSources(p.PathString(), a.model.JobPathMarks) {
 		// A job is already saturating this volume; the next tick retries. The one exception is a
 		// directory the job is removing rows from, which must not keep listing what is gone.
 		return false
@@ -181,6 +197,7 @@ func (a *App) schedulePanelListingRefresh(panelID int, treeIDs ...string) (retry
 			TreeChildren:         children,
 			TreeFetched:          fetched,
 			TreeChanged:          treeChanged,
+			Progress:             opts.indexProgress,
 		}))
 	}(panelID, snap, path, epoch, baseline)
 	return false
@@ -207,7 +224,9 @@ func (a *App) applyPanelListingRefresh(p panelRefreshApplyPayload) bool {
 	}
 	pan.GitignoreActive = p.GitignoreActive
 	pan.DotfilesHiddenActive = p.DotfilesHiddenActive
+	pan.SkipIndexDrift = p.Progress
 	dirty, err := pan.ApplyPeriodicRefresh(p.Path, p.Entries, a.panelViewportRows(p.PanelID), p.Probes, p.TreeChildren, p.TreeChanged)
+	pan.SkipIndexDrift = false
 	if err != nil {
 		return false
 	}

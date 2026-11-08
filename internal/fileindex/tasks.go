@@ -74,6 +74,7 @@ func (x *Index) scanTask(paths []string, fast bool, title, hashStep string, root
 				return err
 			}
 			rep := newScanReporter(r, skipHash)
+			rep.onCommit = x.OnScanCommit
 			if rootDone != nil {
 				rep.rootDone = func(i int) { rootDone(paths[i], rep.Log) }
 			}
@@ -217,9 +218,10 @@ type scanReporter struct {
 
 	mu       sync.Mutex
 	p        jobs.TaskProgress
-	skipHash bool        // the scan stops after pruning
-	rootDone func(i int) // optional, runs before the root's job source finishes
-	hashing  bool        // Pruned was reached and hashing follows
+	skipHash bool                // the scan stops after pruning
+	rootDone func(i int)         // optional, runs before the root's job source finishes
+	onCommit func(dirs []string) // optional, Index.OnScanCommit
+	hashing  bool                // Pruned was reached and hashing follows
 	bytes    float64
 	lastTick time.Time
 }
@@ -326,6 +328,13 @@ func (s *scanReporter) Prune(dir string, _ int) {
 
 func (s *scanReporter) Log(msg string) { s.w.warn(msg) }
 
+// Committed passes the directories of a committed batch on (scan.CommitReporter).
+func (s *scanReporter) Committed(_ scan.Stage, dirs []string) {
+	if s.onCommit != nil {
+		s.onCommit(dirs)
+	}
+}
+
 // RootDone finishes source i: scan.Run's roots are ScanTask's paths, which are the job's sources.
 func (s *scanReporter) RootDone(i int) {
 	if s.rootDone != nil {
@@ -347,13 +356,14 @@ func (s *scanReporter) finish(stats scan.Stats) {
 	s.Hashed(stats)
 }
 
-// compile-time check: scanReporter is a scan.Reporter, a scan.PhaseReporter, a scan.RootReporter and a
-// scan.FileReporter.
+// compile-time check: scanReporter is a scan.Reporter, a scan.PhaseReporter, a scan.RootReporter, a
+// scan.FileReporter and a scan.CommitReporter.
 var (
-	_ scan.Reporter      = (*scanReporter)(nil)
-	_ scan.PhaseReporter = (*scanReporter)(nil)
-	_ scan.RootReporter  = (*scanReporter)(nil)
-	_ scan.FileReporter  = (*scanReporter)(nil)
+	_ scan.Reporter       = (*scanReporter)(nil)
+	_ scan.PhaseReporter  = (*scanReporter)(nil)
+	_ scan.RootReporter   = (*scanReporter)(nil)
+	_ scan.FileReporter   = (*scanReporter)(nil)
+	_ scan.CommitReporter = (*scanReporter)(nil)
 )
 
 // DifferencesTask returns the task job listing where the files under root (a local host path,

@@ -56,8 +56,13 @@ type Index struct {
 	reported    sync.Once
 	// OnChange, when set, is called (from the goroutine that made it) after a change to what the
 	// index holds: a scan or prune task ends, an entry is moved or removed, or the database is
-	// created or upgraded.
-	OnChange func()
+	// created or upgraded. dirs names the directories whose listings changed, as the index records
+	// them; nil means anything may have.
+	OnChange func(dirs []string)
+	// OnScanCommit, when set, is called while a scan runs, after each commit, with the directories
+	// it changed. It runs on the path that commits and must return quickly. The task's end still
+	// calls OnChange.
+	OnScanCommit func(dirs []string)
 
 	// Apply's queue (follow.go): batches waiting for the one goroutine that applies them.
 	applyMu      sync.Mutex
@@ -65,6 +70,10 @@ type Index struct {
 	applyDone    chan struct{} // set while a drain runs, closed when it ends
 	// gone counts, per path as the index records it, the queued changes that took it off the disk.
 	gone map[string]int
+
+	// linkedDirs maps a directory Overlay was given (a path string) to the path the index records it
+	// under, where the two differ (ShownDir).
+	linkedDirs sync.Map
 
 	// writeMu serializes pc's own index writes: Apply's drain and the backend's Rename and Remove.
 	writeMu sync.Mutex

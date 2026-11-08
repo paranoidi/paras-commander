@@ -30,6 +30,9 @@ func (x *Index) Overlay(ctx context.Context, dir pathloc.Path, entries []fsbacke
 	if err != nil {
 		return entries, nil
 	}
+	if raw, err := dir.FilePath(); err == nil && filepath.Clean(raw) != host {
+		x.linkedDirs.Store(dir.String(), host)
+	}
 	d, err := x.DB()
 	if err != nil {
 		return entries, nil
@@ -99,6 +102,30 @@ func (x *Index) Overlay(ctx context.Context, dir pathloc.Path, entries []fsbacke
 		}
 	}
 	return out, nil
+}
+
+// ShownDir is the directory a panel at dir shows, as the index records it, to compare with OnChange's
+// and OnScanCommit's directories; "" when dir is neither local nor fileindex://. It does no I/O, so it
+// suits the UI goroutine: a path through a symlink is known from the panel's last Overlay.
+func (x *Index) ShownDir(dir pathloc.Path) string {
+	switch dir.Scheme() {
+	case pathloc.SchemeFile:
+		if host, ok := x.linkedDirs.Load(dir.String()); ok {
+			return host.(string)
+		}
+		raw, err := dir.FilePath()
+		if err != nil {
+			return ""
+		}
+		return filepath.Clean(raw)
+	case pathloc.SchemeFileIndex:
+		host, err := pathloc.IndexHostPath(dir)
+		if err != nil {
+			return ""
+		}
+		return filepath.Clean(host)
+	}
+	return ""
 }
 
 // DirDrift checks each of host's indexed subdirectories (names) against the index and returns

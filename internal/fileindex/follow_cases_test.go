@@ -4,9 +4,12 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
+	"sync"
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/fschange"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 func mustRenameFile(t *testing.T, from, to string) {
@@ -202,5 +205,69 @@ func TestEditTagsReportsSkippedAndOtherCopies(t *testing.T) {
 	res, err = x.EditTags([]string{filepath.Join(root, "copy.txt")}, []string{"amber"}, false, false)
 	if err != nil || res.Changed != 1 || res.OtherCopies != 1 {
 		t.Fatalf("removal: %+v, %v", res, err)
+	}
+}
+
+// A pass names the directories whose listings it changed.
+func TestApplyScopesOnChange(t *testing.T) {
+	x, root := scanned(t)
+	var got [][]string
+	x.OnChange = func(dirs []string) { got = append(got, dirs) }
+	lantern := filepath.Join(root, "lantern")
+	meadow, moved := filepath.Join(lantern, "meadow.txt"), filepath.Join(root, "meadow.txt")
+	mustRenameFile(t, meadow, moved)
+	applyAndWait(x, []fschange.Change{{Kind: fschange.Renamed, From: meadow, Path: moved}})
+	if len(got) != 1 || !slices.Equal(slices.Sorted(slices.Values(got[0])), []string{root, lantern}) {
+		t.Fatalf("OnChange scopes = %v, want one naming %s and %s", got, root, lantern)
+	}
+}
+
+func TestScanReportsCommittedDirs(t *testing.T) {
+	x := testIndex(t, initIndex(t))
+	root := tree(t)
+	var mu sync.Mutex
+	seen := map[string]bool{}
+	x.OnScanCommit = func(dirs []string) {
+		mu.Lock()
+		defer mu.Unlock()
+		for _, d := range dirs {
+			seen[d] = true
+		}
+	}
+	if err := x.ScanTask([]string{root}).Run(context.Background(), &recReporter{}); err != nil {
+		t.Fatal(err)
+	}
+	if !seen[root] || !seen[filepath.Join(root, "lantern")] {
+		t.Fatalf("reported %v", seen)
+	}
+}
+
+// A panel can show a directory through a symlink, while scopes name it as the index records it.
+func TestShownDirFollowsSymlinkAfterOverlay(t *testing.T) {
+	x, root := scanned(t)
+	link := filepath.Join(t.TempDir(), "shortcut")
+	if err := os.Symlink(root, link); err != nil {
+		t.Fatal(err)
+	}
+	loc, err := pathloc.File(link)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := x.Overlay(context.Background(), loc, listLocal(t, link)); err != nil {
+		t.Fatal(err)
+	}
+	if got := x.ShownDir(loc); got != root {
+		t.Fatalf("ShownDir = %q, want %q", got, root)
+	}
+	plain, _ := pathloc.File(root)
+	if got := x.ShownDir(plain); got != root {
+		t.Fatalf("ShownDir = %q, want %q", got, root)
+	}
+	indexed, err := pathloc.FileIndex(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := x.ShownDir(indexed); got != root {
+		t.Fatalf("ShownDir of a fileindex:// path = %q, want %q", got, root)
 	}
 }

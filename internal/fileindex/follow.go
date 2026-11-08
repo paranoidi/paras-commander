@@ -86,7 +86,7 @@ func (x *Index) drainApplies(done chan struct{}) {
 			x.releaseGone(b.gone)
 		}
 		if changed {
-			x.changed()
+			x.changedIn(batchDirs(batches))
 			time.Sleep(applyPause)
 		}
 	}
@@ -96,6 +96,32 @@ func (x *Index) drainApplies(done chan struct{}) {
 type queuedChanges struct {
 	changes []fschange.Change
 	gone    []string
+}
+
+// batchDirs are the directories whose listings the batches can have changed: those a path left or
+// arrived in.
+func batchDirs(batches []queuedChanges) []string {
+	seen := map[string]bool{}
+	var dirs []string
+	add := func(dir string) {
+		if !seen[dir] {
+			seen[dir] = true
+			dirs = append(dirs, dir)
+		}
+	}
+	for _, b := range batches {
+		for _, p := range b.gone {
+			add(filepath.Dir(p))
+		}
+		for _, c := range b.changes {
+			if c.Kind == fschange.Renamed {
+				if p, err := indexedPath(c.Path); err == nil {
+					add(filepath.Dir(p))
+				}
+			}
+		}
+	}
+	return dirs
 }
 
 // gonePaths are the paths a batch took off the disk, as the index records them.

@@ -28,6 +28,12 @@ func newSourceProgress(n int) *sourceProgress {
 	return &sourceProgress{phases: make([]SourcePhase, n), current: -1}
 }
 
+// newTaskSourceProgress tracks every source of a task, even a lone one: its source finishes while
+// the task goes on (FinishSource), and the file-list marks follow that.
+func newTaskSourceProgress(n int) *sourceProgress {
+	return &sourceProgress{phases: make([]SourcePhase, n), current: -1}
+}
+
 // StartSource marks source i started and the previously started source finished (unless it
 // was deferred back to queued): executors work on one source at a time. It is the
 // ops.Options.OnSourceStart of the job.

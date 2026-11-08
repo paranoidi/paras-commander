@@ -267,6 +267,9 @@ type State struct {
 	WithIndex bool
 	// IndexOverlay merges the index into a WithIndex listing during the fetch (set by app).
 	IndexOverlay IndexOverlayFunc
+	// SkipIndexDrift holds back the drift pass while a running scan's progress listing lands: the
+	// pass walks the disk, and the scan's end triggers one anyway (set by app around the apply).
+	SkipIndexDrift bool
 	// ScheduleIndexDrift runs a directory-drift pass (set by app): the automatic one after a WithIndex
 	// listing and the explicit one from RequestIndexDrift.
 	ScheduleIndexDrift IndexDriftScheduler
@@ -1768,7 +1771,9 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 			s.HistoryIndex = 0
 		}
 	}
-	s.scheduleIndexDrift()
+	if !s.SkipIndexDrift {
+		s.scheduleIndexDrift()
+	}
 	if s.OnDirectoryChange != nil {
 		s.OnDirectoryChange()
 	}

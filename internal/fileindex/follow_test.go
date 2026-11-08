@@ -33,7 +33,7 @@ func applyAndWait(x *Index, batches ...[]fschange.Change) {
 
 func changeCounter(x *Index) *atomic.Int32 {
 	var n atomic.Int32
-	x.OnChange = func() { n.Add(1) }
+	x.OnChange = func([]string) { n.Add(1) }
 	return &n
 }
 

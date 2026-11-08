@@ -53,7 +53,8 @@ type asyncWakeQueues struct {
 	// indexDrift holds fileindex directory-drift results (index_overlay.go).
 	indexDrift coalescingQueue[indexDriftPayload]
 	// dirWatch holds the directories the inotify watcher reported (panel_dir_watch.go).
-	dirWatch coalescingQueue[string]
+	dirWatch  coalescingQueue[string]
+	indexScan coalescingQueue[string]
 	// metaFS holds the filesystem change batches on their way to the meta columns (meta_fs_sink.go).
 	metaFS   coalescingQueue[[]fschange.Change]
 	carousel [ui.PanelIDCount]coalescingQueue[carouselSnapshotPayload]
