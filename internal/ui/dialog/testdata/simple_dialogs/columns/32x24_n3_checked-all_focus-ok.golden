@@ -7,8 +7,8 @@
   │ [ ] Owner                │  
   │ [ ] Group                │  
   │ [ ] Links                │  
-  │                          │  
-  ├────────── Meta ──────────┤  
+  ├──────────────────────────┤  
+  │ Meta:                    │  
   │ [x] lantern              │  
   │ [x] orchard              │  
   │ [x] velvet               │  
@@ -30,7 +30,7 @@ aabbbbbbbcbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbcbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbcbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbccccccbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabdddddcbbbbbbbbbbbbbbbbbbbbbaa
 aabdddddbbbbbbcbbbbbbbbbbbbbbbaa
 aabdddddcbbbbbbbbbbbbbbbbbbbbbaa

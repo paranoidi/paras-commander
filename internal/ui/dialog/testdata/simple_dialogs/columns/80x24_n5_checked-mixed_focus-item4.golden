@@ -4,8 +4,8 @@
             │ [ ] Size          [ ] Accessed      [ ] Owner        │            
             │ [ ] Modified      [ ] Created       [ ] Group        │            
             │ [ ] Changed       [ ] Permissions   [ ] Links        │            
-            │                                                      │            
-            ├──────────────────────── Meta ────────────────────────┤            
+            ├──────────────────────────────────────────────────────┤            
+            │ Meta:                                                │            
             │ [x] lantern       [x] velvet        [x] ribbon       │            
             │ [ ] orchard       [ ] timber                         │            
             ├──────────────────────────────────────────────────────┤            
@@ -30,7 +30,7 @@ aaaaaaaaaaaabbbbbbcbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbaaaaaaaaaaaa
 aaaaaaaaaaaabbbbbbcbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbaaaaaaaaaaaa
 aaaaaaaaaaaabbbbbbbcbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbaaaaaaaaaaaa
 aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbccccccbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
+aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
 aaaaaaaaaaaabdddddcbbbbbbbbbbbbdddddcbbbbbbbbbbbbdddddeceeeebbbbbbbbaaaaaaaaaaaa
 aaaaaaaaaaaabbbbbbbbbbbbcbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
 aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa

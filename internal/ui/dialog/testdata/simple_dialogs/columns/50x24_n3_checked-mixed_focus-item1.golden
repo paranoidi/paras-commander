@@ -5,8 +5,8 @@
       │ [ ] Changed       [ ] Group        │      
       │ [ ] Accessed      [ ] Links        │      
       │ [ ] Created                        │      
-      │                                    │      
-      ├─────────────── Meta ───────────────┤      
+      ├────────────────────────────────────┤      
+      │ Meta:                              │      
       │ [x] lantern       [x] velvet       │      
       │ [ ] orchard                        │      
       ├────────────────────────────────────┤      
@@ -31,7 +31,7 @@ aaaaaabbbbbbbcbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbaaaaaa
 aaaaaabbbbbbcbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbaaaaaa
 aaaaaabbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
-aaaaaabbbbbbbbbbbbbbbbccccccbbbbbbbbbbbbbbbbaaaaaa
+aaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaaabdddddcbbbbbbbbbbbbdddddcbbbbbbbbbbbbbaaaaaa
 aaaaaabeeeeeeeeeeecbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa

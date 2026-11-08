@@ -116,8 +116,8 @@ func ColumnsDialogView(s ColumnsDialogState, screenW, screenH int) dlg.Spec {
 }
 
 // columnsMainView has one checkbox per column above OK / Cancel: the file columns with no heading,
-// then each meta entry Section under a separator headed by its name (entries with no section under
-// Meta). A section with no entries is not shown. Every section uses one grid (newColumnsGrid), so the
+// then each meta entry Section under a separator and a label row with its name (entries with no
+// section under Meta). A section with no entries is not shown. Every section uses one grid (newColumnsGrid), so the
 // columns line up across sections. Plain o / c press the buttons.
 func columnsMainView(s ColumnsDialogState, screenW int) dlg.Spec {
 	shortcuts := ColumnsDialogShortcuts(s.Entries)
@@ -231,9 +231,10 @@ func (g columnsGrid) group(items []dlg.Item) dlg.Group {
 	return dlg.Group{Columns: [][]dlg.Item{out}}
 }
 
-// columnsSectionHeader is a section's heading: a blank row, then a separator with its name.
+// columnsSectionHeader starts a section the way the preview settings dialog does: a plain
+// separator, then the section's name on a label row.
 func columnsSectionHeader(label string) dlg.Group {
-	return dlg.Group{Columns: [][]dlg.Item{{{Kind: dlg.KindSpacer}, {Kind: dlg.KindSeparator, Label: label}}}}
+	return dlg.Group{Columns: [][]dlg.Item{{{Kind: dlg.KindSeparator}, {Kind: dlg.KindLabel, Label: label + ":"}}}}
 }
 
 func columnsPickerView(s ColumnsDialogState, screenH int) dlg.Spec {

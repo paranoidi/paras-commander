@@ -5,8 +5,8 @@
             │ [ ] Size          [ ] Accessed      [ ] Owner        │            
             │ [ ] Modified      [ ] Created       [ ] Group        │            
             │ [ ] Changed       [ ] Permissions   [ ] Links        │            
-            │                                                      │            
-            ├──────────────────────── Meta ────────────────────────┤            
+            ├──────────────────────────────────────────────────────┤            
+            │ Meta:                                                │            
             │ [ ] lantern       [ ] orchard       [ ] velvet       │            
             ├──────────────────────────────────────────────────────┤            
             │ Shows the lantern count                              │            
@@ -30,7 +30,7 @@ aaaaaaaaaaaabbbbbbcbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbaaaaaaaaaaaa
 aaaaaaaaaaaabbbbbbcbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbaaaaaaaaaaaa
 aaaaaaaaaaaabbbbbbbcbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbaaaaaaaaaaaa
 aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbccccccbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
+aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
 aaaaaaaaaaaabdddddcddddddbbbbbbbbbbbbbbbbbcbbbbbbbbbbbcbbbbbbbbbbbbbaaaaaaaaaaaa
 aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
 aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa

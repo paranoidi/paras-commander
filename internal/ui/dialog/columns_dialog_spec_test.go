@@ -35,12 +35,15 @@ func TestColumnsDialogShortcuts_unique(t *testing.T) {
 	}
 }
 
-// sectionLabels lists the labelled separators of a spec, in order.
+// sectionLabels lists the section label rows of a spec, in order.
 func sectionLabels(spec dlg.Spec) []string {
 	var labels []string
 	for _, g := range spec.Groups {
 		for _, it := range g.Columns[0] {
 			if it.Kind == dlg.KindSeparator && it.Label != "" {
+				panic("separators carry no text: " + it.Label)
+			}
+			if it.Kind == dlg.KindLabel {
 				labels = append(labels, it.Label)
 			}
 		}
@@ -67,9 +70,9 @@ func TestColumnsDialogView_sectionsHideWhenEmpty(t *testing.T) {
 		want    []string
 	}{
 		{"file only", nil, nil},
-		{"meta", []dialog.MetaEntry{{Name: "walnut"}}, []string{"Meta"}},
-		{"index", []dialog.MetaEntry{{Name: "fileindex.tags", Label: "Tags", Section: "File Index"}}, []string{"File Index"}},
-		{"both", []dialog.MetaEntry{{Name: "walnut"}, {Name: "fileindex.tags", Label: "Tags", Section: "File Index"}}, []string{"Meta", "File Index"}},
+		{"meta", []dialog.MetaEntry{{Name: "walnut"}}, []string{"Meta:"}},
+		{"index", []dialog.MetaEntry{{Name: "fileindex.tags", Label: "Tags", Section: "File Index"}}, []string{"File Index:"}},
+		{"both", []dialog.MetaEntry{{Name: "walnut"}, {Name: "fileindex.tags", Label: "Tags", Section: "File Index"}}, []string{"Meta:", "File Index:"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
