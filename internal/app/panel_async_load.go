@@ -10,6 +10,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
+	"github.com/paranoidi/paras-commander/internal/fschange"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -53,6 +54,8 @@ type asyncWakeQueues struct {
 	indexDrift coalescingQueue[indexDriftPayload]
 	// dirWatch holds the directories the inotify watcher reported (panel_dir_watch.go).
 	dirWatch coalescingQueue[string]
+	// metaFS holds the filesystem change batches on their way to the meta columns (meta_fs_sink.go).
+	metaFS   coalescingQueue[[]fschange.Change]
 	carousel [ui.PanelIDCount]coalescingQueue[carouselSnapshotPayload]
 }
 

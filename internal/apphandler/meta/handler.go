@@ -54,6 +54,10 @@ func (h *Handler) HandleWake(d WakePayload) {
 	if d.Gen == h.runGen[d.PanelID] {
 		if d.Values != nil {
 			for path, v := range d.Values {
+				// A provider works from a snapshot of the listing: a row dropped since then stays dropped.
+				if !h.rowExists(d.PanelID, d.EntryName, path) {
+					continue
+				}
 				d.Path, d.Value = path, v
 				h.applyWakeResult(d)
 			}
@@ -68,6 +72,17 @@ func (h *Handler) HandleWake(d WakePayload) {
 		}
 		h.scheduleRenderFlush(d.PanelID)
 	}
+}
+
+// rowExists reports whether the named column holds a cell for path.
+func (h *Handler) rowExists(panelID int, entryName, path string) bool {
+	for _, c := range h.model.MetaResults[panelID] {
+		if c.EntryName == entryName {
+			_, ok := c.Results[path]
+			return ok
+		}
+	}
+	return false
 }
 
 func (h *Handler) applyWakeResult(d WakePayload) {
@@ -283,10 +298,10 @@ func (h *Handler) rerunActivePanels() {
 	}
 }
 
-// ReconcileForPanel detects entries that appeared in the panel listing after a same-directory
-// refresh (e.g. rename, flatten, periodic scan) and dispatches meta for just those entries into
-// the current run, leaving every other row's value alone. Called from reconcileAfterEvent; must
-// be cheap when nothing is missing.
+// ReconcileForPanel detects entries with no cell after a same-directory refresh (e.g. rename,
+// flatten, periodic scan) or ApplyFSChanges, and dispatches meta for just those entries into the
+// current run, leaving every other row's value alone. It also prunes gone rows (pruneGone). Called
+// from reconcileAfterEvent; must be cheap when nothing is missing.
 func (h *Handler) ReconcileForPanel(panelID int) {
 	cols := h.model.MetaResults[panelID]
 	if len(cols) == 0 {
@@ -303,6 +318,7 @@ func (h *Handler) ReconcileForPanel(panelID int) {
 	if p == nil {
 		return
 	}
+	h.pruneGone(panelID, p)
 	groups := []dirEntries{{dir: p.PathString(), entries: p.Entries}}
 	// LoadedTreeChildren allocates, so the tree is walked only when children were attached or the
 	// tree children were attached since the last walk (a run's walk is stamped by runForPanel).
@@ -331,6 +347,13 @@ func (h *Handler) ReconcileForPanel(panelID int) {
 		return
 	}
 	h.dispatch(r.ctx, panelID, r.defs, cols, missing)
+}
+
+// panelGroups snapshots every listing the panel shows: its own and each loaded tree node's. The
+// result is safe to hand to a background goroutine.
+func panelGroups(p *panel.State) []dirEntries {
+	root := dirEntries{dir: p.PathString(), entries: append([]localfs.Entry(nil), p.Entries...)}
+	return append([]dirEntries{root}, treeDirEntries(p)...)
 }
 
 // treeDirEntries returns one group per loaded tree node (dir is the node ID, the child listing's
@@ -502,6 +525,7 @@ func (h *Handler) limitActiveNames(names []string) []string {
 func (h *Handler) deactivate(panelID int) {
 	h.invalidatePendingLoads(panelID)
 	h.stopRun(panelID)
+	h.gone[panelID] = nil
 	h.model.MetaResults[panelID] = nil
 	h.activeEntries[panelID] = nil
 	h.navPath[panelID] = ""
@@ -584,7 +608,8 @@ func (h *Handler) HandlePanelDirChanged(panelID int) {
 }
 
 // RefreshPanel handles a user-requested panel refresh: drops the session `cache = true`
-// results and re-runs the panel's active meta commands so every value is recalculated.
+// results and re-runs the panel's active meta commands so every value is recalculated. Changes
+// pc makes itself go through ApplyFSChanges and RefreshProviders instead.
 func (h *Handler) RefreshPanel(panelID int) {
 	h.clearCache()
 	if len(h.model.MetaResults[panelID]) == 0 || len(h.activeEntries[panelID]) == 0 {
@@ -827,9 +852,10 @@ func (h *Handler) armRenderFlush(panelID int, delay time.Duration) {
 // runForPanel runs meta commands for every active entry on panelID using worker pools.
 func (h *Handler) runForPanel(panelID int, cmdDefs []metacmds.MetaEntry, cols []ui.MetaColumnState) {
 	panel := h.host.PanelByID(panelID)
-	groups := append([]dirEntries{{dir: panel.PathString(), entries: append([]localfs.Entry(nil), panel.Entries...)}}, treeDirEntries(panel)...)
+	groups := panelGroups(panel)
 
 	h.stopRun(panelID)
+	h.gone[panelID] = nil
 	ctx, cancel := context.WithCancel(context.Background())
 	h.run[panelID] = &metaRun{ctx: ctx, cancel: cancel, defs: cmdDefs}
 	h.runGen[panelID]++
@@ -1040,8 +1066,12 @@ func (h *Handler) runProvider(ctx context.Context, panelID int, gen uint64, p *m
 
 // entryCmd returns the shell command to run for entry e under cmdDef.
 // when filters every row; files use file, directories use dirs.
-// Returns ("", false) when the entry should not be dispatched (filtered, no command, or cached).
+// Returns ("", false) when the entry should not be dispatched (a ghost row, which has no file to
+// run on; filtered, no command, or cached).
 func (h *Handler) entryCmd(cmdDef metacmds.MetaEntry, e localfs.Entry, dir string) (cmd string, ok bool) {
+	if e.IndexStatus == localfs.IndexStatusMissing {
+		return "", false
+	}
 	matched, err := cmdDef.MatchesRow(e, dir)
 	if err != nil || !matched {
 		return "", false
@@ -1145,6 +1175,7 @@ func (h *Handler) CancelAll() {
 // stopRun cancels the in-flight meta run for panelID, if any, and clears it.
 func (h *Handler) stopRun(panelID int) {
 	h.pendingReveal[panelID].Invalidate()
+	h.stopProviderRefresh(panelID)
 	if r := h.run[panelID]; r != nil {
 		r.cancel()
 		h.run[panelID] = nil

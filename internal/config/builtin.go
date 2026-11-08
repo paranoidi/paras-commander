@@ -81,6 +81,9 @@ const (
 	// DefaultDirWatchDebounce is the throttle window of directory-watch wakeups: changes within
 	// it share one panel re-list, and a continuous stream still re-lists once per window.
 	DefaultDirWatchDebounce = 250 * time.Millisecond
+	// MetaFSChangeDebounce is the throttle window of filesystem changes reaching the meta columns:
+	// the reports of a busy job within it invalidate rows in one pass.
+	MetaFSChangeDebounce = 100 * time.Millisecond
 	// MetaLayoutInterval is how long a panel holds its meta column layout after a run starts, and
 	// the minimum gap between later layout updates while commands are running. Keep it below
 	// meta.MinColumnShownBeforeToast so the first layout of a run stays quiet.

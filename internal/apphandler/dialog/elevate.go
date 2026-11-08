@@ -9,14 +9,9 @@ import (
 )
 
 // fsCtx returns a background context carrying the fschange sink of a dialog operation (ADR 0023):
-// the disk-usage engine, and the fileindex when the active panel follows it (panel.FollowsIndex),
-// so the changes reach the cache and the index.
+// the shared sink, and the fileindex when the active panel follows it (panel.FollowsIndex).
 func (h *Handler) fsCtx() context.Context {
-	// An interface holding a nil *Engine is not nil: only a real engine goes into the sink.
-	var sink fschange.Sink
-	if h.diskUsage != nil {
-		sink = h.diskUsage
-	}
+	sink := h.fsSink
 	if h.indexSink != nil && panel.FollowsIndex(h.host.ActivePanel()) {
 		sink = fschange.Multi(sink, h.indexSink)
 	}

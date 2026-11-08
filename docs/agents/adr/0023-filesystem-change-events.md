@@ -22,4 +22,4 @@ The local filesystem primitives in `internal/ops` report what they did (`fschang
 - A new operation stays in step by calling the shared primitives; reporting is not opt-in per entry point.
 - Cache updates are asynchronous everywhere, so a dialog rename's size may be missing for one apply pass.
 - A dirty path shows as pending (in every panel) until its refresh scan lands.
-- Other subscribers (panel reload targeting, git status, preview prefetch, find index) can use the same events later. The disk-usage engine and, for operations started from a panel that shows the fileindex, `fileindex.Index` are the sinks today.
+- Other subscribers (panel reload targeting, git status, preview prefetch, find index) can use the same events later. The disk-usage engine, the meta columns (`metaFSSink` in `internal/app`) and, for operations started from a panel that shows the fileindex, `fileindex.Index` are the sinks today.

@@ -402,8 +402,8 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, com
 	}
 }
 
-// jobSink is the sink a job's operations report to: the disk-usage sink, plus the fileindex sink
-// when the job follows the index.
+// jobSink is the sink a job's operations report to: the shared sink, plus the fileindex sink when
+// the job follows the index.
 func jobSink(job *jobs.Job, fsSink, indexSink fschange.Sink) fschange.Sink {
 	if job.FollowIndex {
 		return fschange.Multi(fsSink, indexSink)

@@ -373,3 +373,36 @@ func TestRunForPanel_shellColumnRunsInTreeChildDirectory(t *testing.T) {
 		}
 	}
 }
+
+// A ghost row has no file to run a command on, but the index knows it, so providers still see it.
+func TestRunForPanel_ghostRowSkipsShellColumnsOnly(t *testing.T) {
+	p := &metacmds.Provider{Name: "lantern.tags", Values: func(_ context.Context, _ string, entries []localfs.Entry) (map[string]string, error) {
+		out := map[string]string{}
+		for _, e := range entries {
+			out[e.Path] = "seen"
+		}
+		return out, nil
+	}}
+	screen, h, pan, entries := providerFixture(t, p)
+	ghost := "fileindex://" + filepath.Join(pan.PathString(), "bramble.txt")
+	pan.Entries = append(pan.Entries, localfs.Entry{Name: "bramble.txt", Path: ghost, Type: localfs.EntryFile, IndexStatus: localfs.IndexStatusMissing})
+	defs := []metacmds.MetaEntry{{Name: "lantern.tags", Provider: p}, {Name: "words", File: "echo counted", Dirs: "echo counted"}}
+
+	h.runForPanel(0, defs, []ui.MetaColumnState{{EntryName: "lantern.tags"}, {EntryName: "words"}})
+
+	if got := h.model.MetaResults[0][1].PendingCount; got != len(entries) {
+		t.Fatalf("shell PendingCount = %d, want %d (every row but the ghost)", got, len(entries))
+	}
+	pumpWakes(t, screen, h, 0)
+
+	tags, words := h.model.MetaResults[0][0], h.model.MetaResults[0][1]
+	if got, ok := words.Results[ghost]; !ok || got != "" {
+		t.Fatalf("ghost shell cell = %q (present %v), want empty", got, ok)
+	}
+	if tags.Results[ghost] != "seen" {
+		t.Fatalf("ghost provider cell = %q, want the provider to cover it", tags.Results[ghost])
+	}
+	if words.Results[entries[0].Path] != "counted" {
+		t.Fatalf("real row = %q, want the command's output", words.Results[entries[0].Path])
+	}
+}

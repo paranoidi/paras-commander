@@ -117,6 +117,9 @@ type Deps struct {
 	DiskUsage       *diskusage.Engine
 	DiskUsageIgnore diskusage.ShouldIgnoreFolder
 
+	// FSSink receives the filesystem changes of every dialog operation (ADR 0023). Nil disables it.
+	FSSink fschange.Sink
+
 	// FileIndex receives the filesystem changes of dialog operations started from a panel that
 	// follows the fileindex (panel.FollowsIndex). Nil disables it; a nil *fileindex.Index is
 	// harmless (Apply ignores its nil receiver) but pass a nil interface to mean "none".
@@ -173,6 +176,7 @@ type Handler struct {
 	dedup                *dedupctrl.Handler
 	diskUsage            *diskusage.Engine
 	diskUsageIgnore      diskusage.ShouldIgnoreFolder
+	fsSink               fschange.Sink
 	indexSink            fschange.Sink
 	promptElevate        ops.PermissionWaitFunc
 	getenv               func(string) string // nil: bookmarks fall back to os.Getenv
@@ -272,6 +276,7 @@ func New(d Deps) *Handler {
 		dedup:                d.Dedup,
 		diskUsage:            d.DiskUsage,
 		diskUsageIgnore:      d.DiskUsageIgnore,
+		fsSink:               d.FSSink,
 		indexSink:            d.FileIndex,
 		promptElevate:        d.PromptElevate,
 		getenv:               d.Getenv,
