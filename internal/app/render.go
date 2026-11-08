@@ -659,7 +659,8 @@ func (a *App) zoomActivePanelSuppressedByNameWidth(width int) bool {
 	}
 	nameW := ui.PanelNameColumnWidth(width/2, *a.activePanel(), a.model.UseNerdfontIcons,
 		a.model.NarrowPanelsNameOnly, a.model.MetaResults[a.model.ActivePanel])
-	return nameW >= n
+	// Zoom only helps when names are cut off; if they all fit at the even split, keep it.
+	return nameW >= n || ui.PanelNamesFit(*a.activePanel(), nameW)
 }
 
 func (a *App) zoomActivePanelSuppressedByTerminalHeight(height int) bool {

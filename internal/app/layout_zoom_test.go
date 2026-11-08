@@ -15,7 +15,7 @@ import (
 
 func TestRuntimeZoomToggleChangesLayoutAndDoesNotPersist(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "a.txt"))
+	writeFile(t, filepath.Join(dir, zoomLongName))
 
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
@@ -88,7 +88,7 @@ inactive_percent = 30
 
 func TestLayoutForTerminalSizeIgnoresZoomInAuxiliaryViews(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "a.txt"))
+	writeFile(t, filepath.Join(dir, zoomLongName))
 
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
@@ -157,7 +157,7 @@ func TestLayoutForTerminalSizeIgnoresHideInactivePanelInAuxiliaryViews(t *testin
 
 func TestLayoutForTerminalSizeDisablesZoomWhileFilePreviewOpen(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "a.txt"))
+	writeFile(t, filepath.Join(dir, zoomLongName))
 
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
@@ -209,10 +209,18 @@ func TestLayoutForTerminalSizeDisablesZoomWhileFilePreviewOpen(t *testing.T) {
 // newNameWidthZoomApp returns an app with default zoom config, icons explicitly on and a
 // terminal of the given width, so the name-column arithmetic is deterministic: with the default
 // brief listing and no meta columns the even-split name column is width/2 - 11 cells.
+// zoomLongName is wider than any panel name column these tests measure, so zoom has cut-off names to fix.
+var zoomLongName = strings.Repeat("harvest-meadow-", 12) + ".txt"
+
 func newNameWidthZoomApp(t *testing.T, width int) *App {
 	t.Helper()
+	return newZoomAppWithFile(t, width, zoomLongName)
+}
+
+func newZoomAppWithFile(t *testing.T, width int, name string) *App {
+	t.Helper()
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "a.txt"))
+	writeFile(t, filepath.Join(dir, name))
 
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
@@ -390,5 +398,16 @@ func TestPanelToggleZoomNoOpWhileFilePreviewOpen(t *testing.T) {
 	}
 	if !strings.Contains(app.model.Message, "Zoom disabled") {
 		t.Fatalf("transient message = %q, want mention of zoom disabled", app.model.Message)
+	}
+}
+
+func TestLayoutForTerminalSizeKeepsEvenSplitWhenNamesFit(t *testing.T) {
+	app := newZoomAppWithFile(t, 160, "quiet.txt")
+	app.model.MetaResults[ui.PrimaryPanel] = wideMetaColumn()
+
+	// Meta columns shrink the name column below the threshold, but every name still fits.
+	lay := app.layoutForTerminalSize(160, 30)
+	if lay.Primary.Width != 80 || lay.Secondary.Width != 80 {
+		t.Fatalf("Left=%d Right=%d want 50/50", lay.Primary.Width, lay.Secondary.Width)
 	}
 }
