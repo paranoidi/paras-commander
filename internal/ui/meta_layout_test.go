@@ -290,8 +290,8 @@ func TestMetaColumnTitleNotClippedWhilePending(t *testing.T) {
 	if got := MetaHeaderText(layouts); got != "genre" {
 		t.Fatalf("header = %q, want %q", got, "genre")
 	}
-	if got := MetaRowText(layouts, "/a"); got != "  …  " {
-		t.Fatalf("pending row = %q, want centered %q", got, "  …  ")
+	if got := MetaRowText(layouts, "/a"); got != "    …" {
+		t.Fatalf("pending row = %q, want right-aligned %q", got, "    …")
 	}
 }
 

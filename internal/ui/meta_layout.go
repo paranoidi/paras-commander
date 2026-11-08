@@ -31,7 +31,7 @@ type MetaColumnLayout struct {
 	Numeric bool
 	// SortArrow is ↑/↓ when the panel sorts by this column, 0 otherwise.
 	SortArrow rune
-	// Pending is the in-flight marker (MetaColumnState.Pending); rows showing it are centered.
+	// Pending is the in-flight marker (MetaColumnState.Pending); rows showing it are right-aligned.
 	Pending string
 	// PendingHidden mirrors MetaColumnState.PendingHidden: rows showing Pending paint blank.
 	PendingHidden bool
@@ -269,7 +269,7 @@ func MetaRowText(layouts []MetaColumnLayout, path string) string {
 				parts[i] = strings.Repeat(" ", lay.Width)
 				continue
 			}
-			parts[i] = centerMetaLine(text, lay.Width)
+			parts[i] = padMetaLineToWidth(text, lay.Width, true)
 			continue
 		}
 		parts[i] = padMetaLineToWidth(text, lay.Width, lay.RightAlign)
@@ -310,7 +310,7 @@ const (
 // in the trimmed payload, the whole string is one legacy cell (width capped by panelListMetaMax).
 // Cells that still overflow after shrinking are clipped with a trailing ellipsis.
 // Column count is the maximum field count across all non-empty rows; shorter rows pad with empty cells.
-// Cells equal to pending (the in-flight marker) are kept verbatim (MetaRowText centers them) and do
+// Cells equal to pending (the in-flight marker) are kept verbatim (MetaRowText right-aligns them) and do
 // not vote on alignment, so a numeric column is right-aligned from the first frame instead of
 // flipping once results arrive.
 func layoutMetaCells(metaResults map[string]string, pending string) (metaColW int, formatted map[string]string, rightAlign bool) {
@@ -487,13 +487,6 @@ func padMetaLineToWidth(s string, w int, right bool) string {
 		return runewidth.FillLeft(s, w)
 	}
 	return runewidth.FillRight(s, w)
-}
-
-// centerMetaLine centers s within w terminal cells.
-func centerMetaLine(s string, w int) string {
-	s = truncateMetaDisplay(s, w)
-	left := (w - runewidth.StringWidth(s)) / 2
-	return runewidth.FillRight(strings.Repeat(" ", left)+s, w)
 }
 
 func alignMetaCell(s string, colW int, rightDigits bool) string {
