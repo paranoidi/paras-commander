@@ -86,6 +86,6 @@ Built-in columns can come with their own rules, such as the [fileindex](fileinde
 
 ## Sorting and filtering
 
-Active meta columns appear in the Sort dialog (`M-s`, up to four). Values that parse as numbers sort numerically, and so do byte sizes with a binary unit (`512`, `800K`, `5.6G`, `1.2 GiB`, `3 MB`), so `du -h`-style output sorts by size; empty, missing and still-running cells sort last. An all-numeric column sorts high-first, others A to Z; the header arrow points toward larger values. Once every value has arrived the panel re-sorts after `[disk_usage].idle_sort_delay_ms` of cursor inactivity rather than reshuffling while results stream in.
+Active meta columns appear in the Sort dialog (`M-s`, up to four). Values that parse as numbers sort numerically, and so do byte sizes with a binary unit (`512`, `800K`, `5.6G`, `1.2 GiB`, `3 MB`), so `du -h`-style output sorts by size; empty, missing and still-running cells sort last, and so does a cell holding only `-`, which also keeps a numeric column numeric. An all-numeric column sorts high-first, others A to Z; the header arrow points toward larger values. Once every value has arrived the panel re-sorts after `[disk_usage].idle_sort_delay_ms` of cursor inactivity rather than reshuffling while results stream in.
 
 The [panel Filter](panel-filter.md) can match meta values with "Include meta" or "Only meta".

@@ -1257,13 +1257,48 @@ func TestTagStateCountsTargetsAcrossParents(t *testing.T) {
 	}
 }
 
+// TestCopiesColumnEmptyFiles: empty files show no count however many there are, hashed or not,
+// and do not change how other files count.
+func TestCopiesColumnEmptyFiles(t *testing.T) {
+	for _, hash := range []bool{true, false} {
+		x := New(config.FileIndexConfig{Database: initIndex(t), Workers: 2, Hash: hash})
+		x.configPath = filepath.Join(t.TempDir(), "absent-config.ini")
+		t.Cleanup(func() { _ = x.Close() })
+		root := t.TempDir()
+		contents := map[string]string{"tundra.txt": "", "walnut.txt": "", "sparrow.txt": "quill"}
+		var entries []localfs.Entry
+		for name, content := range contents {
+			path := filepath.Join(root, name)
+			if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			entries = append(entries, localfs.Entry{Name: name, Path: path, Type: localfs.EntryFile, Size: int64(len(content))})
+		}
+		if err := x.ScanTask([]string{root}).Run(context.Background(), &recReporter{}); err != nil {
+			t.Fatal(err)
+		}
+		v, err := x.Provider(CopiesColumn).Values(context.Background(), root, entries)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wantSparrow := "1"
+		if !hash {
+			wantSparrow = ""
+		}
+		if v[filepath.Join(root, "tundra.txt")] != panel.MetaNoValue || v[filepath.Join(root, "walnut.txt")] != panel.MetaNoValue || v[filepath.Join(root, "sparrow.txt")] != wantSparrow {
+			t.Fatalf("hash=%v: copies = %v, want %q for empty files and %q for sparrow", hash, v, panel.MetaNoValue, wantSparrow)
+		}
+	}
+}
+
 func TestCopiesColumnAlerts(t *testing.T) {
 	t.Parallel()
 	for value, want := range map[string]panel.MetaAlertLevel{
-		"1": panel.MetaAlertNone,
-		"2": panel.MetaAlertWarn,
-		"3": panel.MetaAlertCritical,
-		"9": panel.MetaAlertCritical,
+		panel.MetaNoValue: panel.MetaAlertNone,
+		"1":               panel.MetaAlertNone,
+		"2":               panel.MetaAlertWarn,
+		"3":               panel.MetaAlertCritical,
+		"9":               panel.MetaAlertCritical,
 	} {
 		if got := copiesAlerts().Level(value); got != want {
 			t.Errorf("Level(%q) = %d, want %d", value, got, want)

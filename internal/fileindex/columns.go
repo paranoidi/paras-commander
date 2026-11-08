@@ -62,7 +62,7 @@ func (x *Index) Providers() []*metacmds.Provider {
 	}{
 		{name: StatusColumn, title: "Status", values: x.statusValues},
 		{name: TagsColumn, title: "Tags", values: tagValues},
-		{name: CopiesColumn, title: "Copies", values: byName(copiesQuery, strconv.Itoa), alerts: copiesAlerts()},
+		{name: CopiesColumn, title: "Copies", values: byName(copiesQuery, copiesCell), alerts: copiesAlerts()},
 		{name: FirstSeenColumn, title: "First seen", values: byName(timestampQuery("created_at"), formatTimestamp)},
 		{name: LastSeenColumn, title: "Last seen", values: byName(timestampQuery("last_seen"), formatTimestamp)},
 		{name: TreeFilesColumn, title: "Tree files", values: treeFilesValues},
@@ -187,10 +187,22 @@ UNION ALL SELECT name, CAST(` + col + ` AS TEXT) FROM dir WHERE parent_id IS ?`
 
 // copiesQuery counts, per file directly in a dir, the indexed files with the same content: the
 // same metadata-free hash for a JPEG (as find duplicates groups them), else the same file row.
-const copiesQuery = `SELECT i.filename, CASE WHEN f.sha256_noexif_jpeg IS NOT NULL
+// An empty file gives 0, hashed or not: all empty files share one content, so the count says
+// nothing. Other unhashed files have no row.
+const copiesQuery = `SELECT i.filename, CASE WHEN i.size = 0 THEN 0
+WHEN f.sha256_noexif_jpeg IS NOT NULL
 THEN (SELECT COUNT(*) FROM instance i2 JOIN file f2 ON f2.id = i2.file_id WHERE f2.sha256_noexif_jpeg = f.sha256_noexif_jpeg)
 ELSE (SELECT COUNT(*) FROM instance i2 WHERE i2.file_id = i.file_id) END
-FROM instance i JOIN file f ON f.id = i.file_id WHERE i.dir_id IS ?`
+FROM instance i LEFT JOIN file f ON f.id = i.file_id
+WHERE i.dir_id IS ? AND (i.file_id IS NOT NULL OR i.size = 0)`
+
+// copiesCell shows a copiesQuery count; 0 is an empty file, which has no meaningful count.
+func copiesCell(n int) string {
+	if n == 0 {
+		return panel.MetaNoValue
+	}
+	return strconv.Itoa(n)
+}
 
 // hashQuery lists the SHA-256 of each file directly in a dir.
 const hashQuery = `SELECT i.filename, f.sha256 FROM instance i JOIN file f ON f.id = i.file_id

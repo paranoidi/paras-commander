@@ -267,7 +267,7 @@ func compareDiskUsagePrimary(left, right localfs.Entry, diskSorter func(string) 
 // metaSortKey is one entry's precomputed sort key for an active meta column, resolved once per
 // sort (see buildMetaSortKeys) instead of re-parsing the raw string on every comparison.
 type metaSortKey struct {
-	missing bool // no value, or blank/pending after trimming; always sorts last
+	missing bool // no value, or blank/pending/MetaNoValue after trimming; always sorts last
 	numeric bool
 	num     float64
 	str     string // lowercased, only meaningful when !numeric && !missing
@@ -288,8 +288,13 @@ func (s SortState) MetaAscending(numeric bool) bool {
 	return numeric == s.Reverse
 }
 
+// MetaNoValue is the cell a meta column shows for an entry the column deliberately has no value
+// for. It counts as a blank for sorting, so it neither makes a numeric column text nor sorts
+// among real values.
+const MetaNoValue = "-"
+
 // MetaValuesNumeric reports whether a meta column is numeric: at least one value is set and
-// every set value (non-blank, not the pending placeholder) parses as a float.
+// every set value (non-blank, not the pending placeholder or MetaNoValue) parses as a float.
 func MetaValuesNumeric(values map[string]string, pending string) bool {
 	found := false
 	for _, v := range values {
@@ -297,7 +302,7 @@ func MetaValuesNumeric(values map[string]string, pending string) bool {
 			continue
 		}
 		v = strings.TrimSpace(v)
-		if v == "" {
+		if v == "" || v == MetaNoValue {
 			continue
 		}
 		if _, ok := MetaNumber(v); !ok {
@@ -354,7 +359,7 @@ func buildMetaSortKeys(entries []localfs.Entry, col string, metaValue func(colum
 			continue
 		}
 		v = strings.TrimSpace(v)
-		if v == "" {
+		if v == "" || v == MetaNoValue {
 			keys[e.Path] = metaSortKey{missing: true}
 			continue
 		}
