@@ -34,6 +34,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/foldercolor"
 	_ "github.com/paranoidi/paras-commander/internal/fsbackend/file"
 	_ "github.com/paranoidi/paras-commander/internal/fsbackend/sftp"
+	"github.com/paranoidi/paras-commander/internal/fschange"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/jobbridge"
@@ -608,13 +609,15 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	// The index handle exists before the job state so jobs following the index (fschange sink)
 	// get it; nothing is opened until it is used.
 	fileIndex := fileindex.New(cfg.FileIndex)
-	// app does not exist yet; the permission prompt is bound once it does.
+	// app does not exist yet; the permission prompt and the meta sink are bound once it does.
 	var app *App
+	metaSink := &metaFSSink{}
+	fsSink := fschange.Multi(duEngine, metaSink)
 	jobState.SetTransferFunc(jobbridge.TransferFunc(cfg.Operations, cfg.Jobs, cfg.Compare, jobState.Wait,
 		func(ctx context.Context, req ops.PermissionRequest) ops.PermissionAnswer {
 			return app.promptElevate(ctx, req)
 		},
-		duEngine, fileIndex))
+		fsSink, fileIndex))
 	jobState.SetThroughputChart(
 		time.Duration(cfg.Jobs.ThroughputChartColumnMS)*time.Millisecond,
 		time.Duration(cfg.Jobs.ThroughputChartWindowSec)*time.Second,
@@ -720,6 +723,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	})
 	jobState.SetScanFunc(jobbridge.ScanFunc(cfg.Jobs))
 	jobState.SetSourceSizeSink(duEngine.SetSize)
+	metaSink.app = app
 	jobState.StartWorker(app.jobStopCh)
 	suppressHeavyPathProbes := func(loc pathloc.Path) bool {
 		if !loc.IsLocal() {
@@ -834,6 +838,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Dedup:                app.dedupCtrl,
 		DiskUsage:            app.disk.engine,
 		DiskUsageIgnore:      duIgnorer,
+		FSSink:               fsSink,
 		FileIndex:            app.fileIndex,
 		PromptElevate:        app.promptElevate,
 		Getenv:               func(k string) string { return app.getenv(k) },
@@ -1305,6 +1310,10 @@ func (a *App) handleEarlyInterruptPayload(data any) (eventOutcome, bool) {
 	}
 	if _, ok := data.(dirWatchWakePayload); ok {
 		a.handleDirWatchWake()
+		return eventOutcome{}, true
+	}
+	if _, ok := data.(metaFSWakePayload); ok {
+		a.handleMetaFSWake()
 		return eventOutcome{}, true
 	}
 	if a.fileindexCtrl.HandleWake(data) {

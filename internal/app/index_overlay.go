@@ -86,12 +86,12 @@ func (a *App) reloadIndexPanels() {
 	}
 }
 
-// refreshIndexViews re-reads the panels browsing with fileindex and both panels' meta columns,
-// so index state and the tags column follow an index change (UI goroutine).
+// refreshIndexViews re-reads the panels browsing with fileindex and both panels' fileindex meta
+// columns, so index state and those columns follow an index change (UI goroutine).
 func (a *App) refreshIndexViews() {
 	a.reloadIndexPanels()
-	a.metaCtrl.RefreshPanel(ui.PrimaryPanel)
-	a.metaCtrl.RefreshPanel(ui.SecondaryPanel)
+	a.metaCtrl.RefreshProviders(ui.PrimaryPanel)
+	a.metaCtrl.RefreshProviders(ui.SecondaryPanel)
 }
 
 // indexDriftScheduler runs fileindex.Index.DirDrift on its own goroutine for panelID. Requests

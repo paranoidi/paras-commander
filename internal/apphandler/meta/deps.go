@@ -81,6 +81,15 @@ type Handler struct {
 	// fitWatch tracks the drawn columns per panel so a column lost to incoming results is
 	// reported (reportLostColumns).
 	fitWatch [2]columnFitWatch
+	// gone holds rows whose path a filesystem change reported gone, per panel; their cells leave
+	// once the listing no longer holds them (pruneGone).
+	gone [2]map[string]struct{}
+	// goneDirty is set when new reports arrived; goneChecked is the listing gone was last checked
+	// against. Together they keep pruneGone from re-reading an unchanged listing.
+	goneDirty   [2]bool
+	goneChecked [2]goneListing
+	// providerCancel cancels the panel's RefreshProviders in flight, so a newer one replaces it.
+	providerCancel [2]context.CancelFunc
 	// cache stores computed meta results by [cmdName][absPath] for entries with cache = true.
 	// Nil until first caching write. Protected by cacheMu.
 	cache   map[string]map[string]string
