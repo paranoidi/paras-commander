@@ -105,6 +105,8 @@ func (h *Handler) HandleCopies(p CopiesPayload) {
 		h.host.SetTransientMessage("Not in the index: "+p.Name, ui.MessageUrgencyWarn)
 	case p.State == fi.CopiesNotHashed:
 		h.host.SetTransientMessage("Not fully hashed yet: "+p.Name, ui.MessageUrgencyWarn)
+	case p.State == fi.CopiesEmpty:
+		h.host.SetTransientMessage("Empty file, copies not tracked: "+p.Name, ui.MessageUrgencyInfo)
 	case len(p.Files) == 0:
 		h.host.SetTransientMessage("No other copies of "+p.Name, ui.MessageUrgencyInfo)
 	default:

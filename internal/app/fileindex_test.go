@@ -1233,6 +1233,11 @@ func copiesApp(t *testing.T) (*App, tcell.SimulationScreen, string) {
 			Dir: filepath.Join(dir, filepath.Dir(name)), Name: filepath.Base(name), Size: int64(len(name)), Mtime: time.Now(), MD5: sum, SHA256: sum + sum,
 		})
 	}
+	if err := os.WriteFile(filepath.Join(dir, "tundra.txt"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	emptySum := strings.Repeat("c", 32)
+	batch = append(batch, db.ScannedFile{Dir: dir, Name: "tundra.txt", Mtime: time.Now(), MD5: emptySum, SHA256: emptySum + emptySum})
 	dbPath := filepath.Join(t.TempDir(), "index.sqlite")
 	d, err := db.Open(dbPath)
 	if err != nil {
@@ -1291,6 +1296,12 @@ func TestFileIndexCopiesMessages(t *testing.T) {
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.Message == "No other copies of thistle.txt" })
 	if a.model.PathPicker.Open {
 		t.Fatal("no copies must not open the picker")
+	}
+	cursorTo(t, a, "tundra.txt")
+	a.dispatch(keymap.ActionFileIndexCopies)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.Message == "Empty file, copies not tracked: tundra.txt" })
+	if a.model.PathPicker.Open {
+		t.Fatal("an empty file must not open the picker")
 	}
 	cursorTo(t, a, "meadow")
 	a.dispatch(keymap.ActionFileIndexCopies)

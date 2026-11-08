@@ -260,6 +260,8 @@ edit refuse a file that is missing from disk.
   first 8 KB, or a scan has not reached it yet) has no known copies until it is fully hashed:
   the action says "Not fully hashed yet". A file the index does not
   know says "Not in the index", and one with no other copy "No other copies".
+- An empty file has no copies to list, since all empty files have the same content: the action
+  says "Empty file, copies not tracked".
 - The answer is what the last scans recorded: the index may be stale, so a
   listed copy can be gone from disk (it then opens in the index view) and a
   new copy is missing until scanned.

@@ -1100,6 +1100,22 @@ func TestOtherCopies(t *testing.T) {
 		t.Fatal(err)
 	}
 	check("harbor/reed.txt", CopiesHashed)
+	// Empty files are not copies of each other, hashed or not.
+	for _, name := range []string{"harbor/tundra.txt", "orchard/walnut.txt", "orchard/sparrow.txt"} {
+		if err := os.WriteFile(at(name), nil, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, dir := range []string{"harbor", "orchard"} {
+		if err := x.ScanTask([]string{at(dir)}).Run(context.Background(), &recReporter{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := d.Exec("UPDATE instance SET file_id = NULL WHERE filename = ?", "sparrow.txt"); err != nil {
+		t.Fatal(err)
+	}
+	check("harbor/tundra.txt", CopiesEmpty)
+	check("orchard/sparrow.txt", CopiesEmpty)
 }
 
 // DedupOutside keeps only groups spanning the directory boundary, with all their members.

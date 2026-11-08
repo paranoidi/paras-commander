@@ -121,6 +121,9 @@ const (
 	CopiesNotHashed
 	// CopiesHashed: the path is fully hashed; the returned list holds its copies.
 	CopiesHashed
+	// CopiesEmpty: the path is an empty file. All empty files share one content, so they are
+	// not listed as copies of each other.
+	CopiesEmpty
 )
 
 // OtherCopies lists the indexed files with the same content as the file at path (a host path,
@@ -142,6 +145,9 @@ func (x *Index) OtherCopies(path string) ([]string, CopiesState, error) {
 	}
 	if !found {
 		return nil, CopiesNotIndexed, nil
+	}
+	if rec.Size == 0 {
+		return nil, CopiesEmpty, nil
 	}
 	if !rec.Hashed {
 		return nil, CopiesNotHashed, nil
