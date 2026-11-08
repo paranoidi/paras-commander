@@ -214,7 +214,7 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		return footerWithEscClose(rest)
 	}
 	if a.model.PathPicker.Open || a.model.ColumnsDialog.Open {
-		return a.pathPickerMetaFooterKeys()
+		return a.pathPickerColumnsFooterKeys()
 	}
 	if a.model.CommandOutputDialog.Open {
 		return footerWithEscClose([]menu.FunctionKey{
@@ -304,8 +304,8 @@ func (a *App) columnsDialogFooterKeys() []menu.FunctionKey {
 	return out
 }
 
-// pathPickerMetaFooterKeys builds footer hints for the PathPicker / ColumnsDialog overlay branch.
-func (a *App) pathPickerMetaFooterKeys() []menu.FunctionKey {
+// pathPickerColumnsFooterKeys builds footer hints for the PathPicker / ColumnsDialog overlay branch.
+func (a *App) pathPickerColumnsFooterKeys() []menu.FunctionKey {
 	rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
 	if a.model.ColumnsDialog.Open {
 		rest = append(a.columnsDialogFooterKeys(), rest...)

@@ -18,3 +18,6 @@ func DialogOptionX(rect Rect) int { return rect.X + 1 }
 
 // DialogContentWidth is the usable width between the left and right one-space margins.
 func DialogContentWidth(rect Rect) int { return rect.Width - 4 }
+
+// DialogWidthForContent is the dialog width whose DialogContentWidth is contentW.
+func DialogWidthForContent(contentW int) int { return contentW + 4 }

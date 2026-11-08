@@ -24,38 +24,40 @@ const (
 // ColumnTimeCells is the width of a timestamp column ("2006-01-02 15:04").
 const ColumnTimeCells = 16
 
-// ColumnSizeGap and ColumnGap are the blank cells before the size column and any other file column.
-const (
-	ColumnSizeGap = 1
-	ColumnGap     = 2
-)
+// columnGap is the blank cells before a file column other than size (panellist.SizeGap).
+const columnGap = 2
 
 // ColumnSpec describes one file column. Columns() is the single source for its name, title, width
 // and mnemonic, and its position is both the drawn order and the dialog order.
 type ColumnSpec struct {
 	ID ColumnID
 	// Name is the column's name in column-profiles.toml.
-	Name       string
-	Title      string
-	Width      int
+	Name  string
+	Title string
+	Width int
+	// Gap is the blank cells before the column.
+	Gap        int
 	RightAlign bool
 	// Mnemonic is its checkbox key in the Columns dialog.
 	Mnemonic rune
-	// Sortable says a header click sorts by SortMode.
-	Sortable bool
+	// SortMode is what a header click sorts by; SortName, the zero value, means the column does
+	// not sort (no file column is the name).
 	SortMode SortMode
 }
 
+// Sortable reports whether a header click on the column sorts.
+func (s ColumnSpec) Sortable() bool { return s.SortMode != SortName }
+
 var columnSpecs = []ColumnSpec{
-	{ID: ColumnSize, Name: "size", Title: "Size", Width: panellist.SizeCells, RightAlign: true, Mnemonic: 's', Sortable: true, SortMode: SortSize},
-	{ID: ColumnModified, Name: "modified", Title: "Modified", Width: ColumnTimeCells, Mnemonic: 'm', Sortable: true, SortMode: SortMtime},
-	{ID: ColumnChanged, Name: "changed", Title: "Changed", Width: ColumnTimeCells, Mnemonic: 'h'},
-	{ID: ColumnAccessed, Name: "accessed", Title: "Accessed", Width: ColumnTimeCells, Mnemonic: 'a'},
-	{ID: ColumnCreated, Name: "created", Title: "Created", Width: ColumnTimeCells, Mnemonic: 'r'},
-	{ID: ColumnPermissions, Name: "permissions", Title: "Permissions", Width: 11, Mnemonic: 'p'},
-	{ID: ColumnOwner, Name: "owner", Title: "Owner", Width: 10, Mnemonic: 'w'},
-	{ID: ColumnGroup, Name: "group", Title: "Group", Width: 10, Mnemonic: 'g'},
-	{ID: ColumnLinks, Name: "links", Title: "Links", Width: 5, RightAlign: true, Mnemonic: 'n'},
+	{ID: ColumnSize, Name: "size", Title: "Size", Width: panellist.SizeCells, Gap: panellist.SizeGap, RightAlign: true, Mnemonic: 's', SortMode: SortSize},
+	{ID: ColumnModified, Name: "modified", Title: "Modified", Width: ColumnTimeCells, Gap: columnGap, Mnemonic: 'm', SortMode: SortMtime},
+	{ID: ColumnChanged, Name: "changed", Title: "Changed", Width: ColumnTimeCells, Gap: columnGap, Mnemonic: 'h'},
+	{ID: ColumnAccessed, Name: "accessed", Title: "Accessed", Width: ColumnTimeCells, Gap: columnGap, Mnemonic: 'a'},
+	{ID: ColumnCreated, Name: "created", Title: "Created", Width: ColumnTimeCells, Gap: columnGap, Mnemonic: 'r'},
+	{ID: ColumnPermissions, Name: "permissions", Title: "Permissions", Width: 11, Gap: columnGap, Mnemonic: 'p'},
+	{ID: ColumnOwner, Name: "owner", Title: "Owner", Width: 10, Gap: columnGap, Mnemonic: 'w'},
+	{ID: ColumnGroup, Name: "group", Title: "Group", Width: 10, Gap: columnGap, Mnemonic: 'g'},
+	{ID: ColumnLinks, Name: "links", Title: "Links", Width: 5, Gap: columnGap, RightAlign: true, Mnemonic: 'n'},
 }
 
 // Columns returns every file column in drawn order. Callers must not modify it.
@@ -105,12 +107,8 @@ func (c ColumnSet) DropRightmost() ColumnSet {
 func (c ColumnSet) ReservedWidth() int {
 	total := 0
 	for _, spec := range columnSpecs {
-		if !c.Has(spec.ID) {
-			continue
-		}
-		total += spec.Width + ColumnGap
-		if spec.ID == ColumnSize {
-			total += ColumnSizeGap - ColumnGap
+		if c.Has(spec.ID) {
+			total += spec.Width + spec.Gap
 		}
 	}
 	return total
@@ -156,17 +154,29 @@ func (s State) NameColumnTitle(showIcons bool) string {
 	}
 }
 
+// columnSortArrow is the sort arrow a file column carries, 0 when it is not the sort key. A
+// disk-totals sort orders by size whatever the sort mode says.
+func (s State) columnSortArrow(spec ColumnSpec) rune {
+	switch {
+	case s.primarySortUsesDiskTotals():
+		if spec.ID == ColumnSize {
+			return SortArrow(false)
+		}
+		return 0
+	case spec.Sortable() && s.Sort.Mode == spec.SortMode:
+		return SortArrow(!s.Sort.Reverse)
+	default:
+		return 0
+	}
+}
+
 // ColumnTitle is the header of a file column, with the sort arrow when it is the sort key. It does
 // not depend on the panel showing the column: the carousel draws its size column regardless.
 func (s State) ColumnTitle(spec ColumnSpec) string {
-	switch {
-	case spec.ID == ColumnSize && s.primarySortUsesDiskTotals():
-		return fmt.Sprintf("%c%s", SortArrow(false), spec.Title)
-	case s.primarySortUsesDiskTotals(), !spec.Sortable, s.Sort.Mode != spec.SortMode:
-		return spec.Title
-	default:
-		return fmt.Sprintf("%c%s", SortArrow(!s.Sort.Reverse), spec.Title)
+	if arrow := s.columnSortArrow(spec); arrow != 0 {
+		return fmt.Sprintf("%c%s", arrow, spec.Title)
 	}
+	return spec.Title
 }
 
 // SizeColumnTitle is ColumnTitle of the size column.
@@ -176,7 +186,7 @@ func (s State) SizeColumnTitle() string { return s.ColumnTitle(columnSpecs[0]) }
 // when there is one, else the name column.
 func (s State) SortedColumnTitle(showIcons bool) string {
 	for _, spec := range s.Columns.Specs() {
-		if spec.Sortable && (s.Sort.Mode == spec.SortMode || (spec.ID == ColumnSize && s.primarySortUsesDiskTotals())) {
+		if s.columnSortArrow(spec) != 0 {
 			return s.ColumnTitle(spec)
 		}
 	}

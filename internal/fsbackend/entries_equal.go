@@ -1,24 +1,6 @@
 package fsbackend
 
-import (
-	"io/fs"
-	"time"
-
-	"github.com/paranoidi/paras-commander/internal/localfs"
-)
-
-type listingEntryKey struct {
-	name       string
-	entryType  EntryType
-	size       int64
-	modifiedAt time.Time
-	indexState string
-	mode       fs.FileMode
-	owner      string
-	group      string
-	links      uint64
-	changedAt  time.Time
-}
+import "github.com/paranoidi/paras-commander/internal/localfs"
 
 // listingIndexState is the fileindex overlay state that counts when comparing listings. The
 // drift pass rewrites an indexed directory's state on the panel after its listing landed
@@ -35,23 +17,12 @@ func listingIndexState(e Entry) string {
 	return e.IndexStatus
 }
 
-func listingEntryKeys(entries []Entry) map[string]listingEntryKey {
-	out := make(map[string]listingEntryKey, len(entries))
-	for _, e := range entries {
-		out[e.Name] = listingEntryKey{
-			name:       e.Name,
-			entryType:  e.Type,
-			size:       e.Size,
-			modifiedAt: e.ModifiedAt,
-			indexState: listingIndexState(e),
-			mode:       e.Mode,
-			owner:      e.Owner,
-			group:      e.Group,
-			links:      e.Links,
-			changedAt:  e.ChangedAt,
-		}
-	}
-	return out
+// sameListingFacts reports whether two rows of one name show the same listing metadata.
+func sameListingFacts(a, b *Entry) bool {
+	return a.Type == b.Type && a.Size == b.Size && a.ModifiedAt.Equal(b.ModifiedAt) &&
+		listingIndexState(*a) == listingIndexState(*b) &&
+		a.Mode == b.Mode && a.Owner == b.Owner && a.Group == b.Group && a.Links == b.Links &&
+		a.ChangedAt.Equal(b.ChangedAt)
 }
 
 // EntriesListingEqual reports whether two directory snapshots have the same visible
@@ -65,16 +36,13 @@ func EntriesListingEqual(a, b []Entry) bool {
 	if len(a) == 0 {
 		return true
 	}
-	bMap := listingEntryKeys(b)
-	for _, e := range a {
-		other, ok := bMap[e.Name]
-		if !ok {
-			return false
-		}
-		if other.entryType != e.Type || other.size != e.Size || !other.modifiedAt.Equal(e.ModifiedAt) || other.indexState != listingIndexState(e) {
-			return false
-		}
-		if other.mode != e.Mode || other.owner != e.Owner || other.group != e.Group || other.links != e.Links || !other.changedAt.Equal(e.ChangedAt) {
+	byName := make(map[string]int, len(b))
+	for i := range b {
+		byName[b[i].Name] = i
+	}
+	for i := range a {
+		j, ok := byName[a[i].Name]
+		if !ok || !sameListingFacts(&a[i], &b[j]) {
 			return false
 		}
 	}

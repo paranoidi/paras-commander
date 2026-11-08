@@ -107,7 +107,7 @@ func (a *App) activeDialog(event *tcell.EventKey) (activeDialog, bool) {
 		if event.Key() == tcell.KeyF9 {
 			b = dialogButtons{} // F9 edits meta.toml from the Columns dialog
 		}
-		return found(fits(func() dlg.Spec { return dialog.ColumnsDialogView(m.ColumnsDialog, layout().Width, layout().Height) }), &m.ColumnsDialog.Focus, noQuit(a.metaCtrl.ApplyDialogEvent), b)
+		return found(fits(a.metaCtrl.DialogSpec), &m.ColumnsDialog.Focus, noQuit(a.metaCtrl.ApplyDialogEvent), b)
 	case InputModeHelpView:
 		return found(func() (dlg.Spec, bool) {
 			spec, _, fit := dialog.HelpDialogView(m.HelpView, layout(), a.styles)

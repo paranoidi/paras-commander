@@ -5,8 +5,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
-	"maps"
-	"slices"
 )
 
 func (h *Handler) resolveEditPath(panelID int) (string, error) {
@@ -41,28 +39,16 @@ func (h *Handler) refreshDialogAfterConfigEdit() {
 		return
 	}
 	panelID := st.PanelID
-	prevChecked := make(map[string]bool, len(st.Entries)+len(st.HiddenMeta))
-	for i, e := range st.Entries {
-		if i < len(st.Checked) && st.Checked[i] {
-			prevChecked[e.Name] = true
-		}
-	}
-	for _, name := range st.HiddenMeta {
-		prevChecked[name] = true
-	}
+	names := dialogMetaNames(st)
 	prevFocusName := focusedEntryName(st)
 	prevFocus := st.Focus
 
 	res := h.loadMetaFile(panelID)
 	entries := entriesFromFile(res.MF)
-	checked := make([]bool, len(entries))
-	for i, e := range entries {
-		checked[i] = prevChecked[e.Name]
-	}
 
 	st.Entries = entries
-	st.Checked = checked
-	st.HiddenMeta = hiddenMetaNames(entries, slices.Collect(maps.Keys(prevChecked)))
+	st.Checked = checkedFor(entries, names)
+	st.HiddenMeta = hiddenMetaNames(entries, names)
 	st.Focus = refocusAfterEdit(entries, prevFocus, prevFocusName)
 }
 
@@ -97,7 +83,7 @@ func refocusAfterEdit(entries []dialog.MetaEntry, prev dlg.ID, prevName string) 
 	if i := entryIndexByName(entries, prevName); i >= 0 {
 		return dialog.MetaEntryID(i)
 	}
-	if _, isFile := dlg.IDIndex(prev, "file:"); isFile {
+	if _, isFile := dialog.ColumnsFileIndex(prev); isFile {
 		return prev
 	}
 	return ""

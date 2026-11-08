@@ -2002,7 +2002,7 @@ func TestFilePickerFooterAdvertisesActions(t *testing.T) {
 	a, screen, _ := copiesApp(t)
 	openCopiesPicker(t, a, screen)
 	hints := map[string]string{}
-	for _, k := range a.pathPickerMetaFooterKeys() {
+	for _, k := range a.pathPickerColumnsFooterKeys() {
 		hints[k.Hint] = k.KeyLabel
 	}
 	for _, hint := range []string{"View", "Edit", "Open ◄", "Open ►"} {

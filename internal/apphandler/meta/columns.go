@@ -21,11 +21,24 @@ type columnSnapshot struct {
 // profile cycle, the Columns dialog and startup; every change of a panel's columns ends in
 // applyColumns.
 func (h *Handler) ApplyProfile(panelID int, profile columnprofile.Profile) {
+	h.applyColumns(panelID, h.profileColumns(profile), profile.Name, profile.Meta)
+}
+
+// profileColumns is the profile's file columns, warning about names no column has.
+func (h *Handler) profileColumns(profile columnprofile.Profile) panel.ColumnSet {
 	set, unknown := profile.Set()
 	if len(unknown) > 0 {
 		h.host.SetTransientMessage(fmt.Sprintf("Profile %s: unknown columns %s", profile.Name, strings.Join(unknown, ", ")), ui.MessageUrgencyWarn)
 	}
-	h.applyColumns(panelID, set, profile.Name, profile.Meta)
+	return set
+}
+
+// dropMetaSort falls back to Name at once, like an explicit Sort dialog apply, rather than leaving
+// the panel sorted by a column that just vanished from the header.
+func (h *Handler) dropMetaSort(panelID int, p *panel.State) {
+	p.Sort.Mode = panel.SortName
+	p.Sort.MetaColumn = ""
+	h.host.ResortPanel(panelID)
 }
 
 // applyColumns sets the panel's file columns and profile name and switches its meta columns,
@@ -67,9 +80,7 @@ func (h *Handler) switchMeta(panelID int, p *panel.State, names []string) {
 		return
 	}
 	if p.Sort.Mode == panel.SortMeta && !slices.Contains(names, p.Sort.MetaColumn) {
-		p.Sort.Mode = panel.SortName
-		p.Sort.MetaColumn = ""
-		h.host.ResortPanel(panelID)
+		h.dropMetaSort(panelID, p)
 	}
 	wasActive := make(map[string]bool, len(prev))
 	for _, n := range prev {

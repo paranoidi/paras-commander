@@ -102,8 +102,10 @@ func placeRow(row Item, x, right, y, markerW int) []PlacedItem {
 	gaps := make([]int, len(row.Cells))
 	used, grows := 0, 0
 	for i, c := range row.Cells {
-		gaps[i] = c.Gap
-		used += c.Gap
+		if i < len(row.Cells)-1 { // a gap only separates: nothing follows the last box
+			gaps[i] = c.Gap
+			used += c.Gap
+		}
 		if c.growing() {
 			grows++
 			continue

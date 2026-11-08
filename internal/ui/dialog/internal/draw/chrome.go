@@ -545,10 +545,13 @@ type DialogButtonSpec struct {
 
 // ClampCenteredDialogRect clamps preferred width/height to the layout margins, then centers.
 // Returns ok false when clamped width or height falls below the corresponding minimum.
+// MaxDialogWidth is the widest a clamped dialog gets on a screen screenW wide.
+func MaxDialogWidth(screenW int) int { return screenW - 4 }
+
 func ClampCenteredDialogRect(layout Layout, prefW, prefH, minW, minH int) (Rect, bool) {
 	w := prefW
-	if w > layout.Width-4 {
-		w = layout.Width - 4
+	if w > MaxDialogWidth(layout.Width) {
+		w = MaxDialogWidth(layout.Width)
 	}
 	if w < minW {
 		return Rect{}, false

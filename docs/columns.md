@@ -33,8 +33,9 @@ Not every source has every fact, and a column with nothing to show stays blank:
 | Column | Local | SFTP | `fileindex://` |
 |---|---|---|---|
 | Owner, Group | yes | numeric id | blank |
-| Links, Changed | yes | blank | blank |
-| Accessed | yes | yes | blank |
+| Links | yes | blank | blank |
+| Changed | yes (Linux) | blank | blank |
+| Accessed | yes (Linux) | yes | blank |
 | Created | yes (Linux) | blank | blank |
 
 Created takes one extra system call per entry, so listings only fetch it while a panel shows that column; switching it on reloads the panel. Owner and group names come from `/etc/passwd` and `/etc/group`, so accounts known only through LDAP or SSSD show as numeric ids.

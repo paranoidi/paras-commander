@@ -3,6 +3,8 @@ package panel
 import (
 	"slices"
 	"testing"
+
+	"github.com/paranoidi/paras-commander/internal/panellist"
 )
 
 func TestColumnSetNamesRoundTrip(t *testing.T) {
@@ -36,13 +38,13 @@ func TestColumnSetDropRightmostFollowsDrawnOrder(t *testing.T) {
 }
 
 func TestColumnSetReservedWidthCountsGaps(t *testing.T) {
-	if got, want := ColumnsBrief.ReservedWidth(), ColumnSizeGap+columnSpecs[0].Width; got != want {
+	if got, want := ColumnsBrief.ReservedWidth(), panellist.SizeGap+columnSpecs[0].Width; got != want {
 		t.Fatalf("brief = %d, want %d", got, want)
 	}
-	if got, want := ColumnsModified.ReservedWidth(), ColumnSizeGap+columnSpecs[0].Width+ColumnGap+ColumnTimeCells; got != want {
+	if got, want := ColumnsModified.ReservedWidth(), panellist.SizeGap+columnSpecs[0].Width+columnGap+ColumnTimeCells; got != want {
 		t.Fatalf("modified = %d, want %d", got, want)
 	}
-	if got, want := ColumnSet(0).With(ColumnGroup).ReservedWidth(), ColumnGap+10; got != want {
+	if got, want := ColumnSet(0).With(ColumnGroup).ReservedWidth(), columnGap+10; got != want {
 		t.Fatalf("group only = %d, want %d", got, want)
 	}
 }

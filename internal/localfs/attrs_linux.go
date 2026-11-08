@@ -11,8 +11,6 @@ import (
 
 func statChangeTime(st *syscall.Stat_t) time.Time { return time.Unix(st.Ctim.Unix()) }
 
-func statAccessTime(st *syscall.Stat_t) time.Time { return time.Unix(st.Atim.Unix()) }
-
 // entryBirthTime returns path's birth time, zero when the filesystem does not record one.
 func entryBirthTime(path string) time.Time {
 	var st unix.Statx_t

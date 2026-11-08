@@ -436,12 +436,7 @@ func (h *Handler) deactivate(panelID int) {
 	h.resortPending[panelID] = false
 	if p := h.host.PanelByID(panelID); p != nil {
 		if p.Sort.Mode == panel.SortMeta {
-			// The sorted-on column no longer exists — fall back to Name immediately (like an
-			// explicit Sort dialog apply), rather than leaving the panel sorted by a column
-			// that just vanished from the header.
-			p.Sort.Mode = panel.SortName
-			p.Sort.MetaColumn = ""
-			h.host.ResortPanel(panelID)
+			h.dropMetaSort(panelID, p)
 		}
 		if p.ActiveEntryFilter != nil && p.ActiveEntryFilter.ID == panel.PatternMetaFilterID {
 			// Meta columns just went away: the filter's closure now reads an empty

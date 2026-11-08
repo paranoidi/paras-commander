@@ -7,7 +7,6 @@ import (
 	"time"
 )
 
-// Stat_t field names differ per platform and only Linux is a build target; the columns stay blank.
+// statChangeTime is Linux-only, like fileAccessTime: Stat_t's time fields differ per platform, and
+// the Changed column stays blank elsewhere.
 func statChangeTime(_ *syscall.Stat_t) time.Time { return time.Time{} }
-
-func statAccessTime(_ *syscall.Stat_t) time.Time { return time.Time{} }

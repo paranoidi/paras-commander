@@ -69,10 +69,16 @@ type ColumnsDialogState struct {
 }
 
 // ColumnsFileID is the widget ID of the checkbox of file column i (panel.Columns order).
-func ColumnsFileID(i int) dlg.ID { return dlg.IndexedID("file:", i) }
+func ColumnsFileID(i int) dlg.ID { return dlg.IndexedID(columnsFileIDPrefix, i) }
+
+// ColumnsFileIndex is the inverse of ColumnsFileID.
+func ColumnsFileIndex(id dlg.ID) (int, bool) {
+	i, ok := dlg.IDIndex(id, columnsFileIDPrefix)
+	return i, ok && i >= 0 && i < len(panel.Columns())
+}
 
 // MetaEntryID is the widget ID of the checkbox row for entry i.
-func MetaEntryID(i int) dlg.ID { return dlg.IndexedID("entry:", i) }
+func MetaEntryID(i int) dlg.ID { return dlg.IndexedID(metaEntryIDPrefix, i) }
 
 // Widgets of the save prompt.
 const (
@@ -93,8 +99,8 @@ const (
 	columnsGridGap     = 2
 	// columnsGridMaxLabel caps the labels that widen the grid; a longer one is clipped.
 	columnsGridMaxLabel = 22
-	// columnsGridFrame is the dialog width around a row: the borders and the text column margins.
-	columnsGridFrame = 4
+	columnsFileIDPrefix = "file:"
+	metaEntryIDPrefix   = "entry:"
 )
 
 // ColumnsDialogView is the widget spec of the dialog's current phase on a screenW by screenH screen.
@@ -149,7 +155,7 @@ func columnsMainView(s ColumnsDialogState, screenW int) dlg.Spec {
 	return dlg.Spec{
 		Title: "Columns", Width: max(grid.dialogWidth(), columnsMinWidth), MinWidth: columnsMinWidth, MinHeight: 5,
 		Groups: groups, MarkerWidth: s.MarkerWidth,
-		Buttons: []dlg.Button{dlg.OKButton, dlg.CancelButton},
+		Buttons: dlg.OKCancelButtons(),
 	}
 }
 
@@ -194,14 +200,14 @@ func newColumnsGrid(s ColumnsDialogState, screenW int) columnsGrid {
 		marker = draw.DialogOptionWidth("") // 0 lays out for the ASCII marker
 	}
 	g := columnsGrid{columns: columnsGridColumns, cellWidth: marker + min(longest, columnsGridMaxLabel)}
-	for g.columns > 1 && g.dialogWidth() > screenW-columnsScreenMargin {
+	for g.columns > 1 && g.dialogWidth() > draw.MaxDialogWidth(screenW) {
 		g.columns--
 	}
 	return g
 }
 
 func (g columnsGrid) dialogWidth() int {
-	return g.columns*g.cellWidth + (g.columns-1)*columnsGridGap + columnsGridFrame
+	return draw.DialogWidthForContent(g.columns*g.cellWidth + (g.columns-1)*columnsGridGap)
 }
 
 // group lays out one section's checkboxes in fixed-width cells, filled column by column (the first
@@ -217,10 +223,7 @@ func (g columnsGrid) group(items []dlg.Item) dlg.Group {
 				break
 			}
 			cell := items[i]
-			cell.Width = g.cellWidth
-			if c < g.columns-1 {
-				cell.Gap = columnsGridGap // none after the last: it would count against the row's width
-			}
+			cell.Width, cell.Gap = g.cellWidth, columnsGridGap
 			cells = append(cells, cell)
 		}
 		out[r] = dlg.Item{Kind: dlg.KindRow, Cells: cells}
@@ -278,7 +281,7 @@ func columnsSaveView(s ColumnsDialogState) dlg.Spec {
 // Apply folds a checkbox activation from dlg.HandleKey into the state. OK and Cancel are the
 // caller's to handle.
 func (s *ColumnsDialogState) Apply(ev dlg.Event) {
-	if i, ok := dlg.IDIndex(ev.ID, "file:"); ok && i >= 0 && i < len(panel.Columns()) {
+	if i, ok := ColumnsFileIndex(ev.ID); ok {
 		id := panel.Columns()[i].ID
 		if s.FileColumns.Has(id) {
 			s.FileColumns = s.FileColumns.Without(id)
@@ -287,10 +290,7 @@ func (s *ColumnsDialogState) Apply(ev dlg.Event) {
 		}
 		return
 	}
-	for i := range s.Entries {
-		if ev.ID == MetaEntryID(i) && i < len(s.Checked) {
-			s.Checked[i] = !s.Checked[i]
-			return
-		}
+	if i, ok := dlg.IDIndex(ev.ID, metaEntryIDPrefix); ok && i >= 0 && i < len(s.Checked) {
+		s.Checked[i] = !s.Checked[i]
 	}
 }

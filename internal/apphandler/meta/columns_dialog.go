@@ -116,29 +116,18 @@ func (h *Handler) setPhase(phase dialog.ColumnsPhase) {
 	st.Focus = ""
 }
 
-func (h *Handler) dialogSpec() dlg.Spec {
+// DialogSpec is the widget spec of the dialog's current phase on the current screen.
+func (h *Handler) DialogSpec() dlg.Spec {
 	screenW, screenH := h.screen.Size()
 	return dialog.ColumnsDialogView(h.model.ColumnsDialog, screenW, screenH)
 }
 
 // HandleDialogKey routes a key event to the open Columns dialog.
 func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
-	st := &h.model.ColumnsDialog
 	action, _ := h.keysColumnsDialog.Lookup(event)
-	switch st.Phase {
+	switch h.model.ColumnsDialog.Phase {
 	case dialog.ColumnsPhaseLoadPicker, dialog.ColumnsPhaseOverwritePicker:
-		if st.Phase == dialog.ColumnsPhaseLoadPicker {
-			switch action {
-			case keymap.ActionColumnsDeleteProfile:
-				h.deleteSelectedProfile()
-				return
-			case keymap.ActionColumnsDefaultProfile:
-				h.setSelectedProfileDefault()
-				return
-			}
-		}
-		w, screenH := h.screen.Size()
-		scrollquery.HandlePickerKey(w, screenH, h.dialogSpec(), h.keysDialogInput, event, h.pickerBinding())
+		h.handlePickerKey(event, action)
 	case dialog.ColumnsPhaseSavePrompt:
 		if action == keymap.ActionColumnsSaveProfile {
 			h.openOverwritePicker()
@@ -146,22 +135,41 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 		}
 		h.handleSavePromptKey(event)
 	default:
-		if event.Key() == tcell.KeyF9 {
-			h.editConfigFromDialog()
-			return
-		}
+		h.handleMainKey(event, action)
+	}
+}
+
+func (h *Handler) handleMainKey(event *tcell.EventKey, action string) {
+	if event.Key() == tcell.KeyF9 {
+		h.editConfigFromDialog()
+		return
+	}
+	switch action {
+	case keymap.ActionColumnsSaveProfile:
+		h.setPhase(dialog.ColumnsPhaseSavePrompt)
+		return
+	case keymap.ActionColumnsLoadProfile:
+		h.openLoadPicker()
+		return
+	}
+	if ev, ok := dlg.HandleKey(h.DialogSpec(), &h.model.ColumnsDialog.Focus, event); ok {
+		h.ApplyDialogEvent(ev)
+	}
+}
+
+func (h *Handler) handlePickerKey(event *tcell.EventKey, action string) {
+	if h.model.ColumnsDialog.Phase == dialog.ColumnsPhaseLoadPicker {
 		switch action {
-		case keymap.ActionColumnsSaveProfile:
-			h.setPhase(dialog.ColumnsPhaseSavePrompt)
+		case keymap.ActionColumnsDeleteProfile:
+			h.deleteSelectedProfile()
 			return
-		case keymap.ActionColumnsLoadProfile:
-			h.openLoadPicker()
+		case keymap.ActionColumnsDefaultProfile:
+			h.setSelectedProfileDefault()
 			return
-		}
-		if ev, ok := dlg.HandleKey(h.dialogSpec(), &st.Focus, event); ok {
-			h.ApplyDialogEvent(ev)
 		}
 	}
+	w, screenH := h.screen.Size()
+	scrollquery.HandlePickerKey(w, screenH, h.DialogSpec(), h.keysDialogInput, event, h.pickerBinding())
 }
 
 // ApplyDialogEvent acts on a widget event of the open Columns dialog (key or click).
@@ -177,9 +185,9 @@ func (h *Handler) ApplyDialogEvent(ev dlg.Event) {
 	}
 	switch ev.ID {
 	case dlg.OK:
-		h.ActivateSelection()
+		h.DialogOK()
 	case dlg.Cancel:
-		h.CloseDialog()
+		h.DialogCancel()
 	default:
 		st.Apply(ev)
 	}
@@ -219,7 +227,7 @@ func (h *Handler) syncPickerRanks() {
 	pk.Ranked, pk.MatchRanges = h.host.SyncFilteredListRanks(lines, pk.Query, len(pk.Items), h.config.Filter.CaseInsensitive)
 	h.host.ClampFilteredListSelection(&pk.Selected, len(pk.Ranked))
 	w, screenH := h.screen.Size()
-	rows, _ := scrollquery.PickerGeometry(w, screenH, h.dialogSpec())
+	rows, _ := scrollquery.PickerGeometry(w, screenH, h.DialogSpec())
 	dialog.EnsurePickerScroll(len(pk.Ranked), &pk.Selected, &pk.ListScroll, rows)
 }
 
@@ -231,12 +239,10 @@ func (h *Handler) openPicker(phase dialog.ColumnsPhase, items []columnprofile.Pr
 }
 
 func (h *Handler) openLoadPicker() {
-	h.reloadProfiles()
 	h.openPicker(dialog.ColumnsPhaseLoadPicker, columnprofile.All(h.profiles))
 }
 
 func (h *Handler) openOverwritePicker() {
-	h.reloadProfiles()
 	var saved []columnprofile.Profile
 	for _, p := range columnprofile.All(h.profiles) {
 		if !p.Builtin {
@@ -274,11 +280,7 @@ func (h *Handler) activatePickerSelection() {
 		h.saveProfile(profile.Name, profile.Description)
 		return
 	}
-	set, unknown := profile.Set()
-	if len(unknown) > 0 {
-		h.host.SetTransientMessage(fmt.Sprintf("Profile %s: unknown columns %s", profile.Name, strings.Join(unknown, ", ")), ui.MessageUrgencyWarn)
-	}
-	st.FileColumns = set
+	st.FileColumns = h.profileColumns(profile)
 	st.Checked = checkedFor(st.Entries, profile.Meta)
 	st.HiddenMeta = hiddenMetaNames(st.Entries, profile.Meta)
 	h.setPhase(dialog.ColumnsPhaseMain)
@@ -328,7 +330,7 @@ func (h *Handler) focusedPromptField() (dlg.ID, *dialog.ColumnsPromptField) {
 
 func (h *Handler) handleSavePromptKey(event *tcell.EventKey) {
 	st := &h.model.ColumnsDialog
-	spec := h.dialogSpec()
+	spec := h.DialogSpec()
 	if ev, ok := dlg.HandleKey(spec, &st.Focus, event); ok {
 		h.applySavePromptEvent(ev)
 		return

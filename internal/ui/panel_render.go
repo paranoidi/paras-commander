@@ -42,6 +42,15 @@ func panelListNameWidth(rowTextWidth int, cols panel.ColumnSet, nameOnly, showGi
 	return max(1, rowTextWidth-panelListReservedBeforeName(showGit, nameOnly)-panelListReservedAfterName(cols, nameOnly))
 }
 
+// panelRowNameWidth is the name width in a row of text rowTextWidth wide, which already has the git
+// strip excluded, with or without the meta columns.
+func panelRowNameWidth(rowTextWidth int, cols panel.ColumnSet, nameOnly, showMeta bool, metaColW int) int {
+	if showMeta {
+		return panelListNameWidthWithMeta(rowTextWidth, metaColW, cols, nameOnly, false)
+	}
+	return panelListNameWidth(rowTextWidth, cols, nameOnly, false)
+}
+
 // panelListNameWidthWithMeta returns name width when the Meta column is shown.
 func panelListNameWidthWithMeta(rowTextWidth, metaColW int, cols panel.ColumnSet, nameOnly, showGit bool) int {
 	return max(1, rowTextWidth-panelListReservedBeforeName(showGit, nameOnly)-panelListReservedAfterName(cols, nameOnly)-2-metaColW)
@@ -657,11 +666,7 @@ func drawPanelRowIconStrip(screen tcell.Screen, p panelRowParams, rp panelRowPai
 // file columns cols and, when showMeta is set, the meta columns (metaTotalW plus their two-cell
 // gap). drawPanel and PanelNameColumnWidth both use it.
 func panelNameColumnWidth(layoutRes panelColumnLayoutResult, cols panel.ColumnSet, showMeta bool, metaTotalW int) int {
-	// RowTextWidth already has the git strip excluded; pass false to avoid double-subtracting.
-	if showMeta {
-		return panelListNameWidthWithMeta(layoutRes.RowTextWidth, metaTotalW, cols, layoutRes.NameOnlyDisplay, false)
-	}
-	return panelListNameWidth(layoutRes.RowTextWidth, cols, layoutRes.NameOnlyDisplay, false)
+	return panelRowNameWidth(layoutRes.RowTextWidth, cols, layoutRes.NameOnlyDisplay, showMeta, metaTotalW)
 }
 
 // fitPanelMetaColumns lays out the meta columns a panel has room for: the rightmost go first
@@ -1129,11 +1134,7 @@ func panelListHeader(rowTextWidth int, state panel.State, fileCols panel.ColumnS
 		}
 		metaTotalW += lay.Width
 	}
-	// rowTextWidth already has the git strip excluded; pass false to avoid double-subtracting.
-	nameWidth := panelListNameWidth(rowTextWidth, fileCols, false, false)
-	if showMeta {
-		nameWidth = panelListNameWidthWithMeta(rowTextWidth, metaTotalW, fileCols, false, false)
-	}
+	nameWidth := panelRowNameWidth(rowTextWidth, fileCols, false, showMeta, metaTotalW)
 	metaHdr, metaStarts := metaHeader(metaSortArrowLayouts(metaLayouts, state))
 	if showMeta && runewidth.StringWidth(metaHdr) > metaTotalW {
 		nameWidth-- // first meta column's sort arrow spills into the name→meta gap
@@ -1169,8 +1170,8 @@ func panelListHeader(rowTextWidth int, state panel.State, fileCols panel.ColumnS
 	}
 	x := joinW
 	for _, spec := range fileCols.Without(panel.ColumnSize).Specs() {
-		x += panel.ColumnGap
-		if spec.Sortable {
+		x += spec.Gap
+		if spec.Sortable() {
 			add(x, x+spec.Width, spec.SortMode, "")
 		}
 		x += spec.Width
@@ -1179,18 +1180,21 @@ func panelListHeader(rowTextWidth int, state panel.State, fileCols panel.ColumnS
 }
 
 // appendFileColumns appends every file column but size (which panellist.JoinRow lays out) to a
-// joined row or header: the one place their gaps, padding and alignment are decided.
+// joined row or header: the one place their gaps, padding and alignment are decided. It runs per
+// painted row, so it walks the table instead of allocating a ColumnSet.Specs.
 func appendFileColumns(row string, cols panel.ColumnSet, cell func(panel.ColumnSpec) string) string {
+	cols = cols.Without(panel.ColumnSize)
+	if cols == 0 {
+		return row
+	}
 	var b strings.Builder
 	b.WriteString(row)
-	for _, spec := range cols.Without(panel.ColumnSize).Specs() {
-		text := cell(spec)
-		b.WriteString(strings.Repeat(" ", panel.ColumnGap))
-		if spec.RightAlign {
-			b.WriteString(runewidth.FillLeft(text, spec.Width))
-		} else {
-			b.WriteString(runewidth.FillRight(text, spec.Width))
+	for _, spec := range panel.Columns() {
+		if !cols.Has(spec.ID) {
+			continue
 		}
+		b.WriteString(strings.Repeat(" ", spec.Gap))
+		b.WriteString(padMetaLineToWidth(cell(spec), spec.Width, spec.RightAlign))
 	}
 	return b.String()
 }
@@ -1212,10 +1216,7 @@ type panelRowOpts struct {
 }
 
 func formatEntry(entry localfs.Entry, width int, opts panelRowOpts, styles theme.Theme, painter DiskUsagePainter, metaText string) string {
-	nameWidth := panelListNameWidth(width, opts.Columns, opts.NameOnly, false)
-	if opts.ShowMeta {
-		nameWidth = panelListNameWidthWithMeta(width, opts.MetaColW, opts.Columns, opts.NameOnly, false)
-	}
+	nameWidth := panelRowNameWidth(width, opts.Columns, opts.NameOnly, opts.ShowMeta, opts.MetaColW)
 	display := panellist.EntryDisplayRunes(entry, nameWidth, opts.ShowIcons, opts.Suffix, styles)
 	name := string(panellist.RunesFromDisplay(display))
 	if opts.NameOnly {
@@ -1256,18 +1257,14 @@ func fileColumnCell(entry localfs.Entry, spec panel.ColumnSpec) string {
 			text = strconv.FormatUint(entry.Links, 10)
 		}
 	}
-	return runewidth.Truncate(text, spec.Width, "…")
+	return primitive.TruncateRight(text, spec.Width)
 }
 
 func matchSpans(entry localfs.Entry, rowWidth int, ranges []search.Range, highlightCursor bool, styles theme.Theme, opts panelRowOpts, nameBGAt func(displayIndex int) tcell.Style) []primitive.Span {
 	if len(ranges) == 0 {
 		return nil
 	}
-	// rowWidth already has the git strip excluded; pass false to avoid double-subtracting.
-	nameWidth := panelListNameWidth(rowWidth, opts.Columns, opts.NameOnly, false)
-	if opts.ShowMeta {
-		nameWidth = panelListNameWidthWithMeta(rowWidth, opts.MetaColW, opts.Columns, opts.NameOnly, false)
-	}
+	nameWidth := panelRowNameWidth(rowWidth, opts.Columns, opts.NameOnly, opts.ShowMeta, opts.MetaColW)
 	display := panellist.EntryDisplayRunes(entry, nameWidth, opts.ShowIcons, opts.Suffix, styles)
 	matchStyle := styles.FuzzyHighlight
 	if highlightCursor {

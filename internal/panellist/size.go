@@ -138,6 +138,12 @@ func MetaCellStyle(info tcell.Style, metaCell int, alerts []MetaAlert, cursorSty
 	return info
 }
 
+// sizeGap separates the size column from what is before it; SizeGap is its width.
+const (
+	sizeGap = " "
+	SizeGap = len(sizeGap)
+)
+
 // JoinRow lays out one name/meta/size row: name is left-padded to nameWidth, meta (already
 // padded by the caller) follows with a two-space gap when showMeta, and size is right-aligned
 // to SizeCells with a one-space gap when showSize.
@@ -146,12 +152,12 @@ func JoinRow(nameWidth int, name, meta string, showMeta bool, size string, showS
 	name = runewidth.FillRight(name, nameWidth)
 	if showMeta {
 		if showSize {
-			return fmt.Sprintf("%s%s%s %*s", name, metaGap, meta, SizeCells, size)
+			return fmt.Sprintf("%s%s%s%s%*s", name, metaGap, meta, sizeGap, SizeCells, size)
 		}
 		return name + metaGap + meta
 	}
 	if showSize {
-		return fmt.Sprintf("%s %*s", name, SizeCells, size)
+		return fmt.Sprintf("%s%s%*s", name, sizeGap, SizeCells, size)
 	}
 	return name
 }

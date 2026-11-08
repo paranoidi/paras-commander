@@ -423,7 +423,7 @@ func metaName(st dialog.ColumnsDialogState) string {
 			return fmt.Sprintf("item%d", i)
 		}
 	}
-	if i, ok := dlg.IDIndex(st.Focus, "file:"); ok {
+	if i, ok := dialog.ColumnsFileIndex(st.Focus); ok {
 		return fmt.Sprintf("file%d", i)
 	}
 	if st.Focus != "" {

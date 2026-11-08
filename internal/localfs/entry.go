@@ -178,6 +178,13 @@ func entryFromDirEntry(cleanPath string, dirEntry os.DirEntry, opts ListOptions)
 	}, true, nil
 }
 
+// entryAttrs are the listing facts read off a FileInfo for the file columns.
+type entryAttrs struct {
+	owner, group          string
+	links                 uint64
+	changedAt, accessedAt time.Time
+}
+
 // IsDir returns true if the entry is a directory.
 func (e Entry) IsDir() bool {
 	return e.Type == EntryDirectory
