@@ -55,6 +55,8 @@ Columns never crowd out the file name. When a panel has too little width, the ri
 
 A failing command leaves the cell empty and shows one warning toast per run, not one per file.
 
+Commands do not run for rows that exist only in the index ([ghost rows](fileindex.md)), since there is no file to run them on; their cells stay empty. File Index columns still fill in for them.
+
 `C-y` drops the cache and recomputes all active columns for that panel. When pc itself changes something (delete, rename, copy over a file, and so on), only that item is recomputed and its cached value dropped; everything else keeps its value. Renaming a directory therefore recomputes that one row. Changes that affect a parent directory's value, such as deleting a file inside it, show after `C-y`. File Index columns are the exception: they update on every row when the index changes, because a change to one file can alter another's values, such as its copy count. Changing directory runs the active columns for the new listing. In [tree view](panels.md#tree-view) the columns also fill in for expanded directories: each directory's rows are computed as they load, with the command running in that directory.
 
 ## Alert colors

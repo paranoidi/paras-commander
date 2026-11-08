@@ -1066,8 +1066,12 @@ func (h *Handler) runProvider(ctx context.Context, panelID int, gen uint64, p *m
 
 // entryCmd returns the shell command to run for entry e under cmdDef.
 // when filters every row; files use file, directories use dirs.
-// Returns ("", false) when the entry should not be dispatched (filtered, no command, or cached).
+// Returns ("", false) when the entry should not be dispatched (a ghost row, which has no file to
+// run on; filtered, no command, or cached).
 func (h *Handler) entryCmd(cmdDef metacmds.MetaEntry, e localfs.Entry, dir string) (cmd string, ok bool) {
+	if e.IndexStatus == localfs.IndexStatusMissing {
+		return "", false
+	}
 	matched, err := cmdDef.MatchesRow(e, dir)
 	if err != nil || !matched {
 		return "", false
