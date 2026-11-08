@@ -393,16 +393,14 @@ icon as soon as its files are committed.
 
 ## Operations and the index
 
-The index follows the renames, moves and deletes that pc makes on disk, when
-the operation was started from a [Browse-with](#browsing-with-fileindex) panel.
-The same operations started from an ordinary local panel leave the index alone;
-a deleted file then shows as a ghost row until a prune. Undoing a job that
-followed the index follows it too. An index view (`fileindex://`) is the other
-way round: its operations change the index and never the disk.
+The index follows the renames, moves and deletes that pc makes on disk, from
+any panel, undo included. An index view (`fileindex://`) is the other way round:
+its operations change the index and never the disk. Changes made outside pc wait
+for a scan; a deleted file then shows as a ghost row until a prune.
 
 Following moves or removes records that already exist. It never adds any: new
 files, copies and extracted files wait for the next scan. A file moved by copy and delete (across
-file systems) loses its tags, because its record is removed rather than moved.
+file systems) has no record until a scan of the destination, which brings its tags back.
 Panels showing the index refresh when the records change.
 
 The [Find duplicates](find-duplicates.md) and Copies outside views are the

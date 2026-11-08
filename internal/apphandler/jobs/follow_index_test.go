@@ -51,28 +51,24 @@ func onlyJob(t *testing.T, s *jobs.State) *jobs.Job {
 	return all[0]
 }
 
-func TestTransferJobKeepsIndexPathsAndFollows(t *testing.T) {
+func TestTransferJobKeepsIndexPaths(t *testing.T) {
 	cases := []struct {
 		name      string
 		panel     string
 		withIndex bool
 		typ       jobs.Type
 		src, dest string
-		follow    bool
 	}{
-		{"copy out of the fileindex", "fileindex:///orchard", false, jobs.TypeCopy, "fileindex:///orchard/harbor.txt", "/meadow", true},
-		{"move inside the fileindex", "fileindex:///orchard", false, jobs.TypeMove, "fileindex:///orchard/harbor.txt", "fileindex:///meadow", true},
-		{"browse with fileindex", "/orchard", true, jobs.TypeMove, "/orchard/harbor.txt", "/meadow", true},
-		{"normal local panel", "/orchard", false, jobs.TypeMove, "/orchard/harbor.txt", "/meadow", false},
+		{"copy out of the fileindex", "fileindex:///orchard", false, jobs.TypeCopy, "fileindex:///orchard/harbor.txt", "/meadow"},
+		{"move inside the fileindex", "fileindex:///orchard", false, jobs.TypeMove, "fileindex:///orchard/harbor.txt", "fileindex:///meadow"},
+		{"browse with fileindex", "/orchard", true, jobs.TypeMove, "/orchard/harbor.txt", "/meadow"},
+		{"normal local panel", "/orchard", false, jobs.TypeMove, "/orchard/harbor.txt", "/meadow"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			h, state := followHandler(t, c.panel, c.withIndex)
 			h.AddTransferJob(TransferJobRequest{Type: c.typ, Sources: []string{c.src}, Dest: c.dest})
 			j := onlyJob(t, state)
-			if j.FollowIndex != c.follow {
-				t.Errorf("FollowIndex = %v, want %v", j.FollowIndex, c.follow)
-			}
 			if j.Sources[0].String() != c.src || j.Destination.String() != c.dest {
 				t.Errorf("job paths %s -> %s, want them untranslated (%s -> %s)", j.Sources[0], j.Destination, c.src, c.dest)
 			}
@@ -109,19 +105,13 @@ func TestTransferJobRefusalsNeverQueue(t *testing.T) {
 	}
 }
 
-func TestDeleteJobFollowsAndKeepsIndexPaths(t *testing.T) {
+func TestDeleteJobKeepsIndexPaths(t *testing.T) {
 	// A fileindex:// delete is the index backend's: sources stay as given and nothing is deleted on disk.
 	h, state := followHandler(t, "fileindex:///orchard", false)
 	h.EnqueueDeleteJob([]string{"fileindex:///orchard/harbor.txt"}, false, false)
 	j := onlyJob(t, state)
-	if !j.FollowIndex || j.DeleteOnDisk || j.Sources[0].Scheme() != pathloc.SchemeFileIndex {
-		t.Fatalf("delete job = follow %v, on disk %v, source %s; want follow, index only, source kept", j.FollowIndex, j.DeleteOnDisk, j.Sources[0])
-	}
-
-	h, state = followHandler(t, "/orchard", false)
-	h.EnqueueDeleteJob([]string{"/orchard/harbor.txt"}, false, false)
-	if onlyJob(t, state).FollowIndex {
-		t.Fatal("a delete from a normal local panel must not follow the index")
+	if j.DeleteOnDisk || j.Sources[0].Scheme() != pathloc.SchemeFileIndex {
+		t.Fatalf("delete job = on disk %v, source %s; want index only, source kept", j.DeleteOnDisk, j.Sources[0])
 	}
 }
 
@@ -129,40 +119,10 @@ func TestDedupDeleteJobDeletesOnDisk(t *testing.T) {
 	h, state := followHandler(t, "/orchard", false)
 	h.EnqueueDedupDeleteJob([]string{"fileindex:///orchard/harbor.txt"}, true)
 	j := onlyJob(t, state)
-	if !j.DeleteOnDisk || !j.FollowIndex || !j.DeleteRemoveEmptyDirs || j.PromptDanglingDirs || j.Sources[0].Scheme() != pathloc.SchemeFileIndex {
-		t.Fatalf("dedup delete job = %+v; want on disk, following, cleaning empty dirs, no prompt, source kept", j)
+	if !j.DeleteOnDisk || !j.DeleteRemoveEmptyDirs || j.PromptDanglingDirs || j.Sources[0].Scheme() != pathloc.SchemeFileIndex {
+		t.Fatalf("dedup delete job = %+v; want on disk, cleaning empty dirs, no prompt, source kept", j)
 	}
 	if clone := j.RetryClone(); !clone.DeleteOnDisk {
 		t.Fatal("a retried dedup delete must still act on disk")
-	}
-}
-
-func TestFlattenJobFollowsOnlyFromPanelShowingIndex(t *testing.T) {
-	h, state := followHandler(t, "/orchard", false)
-	h.AddFlattenJob(FlattenJobRequest{Roots: []string{"/orchard/lantern"}, Dest: "/orchard"})
-	if onlyJob(t, state).FollowIndex {
-		t.Fatal("a flatten from a normal local panel must not follow the index")
-	}
-}
-
-func TestExtractJobDoesNotFollowIndex(t *testing.T) {
-	h, state := followHandler(t, "fileindex:///orchard", false)
-	h.EnqueueExtractJob([]string{"/orchard/harbor.zip"}, "/meadow")
-	if onlyJob(t, state).FollowIndex {
-		t.Fatal("an extract only creates files: it must not follow the index")
-	}
-}
-
-func TestUndoJobKeepsFollowIndex(t *testing.T) {
-	state := jobs.NewState()
-	done := &jobs.Job{
-		ID: "done", Type: jobs.TypeRename, Status: jobs.StatusCompleted, FollowIndex: true,
-		Sources: pathloc.PathsForTest("/orchard/harbor.txt"),
-	}
-	done.Undo = []ops.UndoStep{{Kind: ops.UndoMoveBack, Path: pathloc.MustParse("/orchard/pebble.txt"), From: pathloc.MustParse("/orchard/harbor.txt")}}
-	state.AddFinishedJob(done)
-	undo, ok := state.EnqueueUndo("done")
-	if !ok || !undo.FollowIndex {
-		t.Fatalf("undo = %v, ok %v; want a job that follows the index like its target", undo, ok)
 	}
 }

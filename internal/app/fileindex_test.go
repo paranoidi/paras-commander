@@ -1472,7 +1472,7 @@ func TestFileIndexDedupDeleteRemovesFileAndRecord(t *testing.T) {
 	})
 }
 
-func TestFileIndexNormalLocalPanelDeleteLeavesIndexAlone(t *testing.T) {
+func TestFileIndexNormalLocalPanelDeleteFollows(t *testing.T) {
 	a, screen, dir, _ := fileIndexApp(t)
 	cursorTo(t, a, "harbor.txt")
 	dispatchFileOp(t, a, keymap.ActionFileDelete)
@@ -1489,11 +1489,10 @@ func TestFileIndexNormalLocalPanelDeleteLeavesIndexAlone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The sink would have been queued by now: its drain ends before the check.
-	a.fileIndex.WaitApplied()
-	if _, found, _ := d.FileInfo(filepath.Join(dir, "harbor.txt")); !found {
-		t.Fatal("a delete from a normal local panel must leave the index to prune")
-	}
+	drainInterruptEventsUntil(t, a, screen, 5*time.Second, func() bool {
+		_, found, _ := d.FileInfo(filepath.Join(dir, "harbor.txt"))
+		return !found
+	})
 }
 
 // rescan records dir's files with their real size and mtime (the fixture records "now").

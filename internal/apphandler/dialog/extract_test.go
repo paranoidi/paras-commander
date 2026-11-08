@@ -95,8 +95,8 @@ func TestExecuteExtractReadsIndexedArchiveFromDisk(t *testing.T) {
 	if len(snap) != 1 {
 		t.Fatalf("jobs = %d, want 1", len(snap))
 	}
-	if j := snap[0]; j.Sources[0].String() != archivePath || j.Destination.String() != destDir || j.FollowIndex {
-		t.Fatalf("job = %s -> %s, follow %v; want disk paths and no follow", j.Sources[0], j.Destination, j.FollowIndex)
+	if j := snap[0]; j.Sources[0].String() != archivePath || j.Destination.String() != destDir {
+		t.Fatalf("job = %s -> %s; want disk paths", j.Sources[0], j.Destination)
 	}
 }
 

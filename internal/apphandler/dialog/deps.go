@@ -120,9 +120,8 @@ type Deps struct {
 	// FSSink receives the filesystem changes of every dialog operation (ADR 0023). Nil disables it.
 	FSSink fschange.Sink
 
-	// FileIndex receives the filesystem changes of dialog operations started from a panel that
-	// follows the fileindex (panel.FollowsIndex). Nil disables it; a nil *fileindex.Index is
-	// harmless (Apply ignores its nil receiver) but pass a nil interface to mean "none".
+	// FileIndex receives the filesystem changes of every dialog operation (ADR 0028). Nil disables
+	// it; a nil *fileindex.Index is harmless (Apply ignores its nil receiver) but pass a nil interface to mean "none".
 	FileIndex fschange.Sink
 
 	// PromptElevate asks the user whether a permission-denied local file step may be retried as

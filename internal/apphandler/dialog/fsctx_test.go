@@ -18,33 +18,21 @@ func (l *indexLog) Apply(b []fschange.Change) {
 	l.mu.Unlock()
 }
 
-func TestFsCtxAttachesIndexSinkOnlyForPanelsThatFollowIt(t *testing.T) {
+func TestFsCtxReportsToSharedAndIndexSinks(t *testing.T) {
 	t.Parallel()
 	s := newSnapshotHarness(t, true)
-	sink := &indexLog{}
-	s.h.indexSink = sink // no shared sink: the index sink must still be attached
+	sink, shared := &indexLog{}, &indexLog{}
+	s.h.indexSink, s.h.fsSink = sink, shared
 	change := fschange.Change{Kind: fschange.Removed, Path: "/orchard/harbor.txt"}
 
-	fschange.Report(s.h.fsCtx(), change)
-	if len(sink.got) != 0 {
-		t.Fatalf("a normal local panel reported %v to the index", sink.got)
+	fschange.Report(s.h.fsCtx(), change) // a normal local panel
+	if len(sink.got) != 1 || len(shared.got) != 1 {
+		t.Fatalf("index sink %v, shared sink %v; want one change each", sink.got, shared.got)
 	}
 
-	s.h.host.ActivePanel().WithIndex = true
-	fschange.Report(s.h.fsCtx(), change)
-	if len(sink.got) != 1 {
-		t.Fatalf("a browse-with panel reported %v to the index, want one change", sink.got)
-	}
-
-	// With the shared sink and no index sink wired, the context still works.
-	shared := &indexLog{}
-	s.h.fsSink = shared
 	s.h.indexSink = nil
 	fschange.Report(s.h.fsCtx(), change)
-	if len(sink.got) != 1 {
-		t.Fatal("a cleared index sink still received changes")
-	}
-	if len(shared.got) != 1 {
-		t.Fatalf("the shared sink got %v, want one change", shared.got)
+	if len(sink.got) != 1 || len(shared.got) != 2 {
+		t.Fatalf("index sink %v, shared sink %v; a cleared index sink must not receive it", sink.got, shared.got)
 	}
 }

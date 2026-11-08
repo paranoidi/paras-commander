@@ -254,13 +254,13 @@ baseLabel:
 // TransferFunc builds the job worker transfer function from config. permWait asks the user
 // whether to retry a permission-denied local step as root (nil disables elevation). fsSink (nil
 // disables it) receives the filesystem changes the job's operations report (ADR 0023);
-// indexSink (nil disables it) receives them too, but only for jobs with FollowIndex. Pass a nil
-// interface, not a typed nil pointer, to disable a sink.
+// indexSink (nil disables it) receives them too (ADR 0028). Pass a nil interface, not a typed nil
+// pointer, to disable a sink.
 func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, compareCfg config.CompareConfig, rateWait ops.RateLimiter, permWait ops.PermissionWaitFunc, fsSink, indexSink fschange.Sink) func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer) error {
 	return func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer) error {
 		// One Elevator per job: a sudo password the user types is remembered for this job only.
 		ctx = ops.WithElevator(ctx, ops.NewElevator(opsCfg.Elevate, permWait))
-		ctx = fschange.WithSink(ctx, jobSink(job, fsSink, indexSink))
+		ctx = fschange.WithSink(ctx, fschange.Multi(fsSink, indexSink))
 		opts, throttle := buildTransferOptions(job, opsCfg, jobsCfg, rateWait)
 		opts.OnItemDone = job.RecordOperation
 		opts.OnSourceStart = job.StartSource
@@ -400,15 +400,6 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, com
 			emit:     emit,
 		})
 	}
-}
-
-// jobSink is the sink a job's operations report to: the shared sink, plus the fileindex sink when
-// the job follows the index.
-func jobSink(job *jobs.Job, fsSink, indexSink fschange.Sink) fschange.Sink {
-	if job.FollowIndex {
-		return fschange.Multi(fsSink, indexSink)
-	}
-	return fsSink
 }
 
 // diskWaitFromBlocker adapts the jobs blocker callback to ops.DiskWaitFunc.

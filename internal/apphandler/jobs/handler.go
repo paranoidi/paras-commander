@@ -1449,7 +1449,6 @@ func (h *Handler) AddTransferJob(req TransferJobRequest) bool {
 		Sources:             srcLocs,
 		Destination:         destLoc,
 		DestIsDir:           ops.DestinationIsDirAtEnqueue(destLoc),
-		FollowIndex:         h.followIndex(srcLocs...), // a fileindex:// dest implies fileindex:// sources (refusal above)
 		PausedAfterScan:     req.StartPaused,
 		PreservePermissions: req.Preserve.PreservePermissions,
 		PreserveTimestamps:  req.Preserve.PreserveTimestamps,
@@ -1484,12 +1483,6 @@ func indexTransferRefusal(t jobs.Type, sources []pathloc.Path, dest pathloc.Path
 		}
 	}
 	return ""
-}
-
-// followIndex reports whether a job started now keeps the fileindex in step (panel.FollowsIndex
-// for the active panel and the job's paths).
-func (h *Handler) followIndex(paths ...pathloc.Path) bool {
-	return panel.FollowsIndex(h.host.ActivePanel(), paths...)
 }
 
 // applySizeEstimate seeds a copy or move job's byte total from what the active panel already
@@ -1554,7 +1547,6 @@ func (h *Handler) enqueueDeleteJob(sources []string, removeEmptyDirs, promptDang
 		Sources:               srcLocs,
 		TotalFiles:            len(sources),
 		DeleteRemoveEmptyDirs: removeEmptyDirs,
-		FollowIndex:           h.followIndex(srcLocs...),
 		DeleteOnDisk:          onDisk,
 		PromptDanglingDirs:    promptDangling && h.config.Operations.RemoveDanglingDirs,
 	}
@@ -1572,7 +1564,6 @@ func (h *Handler) EnqueueExtractJob(sources []string, dest string) {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue extract: %v", err), ui.MessageUrgencyError)
 		return
 	}
-	// An extract only creates files, which the index learns of on the next scan: no FollowIndex.
 	job := &jobs.Job{
 		ID:          jobs.NewJobID(),
 		Type:        jobs.TypeExtract,
@@ -1604,7 +1595,6 @@ func (h *Handler) AddFlattenJob(req FlattenJobRequest) {
 		Sources:            srcLocs,
 		Destination:        destLoc,
 		DestIsDir:          ops.DestinationIsDirAtEnqueue(destLoc),
-		FollowIndex:        h.followIndex(), // the dialog refused fileindex:// paths
 		FlattenRemoveEmpty: req.RemoveEmpty,
 		FlattenRecursive:   req.Recursive,
 	}

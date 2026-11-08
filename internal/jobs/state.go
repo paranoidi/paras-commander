@@ -475,7 +475,6 @@ func (s *State) EnqueueUndo(id string) (*Job, bool) {
 		TotalFiles:  len(target.Undo),
 		Undo:        slices.Clone(target.Undo),
 		UndoOf:      id,
-		FollowIndex: target.FollowIndex,
 	}
 	s.AddJob(job)
 	return job, true

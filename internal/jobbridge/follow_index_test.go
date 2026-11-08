@@ -49,28 +49,23 @@ func runJob(t *testing.T, job *jobs.Job, fsSink, indexSink fschange.Sink) {
 	}
 }
 
-func TestIndexSinkReceivesChangesOnlyForFollowingJobs(t *testing.T) {
-	for _, follow := range []bool{true, false} {
-		dir := t.TempDir()
-		file := filepath.Join(dir, "harbor.txt")
-		if err := os.WriteFile(file, []byte("anchor"), 0o644); err != nil {
-			t.Fatal(err)
-		}
-		disk, index := &changeLog{}, &changeLog{}
-		runJob(t, &jobs.Job{
-			ID: jobs.NewJobID(), Type: jobs.TypeDelete, Status: jobs.StatusRunning, FollowIndex: follow,
-			Sources: pathloc.PathsForTest(file),
-		}, disk, index)
-		if got := disk.paths(); len(got) != 1 || got[0] != file {
-			t.Errorf("follow=%v: disk-usage sink got %v, want the deleted file", follow, got)
-		}
-		got := index.paths()
-		if follow && (len(got) != 1 || got[0] != file) {
-			t.Errorf("a following job reported %v to the index, want the deleted file", got)
-		}
-		if !follow && len(got) != 0 {
-			t.Errorf("a job that does not follow the index reported %v to it", got)
-		}
+// Every job reports to the index, and the shared sink gets the same events.
+func TestEveryJobReportsToBothSinks(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "harbor.txt")
+	if err := os.WriteFile(file, []byte("anchor"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	disk, index := &changeLog{}, &changeLog{}
+	runJob(t, &jobs.Job{
+		ID: jobs.NewJobID(), Type: jobs.TypeDelete, Status: jobs.StatusRunning,
+		Sources: pathloc.PathsForTest(file),
+	}, disk, index)
+	if got := disk.paths(); len(got) != 1 || got[0] != file {
+		t.Errorf("shared sink got %v, want the deleted file", got)
+	}
+	if got := index.paths(); len(got) != 1 || got[0] != file {
+		t.Errorf("index sink got %v, want the deleted file", got)
 	}
 }
 
@@ -82,7 +77,7 @@ func TestFollowingJobWorksWithoutDiskUsageSink(t *testing.T) {
 	}
 	index := &changeLog{}
 	runJob(t, &jobs.Job{
-		ID: jobs.NewJobID(), Type: jobs.TypeDelete, Status: jobs.StatusRunning, FollowIndex: true,
+		ID: jobs.NewJobID(), Type: jobs.TypeDelete, Status: jobs.StatusRunning,
 		Sources: pathloc.PathsForTest(file),
 	}, nil, index)
 	if got := index.paths(); len(got) != 1 {
@@ -138,7 +133,7 @@ func TestDeleteOfIndexPathsOnDiskCleansEmptyParentsOnDiskOnly(t *testing.T) {
 	}
 	index := &changeLog{}
 	runJob(t, &jobs.Job{
-		ID: jobs.NewJobID(), Type: jobs.TypeDelete, Status: jobs.StatusRunning, FollowIndex: true, DeleteOnDisk: true,
+		ID: jobs.NewJobID(), Type: jobs.TypeDelete, Status: jobs.StatusRunning, DeleteOnDisk: true,
 		DeleteRemoveEmptyDirs: true, Sources: []pathloc.Path{src},
 	}, nil, index)
 	if _, err := os.Stat(file); err == nil {
@@ -159,7 +154,7 @@ func TestDeleteOfIndexPathsWithoutDeleteOnDiskLeavesDiskAlone(t *testing.T) {
 	file, parent, src, idx := indexedFile(t)
 	index := &changeLog{}
 	runJob(t, &jobs.Job{
-		ID: jobs.NewJobID(), Type: jobs.TypeDelete, Status: jobs.StatusRunning, FollowIndex: true,
+		ID: jobs.NewJobID(), Type: jobs.TypeDelete, Status: jobs.StatusRunning,
 		DeleteRemoveEmptyDirs: true, Sources: []pathloc.Path{src},
 	}, nil, index)
 	if _, err := os.Stat(file); err != nil {
@@ -186,7 +181,7 @@ func TestDeleteOnDiskOfFileGoneFromDiskRemovesRecordOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 	runJob(t, &jobs.Job{
-		ID: jobs.NewJobID(), Type: jobs.TypeDelete, Status: jobs.StatusRunning, FollowIndex: true, DeleteOnDisk: true,
+		ID: jobs.NewJobID(), Type: jobs.TypeDelete, Status: jobs.StatusRunning, DeleteOnDisk: true,
 		DeleteRemoveEmptyDirs: true, Sources: []pathloc.Path{src},
 	}, nil, &changeLog{})
 	d, err := idx.DB()

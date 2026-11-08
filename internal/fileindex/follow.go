@@ -29,17 +29,21 @@ const (
 
 // Apply makes the index follow filesystem changes pc made on disk (fschange.Sink, ADR 0023): a
 // removed path loses its record, a renamed one moves its record (a record at the target is
-// dropped first, as the rename replaced the file). Paths the index does not know, Created and Dirty
-// changes are ignored: new and changed content waits for a scan. Apply only queues the batch; one
-// goroutine applies queued batches in order, and it does nothing while the index is not
-// available (it never prompts or creates a database). OnChange fires once per pass that changed a
-// record. Until a batch is applied, Overlay shows no ghost row for what it took off the disk. A nil
-// Index ignores everything.
+// dropped first, as the rename replaced the file, also when the source has no record to move).
+// Paths the index does not know, Created and Dirty changes are ignored: new and changed content
+// waits for a scan. It receives every job's changes (ADR 0028), so it stays cheap on the caller's
+// side: without a database, or with nothing to follow, nothing is queued, and otherwise it only
+// queues the batch; one goroutine applies queued batches in order (it never prompts or creates a
+// database). OnChange fires once per pass that changed a record. Until a batch is applied, Overlay
+// shows no ghost row for what it took off the disk. A nil Index ignores everything.
 func (x *Index) Apply(batch []fschange.Change) {
-	if x == nil || len(batch) == 0 {
+	if x == nil || len(batch) == 0 || !x.Available() {
 		return
 	}
 	gone := gonePaths(batch)
+	if len(gone) == 0 {
+		return
+	}
 	x.holdGone(gone)
 	x.applyMu.Lock()
 	x.applyPending = append(x.applyPending, queuedChanges{changes: slices.Clone(batch), gone: gone})
@@ -199,13 +203,21 @@ type move struct {
 	dir      bool
 }
 
-// applyBatch applies one batch of changes and reports whether a record changed. Errors leave the
-// records as they were: the next scan puts the index right.
+// applyBatch applies one batch of changes in the order they arrived and reports whether a record
+// changed. A run of renames applies together, as a chain among them needs (moveRecords). Errors
+// leave the records as they were: the next scan puts the index right.
 func applyBatch(d *db.DB, batch []fschange.Change) (changed bool) {
 	var moves []move
+	flush := func() {
+		if moveRecords(d, moves) {
+			changed = true
+		}
+		moves = nil
+	}
 	for _, c := range batch {
 		switch c.Kind {
 		case fschange.Removed:
+			flush()
 			if p, err := indexedPath(c.Path); err == nil && removeRecord(d, p, c.IsDir) {
 				changed = true
 			}
@@ -217,10 +229,17 @@ func applyBatch(d *db.DB, batch []fschange.Change) (changed bool) {
 			}
 			if dir, ok := recordKind(d, from, c.IsDir); ok {
 				moves = append(moves, move{from: from, to: to, dir: dir})
+			} else if !c.IsDir && !slices.ContainsFunc(moves, func(m move) bool { return m.to == from }) {
+				// An unindexed file replaced the target: its record describes content that is gone.
+				flush()
+				if removeRecord(d, to, false) {
+					changed = true
+				}
 			}
 		}
 	}
-	return moveRecords(d, moves) || changed
+	flush()
+	return changed
 }
 
 // indexedPath is the path the index records for host path p: its directory resolved as
@@ -327,5 +346,22 @@ func moveRecord(d *db.DB, from, to string, dir bool) bool {
 			return false
 		}
 	}
-	return retryBusy(func() error { _, err := d.Move(from, to, nil); return err }) == nil
+	move := func() error { return retryBusy(func() error { _, err := d.Move(from, to, nil); return err }) }
+	err := move()
+	if err == nil {
+		return true
+	}
+	if !dir || isBusy(err) {
+		return false
+	}
+	// rename(2) only lands a directory on an empty one, so records clashing at the target are stale.
+	if strings.Contains(err.Error(), "Cannot merge") {
+		removed := retryBusy(func() error { _, err := d.RemoveTree(to); return err })
+		if removed == nil && move() == nil {
+			return true
+		}
+	}
+	// The directory is gone from here whatever the records say: no ghost stays. A scan of the
+	// destination records it there.
+	return retryBusy(func() error { _, err := d.RemoveTree(from); return err }) == nil
 }
