@@ -228,8 +228,9 @@ func (g columnsGrid) group(items []dlg.Item) dlg.Group {
 	return dlg.Group{Columns: [][]dlg.Item{out}}
 }
 
+// columnsSectionHeader is a section's heading: a blank row, then a separator with its name.
 func columnsSectionHeader(label string) dlg.Group {
-	return dlg.Group{Columns: [][]dlg.Item{{{Kind: dlg.KindSeparator, Label: label}}}}
+	return dlg.Group{Columns: [][]dlg.Item{{{Kind: dlg.KindSpacer}, {Kind: dlg.KindSeparator, Label: label}}}}
 }
 
 func columnsPickerView(s ColumnsDialogState, screenH int) dlg.Spec {
