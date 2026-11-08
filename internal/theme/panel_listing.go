@@ -53,6 +53,18 @@ func (t Theme) PanelListingEntryStyle(entryType localfs.EntryType, chromeBlocked
 	}
 }
 
+// PanelListingRangeStyle is rowStyle on the panel.row.range background, or panel.row.range.unselect
+// for a range that unselects: a row a pending range covers keeps its foreground, so selected and
+// folder colors stay readable.
+func (t Theme) PanelListingRangeStyle(rowStyle tcell.Style, unselect bool) tcell.Style {
+	span := t.PanelRowRange
+	if unselect {
+		span = t.PanelRowRangeUnselect
+	}
+	_, bg, _ := span.Decompose()
+	return rowStyle.Background(bg)
+}
+
 // PanelListingSelectedStyle returns the row style when an entry is selected but not the cursor.
 func (t Theme) PanelListingSelectedStyle(chromeBlocked bool) tcell.Style {
 	if chromeBlocked {

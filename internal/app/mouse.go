@@ -7,9 +7,22 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
+
+// panelDrag is a drag over a file list: the left button selects the rows it covers, the right
+// button unselects them. A press on a row arms it; it becomes active when the pointer reaches
+// another screen row, and only then does it set the panel's pending range.
+type panelDrag struct {
+	armed, active bool
+	button        tcell.ButtonMask
+	panel         int
+	lastY         int    // screen row of the last report, clamped to the list
+	anchor        string // path of the pressed entry
+}
 
 // mouseState is the click bookkeeping behind handleMouse.
 type mouseState struct {
@@ -28,11 +41,13 @@ type mouseState struct {
 	x, y    int
 	// keyed hides every hover highlight from a key press until the next mouse event.
 	keyed bool
+	// drag is the file list drag in progress.
+	drag panelDrag
 }
 
-// hovers reports whether pointer hover highlights show: the pointer has reported and no key was
-// pressed since. Every hover goes through it.
-func (m *mouseState) hovers() bool { return m.pointer && !m.keyed }
+// hovers reports whether pointer hover highlights show: the pointer has reported, no key was
+// pressed since and no file list drag is active. Every hover goes through it.
+func (m *mouseState) hovers() bool { return m.pointer && !m.keyed && !m.drag.active }
 
 // doubleClick records a left press on row of target and reports whether it completes a double
 // click: the previous press hit the same row within config.MouseDoubleClickMS. A third press
@@ -58,6 +73,7 @@ func (a *App) applyMouseConfig() {
 		a.screen.EnableMouse(mouseEventMask)
 		a.mouse.enabled = true
 	case !a.config.UI.Mouse && a.mouse.enabled:
+		a.cancelPanelDrag()
 		a.screen.DisableMouse()
 		a.mouse.enabled = false
 		a.mouse.buttons = 0
@@ -72,6 +88,7 @@ func (a *App) releaseMouse() (restore func()) {
 	if !a.mouse.enabled {
 		return func() {}
 	}
+	a.cancelPanelDrag()
 	a.screen.DisableMouse()
 	a.mouse.buttons = 0
 	a.mouse.pointer = false
@@ -361,7 +378,127 @@ func (a *App) setCursorByMouse(row int) {
 	a.doListNav(func() { p.Move(row-p.Cursor, vr) })
 }
 
-// handleMouse handles one mouse event. The footer, the menu bar and its pulldown take clicks in
+// armPanelDrag prepares a drag from entry row of panel id, the row a press of button at screen row
+// y just landed on.
+func (a *App) armPanelDrag(id, row, y int, button tcell.ButtonMask) {
+	if e, _, ok := a.panelByID(id).VisibleEntry(row); ok {
+		a.mouse.drag = panelDrag{armed: true, button: button, panel: id, lastY: y, anchor: e.Path}
+	}
+}
+
+// cancelPanelDrag drops the drag without selecting anything and reports whether an active drag
+// ended, which the caller must paint.
+func (a *App) cancelPanelDrag() bool {
+	d := a.mouse.drag
+	a.mouse.drag = panelDrag{}
+	if d.active {
+		a.panelByID(d.panel).ClearPendingRange()
+	}
+	return d.active
+}
+
+// panelDragRow maps pointer row y to the entry a drag targets, and returns y clamped to the list.
+// A list that fits the panel never scrolls, so the entry is the one under the pointer. A longer
+// list can scroll on every cursor move (edge and center scroll modes), so the same screen row
+// keeps meaning another entry: there the cursor follows the pointer's row changes, and past the
+// top or bottom of the list each report steps one row.
+func panelDragRow(file ui.Rect, p *panel.State, y, lastY int) (row, listY int) {
+	top, rows, count := ui.PanelListTop(file), ui.PanelListRows(file), p.VisibleEntryCount()
+	listY = max(top, min(y, top+rows-1))
+	switch {
+	case count <= rows:
+		row = p.ScrollOffset + listY - top
+	case y < top:
+		row = p.Cursor - 1
+	case y >= top+rows:
+		row = p.Cursor + 1
+	default:
+		row = p.Cursor + listY - lastY
+	}
+	return max(0, min(row, count-1)), listY
+}
+
+// movePanelDrag activates the drag if it is not yet and moves the cursor to entry target, reporting
+// whether anything visible changed.
+func (a *App) movePanelDrag(p *panel.State, target int) bool {
+	d := &a.mouse.drag
+	changed := !d.active
+	if !d.active {
+		d.active = true
+		p.RangeAnchor, p.RangeUnselect = d.anchor, d.button == tcell.Button2
+		a.clearPanelTitleHover()
+	}
+	if target != p.Cursor {
+		a.setCursorByMouse(target)
+		changed = true
+	}
+	return changed
+}
+
+// handlePanelDrag runs ahead of everything else in handleMouse while a drag is armed, so the
+// footer, menus and other panel ignore the pointer. The drag stays with its panel: only y counts.
+// A release on an active left drag commits through panel.select-range, the keyboard's path, which
+// keeps the cursor where it is; an active right drag unselects the range. A right button released
+// without activating was a right click and toggles the row. handled is false when the event
+// belongs to the normal handling: a left button released without activating, just a click.
+func (a *App) handlePanelDrag(layout ui.Layout, y int, buttons tcell.ButtonMask) (handled, rendered bool) {
+	d := &a.mouse.drag
+	if !d.armed {
+		return false, false
+	}
+	p := a.panelByID(d.panel)
+	file, ok := a.panelFileFrame(layout, d.panel)
+	if !ok || layout.TooSmall || a.inputMode() != InputModeNormal || a.model.ViewMode != ui.ViewBrowser ||
+		a.model.ActivePanel != d.panel || p.VisibleEntryCount() == 0 {
+		if !a.cancelPanelDrag() {
+			return false, false
+		}
+		a.render()
+		return true, true
+	}
+	target, listY := panelDragRow(file, p, y, d.lastY)
+	step := wheelDelta(buttons, config.MouseWheelRows)
+	// A wheel report carries no button bits even with the left button held, so it is no release.
+	release := step == 0 && buttons&d.button == 0
+	if step != 0 {
+		target = max(0, min(p.Cursor+step, p.VisibleEntryCount()-1))
+	}
+	moved := y != d.lastY || step != 0 // a click scrolling the list must not count as a drag
+	if release {
+		moved = y == listY && moved // a release past the edge is not one more scroll step
+	}
+	changed := false
+	if moved {
+		changed = a.movePanelDrag(p, target)
+	}
+	d.lastY = listY
+	switch {
+	case release && !d.active:
+		right := d.button == tcell.Button2
+		a.mouse.drag = panelDrag{}
+		if !right {
+			return false, false
+		}
+		a.tryDispatchSelectionActions(keymap.ActionPanelSelectToggle)
+	case release:
+		switch span := p.PendingRange(); {
+		case !span.Active:
+			p.ClearPendingRange()
+		case span.Unselect:
+			a.announceRange(primitive.RangeUnselected, p.UnselectPendingRange())
+		default:
+			a.tryDispatchSelectionActions(keymap.ActionPanelSelectRange)
+		}
+		a.mouse.drag = panelDrag{}
+	case !changed:
+		return true, false
+	}
+	a.render()
+	return true, true
+}
+
+// handleMouse handles one mouse event. An armed file list drag takes it first
+// (handlePanelDrag). The footer, the menu bar and its pulldown take clicks in
 // every mode that shows them; the browser panels react in normal mode, the Jobs, Commands and
 // Messages lists in their views, and the top-most dlg dialog in every other mode
 // (handleDialogMouse). Everything else (other panes and views, the quick filter) swallows it.
@@ -377,6 +514,9 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 	w, h := a.screen.Size()
 	layout := a.layoutForTerminalSize(w, h)
 	x, y := ev.Position()
+	if handled, rendered := a.handlePanelDrag(layout, y, buttons); handled {
+		return false, rendered
+	}
 	if a.inputMode() == InputModeFilePreviewView {
 		left := pressed&tcell.Button1 != 0
 		double := left && a.mouse.doubleClick("preview", y)
@@ -456,6 +596,7 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 		}
 		a.setCursorByMouse(row)
 		if !a.mouse.doubleClick(fmt.Sprintf("panel:%d", id), row) {
+			a.armPanelDrag(id, row, y, tcell.Button1)
 			return false, true
 		}
 		return a.finishResolvedKeyboardAction(keymap.ActionNavOpen)
@@ -465,7 +606,8 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 			return false, true
 		}
 		a.setCursorByMouse(row)
-		return a.finishResolvedKeyboardAction(keymap.ActionPanelSelectToggle)
+		a.armPanelDrag(id, row, y, tcell.Button2) // the release toggles the row unless it drags
+		return false, true
 	}
 	return false, false
 }

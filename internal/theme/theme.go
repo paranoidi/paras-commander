@@ -140,10 +140,13 @@ type Theme struct {
 	// PanelCursorRange / PanelCursorRangeSelected style the cursor row while a range select
 	// is pending (panel.row.cursor.range[.selected]); PanelRowMarkRangeAnchor styles the anchor mark.
 	PanelCursorRange, PanelCursorRangeSelected, PanelRowMarkRangeAnchor tcell.Style
-	PanelCursorActiveUnique                                             tcell.Style
-	PanelCursorInactive                                                 tcell.Style
-	PanelActiveCursorSelected                                           tcell.Style
-	PanelInactiveCursorSelected                                         tcell.Style
+	// PanelRowRange and PanelRowRangeUnselect are the background of the other rows a pending range
+	// covers, when it selects and unselects them (panel.row.range[.unselect]; PanelListingRangeStyle).
+	PanelRowRange, PanelRowRangeUnselect tcell.Style
+	PanelCursorActiveUnique              tcell.Style
+	PanelCursorInactive                  tcell.Style
+	PanelActiveCursorSelected            tcell.Style
+	PanelInactiveCursorSelected          tcell.Style
 	// PanelCarouselInactiveCursor* styles preview-pane cursors in carousel mode.
 	PanelCarouselInactiveCursor         tcell.Style
 	PanelCarouselInactiveCursorSelected tcell.Style
@@ -1270,7 +1273,7 @@ var optionalStyleKeys = func() []string {
 		}
 	}
 	keys = append(keys, "menu.speed.cap", "menu.speed.text", "menu.status.separator", "message.sweep", "message.success", "footer.hover", "footer.hover.active", "jobs.row.hover", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
-		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "dialog.text_select", "dialog.accent_alt", "panel.empty", "panel.scrollbar.match",
+		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "panel.row.range", "panel.row.range.unselect", "dialog.text_select", "dialog.accent_alt", "panel.empty", "panel.scrollbar.match",
 		"jobs.operations.success", "jobs.operations.failed", "jobs.operations.skipped", "jobs.progress.completed.fill", "panel.row.mark.job.removing",
 		"tooltip.text", "tooltip.info", "preview.search_icon")
 	keys = append(keys, fileIndexStateStyleKeys()...)
@@ -1705,6 +1708,16 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, err
 	}
 
+	panelRowRange, err := optionalStyle(specs, palette, "panel.row.range", tcell.StyleDefault.Background(tcell.ColorOlive))
+	if err != nil {
+		return Theme{}, err
+	}
+
+	panelRowRangeUnselect, err := optionalStyle(specs, palette, "panel.row.range.unselect", tcell.StyleDefault.Background(tcell.ColorMaroon))
+	if err != nil {
+		return Theme{}, err
+	}
+
 	panelEmpty, err := optionalStyle(specs, palette, "panel.empty", panelEmptyFallback)
 	if err != nil {
 		return Theme{}, err
@@ -1822,6 +1835,8 @@ func parse(data []byte) (Theme, error) {
 		PanelRowMarkRangeAnchor:             panelRowMarkRangeAnchor,
 		PanelCursorRange:                    panelCursorRange,
 		PanelCursorRangeSelected:            panelCursorRangeSelected,
+		PanelRowRange:                       panelRowRange,
+		PanelRowRangeUnselect:               panelRowRangeUnselect,
 		PanelCursorActive:                   styles["panel.active.row.cursor"],
 		PanelCursorActiveUnique:             styles["panel.active.row.cursor.unique"],
 		PanelCursorInactive:                 styles["panel.inactive.row.cursor"],

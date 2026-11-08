@@ -50,6 +50,8 @@ type State struct {
 	Path pathloc.Path
 	// RangeAnchor is the path marked as the start of a pending range select ("" when none).
 	RangeAnchor string
+	// RangeUnselect marks the pending range as one that unselects its rows (a right-button drag).
+	RangeUnselect bool
 	// VolumeAvailBytes / VolumeTotalBytes describe the file system backing Path after the last successful load.
 	VolumeSpaceOK    bool
 	VolumeAvailBytes uint64
@@ -689,6 +691,59 @@ func (s *State) ToggleSelectionAndAdvance(viewportRows int) (bool, bool) {
 	return true, conflictsRemoved
 }
 
+// RowSpan is an inclusive range of visible entry indexes; the zero value contains nothing.
+type RowSpan struct {
+	Lo, Hi int
+	Active bool
+	// Unselect marks a span that unselects its rows rather than selecting them.
+	Unselect bool
+}
+
+// Contains reports whether the visible entry at index lies in the span.
+func (r RowSpan) Contains(index int) bool {
+	return r.Active && index >= r.Lo && index <= r.Hi
+}
+
+// PendingRange is the span a pending range select covers: the visible entries between RangeAnchor
+// and the cursor. It is inactive with no anchor or when the anchor is no longer visible. It walks
+// the listing, so a draw calls it once rather than per row.
+func (s State) PendingRange() RowSpan {
+	ai := primitive.RangeAnchorIndex(s.VisibleEntryCount(), s.RangeAnchor, func(i int) string {
+		e, _, _ := s.VisibleEntry(i)
+		return e.Path
+	})
+	if ai < 0 {
+		return RowSpan{}
+	}
+	return RowSpan{Lo: min(ai, s.Cursor), Hi: max(ai, s.Cursor), Active: true, Unselect: s.RangeUnselect}
+}
+
+// ClearPendingRange drops the pending range select without changing the selection.
+func (s *State) ClearPendingRange() {
+	s.RangeAnchor, s.RangeUnselect = "", false
+}
+
+// UnselectPendingRange removes every entry of the pending range from the selection, clears the
+// range and returns how many entries were selected.
+func (s *State) UnselectPendingRange() (removed int) {
+	span := s.PendingRange()
+	s.ClearPendingRange()
+	if !span.Active {
+		return 0
+	}
+	for i := span.Lo; i <= span.Hi; i++ {
+		e, _, ok := s.VisibleEntry(i)
+		if !ok || !s.IsSelectedPath(e.Path) {
+			continue
+		}
+		s.applySelectionRemove(e.Path, s.selectedPathIsDirectory(e.Path))
+		s.removePathFromSelectedStripOrder(e.Path)
+		removed++
+	}
+	s.normalizeSelectedStripCursor()
+	return removed
+}
+
 // MarkRange sets RangeAnchor to the current entry and advances the cursor like
 // ToggleSelectionAndAdvance, or, when an anchor is set and still visible,
 // adds every visible entry between anchor and cursor to the selection and clears the anchor.
@@ -698,20 +753,15 @@ func (s *State) MarkRange(viewportRows int) (anchored bool, added int, conflicts
 	if !ok {
 		return false, 0, false
 	}
-	n := s.VisibleEntryCount()
-	ai := primitive.RangeAnchorIndex(n, s.RangeAnchor, func(i int) string {
-		e, _, _ := s.VisibleEntry(i)
-		return e.Path
-	})
-	if ai < 0 {
+	span := s.PendingRange()
+	if !span.Active {
 		s.RangeAnchor = cur.Path
-		if s.Cursor < n-1 {
+		if s.Cursor < s.VisibleEntryCount()-1 {
 			s.Move(1, viewportRows)
 		}
 		return true, 0, false
 	}
-	lo, hi := min(ai, s.Cursor), max(ai, s.Cursor)
-	for i := lo; i <= hi; i++ {
+	for i := span.Lo; i <= span.Hi; i++ {
 		e, _, ok := s.VisibleEntry(i)
 		if !ok || e.Name == ".." {
 			continue
