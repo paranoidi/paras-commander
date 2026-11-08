@@ -50,6 +50,8 @@ type State struct {
 	Path pathloc.Path
 	// RangeAnchor is the path marked as the start of a pending range select ("" when none).
 	RangeAnchor string
+	// RangeUnselect marks the pending range as one that unselects its rows (a right-button drag).
+	RangeUnselect bool
 	// VolumeAvailBytes / VolumeTotalBytes describe the file system backing Path after the last successful load.
 	VolumeSpaceOK    bool
 	VolumeAvailBytes uint64
@@ -693,6 +695,8 @@ func (s *State) ToggleSelectionAndAdvance(viewportRows int) (bool, bool) {
 type RowSpan struct {
 	Lo, Hi int
 	Active bool
+	// Unselect marks a span that unselects its rows rather than selecting them.
+	Unselect bool
 }
 
 // Contains reports whether the visible entry at index lies in the span.
@@ -711,7 +715,33 @@ func (s State) PendingRange() RowSpan {
 	if ai < 0 {
 		return RowSpan{}
 	}
-	return RowSpan{Lo: min(ai, s.Cursor), Hi: max(ai, s.Cursor), Active: true}
+	return RowSpan{Lo: min(ai, s.Cursor), Hi: max(ai, s.Cursor), Active: true, Unselect: s.RangeUnselect}
+}
+
+// ClearPendingRange drops the pending range select without changing the selection.
+func (s *State) ClearPendingRange() {
+	s.RangeAnchor, s.RangeUnselect = "", false
+}
+
+// UnselectPendingRange removes every entry of the pending range from the selection, clears the
+// range and returns how many entries were selected.
+func (s *State) UnselectPendingRange() (removed int) {
+	span := s.PendingRange()
+	s.ClearPendingRange()
+	if !span.Active {
+		return 0
+	}
+	for i := span.Lo; i <= span.Hi; i++ {
+		e, _, ok := s.VisibleEntry(i)
+		if !ok || !s.IsSelectedPath(e.Path) {
+			continue
+		}
+		s.applySelectionRemove(e.Path, s.selectedPathIsDirectory(e.Path))
+		s.removePathFromSelectedStripOrder(e.Path)
+		removed++
+	}
+	s.normalizeSelectedStripCursor()
+	return removed
 }
 
 // MarkRange sets RangeAnchor to the current entry and advances the cursor like

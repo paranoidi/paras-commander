@@ -60,6 +60,38 @@ func TestMarkRangeStaleAnchorBecomesFresh(t *testing.T) {
 	}
 }
 
+func TestUnselectPendingRange(t *testing.T) {
+	s := rangeTestState("amber", "birch", "cedar", "dune")
+	for _, n := range []string{"amber", "birch", "dune"} {
+		s.AddSelection(filepath.Join("/tmp", n))
+	}
+	s.RangeAnchor, s.RangeUnselect, s.Cursor = "/tmp/birch", true, 3
+	if !s.PendingRange().Unselect {
+		t.Fatal("span must report it unselects")
+	}
+	if removed := s.UnselectPendingRange(); removed != 2 { // cedar was not selected
+		t.Fatalf("removed = %d want 2", removed)
+	}
+	if !s.IsSelectedPath("/tmp/amber") || s.IsSelectedPath("/tmp/birch") || s.IsSelectedPath("/tmp/dune") {
+		t.Fatalf("selection = %v", s.SelectedPaths)
+	}
+	if s.RangeAnchor != "" || s.RangeUnselect {
+		t.Fatalf("range not cleared: anchor=%q unselect=%v", s.RangeAnchor, s.RangeUnselect)
+	}
+}
+
+func TestUnselectPendingRangeStaleAnchorChangesNothing(t *testing.T) {
+	s := rangeTestState("amber", "birch")
+	s.AddSelection("/tmp/amber")
+	s.RangeAnchor, s.RangeUnselect = "/tmp/gone", true
+	if removed := s.UnselectPendingRange(); removed != 0 || !s.IsSelectedPath("/tmp/amber") {
+		t.Fatalf("removed=%d selection=%v", removed, s.SelectedPaths)
+	}
+	if s.RangeAnchor != "" {
+		t.Fatal("stale range not cleared")
+	}
+}
+
 func TestPendingRange(t *testing.T) {
 	s := rangeTestState("amber", "birch", "cedar", "dune")
 	if got := s.PendingRange(); got.Active || got.Contains(0) {

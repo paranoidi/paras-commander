@@ -21,19 +21,22 @@ func RangeAnchorIndex(n int, anchor string, key func(i int) string) int {
 type RangeResult int
 
 const (
-	RangeNone    RangeResult = iota // nothing to anchor or select
-	RangeStarted                    // anchor set; the caller advances the cursor
-	RangeDone                       // range selected, anchor cleared
+	RangeNone       RangeResult = iota // nothing to anchor or select
+	RangeStarted                       // anchor set; the caller advances the cursor
+	RangeDone                          // range selected, anchor cleared
+	RangeUnselected                    // range unselected, anchor cleared
 )
 
 // RangeMessage is the toast for a range-select press ("" for RangeNone); keyLabel is the
-// action's binding. Shared by the panel, Compare and Dedup.
+// action's binding, added the number of entries changed. Shared by the panel, Compare and Dedup.
 func RangeMessage(res RangeResult, added int, keyLabel string) string {
 	switch res {
 	case RangeStarted:
 		return fmt.Sprintf("Range start set, move and press %s on the last item", keyLabel)
 	case RangeDone:
 		return fmt.Sprintf("Selected %d items", added)
+	case RangeUnselected:
+		return fmt.Sprintf("Unselected %d items", added)
 	}
 	return ""
 }

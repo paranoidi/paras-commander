@@ -354,7 +354,7 @@ func resolveCarouselColumnEntry(cp carouselColumnParams, row int) (carouselColum
 			style = p.Styles.PanelListingSelectedStyle(p.ChromeBlocked)
 		}
 		if cp.RangeSpan.Contains(entryIndex) && !p.ChromeBlocked {
-			style = p.Styles.PanelListingRangeStyle(style)
+			style = p.Styles.PanelListingRangeStyle(style, cp.RangeSpan.Unselect)
 		}
 	}
 	return carouselColumnEntry{Entry: entry, SelState: selState, EntryIndex: entryIndex, IsCursor: isCursor, Selected: selected, Style: style}, true

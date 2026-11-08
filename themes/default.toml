@@ -89,6 +89,7 @@ empty = { fg = "bright_black" }  # "[empty]" text of empty lists
 cursor.range = { fg = "black", bg = "yellow", icon = "black" }  # cursor row while a range select is pending
 cursor.range.selected = { fg = "black", bg = "yellow", bold = true, icon = "black" }
 range = { bg = "#3a3a00" }   # other rows a pending range select covers; background only, rows keep their text colors
+range.unselect = { bg = "#4a1010" }  # same, for a mouse drag that unselects them
 directory = { fg = "blue", bold = true }
 file = { fg = "white" }
 info = { fg = "bright_black" }  # size / mtime / permissions / meta columns

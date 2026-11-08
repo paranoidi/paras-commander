@@ -143,6 +143,84 @@ func TestMouseDragFollowsPointerWhenListScrolls(t *testing.T) {
 	}
 }
 
+// selectFirstRows selects rows 1 to n through a left drag.
+func selectFirstRows(t *testing.T, app *App, n int) {
+	t.Helper()
+	x, y := cellOf(t, app, ui.PrimaryPanel, 1)
+	app.handleMouse(mouseEv(x, y, tcell.Button1))
+	x, y = cellOf(t, app, ui.PrimaryPanel, n)
+	app.handleMouse(mouseEv(x, y, tcell.Button1))
+	app.handleMouse(mouseEv(x, y, tcell.ButtonNone))
+}
+
+func TestMouseRightDragUnselectsRange(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		from, to int
+	}{{"down", 2, 4}, {"up", 4, 2}} {
+		t.Run(tc.name, func(t *testing.T) {
+			app, _ := mouseTestApp(t)
+			p := &app.model.Primary
+			selectFirstRows(t, app, 5)
+			x, y := cellOf(t, app, ui.PrimaryPanel, tc.from)
+			app.handleMouse(mouseEv(x, y, tcell.Button2))
+			wantRows(t, p, 1, 2, 3, 4, 5) // nothing changes on the press
+			y += tc.to - tc.from          // relative: the press may have scrolled the list
+			app.handleMouse(mouseEv(x, y, tcell.Button2))
+			if span := p.PendingRange(); !span.Active || !span.Unselect {
+				t.Fatalf("mid-drag span = %+v", span)
+			}
+			wantRows(t, p, 1, 2, 3, 4, 5)
+			app.handleMouse(mouseEv(x, y, tcell.ButtonNone))
+			wantRows(t, p, 1, 5)
+			if p.Cursor != tc.to || p.RangeAnchor != "" || p.RangeUnselect {
+				t.Fatalf("cursor=%d anchor=%q unselect=%v", p.Cursor, p.RangeAnchor, p.RangeUnselect)
+			}
+		})
+	}
+}
+
+func TestMouseRightClickTogglesOnRelease(t *testing.T) {
+	app, _ := mouseTestApp(t)
+	p := &app.model.Primary
+	x, y := cellOf(t, app, ui.PrimaryPanel, 3)
+	app.handleMouse(mouseEv(x, y, tcell.Button2))
+	wantRows(t, p)
+	app.handleMouse(mouseEv(x, y, tcell.ButtonNone))
+	wantRows(t, p, 3)
+	if p.Cursor != 4 {
+		t.Fatalf("cursor = %d want 4: the toggle advances", p.Cursor)
+	}
+	x, y = cellOf(t, app, ui.PrimaryPanel, 3)
+	click(app, x, y, tcell.Button2)
+	wantRows(t, p)
+}
+
+func TestMouseRightDragKeyCancels(t *testing.T) {
+	app, _ := mouseTestApp(t)
+	p := &app.model.Primary
+	selectFirstRows(t, app, 4)
+	x, y := cellOf(t, app, ui.PrimaryPanel, 2)
+	app.handleMouse(mouseEv(x, y, tcell.Button2))
+	x, y = cellOf(t, app, ui.PrimaryPanel, 3)
+	app.handleMouse(mouseEv(x, y, tcell.Button2))
+	app.handleKey(tcell.NewEventKey(tcell.KeyEscape, 0, tcell.ModNone))
+	if p.RangeAnchor != "" || p.RangeUnselect {
+		t.Fatalf("anchor=%q unselect=%v", p.RangeAnchor, p.RangeUnselect)
+	}
+	app.handleMouse(mouseEv(x, y, tcell.ButtonNone))
+	wantRows(t, p, 1, 2, 3, 4)
+}
+
+func TestMouseRightPressKeyCancelsToggle(t *testing.T) {
+	app, _ := mouseTestApp(t)
+	x, y := cellOf(t, app, ui.PrimaryPanel, 3)
+	app.handleMouse(mouseEv(x, y, tcell.Button2))
+	app.handleKey(tcell.NewEventKey(tcell.KeyEscape, 0, tcell.ModNone))
+	app.handleMouse(mouseEv(x, y, tcell.ButtonNone))
+	wantRows(t, &app.model.Primary)
+}
+
 func TestMouseDragKeyCancels(t *testing.T) {
 	app, _ := mouseTestApp(t)
 	p := &app.model.Primary

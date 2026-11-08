@@ -600,7 +600,7 @@ func panelRowStyle(entry localfs.Entry, entryIndex int, state panel.State, ctx P
 	} else if rowHovered(entryIndex, state, ctx) {
 		style = styles.PanelListingCursorStyle(style, theme.PanelListingCursorOpts{Selected: selected})
 	} else if rowInRangeSpan(entryIndex, state, ctx) {
-		style = styles.PanelListingRangeStyle(style)
+		style = styles.PanelListingRangeStyle(style, ctx.RangeSpan.Unselect)
 	}
 	return style, selected
 }

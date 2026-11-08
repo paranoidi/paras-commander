@@ -39,6 +39,12 @@ func TestPanelRowStyleRangeSpan(t *testing.T) {
 	if fg, _, _ := st.Decompose(); fg != tcell.ColorYellow {
 		t.Fatalf("selected row in the span lost its foreground: %v", fg)
 	}
+	styles.PanelRowRangeUnselect = tcell.StyleDefault.Background(tcell.ColorMaroon)
+	ctx.RangeSpan.Unselect = true
+	if bg(1) != tcell.ColorMaroon {
+		t.Fatal("an unselecting span must use its own background")
+	}
+	ctx.RangeSpan.Unselect = false
 	ctx.ChromeBlocked = true
 	if bg(1) == tcell.ColorOlive {
 		t.Fatal("blocked chrome must not paint the span")
