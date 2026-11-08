@@ -91,6 +91,8 @@ Symbols at the end of a name:
 - A name-match mark on rows whose name also exists in the other panel's directory (`other_panel_match_marks` in [config.md](config.md#ui)); the name under the cursor is highlighted in both panels.
 - Job, queued, pinned and no-permission marks; see [Jobs](jobs.md).
 
+A broken symlink, one whose target does not exist, has no no-permission mark. Its link icon is red instead.
+
 After a copy or move into the other panel's directory, that panel's cursor jumps to the first transferred entry unless you already moved it (`focus_other_panel_after_transfer`, [config.md](config.md#operations)).
 
 ## Opening files

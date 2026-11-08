@@ -38,6 +38,10 @@ type Entry struct {
 	// AccessDenied is derived from the listing Lstat (no re-stat at paint time), same
 	// rationale as Dev above.
 	AccessDenied bool
+	// BrokenLink marks a symlink whose target does not resolve. Captured by the same listing
+	// access check as AccessDenied, and exclusive with it: a dangling link is not a permission
+	// problem.
+	BrokenLink bool
 	// IndexStatus is the fileindex state of the row (an IndexStatus* value), set only on
 	// listings of a panel browsing with the fileindex overlay; "" elsewhere.
 	IndexStatus string
@@ -133,6 +137,7 @@ func entryFromDirEntry(cleanPath string, dirEntry os.DirEntry) (Entry, bool, err
 	}
 
 	dev, devOK := entryDevice(info)
+	denied, brokenLink := entryAccess(path, info)
 	return Entry{
 		Name:         name,
 		Path:         path,
@@ -142,7 +147,8 @@ func entryFromDirEntry(cleanPath string, dirEntry os.DirEntry) (Entry, bool, err
 		ModifiedAt:   info.ModTime(),
 		Dev:          dev,
 		DevValid:     devOK,
-		AccessDenied: entryAccessDenied(path, info),
+		AccessDenied: denied,
+		BrokenLink:   brokenLink,
 	}, true, nil
 }
 

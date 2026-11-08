@@ -36,6 +36,9 @@ type Entry struct {
 	// AccessDenied carries a permission fact captured at listing time (local backend only;
 	// see localfs.Entry).
 	AccessDenied bool
+	// BrokenLink carries a dangling-symlink fact captured at listing time (local backend only;
+	// see localfs.Entry).
+	BrokenLink bool
 	// IndexStatus is localfs.Entry.IndexStatus: the fileindex overlay's state for the row.
 	IndexStatus string
 }

@@ -196,6 +196,61 @@ func TestResolvesToDir(t *testing.T) {
 	}
 }
 
+func TestListDirFlagsBrokenLinksNotAccessDenied(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteFile(t, filepath.Join(dir, "lantern"))
+	mustWriteFile(t, filepath.Join(dir, "plain"))
+	links := map[string]string{
+		"good":      "lantern",
+		"dangling":  "absent",
+		"not-a-dir": "plain/absent",
+		"loop":      "loop",
+	}
+	for name, target := range links {
+		if err := os.Symlink(target, filepath.Join(dir, name)); err != nil {
+			t.Fatalf("Symlink(%s): %v", name, err)
+		}
+	}
+
+	listing, err := ListDir(dir, DefaultListOptions())
+	if err != nil {
+		t.Fatalf("ListDir() error = %v", err)
+	}
+	wantBroken := map[string]bool{"lantern": false, "plain": false, "good": false, "dangling": true, "not-a-dir": true, "loop": true}
+	for _, e := range listing.Entries {
+		if e.BrokenLink != wantBroken[e.Name] {
+			t.Errorf("%s: BrokenLink = %v, want %v", e.Name, e.BrokenLink, wantBroken[e.Name])
+		}
+		if e.AccessDenied {
+			t.Errorf("%s: AccessDenied = true, want false", e.Name)
+		}
+	}
+}
+
+func TestListDirLinkToUnreadableTargetStaysAccessDenied(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root bypasses permission checks")
+	}
+	dir := t.TempDir()
+	secret := filepath.Join(dir, "secret")
+	if err := os.WriteFile(secret, []byte("x"), 0o000); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(secret, filepath.Join(dir, "veil")); err != nil {
+		t.Fatal(err)
+	}
+
+	listing, err := ListDir(dir, DefaultListOptions())
+	if err != nil {
+		t.Fatalf("ListDir() error = %v", err)
+	}
+	for _, e := range listing.Entries {
+		if e.Name == "veil" && (!e.AccessDenied || e.BrokenLink) {
+			t.Fatalf("veil: AccessDenied = %v, BrokenLink = %v, want true, false", e.AccessDenied, e.BrokenLink)
+		}
+	}
+}
+
 func mustMkdir(t *testing.T, path string) {
 	t.Helper()
 	if err := os.Mkdir(path, 0o755); err != nil {

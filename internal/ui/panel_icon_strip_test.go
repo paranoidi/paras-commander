@@ -1,9 +1,11 @@
 package ui
 
 import (
+	"io/fs"
 	"testing"
 	"unicode/utf8"
 
+	devicons "github.com/epilande/go-devicons"
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panellist"
@@ -106,6 +108,49 @@ func TestPaintPanelIconStripFileStillUsesDevicon(t *testing.T) {
 	gotRune, _ := utf8.DecodeRuneInString(main)
 	if gotRune == []rune(th.FolderIcon(theme.FolderIconDefault))[0] {
 		t.Fatal("file row should not use folder theme icon")
+	}
+}
+
+func paintBrokenLinkIcon(t *testing.T, th theme.Theme, entry localfs.Entry, ctx PanelIconStripContext) (string, tcell.Color) {
+	t.Helper()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatal(err)
+	}
+	defer screen.Fini()
+	screen.SetSize(10, 3)
+	paintPanelIconStrip(screen, 0, 1, entry, th.PanelListingEntryStyle(entry.Type, ctx.ChromeBlocked), th, ctx)
+	main, style, _ := screen.Get(0, 1)
+	fg, _, _ := style.Decompose()
+	return main, fg
+}
+
+func TestPaintPanelIconStripBrokenLinkUsesBrokenLinkColor(t *testing.T) {
+	th := theme.Default()
+	wantFG, _, _ := th.PanelIconBrokenLink.Decompose()
+	if rowFG, _, _ := th.PanelRowSymlink.Decompose(); wantFG == rowFG {
+		t.Fatalf("panel.icon.broken_link %v must differ from panel.row.symlink", wantFG)
+	}
+	// An image-named link must not take the image preview tint.
+	for _, name := range []string{"harbor", "harbor.png"} {
+		entry := localfs.Entry{Name: name, Path: "/tmp/" + name, Type: localfs.EntrySymlink, Mode: fs.ModeSymlink | 0o777, BrokenLink: true}
+		got, gotFG := paintBrokenLinkIcon(t, th, entry, PanelIconStripContext{})
+		if want := string([]rune(devicons.IconForInfo(fileInfoFromEntry(entry)).Icon)[0]); got != want {
+			t.Fatalf("%s: icon = %q, want link icon %q", name, got, want)
+		}
+		if gotFG != wantFG {
+			t.Fatalf("%s: icon fg = %v, want panel.icon.broken_link %v", name, gotFG, wantFG)
+		}
+	}
+}
+
+func TestPaintPanelIconStripBrokenLinkBlockedUsesRowForeground(t *testing.T) {
+	th := theme.Default()
+	entry := localfs.Entry{Name: "harbor", Path: "/tmp/harbor", Type: localfs.EntrySymlink, Mode: fs.ModeSymlink | 0o777, BrokenLink: true}
+	_, gotFG := paintBrokenLinkIcon(t, th, entry, PanelIconStripContext{ChromeBlocked: true})
+	wantFG, _, _ := th.PanelBlockedRowSymlink.Decompose()
+	if gotFG != wantFG {
+		t.Fatalf("blocked icon fg = %v, want panel.blocked.row.symlink %v", gotFG, wantFG)
 	}
 }
 

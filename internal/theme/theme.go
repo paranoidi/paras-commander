@@ -213,6 +213,9 @@ type Theme struct {
 	PanelIconPreviewWarm tcell.Style
 	// PanelIconPreviewCold styles image/video file icons whose prefetch cache is not yet warm.
 	PanelIconPreviewCold tcell.Style
+	// PanelIconBrokenLink styles the file icon of a symlink whose target does not resolve;
+	// optional, falls back to the palette's red.
+	PanelIconBrokenLink tcell.Style
 	// MenuProgress* styles segmented progress in the menu-bar jobs strip.
 	MenuProgressDone      tcell.Style
 	MenuProgressRemaining tcell.Style
@@ -1271,7 +1274,7 @@ var optionalStyleKeys = func() []string {
 		"jobs.operations.success", "jobs.operations.failed", "jobs.operations.skipped", "jobs.progress.completed.fill", "panel.row.mark.job.removing",
 		"tooltip.text", "tooltip.info", "preview.search_icon")
 	keys = append(keys, fileIndexStateStyleKeys()...)
-	keys = append(keys, "panel.meta.warn", "panel.meta.critical")
+	keys = append(keys, "panel.meta.warn", "panel.meta.critical", "panel.icon.broken_link")
 	return keys
 }()
 
@@ -1707,6 +1710,11 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, err
 	}
 
+	panelIconBrokenLink, err := optionalStyle(specs, palette, "panel.icon.broken_link", tcell.StyleDefault.Foreground(palette["red"]))
+	if err != nil {
+		return Theme{}, err
+	}
+
 	fuzzyCursorFG, _, _ := styles["fuzzy.highlight.cursor"].Decompose()
 	panelScrollbarMatch, err := optionalStyle(specs, palette, "panel.scrollbar.match", tcell.StyleDefault.Foreground(fuzzyCursorFG))
 	if err != nil {
@@ -1864,6 +1872,7 @@ func parse(data []byte) (Theme, error) {
 		PanelIconFolderExcluded:          styles["panel.icon.folder.excluded"],
 		PanelIconPreviewWarm:             styles["panel.icon.preview.warm"],
 		PanelIconPreviewCold:             styles["panel.icon.preview.cold"],
+		PanelIconBrokenLink:              panelIconBrokenLink,
 		MenuProgressDone:                 styles["menu.progress.done"],
 		MenuProgressRemaining:            styles["menu.progress.remaining"],
 		MenuProgressDoneGfx:              menuProgressDoneGfx,

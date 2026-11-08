@@ -4,7 +4,7 @@ package localfs
 
 import "io/fs"
 
-// entryAccessDenied is unsupported off Unix; the no-permission icon is simply not shown.
-func entryAccessDenied(_ string, _ fs.FileInfo) bool {
-	return false
+// entryAccess is unsupported off Unix; the no-permission and broken-link marks are simply not shown.
+func entryAccess(_ string, _ fs.FileInfo) (denied, brokenLink bool) {
+	return false, false
 }

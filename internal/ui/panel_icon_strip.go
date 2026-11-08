@@ -124,6 +124,8 @@ func paintPanelIconStrip(
 		switch {
 		case ctx.ChromeBlocked:
 			fg = fileDeviconForeground(rowStyle, "", th, ctx.CursorStyleKey, true)
+		case entry.BrokenLink:
+			fg = th.PanelRowIconForeground(ctx.CursorStyleKey, th.PanelIconBrokenLink)
 		case localfs.IsImagePath(entry.Path) || localfs.IsVideoPath(entry.Path):
 			fg = previewIconForeground(ctx.PreviewWarm, th, ctx.CursorStyleKey)
 		default:

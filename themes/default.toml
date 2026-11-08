@@ -112,6 +112,9 @@ job.move = { fg = "red" }
 job.delete = { fg = "red" }
 job.removing = { fg = "red" }   # move source being deleted after its copy (optional)
 
+[panel.icon]                 # file icon colors
+broken_link = { fg = "red" }  # symlink whose target does not resolve
+
 [panel.icon.folder]          # folder icon colors
 open = { fg = "bright_cyan" }
 mount = { fg = "bright_blue" }

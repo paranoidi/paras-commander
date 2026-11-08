@@ -20,6 +20,7 @@ func ToPanelEntry(e Entry) localfs.Entry {
 		Dev:          e.Dev,
 		DevValid:     e.DevValid,
 		AccessDenied: e.AccessDenied,
+		BrokenLink:   e.BrokenLink,
 		IndexStatus:  e.IndexStatus,
 	}
 }
@@ -46,6 +47,7 @@ func FromPanelEntry(e localfs.Entry) Entry {
 		Dev:          e.Dev,
 		DevValid:     e.DevValid,
 		AccessDenied: e.AccessDenied,
+		BrokenLink:   e.BrokenLink,
 		IndexStatus:  e.IndexStatus,
 	}
 }

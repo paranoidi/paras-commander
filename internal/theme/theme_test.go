@@ -701,3 +701,25 @@ func TestPanelMetaAlertStylesFallBack(t *testing.T) {
 		t.Fatalf("critical fg = %v attrs = %v, want bold red", fg, attrs)
 	}
 }
+
+func TestBrokenLinkIconFallsBackToPaletteRed(t *testing.T) {
+	data, err := themes.Files.ReadFile("default.toml")
+	if err != nil {
+		t.Fatalf("ReadFile(default.toml): %v", err)
+	}
+	withKey, err := parse(data)
+	if err != nil {
+		t.Fatalf("parse(default): %v", err)
+	}
+	const line = "broken_link = { fg = \"red\" }"
+	if !strings.Contains(string(data), line) {
+		t.Fatalf("default.toml has no %q", line)
+	}
+	without, err := parse([]byte(strings.Replace(string(data), line, "", 1)))
+	if err != nil {
+		t.Fatalf("parse(without key): %v", err)
+	}
+	if without.PanelIconBrokenLink != withKey.PanelIconBrokenLink {
+		t.Fatalf("fallback = %v, want the default theme's %v", without.PanelIconBrokenLink, withKey.PanelIconBrokenLink)
+	}
+}
