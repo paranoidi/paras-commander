@@ -22,6 +22,7 @@ Quick view is per panel: the panel you turn it on for becomes the driver, and th
 - A directory under the cursor is listed in the preview pane (the directory is not entered and history is not touched).
 - `C-k` / `C-j` page the preview without leaving the file list.
 - `Tab` only swaps the active panel while quick view is on. With it off, `Tab` cycles file list, selected strip and the preview pane, so arrows scroll the preview when it has focus.
+- With [mouse support](mouse.md) on, the wheel over the preview scrolls it, or moves through the listing when it shows a directory. Focus stays in the other panel.
 - Quick view and [panel sync](navigation.md#latched-panel-sync) are mutually exclusive; turning one on turns the other off. Zoom is disabled while a preview is shown (even 50/50 split).
 - With `[preview].quick_view_disable_on_inactive_nav` (default on) quick view switches off when the inactive panel navigates elsewhere, for example through "open in other panel".
 - Empty files are skipped by quick view; F3 still opens them.

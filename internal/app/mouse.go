@@ -579,7 +579,7 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 	}
 	id, row, ok := a.mouseHit(layout, x, y)
 	if !ok {
-		return false, false
+		return false, a.wheelInactivePreview(layout, x, y, buttons)
 	}
 	switch step := wheelDelta(buttons, config.MouseWheelRows); {
 	case step != 0:
@@ -635,6 +635,27 @@ func (a *App) handlePanelHeaderMouse(layout ui.Layout, x, y int, pressed tcell.B
 	}
 	a.render()
 	return true, true
+}
+
+// wheelInactivePreview scrolls the preview in the inactive column on a wheel report over it, without
+// taking focus, and reports whether it rendered.
+func (a *App) wheelInactivePreview(layout ui.Layout, x, y int, buttons tcell.ButtonMask) (rendered bool) {
+	step := wheelDelta(buttons, config.MouseWheelRows)
+	if step == 0 {
+		return false
+	}
+	id, col := ui.SecondaryPanel, layout.Secondary
+	if a.model.ActivePanel == ui.SecondaryPanel {
+		id, col = ui.PrimaryPanel, layout.Primary
+	}
+	if !col.Contains(x, y) {
+		return false
+	}
+	if _, listed := a.panelFileFrame(layout, id); listed || !a.previewCtrl.ScrollInactiveColumnPreview(step) {
+		return false
+	}
+	a.render()
+	return true
 }
 
 // scrollInactivePanel moves the cursor of a non-focused panel by delta rows.

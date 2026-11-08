@@ -296,6 +296,11 @@ func (h *Handler) quickViewFilePreviewScrollable() bool {
 	if !h.model.QuickViewDisplayActive() || h.model.QuickViewDirOverlayActive {
 		return false
 	}
+	return h.filePreviewBodyScrollable()
+}
+
+// filePreviewBodyScrollable reports whether the inactive-column preview holds finished content.
+func (h *Handler) filePreviewBodyScrollable() bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	st := h.model.FilePreview
@@ -309,6 +314,22 @@ func (h *Handler) quickViewFilePreviewScrollable() bool {
 		return len(st.HighlightedCells) > 0
 	}
 	return strings.TrimSpace(st.CombinedText) != ""
+}
+
+// ScrollInactiveColumnPreview moves what the inactive column previews by delta rows: the quick-view
+// directory overlay's cursor or the file preview's scroll offset. The driver's highlight stays put.
+// It reports false when the column holds nothing to scroll (a pending or failed preview).
+func (h *Handler) ScrollInactiveColumnPreview(delta int) bool {
+	if h.model.QuickViewDisplayActive() && h.model.QuickViewDirOverlayActive {
+		viewportRows := h.host.PanelViewportRows(h.model.QuickViewDirOverlayPanelID)
+		h.model.QuickViewDirOverlay.Move(delta, max(1, viewportRows))
+		return true
+	}
+	if !h.filePreviewBodyScrollable() {
+		return false
+	}
+	h.previewScrollBy(delta)
+	return true
 }
 
 // TryDispatchQuickViewPreviewScroll handles Ctrl+J/Ctrl+K preview page keys.

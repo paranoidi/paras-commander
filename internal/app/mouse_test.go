@@ -1122,3 +1122,121 @@ func TestCopyPreviewSelectionToast(t *testing.T) {
 		}
 	}
 }
+
+// mouseScreenText is everything painted on the app's simulation screen.
+func mouseScreenText(t *testing.T, a *App) string {
+	t.Helper()
+	screen, ok := a.screen.(tcell.SimulationScreen)
+	if !ok {
+		t.Fatal("expected simulation screen")
+	}
+	w, h := screen.Size()
+	return tcelltest.DumpRect(screen, 0, 0, w, h)
+}
+
+// mouseQuickViewApp latches quick view on the primary panel with its cursor on name.
+func mouseQuickViewApp(t *testing.T, name string) (a *App, x, y int) {
+	t.Helper()
+	a, _ = mouseTestApp(t)
+	a.config.UI.KeyRepeatDebounceMS = 0
+	a.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, a.panelByID(ui.PrimaryPanel), name)
+	a.model.QuickViewEnabled = true
+	a.model.QuickViewPanel = ui.PrimaryPanel
+	w, h := a.screen.Size()
+	col := a.layoutForTerminalSize(w, h).Secondary
+	return a, col.X + col.Width/2, col.Y + col.Height/2
+}
+
+func TestMouseWheelScrollsQuickViewFilePreview(t *testing.T) {
+	app, x, y := mouseQuickViewApp(t, "walnut.txt")
+	var body strings.Builder
+	for i := range 200 {
+		fmt.Fprintf(&body, "row-%03d\n", i)
+	}
+	if err := os.WriteFile(filepath.Join(app.panelByID(ui.PrimaryPanel).Path.String(), "walnut.txt"), []byte(body.String()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	app.previewCtrl.ApplyQuickViewPreviewImmediately()
+	screen, ok := app.screen.(tcell.SimulationScreen)
+	if !ok {
+		t.Fatal("expected simulation screen")
+	}
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		app.commandsMu.RLock()
+		defer app.commandsMu.RUnlock()
+		return app.model.FilePreview.Open && app.model.FilePreview.Phase == ui.FilePreviewPhaseDone
+	})
+	app.render()
+	cursor := app.model.Primary.Cursor
+	shown := func(needle string) bool {
+		return strings.Contains(mouseScreenText(t, app), needle)
+	}
+	if !shown("row-000") {
+		t.Fatal("first row not painted before the wheel")
+	}
+
+	_, rendered := app.handleMouse(mouseEv(x, y, tcell.WheelDown))
+	if !rendered || app.model.FilePreview.Scroll != config.MouseWheelRows {
+		t.Fatalf("rendered=%v scroll=%d want true/%d", rendered, app.model.FilePreview.Scroll, config.MouseWheelRows)
+	}
+	if shown("row-000") {
+		t.Fatal("wheel did not repaint the preview")
+	}
+	if app.model.Primary.Cursor != cursor || app.model.ActivePanel != ui.PrimaryPanel {
+		t.Fatalf("cursor=%d active=%d, want driver untouched", app.model.Primary.Cursor, app.model.ActivePanel)
+	}
+
+	app.handleMouse(mouseEv(x, y, tcell.WheelUp))
+	app.handleMouse(mouseEv(x, y, tcell.WheelUp))
+	if app.model.FilePreview.Scroll != 0 {
+		t.Fatalf("scroll=%d want clamped to 0", app.model.FilePreview.Scroll)
+	}
+}
+
+func TestMouseWheelMovesQuickViewDirOverlay(t *testing.T) {
+	app, x, y := mouseQuickViewApp(t, "aaa-kettle")
+	for _, n := range []string{"amber", "bronze", "copper", "drift", "ember", "flint", "grove", "hazel"} {
+		writeFile(t, filepath.Join(app.panelByID(ui.PrimaryPanel).Path.String(), "aaa-kettle", n+".txt"))
+	}
+	app.previewCtrl.ApplyQuickViewPreviewImmediately()
+	if !app.model.QuickViewDirOverlayActive {
+		t.Fatal("expected directory overlay")
+	}
+	screen, ok := app.screen.(tcell.SimulationScreen)
+	if !ok {
+		t.Fatal("expected simulation screen")
+	}
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return !app.model.QuickViewDirOverlay.ListingPending
+	})
+	ov := &app.model.QuickViewDirOverlay
+	ov.Cursor = 0
+	driver := app.model.Primary.Cursor
+
+	if _, rendered := app.handleMouse(mouseEv(x, y, tcell.WheelDown)); !rendered {
+		t.Fatal("wheel over the overlay did not render")
+	}
+	if ov.Cursor != config.MouseWheelRows {
+		t.Fatalf("overlay cursor=%d want %d", ov.Cursor, config.MouseWheelRows)
+	}
+	if app.model.Primary.Cursor != driver || !app.model.QuickViewDirOverlayActive {
+		t.Fatalf("driver cursor=%d want %d, overlay active=%v", app.model.Primary.Cursor, driver, app.model.QuickViewDirOverlayActive)
+	}
+}
+
+func TestMouseWheelIgnoresPendingQuickViewPreview(t *testing.T) {
+	app, x, y := mouseQuickViewApp(t, "walnut.txt")
+	cursor := app.model.Primary.Cursor
+	app.commandsMu.Lock()
+	app.model.FilePreview.Open = true
+	app.model.FilePreview.Phase = ui.FilePreviewPhasePending
+	app.model.FilePreview.Scroll = 7
+	app.commandsMu.Unlock()
+	if _, rendered := app.handleMouse(mouseEv(x, y, tcell.WheelDown)); rendered {
+		t.Fatal("wheel over a pending preview rendered")
+	}
+	if app.model.FilePreview.Scroll != 7 || app.model.Primary.Cursor != cursor {
+		t.Fatalf("scroll=%d cursor=%d want 7/%d", app.model.FilePreview.Scroll, app.model.Primary.Cursor, cursor)
+	}
+}

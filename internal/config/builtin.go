@@ -408,7 +408,7 @@ const (
 	// MouseCopyToastMaxRunes is the selection length from which the copy toast of a mouse selection
 	// gives the line count instead of the selected text.
 	MouseCopyToastMaxRunes = 70
-	// MouseWheelRows is how many rows one wheel notch moves the cursor over a file panel.
+	// MouseWheelRows is how many rows one wheel notch moves over a file panel or the preview beside it.
 	MouseWheelRows = 3
 	// NarrowPanelRowTextWidthThreshold is the row text width (cells) below which a panel counts as
 	// "narrow" for optional name-only listing (see [ui].narrow_panels_name_only).

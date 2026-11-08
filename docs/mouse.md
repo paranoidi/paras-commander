@@ -15,6 +15,7 @@ In the file browser:
 | Drag with the right button | The same with a red tint, and removes the rows from the selection on release. |
 | Right click on a row | Focuses the panel and moves the cursor on press, and toggles the row's selection on release. |
 | Wheel | Scrolls the panel under the pointer by a few rows. Focus does not change. |
+| Wheel over quick view | Scrolls the file preview, or moves through the directory listing, by a few rows. Focus and the highlighted entry in the other panel do not change. |
 | Pointer over a row | Highlights the row in the inactive panel's cursor colors. The cursor does not move. A key press hides the highlight until the mouse moves again. |
 | Pointer over the path in a panel's top border | Inverts the colors of the path element under it (`~`, `/`, a directory name). |
 | Left click on a path element | Focuses the panel and opens that directory, with the cursor on the directory you came from. |
@@ -24,7 +25,7 @@ In the file browser:
 
 A shortened element (`p` for `projects` in a narrow panel) opens the full directory it stands for. The path does not react while the panel's top border shows the quick filter or a quick-view directory.
 
-Panels in tree view behave the same as flat ones. A panel in carousel mode only takes focus on click. Picking a column turns the sort dialog's disk-usage size ordering off, so it does not take over again; while that ordering is in effect, Size counts as the sorted column. A narrow name-only panel shows one header title, so a click anywhere on its header opens the dialog. While quick view or a file preview fills the inactive column, clicks and the wheel there are ignored.
+Panels in tree view behave the same as flat ones. A panel in carousel mode only takes focus on click. Picking a column turns the sort dialog's disk-usage size ordering off, so it does not take over again; while that ordering is in effect, Size counts as the sorted column. A narrow name-only panel shows one header title, so a click anywhere on its header opens the dialog. While quick view or a file preview fills the inactive column, clicks there are ignored.
 
 ### Drag select
 
