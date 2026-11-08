@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -285,5 +286,45 @@ func TestDiskUsageBarIconColorOnTreeRows(t *testing.T) {
 	}
 	if fg, bg := barIconFileIconStyle(t, screen, barIconShortName); fg == barIcon || bg == barBG {
 		t.Errorf("short tree row icon fg=%v bg=%v, want devicon color off the bar", fg, bg)
+	}
+}
+
+func TestDiskUsageBarIconColorOnGitColumn(t *testing.T) {
+	t.Parallel()
+	th := theme.Default()
+	barIcon := th.PanelFileIconFG["panel.usage.normal"]
+	_, barBG, _ := th.PanelUsageNormal.Decompose()
+	modifiedFG := fgOf(th.PanelGitStyle(gitstatus.Modified.ThemeKey()))
+	newFG := fgOf(th.PanelGitStyle(gitstatus.New.ThemeKey()))
+	if barIcon == modifiedFG || barIcon == newFG {
+		t.Fatal("test needs distinct bar icon and git status colors")
+	}
+	const unstagedCell, stagedCell = 2, 3 // non-blank cells left of the name, after the file icon
+
+	state, sizes := barIconRows()
+	state.WithIndex = false
+	state.GitColumnActive = true
+	state.GitByPath = map[string]gitstatus.Cell{}
+	for _, e := range state.Entries {
+		state.GitByPath[e.Path] = gitstatus.Cell{Staged: gitstatus.Modified, Unstaged: gitstatus.New}
+	}
+	state.Cursor = 0
+	screen := drawBarIconPanel(t, state, sizes, PanelContext{PanelID: PrimaryPanel, FileListActive: true, CursorRowActive: true}, nil)
+
+	for _, cell := range []int{unstagedCell, stagedCell} {
+		if fg, bg := barIconGlyphLeftOf(t, screen, barIconLongName, cell); fg != barIcon || bg != barBG {
+			t.Errorf("long row cell %d fg=%v bg=%v, want %v on bar %v", cell, fg, bg, barIcon, barBG)
+		}
+	}
+	// The short row's bar covers only the leading gutter.
+	if fg, bg := barIconGlyphLeftOf(t, screen, barIconShortName, stagedCell); fg != modifiedFG || bg == barBG {
+		t.Errorf("short row staged fg=%v bg=%v, want %v off the bar", fg, bg, modifiedFG)
+	}
+	if fg, bg := barIconGlyphLeftOf(t, screen, barIconShortName, unstagedCell); fg != newFG || bg == barBG {
+		t.Errorf("short row unstaged fg=%v bg=%v, want %v off the bar", fg, bg, newFG)
+	}
+	// The cursor row has no bar here and keeps its own foreground.
+	if fg, _ := barIconGlyphLeftOf(t, screen, barIconCursorName, stagedCell); fg != fgOf(th.PanelCursorActive) {
+		t.Errorf("cursor row staged fg=%v, want the cursor row foreground", fg)
 	}
 }

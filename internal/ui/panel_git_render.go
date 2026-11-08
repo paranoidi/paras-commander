@@ -45,23 +45,29 @@ func gitStatusDimOnUsageBar(st gitstatus.Status) bool {
 	return st == gitstatus.NotModified || st == gitstatus.Ignored
 }
 
-func gitStatusCellStyle(st gitstatus.Status, rowStyle tcell.Style, styles theme.Theme, cursorRow, diskUsageOverlay bool, usageAccent tcell.Style) tcell.Style {
-	_, rowBG, rowAttrs := rowStyle.Decompose()
-	if cursorRow {
-		fg, _, _ := rowStyle.Decompose()
-		return tcell.StyleDefault.Foreground(fg).Background(rowBG).Attributes(rowAttrs)
+// gitStatusCellStyle styles one git status cell. barIconKey (Theme.DiskUsageBarIconKey, "" off the
+// bar) overrides the color on a disk-usage bar cell, on the cursor row too.
+func gitStatusCellStyle(st gitstatus.Status, rowStyle tcell.Style, styles theme.Theme, cursorRow, diskUsageOverlay bool, usageAccent tcell.Style, barIconKey string) tcell.Style {
+	rowFG, rowBG, rowAttrs := rowStyle.Decompose()
+	var fg tcell.Color
+	var attrs tcell.AttrMask
+	switch {
+	case cursorRow:
+		fg, attrs = rowFG, rowAttrs
+	case diskUsageOverlay && gitStatusDimOnUsageBar(st):
+		fg, _, attrs = usageAccent.Decompose()
+	default:
+		fg, _, attrs = styles.PanelGitStyle(st.ThemeKey()).Decompose()
 	}
-	if diskUsageOverlay && gitStatusDimOnUsageBar(st) {
-		fg, _, attrs := usageAccent.Decompose()
-		return tcell.StyleDefault.Foreground(fg).Background(rowBG).Attributes(attrs)
+	if barIconKey != "" {
+		fg = styles.PanelFileIconFG[barIconKey]
 	}
-	fg, _, attrs := styles.PanelGitStyle(st.ThemeKey()).Decompose()
 	return tcell.StyleDefault.Foreground(fg).Background(rowBG).Attributes(attrs)
 }
 
-func paintGitColumn(screen tcell.Screen, x, y int, cell gitstatus.Cell, rowStyle tcell.Style, styles theme.Theme, cursorRow, diskUsageOverlay bool, usageAccent tcell.Style) {
+func paintGitColumn(screen tcell.Screen, x, y int, cell gitstatus.Cell, rowStyle tcell.Style, styles theme.Theme, cursorRow, diskUsageOverlay bool, usageAccent tcell.Style, barIconKey string) {
 	for i, st := range []gitstatus.Status{cell.Staged, cell.Unstaged} {
-		s := gitStatusCellStyle(st, rowStyle, styles, cursorRow, diskUsageOverlay, usageAccent)
+		s := gitStatusCellStyle(st, rowStyle, styles, cursorRow, diskUsageOverlay, usageAccent, barIconKey)
 		screen.SetContent(x+i, y, st.Rune(), nil, s)
 	}
 }

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"maps"
 	"testing"
 	"unicode/utf8"
 
@@ -37,8 +38,44 @@ func TestPanelGitCellDefaultsToNotModified(t *testing.T) {
 	}
 }
 
-func TestGitNotModifiedUsesUsageForegroundUnderDiskMeter(t *testing.T) {
+// A bar icon color wins on a git cell; without one, unmodified cells take the bar's foreground
+// because panel.git.not_modified matches the bar background.
+func TestGitNotModifiedForegroundUnderDiskMeter(t *testing.T) {
 	t.Parallel()
+	withIcon := theme.Default()
+	noIcon := theme.Default()
+	noIcon.PanelFileIconFG = maps.Clone(noIcon.PanelFileIconFG)
+	delete(noIcon.PanelFileIconFG, "panel.usage.normal")
+	usageFG, _, _ := withIcon.PanelUsageNormal.Decompose()
+
+	cases := []struct {
+		name   string
+		styles theme.Theme
+		wantFG tcell.Color
+	}{
+		{"bar icon color", withIcon, withIcon.PanelFileIconFG["panel.usage.normal"]},
+		{"no bar icon color", noIcon, usageFG},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			gotFG, gotBG := gitNotModifiedCellUnderMeter(t, tc.styles)
+			_, wantBG, _ := tc.styles.PanelUsageNormal.Decompose()
+			if gotFG != tc.wantFG {
+				t.Fatalf("git '-' foreground = %v, want %v", gotFG, tc.wantFG)
+			}
+			if gotBG != wantBG {
+				t.Fatalf("git '-' background = %v, want usage.normal %v", gotBG, wantBG)
+			}
+			if gotFG == gotBG {
+				t.Fatalf("git '-' foreground matches background (%v)", gotFG)
+			}
+		})
+	}
+}
+
+func gitNotModifiedCellUnderMeter(t *testing.T, styles theme.Theme) (fg, bg tcell.Color) {
+	t.Helper()
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init: %v", err)
@@ -46,10 +83,6 @@ func TestGitNotModifiedUsesUsageForegroundUnderDiskMeter(t *testing.T) {
 	t.Cleanup(screen.Fini)
 	const width, height = 60, 10
 	screen.SetSize(width, height)
-
-	styles := theme.Default()
-	wantUsageFG, wantUsageBG, _ := styles.PanelUsageNormal.Decompose()
-	gitNotModifiedFG, _, _ := styles.PanelGitNotModified.Decompose()
 
 	root := "/vol"
 	largePath := root + "/large"
@@ -80,17 +113,6 @@ func TestGitNotModifiedUsesUsageForegroundUnderDiskMeter(t *testing.T) {
 	if r != '-' {
 		t.Fatalf("git staged cell = %q, want '-'", ch)
 	}
-	gotFG, gotBG, _ := style.Decompose()
-	if gotFG != wantUsageFG {
-		t.Fatalf("git '-' foreground = %v, want usage.normal %v (panel.git.not_modified is %v)", gotFG, wantUsageFG, gitNotModifiedFG)
-	}
-	if gotFG == gitNotModifiedFG && gitNotModifiedFG == wantUsageBG {
-		t.Fatalf("git '-' still using panel.git.not_modified foreground %v that matches usage background", gitNotModifiedFG)
-	}
-	if gotBG != wantUsageBG {
-		t.Fatalf("git '-' background = %v, want usage.normal %v", gotBG, wantUsageBG)
-	}
-	if gotFG == gotBG {
-		t.Fatalf("git '-' foreground matches background (%v)", gotFG)
-	}
+	fg, bg, _ = style.Decompose()
+	return fg, bg
 }

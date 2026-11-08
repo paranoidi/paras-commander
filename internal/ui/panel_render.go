@@ -663,18 +663,16 @@ func drawPanelRowGitStrip(screen tcell.Screen, p panelRowParams, rp panelRowPain
 	gitStyle := rp.BlendCell(p.LeftGutter)
 	gitUnderUsage := !p.Ctx.ChromeBlocked && rp.FillCols > p.LeftGutter
 	var gitUsageAccent tcell.Style
+	barIconKey := ""
 	if gitUnderUsage {
 		gitUsageAccent = p.PanelStyle.Styles.DiskUsageBarStyle(p.Ctx.FileListActive, rp.EntryIndex == p.State.Cursor, rp.Selected)
+		barIconKey = rp.BarIconKey
 	}
 	if rp.HasEntry && p.State.WithIndex {
-		barIconKey := ""
-		if gitUnderUsage {
-			barIconKey = rp.BarIconKey
-		}
 		paintIndexColumn(screen, p.GitStart, rp.Y, indexRowState(rp.Entry, p.Display.JobMarks), gitStyle, p.PanelStyle.Styles, rp.EntryIndex == p.State.Cursor, p.Ctx.ChromeBlocked, barIconKey)
 		paintGitRowTrailingGap(screen, p.GitStart, rp.Y, gitStyle)
 	} else if rp.HasEntry {
-		paintGitColumn(screen, p.GitStart, rp.Y, panelGitCell(rp.Entry, p.State.GitByPath), gitStyle, p.PanelStyle.Styles, rp.EntryIndex == p.State.Cursor, gitUnderUsage, gitUsageAccent)
+		paintGitColumn(screen, p.GitStart, rp.Y, panelGitCell(rp.Entry, p.State.GitByPath), gitStyle, p.PanelStyle.Styles, rp.EntryIndex == p.State.Cursor, gitUnderUsage, gitUsageAccent, barIconKey)
 		paintGitRowTrailingGap(screen, p.GitStart, rp.Y, gitStyle)
 	} else {
 		paintGitStripBlank(screen, p.GitStart, rp.Y, gitStyle)
