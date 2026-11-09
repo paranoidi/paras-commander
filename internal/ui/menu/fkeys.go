@@ -100,7 +100,7 @@ var FunctionKeysJobsDetailView = []FunctionKey{
 
 // JobActions says which state-dependent jobs-view actions apply to the selected job (and, for
 // Clear, to the list). Handler.SelectedJobActions computes it; FunctionKeysJobsView hides every
-// FunctionKeysJobs entry whose action it rules out.
+// FunctionKeysJobs entry whose action it rules out, and the jobs `:` leader menu dims them.
 type JobActions struct {
 	Cancel   bool // not finished and not already canceling
 	SoftStop bool // running or waiting on a decision, soft-stoppable type, not yet requested
@@ -114,8 +114,8 @@ type JobActions struct {
 	Clear    bool // the list holds a finished job
 }
 
-// allows reports whether a lists the action; actions it does not track are always allowed.
-func (a JobActions) allows(actionID string) bool {
+// Allows reports whether a lists the action; actions it does not track are always allowed.
+func (a JobActions) Allows(actionID string) bool {
 	switch actionID {
 	case keymap.ActionJobsCancel:
 		return a.Cancel
@@ -144,7 +144,7 @@ func (a JobActions) allows(actionID string) bool {
 func FunctionKeysJobsView(avail JobActions) []FunctionKey {
 	out := make([]FunctionKey, 0, len(FunctionKeysJobs))
 	for _, fk := range FunctionKeysJobs {
-		if !avail.allows(fk.ActionID) {
+		if !avail.Allows(fk.ActionID) {
 			continue
 		}
 		if fk.ActionID == keymap.ActionJobsResume && avail.Retry {

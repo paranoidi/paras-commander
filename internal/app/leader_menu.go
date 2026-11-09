@@ -7,6 +7,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/app/helpkeys"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
 func (a *App) openLeaderMenu(kind ui.LeaderMenuKind, items []ui.LeaderMenuItem) {
@@ -195,15 +196,30 @@ func (a *App) openViewLeaderMenu() {
 		a.setTransientMessage(prefix+": no entries configured", ui.MessageUrgencyWarn)
 		return
 	}
-	if a.model.ViewMode == ui.ViewJobs && a.jobsCtrl.SelectedJobActions().Retry {
-		for i := range entries {
-			if entries[i].ActionID == keymap.ActionJobsResume {
-				entries[i].Label = "Retry job"
-			}
+	items, actions := a.buildLeaderMenuItems(entries)
+	if a.model.ViewMode == ui.ViewJobs {
+		applyJobActionsToLeaderMenu(items, actions, a.jobsCtrl.SelectedJobActions())
+	}
+	a.openLeaderMenuDispatch(items, actions, ui.LeaderMenuBuiltin, prefix, a.activateHelpAction)
+}
+
+// applyJobActionsToLeaderMenu dims the jobs leader-menu entries whose action does not apply to
+// the selected job (the same menu.JobActions the footer filters by) and relabels Resume as Retry
+// on a retryable job. Dimmed entries stay activatable; their handlers explain why they did nothing.
+// actions is parallel to the non-group rows of items, as buildLeaderMenuItems returns them.
+func applyJobActionsToLeaderMenu(items []ui.LeaderMenuItem, actions []string, avail menu.JobActions) {
+	ai := 0
+	for i := range items {
+		if items[i].GroupTitle != "" {
+			continue
+		}
+		id := actions[ai]
+		ai++
+		items[i].Disabled = !avail.Allows(id)
+		if id == keymap.ActionJobsResume && avail.Retry {
+			items[i].Label = "Retry job"
 		}
 	}
-	items, actions := a.buildLeaderMenuItems(entries)
-	a.openLeaderMenuDispatch(items, actions, ui.LeaderMenuBuiltin, prefix, a.activateHelpAction)
 }
 
 // buildLeaderMenuItems converts leader-menu entries into UI items plus their parallel action-ID

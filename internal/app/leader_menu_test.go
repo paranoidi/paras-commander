@@ -788,3 +788,25 @@ func TestLeaderMenuChordToggleExplainsNoRoom(t *testing.T) {
 		t.Fatalf("toggle message missing the reason:\n%s", text)
 	}
 }
+
+func TestJobsLeaderMenuDimsInapplicableActions(t *testing.T) {
+	t.Parallel()
+	items := []ui.LeaderMenuItem{
+		{GroupTitle: "Queue"},
+		{Label: "Pause job"},
+		{Label: "Resume job"},
+		{Label: "Cancel job"},
+		{Label: "Filter by result"},
+	}
+	actions := []string{keymap.ActionJobsPause, keymap.ActionJobsResume, keymap.ActionJobsCancel, keymap.ActionJobsResultFilter}
+	applyJobActionsToLeaderMenu(items, actions, menu.JobActions{Retry: true})
+	want := []struct {
+		label    string
+		disabled bool
+	}{{"", false}, {"Pause job", true}, {"Retry job", false}, {"Cancel job", true}, {"Filter by result", false}}
+	for i, w := range want {
+		if items[i].Label != w.label && items[i].GroupTitle == "" || items[i].Disabled != w.disabled {
+			t.Errorf("item %d = %+v, want label %q disabled %v", i, items[i], w.label, w.disabled)
+		}
+	}
+}

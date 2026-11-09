@@ -66,7 +66,8 @@ queued job, Resume on a paused one, Retry on a failed or canceled one, Soft
 stop on a running one, Cancel until the job has finished or is already
 canceling, Move up / Move down while the job waits in the queue with a job
 before / after it, Undo when the job can be undone, and Clear while finished
-jobs are listed.
+jobs are listed. The `:` leader menu keeps every entry but dims the ones that
+do not apply; choosing a dimmed entry only says why it cannot run.
 
 **Soft stop** asks a running job to stop once the file it is working on is
 complete: that file finishes normally, nothing further starts, and the job ends
