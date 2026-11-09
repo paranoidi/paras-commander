@@ -776,10 +776,7 @@ func (h *Handler) ExecuteDelete() {
 	p := h.host.ActivePanel()
 	if h.model.ViewMode == ui.ViewCompare {
 		// The delete source is the focused column's panel (its selection), not the active panel.
-		p = h.host.PanelByID(ui.PrimaryPanel)
-		if h.model.CompareView.FocusColumn == ui.CompareColumnSecondary {
-			p = h.host.PanelByID(ui.SecondaryPanel)
-		}
+		p = h.host.PanelByID(h.model.CompareView.FocusedPanelID())
 	}
 	listed := h.model.FileDialog.DeleteEntries
 	if len(listed) == 0 {

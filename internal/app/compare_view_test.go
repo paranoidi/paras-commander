@@ -413,6 +413,35 @@ func TestCompareViewDeleteOpensDialogForFocusedColumnCursor(t *testing.T) {
 	}
 }
 
+// With swapped panes the left column belongs to the Secondary panel: confirming a delete clears
+// that panel's selection and leaves the other panel's alone.
+func TestCompareViewDeleteClearsFocusedPanelSelectionWhenSwapped(t *testing.T) {
+	screen := newScreen(t, 100, 30)
+	app := newApp(t, screen, t.TempDir())
+	left, right := t.TempDir(), t.TempDir()
+	doomed := writeCompareFile(t, left, "orchard/lantern.txt", "left")
+	kept := writeCompareFile(t, right, "quarry/willow.txt", "right")
+	openCompareOn(t, app, left, right)
+	app.model.CompareView.SwapPanels = true
+	focused, other := app.panelByID(ui.SecondaryPanel), app.panelByID(ui.PrimaryPanel)
+	focused.AddSelection(doomed)
+	other.AddSelection(kept)
+
+	pressKey(t, app, tcell.KeyF8, tcell.ModNone)
+	fd := app.model.FileDialog
+	if !fd.Open || fd.DialogType != dialog.FileDialogDelete || len(fd.DeleteEntries) != 1 || fd.DeleteEntries[0].Path != doomed {
+		t.Fatalf("delete dialog = %+v", fd)
+	}
+	app.dialogCtrl.ExecuteFileDialog()
+
+	if len(focused.SelectedPaths) != 0 {
+		t.Fatalf("focused panel's selection = %v, want empty", focused.SelectedPaths)
+	}
+	if !other.IsSelectedPath(kept) {
+		t.Fatalf("other panel's selection was cleared: %v", other.SelectedPaths)
+	}
+}
+
 // TestCompareViewExternalBrowserUsesFocusedColumn verifies M-x reveals the focused side's
 // file directory, and that side's root when the row has no entry there.
 func TestCompareViewExternalBrowserUsesFocusedColumn(t *testing.T) {
