@@ -2064,3 +2064,58 @@ func TestReloadIndexPanelsSupersedesListingInFlight(t *testing.T) {
 		t.Fatal("the refresh replaced a navigation in flight")
 	}
 }
+
+// Every drift pass ends the rows' wait: with a result, cancelled, or after the panel left.
+func TestFileIndexDriftPendingEndsWithThePass(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	var reqs []panel.IndexDriftRequest
+	openIndexedParent(t, a, screen, dir, &reqs)
+	p, name := a.activePanel(), filepath.Base(dir)
+	pending := func() bool {
+		for _, e := range p.Entries {
+			if e.Name == name {
+				return p.IndexDriftPending(e)
+			}
+		}
+		t.Fatalf("no row %s", name)
+		return false
+	}
+	if !pending() {
+		t.Fatal("a directory with a pass that has not reported is not pending")
+	}
+
+	// The panel left the directory: the result is dropped, the wait still ends.
+	other, _ := pathloc.File(filepath.Join(dir, "elsewhere"))
+	if !a.applyIndexDrift(indexDriftPayload{panelID: a.model.ActivePanel, dir: other, seq: reqs[len(reqs)-1].Seq}) {
+		t.Fatal("ending a pass the row waited on asks for no render")
+	}
+	if pending() {
+		t.Fatal("still pending after the pass ended elsewhere")
+	}
+
+	// The real scheduler reports a finished pass.
+	p.ScheduleIndexDrift = a.indexDriftScheduler(a.model.ActivePanel)
+	p.RequestIndexDrift(name)
+	if !pending() {
+		t.Fatal("not pending while the explicit pass runs")
+	}
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return !pending() })
+
+	// A cancelled pass reports too, and leaves the row's state alone.
+	for i := range p.Entries {
+		if p.Entries[i].Name == name {
+			p.Entries[i].IndexStatus = localfs.IndexStatusIndexed
+		}
+	}
+	a.indexDrift.mu.Lock()
+	a.indexDrift.cancel[a.model.ActivePanel]()
+	a.indexDrift.mu.Unlock()
+	p.RequestIndexDrift(name)
+	if !pending() {
+		t.Fatal("not pending while the cancelled pass winds down")
+	}
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return !pending() })
+	if st, _ := entryStatus(a, name); st != localfs.IndexStatusIndexed {
+		t.Fatalf("status after a cancelled pass = %q, want indexed", st)
+	}
+}

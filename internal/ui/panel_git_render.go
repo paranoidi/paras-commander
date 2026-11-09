@@ -73,13 +73,17 @@ func paintGitColumn(screen tcell.Screen, x, y int, cell gitstatus.Cell, rowStyle
 }
 
 // indexRowState is the fileindex state icon key of a row: scanning while a task job (a scan or
-// prune) works on it, else the overlay's IndexStatus ("" for rows the index has no opinion on).
-func indexRowState(entry localfs.Entry, jobMarks []JobPathMark) string {
+// prune) works on it, checking while a drift pass has yet to report on it (driftPending), else
+// the overlay's IndexStatus ("" for rows the index has no opinion on).
+func indexRowState(entry localfs.Entry, jobMarks []JobPathMark, driftPending bool) string {
 	if entry.IndexStatus == "" {
 		return ""
 	}
 	if m, ok := EntryPathJobMark(entry.Path, jobMarks); ok && jobs.Type(m.Type) == jobs.TypeTask && jobs.Status(m.Status).IsActive() {
 		return localfs.IndexStatusScanning
+	}
+	if driftPending {
+		return localfs.IndexStatusChecking
 	}
 	return entry.IndexStatus
 }

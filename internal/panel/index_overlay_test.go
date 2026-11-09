@@ -135,3 +135,49 @@ func TestApplyListingClearsWithIndexOffLocalPaths(t *testing.T) {
 		t.Fatal("WithIndex must clear when the listing is not local")
 	}
 }
+
+func TestIndexDriftPendingFollowsThePass(t *testing.T) {
+	root, _ := pathloc.File("/vol")
+	var reqs []IndexDriftRequest
+	started := true
+	s := State{Path: root, WithIndex: true, ScheduleIndexDrift: func(r IndexDriftRequest) bool { reqs = append(reqs, r); return started }, Entries: []localfs.Entry{
+		{Name: "orchard", Path: "/vol/orchard", Type: localfs.EntryDirectory, IndexStatus: localfs.IndexStatusIndexed},
+		{Name: "marsh", Path: "/vol/marsh", Type: localfs.EntryDirectory, IndexStatus: localfs.IndexStatusTagged},
+		{Name: "pasture", Path: "/vol/pasture", Type: localfs.EntryDirectory, IndexStatus: localfs.IndexStatusNew},
+		{Name: "reed.txt", Path: "/vol/reed.txt", Type: localfs.EntryFile, IndexStatus: localfs.IndexStatusIndexed},
+	}}
+	pending := func(i int) bool { return s.IndexDriftPending(s.Entries[i]) }
+
+	s.scheduleIndexDrift()
+	if !pending(0) || !pending(1) || pending(2) || pending(3) {
+		t.Fatalf("pending after the automatic pass = %v", s.indexDriftPending)
+	}
+	first := reqs[0].Seq
+
+	// A newer pass over orchard keeps it waiting after the first pass ends.
+	s.RequestIndexDrift("orchard")
+	second := reqs[1].Seq
+	if !s.FinishIndexDrift(first) {
+		t.Fatal("finishing the first pass stopped no row waiting")
+	}
+	if !pending(0) || pending(1) {
+		t.Fatalf("pending after the first pass ended = %v", s.indexDriftPending)
+	}
+
+	// A result of differs is an answer, even while a pass still covers the directory.
+	s.ApplyIndexDrift(map[string]string{"orchard": localfs.IndexStatusDiffers})
+	if pending(0) {
+		t.Fatal("a directory that differs still shows as waiting")
+	}
+	if !s.FinishIndexDrift(second) || s.FinishIndexDrift(second) {
+		t.Fatal("finishing the second pass must end the wait exactly once")
+	}
+
+	// A pass that did not start leaves nothing waiting.
+	started = false
+	s.Entries[0].IndexStatus = localfs.IndexStatusIndexed
+	s.scheduleIndexDrift()
+	if pending(0) || pending(1) {
+		t.Fatalf("pending after a refused pass = %v", s.indexDriftPending)
+	}
+}

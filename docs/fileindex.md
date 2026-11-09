@@ -93,15 +93,16 @@ not watched.
 | `missing` | only in index | Only in the index (ghost row) |
 | `excluded` | excluded | Not in the index, and the scan rules in fileindex's `config.ini` (`exclude_dirs`, `exclude_files`, file patterns) skip it |
 | `scanning` | scanning | A scan or prune task job is working on the row |
+| `checking` | checking | An indexed directory the background check has not finished with yet |
 | `differs` | differs below | An indexed directory with something different below it: a new file a scan would add, a file whose size or modification time changed, or an indexed file gone from disk |
 | `unchecked` | browser scan depth exceeded | An indexed directory with nothing different found in the folders the automatic check reached, but with deeper folders it did not look into |
 | `tagged` | tagged | Indexed and carrying tags |
 
 When several apply, the first of: scanning, missing, changed, excluded, new,
-differs, unhashed, tagged, unchecked, indexed (a file that is both unhashed
+differs, checking, unhashed, tagged, unchecked, indexed (a file that is both unhashed
 and tagged shows `unhashed`). A directory does not count unhashed files as a
 difference. Directories are checked in the background
-(flat layout only). After each
+(flat layout only), and show `checking` until the check reports back. After each
 listing, every indexed directory is checked down to `browser_scan_max_depth`
 levels (default 3). A difference within that depth shows as `differs`; if there
 is none but the directory has folders deeper than that, it shows `unchecked`
@@ -118,7 +119,7 @@ when nothing differs, so a difference below the automatic depth shows only
 after such a request. A tagged directory keeps `tagged` instead of showing
 `unchecked`. The glyphs are under
 `[icons.fileindex_state]` and the colors under `[panel.fileindex]` in the
-theme (scanning uses `[status] scanning`); without Nerd Font icons a letter is shown instead. The fileindex menu shows a legend of these icons at the bottom.
+theme (scanning and checking use `[status] scanning`); without Nerd Font icons a letter is shown instead. The fileindex menu shows a legend of these icons at the bottom.
 
 On a ghost row:
 

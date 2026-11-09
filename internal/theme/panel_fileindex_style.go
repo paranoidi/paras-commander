@@ -4,8 +4,8 @@ import "github.com/gdamore/tcell/v2"
 
 // fileIndexStates are the fileindex row states of "browse with fileindex" (localfs.IndexStatus*
 // values): each has an icon ([icons.fileindex_state]) and a style ([panel.fileindex]), except
-// scanning, styled by [status] scanning (Theme.StatusScanning). The fallback glyph is the Nerd
-// Font icon, ascii the one shown without Nerd Font icons.
+// the loading states (fileIndexStateLoading), styled by [status] scanning (Theme.StatusScanning).
+// The fallback glyph is the Nerd Font icon, ascii the one shown without Nerd Font icons.
 var fileIndexStates = []struct {
 	key, icon, ascii string
 	fg               tcell.Color
@@ -16,20 +16,21 @@ var fileIndexStates = []struct {
 	{"missing", "\U000F01BA", "-", tcell.ColorRed},      // nf-md-database_plus
 	{"excluded", "\U000F1640", "x", tcell.ColorGray},    // nf-md-database_off
 	{"scanning", "\U000F0CFF", "*", tcell.ColorDefault}, // nf-md-database_sync
+	{"checking", "\U000F0866", ".", tcell.ColorDefault}, // nf-md-database_search
 	{"differs", "\U000F163A", "!", tcell.ColorYellow},   // nf-md-database_alert
 	{"unchecked", "\U000F1920", "?", tcell.ColorYellow}, // nf-md-database_eye_off
 	{"unhashed", "\U000F163F", "h", tcell.ColorGray},    // nf-md-database_clock
 	{"tagged", "\U000F12F6", "#", tcell.ColorNavy},      // nf-md-database_marker
 }
 
-// fileIndexStateScanning is the state styled by StatusScanning instead of [panel.fileindex].
-const fileIndexStateScanning = "scanning"
+// fileIndexStateLoading reports a state styled by StatusScanning instead of [panel.fileindex].
+func fileIndexStateLoading(state string) bool { return state == "scanning" || state == "checking" }
 
 // fileIndexStateStyleKeys are the optional [panel.fileindex] style keys.
 func fileIndexStateStyleKeys() []string {
 	keys := make([]string, 0, len(fileIndexStates))
 	for _, s := range fileIndexStates {
-		if s.key != fileIndexStateScanning {
+		if !fileIndexStateLoading(s.key) {
 			keys = append(keys, "panel.fileindex."+s.key)
 		}
 	}
@@ -54,9 +55,9 @@ func (t Theme) IconFileIndexState(state string) rune {
 }
 
 // PanelFileIndexStyle is the foreground style of a fileindex row state ([panel.fileindex];
-// StatusScanning for scanning).
+// StatusScanning for the loading states).
 func (t Theme) PanelFileIndexStyle(state string) tcell.Style {
-	if state == fileIndexStateScanning {
+	if fileIndexStateLoading(state) {
 		return t.StatusScanning
 	}
 	if st, ok := t.PanelFileIndex[state]; ok {
@@ -70,7 +71,7 @@ func (t Theme) PanelFileIndexStyle(state string) tcell.Style {
 func fileIndexStateStyles(specs map[string]styleSpec, palette map[string]tcell.Color) (map[string]tcell.Style, error) {
 	out := make(map[string]tcell.Style, len(fileIndexStates))
 	for _, s := range fileIndexStates {
-		if s.key == fileIndexStateScanning {
+		if fileIndexStateLoading(s.key) {
 			continue
 		}
 		st, err := optionalStyle(specs, palette, "panel.fileindex."+s.key, tcell.StyleDefault.Foreground(s.fg))

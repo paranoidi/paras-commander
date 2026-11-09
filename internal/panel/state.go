@@ -273,6 +273,10 @@ type State struct {
 	// ScheduleIndexDrift runs a directory-drift pass (set by app): the automatic one after a WithIndex
 	// listing and the explicit one from RequestIndexDrift.
 	ScheduleIndexDrift IndexDriftScheduler
+	// indexDriftPending maps the path of a directory awaiting a drift pass to that pass's Seq, the
+	// newest asked for it; FinishIndexDrift removes it. indexDriftSeq numbers the passes.
+	indexDriftPending map[string]uint64
+	indexDriftSeq     uint64
 	// IndexAutoDriftDepth is the depth of the automatic drift pass after a WithIndex listing:
 	// levels to check, 0 unlimited, negative off (set by app from [fileindex].browser_scan_max_depth).
 	IndexAutoDriftDepth int

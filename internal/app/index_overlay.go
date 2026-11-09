@@ -17,11 +17,13 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-// indexDriftPayload carries one panel's directory-drift result (subdirectory name to differs,
-// unchecked or indexed).
+// indexDriftPayload carries the end of one panel's drift pass: seq (panel.IndexDriftRequest.Seq)
+// and the result (subdirectory name to differs, unchecked or indexed), nil when the pass failed
+// or was cancelled.
 type indexDriftPayload struct {
 	panelID int
 	dir     pathloc.Path
+	seq     uint64
 	dirs    map[string]string
 	// explicit marks the result of an explicit (unlimited) request; it is never overwritten by
 	// a later automatic result.
@@ -187,15 +189,13 @@ func (a *App) indexDriftScheduler(panelID int) panel.IndexDriftScheduler {
 		ctx := st.ctx[panelID]
 		st.mu.Unlock()
 		go func() {
-			host, err := fileindex.IndexPath(req.Dir.String())
-			if err != nil {
-				return
+			var dirs map[string]string
+			if host, err := fileindex.IndexPath(req.Dir.String()); err == nil {
+				if res, err := a.fileIndex.DirDrift(ctx, filepath.Clean(host), req.Subdirs, req.MaxDepth); err == nil {
+					dirs = res
+				}
 			}
-			dirs, err := a.fileIndex.DirDrift(ctx, filepath.Clean(host), req.Subdirs, req.MaxDepth)
-			if err != nil || len(dirs) == 0 {
-				return
-			}
-			if asyncWakes(a).indexDrift.push(indexDriftPayload{panelID: panelID, dir: req.Dir, dirs: dirs, explicit: req.Explicit}) {
+			if asyncWakes(a).indexDrift.push(indexDriftPayload{panelID: panelID, dir: req.Dir, seq: req.Seq, dirs: dirs, explicit: req.Explicit}) {
 				postGuaranteedWake(a.screen, indexDriftPayload{})
 			}
 		}()
@@ -203,8 +203,9 @@ func (a *App) indexDriftScheduler(panelID int) panel.IndexDriftScheduler {
 	}
 }
 
-// applyIndexDrift applies drift results on the UI goroutine; panels that left the directory and
-// panels no longer browsing with fileindex are dropped.
+// applyIndexDrift ends the panels' wait on the finished passes and applies their results on the
+// UI goroutine; results for panels that left the directory or no longer browse with fileindex are
+// dropped.
 func (a *App) applyIndexDrift(p indexDriftPayload) bool {
 	items := asyncWakes(a).indexDrift.drain()
 	if len(items) == 0 {
@@ -213,6 +214,9 @@ func (a *App) applyIndexDrift(p indexDriftPayload) bool {
 	changed := false
 	for _, it := range items {
 		pan := a.panelByID(it.panelID)
+		if pan.FinishIndexDrift(it.seq) {
+			changed = true
+		}
 		if it.dirs == nil || !pan.WithIndex || !pan.Path.Equal(it.dir) {
 			continue
 		}

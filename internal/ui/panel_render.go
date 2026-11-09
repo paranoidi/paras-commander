@@ -669,7 +669,7 @@ func drawPanelRowGitStrip(screen tcell.Screen, p panelRowParams, rp panelRowPain
 		barIconKey = rp.BarIconKey
 	}
 	if rp.HasEntry && p.State.WithIndex {
-		paintIndexColumn(screen, p.GitStart, rp.Y, indexRowState(rp.Entry, p.Display.JobMarks), gitStyle, p.PanelStyle.Styles, rp.EntryIndex == p.State.Cursor, p.Ctx.ChromeBlocked, barIconKey)
+		paintIndexColumn(screen, p.GitStart, rp.Y, indexRowState(rp.Entry, p.Display.JobMarks, p.State.IndexDriftPending(rp.Entry)), gitStyle, p.PanelStyle.Styles, rp.EntryIndex == p.State.Cursor, p.Ctx.ChromeBlocked, barIconKey)
 		paintGitRowTrailingGap(screen, p.GitStart, rp.Y, gitStyle)
 	} else if rp.HasEntry {
 		paintGitColumn(screen, p.GitStart, rp.Y, panelGitCell(rp.Entry, p.State.GitByPath), gitStyle, p.PanelStyle.Styles, rp.EntryIndex == p.State.Cursor, gitUnderUsage, gitUsageAccent, barIconKey)

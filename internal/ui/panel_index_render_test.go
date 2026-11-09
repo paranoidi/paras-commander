@@ -66,14 +66,14 @@ func TestPanelIndexStripPaintsStateIcons(t *testing.T) {
 func TestIndexRowStateScanningOverridesOnlyIndexedRows(t *testing.T) {
 	t.Parallel()
 	marks := []JobPathMark{{Type: string(jobs.TypeTask), Status: string(jobs.StatusRunning), Sources: []string{"/vol/thistle"}}}
-	if got := indexRowState(localfs.Entry{Path: "/vol/thistle/bramble.txt", IndexStatus: "indexed"}, marks); got != "scanning" {
+	if got := indexRowState(localfs.Entry{Path: "/vol/thistle/bramble.txt", IndexStatus: "indexed"}, marks, true); got != "scanning" {
 		t.Fatalf("row under a running scan = %q, want scanning", got)
 	}
-	if got := indexRowState(localfs.Entry{Path: "/vol/thistle/bramble.txt"}, marks); got != "" {
+	if got := indexRowState(localfs.Entry{Path: "/vol/thistle/bramble.txt"}, marks, false); got != "" {
 		t.Fatalf("row without index state = %q, want blank", got)
 	}
 	queued := []JobPathMark{{Type: string(jobs.TypeTask), Status: string(jobs.StatusQueued), Sources: []string{"/vol/thistle"}}}
-	if got := indexRowState(localfs.Entry{Path: "/vol/thistle/bramble.txt", IndexStatus: "new"}, queued); got != "new" {
+	if got := indexRowState(localfs.Entry{Path: "/vol/thistle/bramble.txt", IndexStatus: "new"}, queued, false); got != "new" {
 		t.Fatalf("row under a queued scan = %q, want its own state", got)
 	}
 }
@@ -82,9 +82,36 @@ func TestIndexStateIconsFallBackToASCII(t *testing.T) {
 	t.Parallel()
 	th := theme.Default()
 	th.UseNerdfontIcons = false
-	for _, st := range []string{"indexed", "changed", "new", "missing", "excluded", "scanning", "differs", "tagged"} {
+	for _, st := range []string{"indexed", "changed", "new", "missing", "excluded", "scanning", "checking", "differs", "tagged"} {
 		if r := th.IconFileIndexState(st); r == 0 || r > 0x7f {
 			t.Errorf("%s without Nerd Font icons = %q, want an ASCII letter", st, r)
 		}
+	}
+}
+
+func TestIndexRowStateCheckingWaitsOnTheDriftPass(t *testing.T) {
+	t.Parallel()
+	dir := localfs.Entry{Path: "/vol/thistle", Type: localfs.EntryDirectory, IndexStatus: localfs.IndexStatusIndexed}
+	if got := indexRowState(dir, nil, true); got != localfs.IndexStatusChecking {
+		t.Fatalf("directory awaiting its pass = %q, want checking", got)
+	}
+	if got := indexRowState(dir, nil, false); got != localfs.IndexStatusIndexed {
+		t.Fatalf("directory after its pass = %q, want indexed", got)
+	}
+	marks := []JobPathMark{{Type: string(jobs.TypeTask), Status: string(jobs.StatusRunning), Sources: []string{"/vol/thistle"}}}
+	if got := indexRowState(dir, marks, true); got != localfs.IndexStatusScanning {
+		t.Fatalf("directory under a running scan = %q, want scanning", got)
+	}
+}
+
+func TestIndexCheckingStateUsesTheLoadingStyleAndSearchGlyph(t *testing.T) {
+	t.Parallel()
+	th := theme.Default()
+	th.UseNerdfontIcons = true
+	if got := th.PanelFileIndexStyle(localfs.IndexStatusChecking); got != th.StatusScanning {
+		t.Errorf("checking style = %v, want status.scanning %v", got, th.StatusScanning)
+	}
+	if got := th.IconFileIndexState(localfs.IndexStatusChecking); got != '\U000F0866' {
+		t.Errorf("checking icon = %U, want U+F0866", got)
 	}
 }

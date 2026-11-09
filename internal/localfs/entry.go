@@ -73,6 +73,7 @@ const (
 	IndexStatusDiffers   = "differs"   // an indexed directory whose subtree differs from the index
 	IndexStatusUnchecked = "unchecked" // an indexed directory with a subdirectory too deep for the automatic check
 	IndexStatusScanning  = "scanning"  // render-only: a scan or prune task job works on the row
+	IndexStatusChecking  = "checking"  // render-only: a drift pass has yet to report on the directory
 )
 
 // ListOptions controls directory listing behavior.

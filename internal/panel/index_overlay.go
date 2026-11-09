@@ -24,9 +24,12 @@ type IndexDriftRequest struct {
 	MaxDepth int
 	// Explicit marks a request made by the user (directory size) rather than the automatic pass.
 	Explicit bool
+	// Seq identifies the pass: the scheduler hands it to FinishIndexDrift however the pass ends.
+	Seq uint64
 }
 
-// IndexDriftScheduler starts the drift pass off the UI goroutine and reports whether it did.
+// IndexDriftScheduler starts the drift pass off the UI goroutine and reports whether it did. A
+// started pass must end in FinishIndexDrift, whether it succeeds, fails or is cancelled.
 type IndexDriftScheduler func(req IndexDriftRequest) bool
 
 // driftCandidate reports whether e is a directory a drift pass can say something about.
@@ -40,15 +43,46 @@ func (s *State) requestIndexDrift(maxDepth int, explicit bool, want func(name st
 	if !s.WithIndex || s.ScheduleIndexDrift == nil || s.ListLayout == ListLayoutTree || !s.Path.IsLocal() {
 		return
 	}
-	var subdirs []string
+	var subdirs, paths []string
 	for _, e := range s.Entries {
 		if driftCandidate(e) && want(e.Name) {
 			subdirs = append(subdirs, e.Name)
+			paths = append(paths, e.Path)
 		}
 	}
-	if len(subdirs) > 0 {
-		s.ScheduleIndexDrift(IndexDriftRequest{Dir: s.Path, Subdirs: subdirs, MaxDepth: maxDepth, Explicit: explicit})
+	if len(subdirs) == 0 {
+		return
 	}
+	s.indexDriftSeq++
+	if !s.ScheduleIndexDrift(IndexDriftRequest{Dir: s.Path, Subdirs: subdirs, MaxDepth: maxDepth, Explicit: explicit, Seq: s.indexDriftSeq}) {
+		return
+	}
+	if s.indexDriftPending == nil {
+		s.indexDriftPending = make(map[string]uint64, len(paths))
+	}
+	for _, p := range paths {
+		s.indexDriftPending[p] = s.indexDriftSeq
+	}
+}
+
+// FinishIndexDrift ends the wait on the drift pass seq, leaving directories a newer pass also
+// covers, and reports whether any row stopped waiting.
+func (s *State) FinishIndexDrift(seq uint64) bool {
+	changed := false
+	for p, pending := range s.indexDriftPending {
+		if pending == seq {
+			delete(s.indexDriftPending, p)
+			changed = true
+		}
+	}
+	return changed
+}
+
+// IndexDriftPending reports whether the row is a directory whose state a running drift pass has
+// yet to settle. Rows outside the drift candidates, differs among them, already have their answer.
+func (s *State) IndexDriftPending(e localfs.Entry) bool {
+	_, pending := s.indexDriftPending[e.Path]
+	return pending && driftCandidate(e)
 }
 
 // scheduleIndexDrift is the automatic pass after a listing lands: every indexed directory is
