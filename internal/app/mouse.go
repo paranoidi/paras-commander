@@ -572,6 +572,9 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 			return false, false
 		}
 	}
+	if a.handlePanelHeadingRightClick(layout, x, y, pressed) {
+		return false, true
+	}
 	if id, seg, ok := a.panelTitleHit(layout, x, y); ok && pressed&tcell.Button1 != 0 {
 		a.focusPanelByMouse(id)
 		if seg.Depth == 0 {
@@ -621,6 +624,25 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 		return false, true
 	}
 	return false, false
+}
+
+// handlePanelHeadingRightClick opens the Columns dialog for the panel on a right press anywhere on
+// its top border or column header row, and reports whether it did.
+func (a *App) handlePanelHeadingRightClick(layout ui.Layout, x, y int, pressed tcell.ButtonMask) bool {
+	if pressed&tcell.Button2 == 0 { // tcell: Button2 is the right button
+		return false
+	}
+	id, file, ok := a.mousePanelAt(layout, x, y)
+	if !ok {
+		return false
+	}
+	if _, _, onHeader := ui.PanelHeaderColumnAt(file, &a.model, id, x, y); y != file.Y && !onHeader {
+		return false
+	}
+	a.focusPanelByMouse(id)
+	a.metaCtrl.OpenDialog(id)
+	a.render()
+	return true
 }
 
 // handlePanelHeaderMouse handles a left press on a file list's column header row: a sortable

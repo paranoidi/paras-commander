@@ -4,7 +4,7 @@ Every panel shows the file name plus the columns you choose. Choose them in one 
 
 ## The Columns dialog
 
-`M-,` (leader `,`, Left/Right menu, Columns...) opens the dialog for the active panel. Tick the columns you want and press OK; Cancel leaves the panel as it was.
+`M-,` (leader `,`, Left/Right menu, Columns...) opens the dialog for the active panel. A right click on a panel's top border or column header row opens it for that panel ([Mouse](mouse.md)). Tick the columns you want and press OK; Cancel leaves the panel as it was.
 
 The file columns come first and are always shown:
 

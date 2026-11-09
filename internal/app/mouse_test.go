@@ -653,6 +653,51 @@ func TestMouseClickTitleSegmentNavigatesToAncestor(t *testing.T) {
 	}
 }
 
+func TestMouseRightClickPanelHeadingOpensColumnsDialog(t *testing.T) {
+	endOfTitle := func(t *testing.T, app *App, _, y int) (int, int) {
+		t.Helper()
+		w, h := app.screen.Size()
+		col := app.layoutForTerminalSize(w, h).Secondary
+		return col.X + col.Width - 2, y
+	}
+	cases := []struct {
+		name string
+		at   func(t *testing.T, app *App, x, y int) (int, int)
+	}{
+		{"path in top border", func(_ *testing.T, _ *App, x, y int) (int, int) { return x, y }},
+		{"top border past the path", endOfTitle},
+		{"column header row", func(_ *testing.T, _ *App, x, y int) (int, int) { return x, y + 1 }},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			app, _ := mouseTestApp(t)
+			x, y := titleSegmentAt(t, app, ui.SecondaryPanel, 1)
+			x, y = tc.at(t, app, x, y)
+			path := app.model.Secondary.PathString()
+			click(app, x, y, tcell.Button2)
+			if !app.model.ColumnsDialog.Open || app.model.ColumnsDialog.PanelID != ui.SecondaryPanel {
+				t.Fatalf("columns dialog = open %v panel %d, want open on secondary", app.model.ColumnsDialog.Open, app.model.ColumnsDialog.PanelID)
+			}
+			if app.model.ActivePanel != ui.SecondaryPanel {
+				t.Fatalf("active = %d want secondary", app.model.ActivePanel)
+			}
+			if app.model.Secondary.PathString() != path || len(app.model.Secondary.SelectedPaths) != 0 {
+				t.Fatal("right click on the heading must neither navigate nor select")
+			}
+		})
+	}
+}
+
+func TestMouseRightClickCarouselTopBorderOpensColumnsDialog(t *testing.T) {
+	app, _ := mouseTestApp(t)
+	app.toggleCarousel(ui.PrimaryPanel, true)
+	x, y := titleSegmentAt(t, app, ui.PrimaryPanel, 0)
+	click(app, x, y, tcell.Button2)
+	if !app.model.ColumnsDialog.Open {
+		t.Fatal("right click on a carousel panel's top border must open the columns dialog")
+	}
+}
+
 func TestMouseClickTitlePanelDirectoryRefreshes(t *testing.T) {
 	app, dir := mouseTestApp(t)
 	// The panel directory starts after the parent segment and its "/" separator.
