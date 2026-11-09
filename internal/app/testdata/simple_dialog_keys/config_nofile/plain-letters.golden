@@ -1,30 +1,30 @@
 == open ==
-focus=nerdfont nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=nerdfont nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == d ==
-focus=nerdfont nerd=false zoom=true stacked=false mouse=false mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=nerdfont nerd=false zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == z ==
-focus=zoom nerd=false zoom=false stacked=false mouse=false mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=zoom nerd=false zoom=false stacked=false mouse=true mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == h ==
-focus=hsplit nerd=false zoom=false stacked=true mouse=false mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=hsplit nerd=false zoom=false stacked=true mouse=true mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == i ==
-focus=mode0 nerd=false zoom=false stacked=true mouse=false mode=minimal bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=mode0 nerd=false zoom=false stacked=true mouse=true mode=minimal bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == e ==
-focus=mode1 nerd=false zoom=false stacked=true mouse=false mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=mode1 nerd=false zoom=false stacked=true mouse=true mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == t ==
-focus=mode2 nerd=false zoom=false stacked=true mouse=false mode=center bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=mode2 nerd=false zoom=false stacked=true mouse=true mode=center bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == n ==
-focus=bar0 nerd=false zoom=false stacked=true mouse=false mode=center bar=none split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=bar0 nerd=false zoom=false stacked=true mouse=true mode=center bar=none split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == u ==
-focus=bar1 nerd=false zoom=false stacked=true mouse=false mode=center bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=bar1 nerd=false zoom=false stacked=true mouse=true mode=center bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == r ==
-focus=bar2 nerd=false zoom=false stacked=true mouse=false mode=center bar=bar split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=bar2 nerd=false zoom=false stacked=true mouse=true mode=center bar=bar split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == m ==
-focus=bar2 nerd=false zoom=false stacked=true mouse=false mode=center bar=bar split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=bar2 nerd=false zoom=false stacked=true mouse=true mode=center bar=bar split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == p ==
-focus=bar2 nerd=false zoom=false stacked=true mouse=false mode=center bar=bar split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=bar2 nerd=false zoom=false stacked=true mouse=true mode=center bar=bar split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == b ==
-focus=bar2 nerd=false zoom=false stacked=true mouse=false mode=center bar=bar split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=bar2 nerd=false zoom=false stacked=true mouse=true mode=center bar=bar split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == x ==
-focus=bar2 nerd=false zoom=false stacked=true mouse=false mode=center bar=bar split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=bar2 nerd=false zoom=false stacked=true mouse=true mode=center bar=bar split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == Down ==
-focus=mouse nerd=false zoom=false stacked=true mouse=false mode=center bar=bar split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=mouse nerd=false zoom=false stacked=true mouse=true mode=center bar=bar split=[<<22%|<44%|*] cursors=[5|4|1] msg=""

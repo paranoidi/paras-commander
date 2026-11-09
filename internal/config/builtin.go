@@ -398,9 +398,9 @@ const (
 	// DefaultScreenRenderHashCache skips terminal Show when the logical screen buffer matches the
 	// last pushed frame (reduces flicker and I/O on slow links). Set [ui].screen_render_hash_cache = false to always flush.
 	DefaultScreenRenderHashCache = true
-	// DefaultMouse is the built-in [ui].mouse value. Mouse reporting is opt-in because it takes over
-	// the terminal's own text selection (Shift+drag selects instead) and needs `set -g mouse on` in tmux.
-	DefaultMouse = false
+	// DefaultMouse is the built-in [ui].mouse value. Mouse reporting takes over the terminal's own text
+	// selection (Shift+drag selects instead) and needs `set -g mouse on` in tmux.
+	DefaultMouse = true
 
 	// DefaultTooltips is the built-in [ui].tooltips value: dialogs show the focused widget's
 	// tooltip (the find dialog's advanced fields explain their syntax).

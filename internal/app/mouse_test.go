@@ -188,7 +188,9 @@ func TestMouseSwallowedWhileDialogOpen(t *testing.T) {
 
 func TestMouseEnabledOnlyByOption(t *testing.T) {
 	spy := &mouseSpyScreen{SimulationScreen: newScreen(t, 80, 24)}
-	app := newTestApp(t, spy, testOptions(t.TempDir()))
+	opts := testOptions(t.TempDir())
+	opts.Config.UI.Mouse = false
+	app := newTestApp(t, spy, opts)
 	app.applyMouseConfig()
 	if len(spy.calls) != 0 {
 		t.Fatalf("mouse off: unexpected screen calls %v", spy.calls)

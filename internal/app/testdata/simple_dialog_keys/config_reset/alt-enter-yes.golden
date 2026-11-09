@@ -1,8 +1,8 @@
 == open ==
-focus=nerdfont nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=nerdfont nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == F8 ==
 reset-confirm focus=0
 == Right ==
 reset-confirm focus=1
 == Alt+Enter ==
-focus=nerdfont nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg="Configuration reset to defaults"
+focus=nerdfont nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg="Configuration reset to defaults"

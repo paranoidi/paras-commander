@@ -1,6 +1,6 @@
 # Mouse
 
-Optional mouse support for the twin-panel file browser, the menus, the footer, the jobs, commands and messages lists, and dialogs. Off by default; turn it on with **Mouse support** in the Configuration dialog (Options menu), or with `[ui].mouse = true` in `config.toml` (see [Configuration](config.md)). Either way it applies at once.
+Mouse support for the twin-panel file browser, the menus, the footer, the jobs, commands and messages lists, and dialogs. On by default; turn it off with **Mouse support** in the Configuration dialog (Options menu), or with `[ui].mouse = false` in `config.toml` (see [Configuration](config.md)). Either way it applies at once.
 
 ## What works
 
