@@ -61,6 +61,13 @@ total `(estimated)` until the exact size is counted (see
 | `Enter` | Maximize the focused Operations panel with wrapped lines; `Esc`, `Enter` or `Left` restore it |
 | `Left` | Back to the file view |
 
+The footer lists only the actions that apply to the selected job: Pause on a
+queued job, Resume on a paused one, Retry on a failed or canceled one, Soft
+stop on a running one, Cancel until the job has finished or is already
+canceling, Move up / Move down while the job waits in the queue with a job
+before / after it, Undo when the job can be undone, and Clear while finished
+jobs are listed.
+
 **Soft stop** asks a running job to stop once the file it is working on is
 complete: that file finishes normally, nothing further starts, and the job ends
 as canceled with its completed work kept. The Details panel shows

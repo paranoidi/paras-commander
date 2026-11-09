@@ -995,7 +995,7 @@ func (h *Handler) undoSelectedJob() {
 	}
 	if !j.Undoable() {
 		reason := j.UndoLabel()
-		if reason == "" || reason == "available" {
+		if reason == "" || reason == jobs.UndoAvailable {
 			reason = "not available for this job"
 		}
 		h.host.SetTransientMessage("Cannot undo: "+reason, ui.MessageUrgencyWarn)
@@ -1057,19 +1057,32 @@ func (h *Handler) RecordRename(steps []ops.UndoStep) {
 	h.SyncJobsList()
 }
 
-// SelectedJobStatus returns the status of the currently selected job in the jobs view, or ""
-// when nothing is selected. Single source of truth for the Resume/Retry footer hint and
-// leader-menu label.
-func (h *Handler) SelectedJobStatus() jobs.Status {
+// SelectedJobActions reports which state-dependent jobs-view actions apply to the selected job,
+// mirroring the guards of the action handlers. Single source for the jobs footer
+// (menu.FunctionKeysJobsView) and the leader menu's Resume → Retry relabel.
+func (h *Handler) SelectedJobActions() menu.JobActions {
+	var a menu.JobActions
+	a.Clear = slices.ContainsFunc(h.model.JobsList, func(e ui.JobEntry) bool { return jobs.Status(e.Status).IsFinished() })
 	sel := h.model.JobsView.Selected
 	if sel < 0 || sel >= len(h.model.JobsList) {
-		return ""
+		return a
 	}
-	return jobs.Status(h.model.JobsList[sel].Status)
+	e := h.model.JobsList[sel]
+	st, typ := jobs.Status(e.Status), jobs.Type(e.Type)
+	a.Cancel = !st.IsFinished() && st != jobs.StatusCanceling
+	a.SoftStop = (st == jobs.StatusRunning || st == jobs.StatusWaitingDecision) && typ.SoftStoppable() && !e.SoftStop
+	a.Pause = st == jobs.StatusQueued && typ.Pausable()
+	a.Resume = st == jobs.StatusPaused
+	a.Retry = st.IsRetryable() && typ.Retryable()
+	if qi, ok := h.selectedQueueIndex(); ok {
+		a.MoveUp = qi > 0
+		a.MoveDown = qi < h.jobQueue().Len()-1
+	}
+	a.Undo = e.Undo == jobs.UndoAvailable
+	a.Results = e.Results != ""
+	return a
 }
 
-// SelectedJobHasResults reports whether the selected job has results to show (jobs.show-results).
-func (h *Handler) SelectedJobHasResults() bool { return h.selectedJobEntry().Results != "" }
 
 func (h *Handler) clearFinishedJobs() {
 	h.jobQueue().ClearFinished()

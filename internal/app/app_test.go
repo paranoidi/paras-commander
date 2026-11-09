@@ -114,7 +114,7 @@ func TestActiveFooterKeysBrowserShowsF7JobsViewUsesJobsLegend(t *testing.T) {
 		t.Fatal("browser footer: F7 should have a hint (Mkdir)")
 	}
 
-	jobsKeys := menu.FunctionKeysJobsView(false, false, false)
+	jobsKeys := menu.FunctionKeysJobsView(app.jobsCtrl.SelectedJobActions())
 	app.model.ViewMode = ui.ViewJobs
 	gotJobs := app.activeFooterKeys()
 	if len(gotJobs) != len(jobsKeys) {

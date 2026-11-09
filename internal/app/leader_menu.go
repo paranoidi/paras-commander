@@ -195,7 +195,7 @@ func (a *App) openViewLeaderMenu() {
 		a.setTransientMessage(prefix+": no entries configured", ui.MessageUrgencyWarn)
 		return
 	}
-	if a.model.ViewMode == ui.ViewJobs && a.jobsCtrl.SelectedJobStatus().IsRetryable() {
+	if a.model.ViewMode == ui.ViewJobs && a.jobsCtrl.SelectedJobActions().Retry {
 		for i := range entries {
 			if entries[i].ActionID == keymap.ActionJobsResume {
 				entries[i].Label = "Retry job"

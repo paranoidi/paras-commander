@@ -667,19 +667,44 @@ func TestFunctionKeysJobsDetailViewTickrateKeysReplay(t *testing.T) {
 	}
 }
 
-func TestFunctionKeysJobsViewResultsKeyOnlyWithResults(t *testing.T) {
-	has := func(keys []FunctionKey) bool {
-		for _, fk := range keys {
-			if fk.ActionID == keymap.ActionJobsShowResults {
-				return true
-			}
+func TestFunctionKeysJobsViewHidesInapplicableActions(t *testing.T) {
+	hints := func(avail JobActions) map[string]string {
+		out := map[string]string{}
+		for _, fk := range FunctionKeysJobsView(avail) {
+			out[fk.ActionID] = fk.Hint
 		}
-		return false
+		return out
 	}
-	if has(FunctionKeysJobsView(true, false, false)) {
-		t.Error("the results key shows for a job without results")
+	conditional := []string{
+		keymap.ActionJobsCancel, keymap.ActionJobsSoftStop, keymap.ActionJobsPause,
+		keymap.ActionJobsResume, keymap.ActionJobsQueueUp, keymap.ActionJobsQueueDown,
+		keymap.ActionJobsUndo, keymap.ActionJobsShowResults, keymap.ActionJobsClearFinished,
 	}
-	if !has(FunctionKeysJobsView(false, false, true)) || !has(FunctionKeysJobsView(true, false, true)) {
+	none := hints(JobActions{})
+	for _, id := range conditional {
+		if _, ok := none[id]; ok {
+			t.Errorf("%s shows with no applicable actions", id)
+		}
+	}
+	for _, id := range []string{keymap.ActionAppShowHelp, keymap.ActionJobsResultFilter, keymap.ActionAppOpenMenu, keymap.ActionAppQuit} {
+		if _, ok := none[id]; !ok {
+			t.Errorf("%s is missing; it does not depend on the selected job", id)
+		}
+	}
+	running := hints(JobActions{Cancel: true, SoftStop: true})
+	if _, ok := running[keymap.ActionJobsResume]; ok {
+		t.Error("Resume shows on a running job")
+	}
+	if _, ok := running[keymap.ActionJobsPause]; ok {
+		t.Error("Pause shows on a running job")
+	}
+	if got := hints(JobActions{Resume: true})[keymap.ActionJobsResume]; got != "Resume" {
+		t.Errorf("paused job Resume hint = %q, want Resume", got)
+	}
+	if got := hints(JobActions{Retry: true})[keymap.ActionJobsResume]; got != "Retry" {
+		t.Errorf("failed job Resume hint = %q, want Retry", got)
+	}
+	if _, ok := hints(JobActions{Results: true})[keymap.ActionJobsShowResults]; !ok {
 		t.Error("the results key is missing for a job with results")
 	}
 }

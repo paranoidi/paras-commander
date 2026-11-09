@@ -328,6 +328,9 @@ func (j *Job) Undoable() bool {
 	return j.Type.journaled() && j.Status.IsFinished() && len(j.Undo) > 0 && !j.Irreversible && !j.Undone
 }
 
+// UndoAvailable is the UndoLabel of a job that can be undone.
+const UndoAvailable = "available"
+
 // UndoLabel is the Details line value for a job that can be undone or explains why not; empty
 // for job types that never support undo.
 func (j *Job) UndoLabel() string {
@@ -339,7 +342,7 @@ func (j *Job) UndoLabel() string {
 	case j.Irreversible:
 		return "irreversible (overwrote files)"
 	case j.Undoable():
-		return "available"
+		return UndoAvailable
 	case len(j.Undo) == 0 && j.Status.IsFinished():
 		return "nothing to undo"
 	}

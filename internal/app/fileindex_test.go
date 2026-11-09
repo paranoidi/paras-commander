@@ -1786,7 +1786,7 @@ func TestFileIndexShowResultsFromJobsView(t *testing.T) {
 		a.model.JobsView.Selected = len(a.model.JobsList) - 1
 	}
 	openAtJob()
-	if !slices.ContainsFunc(menu.FunctionKeysJobsView(false, false, a.jobsCtrl.SelectedJobHasResults()), func(fk menu.FunctionKey) bool {
+	if !slices.ContainsFunc(menu.FunctionKeysJobsView(a.jobsCtrl.SelectedJobActions()), func(fk menu.FunctionKey) bool {
 		return fk.ActionID == keymap.ActionJobsShowResults
 	}) {
 		t.Fatal("the footer lacks the results key for a job with results")
@@ -1823,7 +1823,7 @@ func TestFileIndexShowResultsWithoutResultsWarns(t *testing.T) {
 	a.jobsCtrl.OpenJobsView()
 	a.jobsCtrl.SyncJobsList()
 	a.model.JobsView.Selected = 0
-	if a.jobsCtrl.SelectedJobHasResults() {
+	if a.jobsCtrl.SelectedJobActions().Results {
 		t.Fatal("a scan job has no results")
 	}
 	a.dispatch(keymap.ActionJobsShowResults)

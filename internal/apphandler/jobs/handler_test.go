@@ -16,6 +16,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/menu"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
 )
@@ -1208,5 +1209,47 @@ func TestJobsMessagesPaneCursorAndCopy(t *testing.T) {
 	h.TryDispatch(keymap.ActionJobsCopyMessage)
 	if len(copied) != 1 || copied[0] != warns[1] {
 		t.Fatalf("copied %q, want %q", copied, warns[1])
+	}
+}
+
+func TestSelectedJobActionsFollowJobState(t *testing.T) {
+	t.Parallel()
+	h, model, state := newMaximizeTestHandler(t)
+	state.Queue().RemoveFinished() // the fixture's failed job; only "first" and "second" stay queued
+	for _, id := range []string{"first", "second"} {
+		state.AddJob(&jobs.Job{ID: id, Type: jobs.TypeMove, Status: jobs.StatusQueued, Sources: pathloc.PathsForTest("/" + id), Destination: pathloc.MustParse("/harbor")})
+	}
+	model.JobsList = []ui.JobEntry{
+		{ID: "first", Type: string(jobs.TypeMove), Status: string(jobs.StatusQueued)},
+		{ID: "second", Type: string(jobs.TypeMove), Status: string(jobs.StatusPaused)},
+		{ID: "run", Type: string(jobs.TypeCopy), Status: string(jobs.StatusRunning)},
+		{ID: "stopping", Type: string(jobs.TypeCopy), Status: string(jobs.StatusRunning), SoftStop: true},
+		{ID: "task", Type: string(jobs.TypeTask), Status: string(jobs.StatusRunning)},
+		{ID: "canceling", Type: string(jobs.TypeCopy), Status: string(jobs.StatusCanceling)},
+		{ID: "done", Type: string(jobs.TypeCopy), Status: string(jobs.StatusCompleted), Undo: jobs.UndoAvailable},
+		{ID: "failed", Type: string(jobs.TypeCopy), Status: string(jobs.StatusFailed)},
+		{ID: "renamed", Type: string(jobs.TypeRename), Status: string(jobs.StatusCompleted), Undo: "undone"},
+	}
+	tests := []struct {
+		row  int
+		want menu.JobActions
+	}{
+		{0, menu.JobActions{Cancel: true, Pause: true, MoveDown: true}},
+		{1, menu.JobActions{Cancel: true, Resume: true, MoveUp: true}},
+		{2, menu.JobActions{Cancel: true, SoftStop: true}},
+		{3, menu.JobActions{Cancel: true}},
+		{4, menu.JobActions{Cancel: true}},
+		{5, menu.JobActions{}},
+		{6, menu.JobActions{Undo: true}},
+		{7, menu.JobActions{Retry: true}},
+		{8, menu.JobActions{}},
+	}
+	for _, tc := range tests {
+		model.JobsView.Selected = tc.row
+		got := h.SelectedJobActions()
+		tc.want.Clear = true
+		if got != tc.want {
+			t.Errorf("%s: SelectedJobActions = %+v, want %+v", model.JobsList[tc.row].ID, got, tc.want)
+		}
 	}
 }
