@@ -13,6 +13,20 @@ func (a *App) openLeaderMenu(kind ui.LeaderMenuKind, items []ui.LeaderMenuItem) 
 	a.model.LeaderMenu = ui.LeaderMenuState{Open: true, Kind: kind, Items: items}
 }
 
+// leaderMenuDirectKey is the chord hint for a leader-menu row, or "" while hints are off. It reads
+// the map that handles the key in the current context (the Find dialog's or the view's overlay,
+// then the global map), so a view-only action shows the chord that really fires it.
+func (a *App) leaderMenuDirectKey(actionID string) string {
+	if !a.config.UI.LeaderMenuShowDirectKeys || a.keys == nil {
+		return ""
+	}
+	overlay := a.viewOverlayKeys()
+	if a.model.FindDialog.Open {
+		overlay = a.keys.FindDialog
+	}
+	return keymap.MenuBindingLabelPreferOverlay(a.keys.Global, overlay, actionID)
+}
+
 func (a *App) refreshLeaderMenuDirectKeys() {
 	st := &a.model.LeaderMenu
 	if st.Kind == ui.LeaderMenuUser || st.Kind == ui.LeaderMenuCopy || len(st.Items) == 0 {
@@ -24,14 +38,8 @@ func (a *App) refreshLeaderMenuDirectKeys() {
 			continue
 		}
 		directKey := ""
-		if a.config.UI.LeaderMenuShowDirectKeys && a.keys != nil && actionIdx < len(a.leaderMenuActions) {
-			keyMap := a.keys.Global
-			if st.Kind == ui.LeaderMenuPreview {
-				keyMap = a.keys.FilePreview
-			}
-			if keyMap != nil {
-				directKey = keyMap.MenuBindingLabel(a.leaderMenuActions[actionIdx])
-			}
+		if actionIdx < len(a.leaderMenuActions) {
+			directKey = a.leaderMenuDirectKey(a.leaderMenuActions[actionIdx])
 		}
 		st.Items[i].DirectKey = directKey
 		actionIdx++
@@ -45,6 +53,11 @@ func (a *App) toggleLeaderMenuDirectKeys() {
 	urgency := ui.MessageUrgencyInfo
 	if !a.config.UI.LeaderMenuShowDirectKeys {
 		msg = "Function menu: chord hints off"
+	} else {
+		w, h := a.screen.Size()
+		if !ui.LeaderMenuShowDirectKeys(a.layoutForTerminalSize(w, h), a.model.LeaderMenu.Items) {
+			msg += " (no room at this terminal size)"
+		}
 	}
 	if err := a.persistPartial(map[string]interface{}{
 		"ui": map[string]interface{}{
@@ -194,7 +207,7 @@ func (a *App) openViewLeaderMenu() {
 }
 
 // buildLeaderMenuItems converts leader-menu entries into UI items plus their parallel action-ID
-// slice, resolving each non-group entry's direct-key hint from the global keymap. Shared by
+// slice, resolving each non-group entry's direct-key hint. Shared by
 // openBuiltinLeaderMenu and openViewLeaderMenu, which differ only in their entries source.
 func (a *App) buildLeaderMenuItems(entries []keymap.LeaderMenuEntry) ([]ui.LeaderMenuItem, []string) {
 	var items []ui.LeaderMenuItem
@@ -204,15 +217,11 @@ func (a *App) buildLeaderMenuItems(entries []keymap.LeaderMenuEntry) ([]ui.Leade
 			items = append(items, ui.LeaderMenuItem{GroupTitle: e.GroupTitle, GroupColumn: e.GroupColumn})
 			continue
 		}
-		directKey := ""
-		if a.config.UI.LeaderMenuShowDirectKeys && a.keys.Global != nil {
-			directKey = a.keys.Global.MenuBindingLabel(e.ActionID)
-		}
 		items = append(items, ui.LeaderMenuItem{
 			Key:         e.Key,
 			Label:       e.Label,
 			GroupColumn: e.GroupColumn,
-			DirectKey:   directKey,
+			DirectKey:   a.leaderMenuDirectKey(e.ActionID),
 		})
 		actions = append(actions, e.ActionID)
 	}

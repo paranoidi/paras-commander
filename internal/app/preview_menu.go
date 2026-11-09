@@ -29,11 +29,7 @@ func (a *App) openPreviewLeaderMenu() {
 	var items []ui.LeaderMenuItem
 	var actions []string
 	for _, e := range entries {
-		directKey := ""
-		if a.config.UI.LeaderMenuShowDirectKeys && a.keys.FilePreview != nil {
-			directKey = a.keys.FilePreview.MenuBindingLabel(e.ActionID)
-		}
-		items = append(items, ui.LeaderMenuItem{Key: e.Key, Label: e.Label, DirectKey: directKey})
+		items = append(items, ui.LeaderMenuItem{Key: e.Key, Label: e.Label, DirectKey: a.leaderMenuDirectKey(e.ActionID)})
 		actions = append(actions, e.ActionID)
 	}
 	a.leaderMenuActions = actions

@@ -233,10 +233,10 @@ func LeaderMenuIndexForKey(items []LeaderMenuItem, r rune) (int, bool) {
 	return 0, false
 }
 
-// leaderMenuShowDirectKeys reports whether direct keybind suffixes may be drawn.
+// LeaderMenuShowDirectKeys reports whether direct keybind suffixes may be drawn.
 // Suffixes are dropped when the terminal is too short to show every action, or too
 // narrow for every visible label and its direct-key hint to fit in a column.
-func leaderMenuShowDirectKeys(layout geom.Layout, items []LeaderMenuItem) bool {
+func LeaderMenuShowDirectKeys(layout geom.Layout, items []LeaderMenuItem) bool {
 	if LeaderMenuHiddenActionCount(layout, items) > 0 {
 		return false
 	}
@@ -526,7 +526,7 @@ func LeaderMenuActionAt(layout geom.Layout, state LeaderMenuState, x, y int) (ac
 	if !ok || !rect.Contains(x, y) {
 		return -1, false
 	}
-	for _, cell := range leaderMenuCells(rect, visibleItems, leaderMenuShowDirectKeys(layout, state.Items)) {
+	for _, cell := range leaderMenuCells(rect, visibleItems, LeaderMenuShowDirectKeys(layout, state.Items)) {
 		if cell.Action >= 0 && y == cell.Y && x >= cell.X && x < cell.X+cell.Width {
 			return cell.Action, true
 		}
@@ -570,7 +570,7 @@ func DrawLeaderMenu(screen tcell.Screen, layout geom.Layout, state LeaderMenuSta
 		groupStyle = groupStyle.Background(surfBG)
 	}
 
-	showDirectKeys := leaderMenuShowDirectKeys(layout, state.Items)
+	showDirectKeys := LeaderMenuShowDirectKeys(layout, state.Items)
 	keys := leaderMenuKeys(visibleItems)
 	for _, cell := range leaderMenuCells(rect, visibleItems, showDirectKeys) {
 		it := visibleItems[cell.Item]

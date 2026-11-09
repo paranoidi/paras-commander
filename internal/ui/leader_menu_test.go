@@ -125,7 +125,7 @@ func leaderMenuMacroX(layout geom.Layout, items []LeaderMenuItem, macroCol int) 
 	visible := LeaderMenuVisibleItems(layout, items)
 	rect := LeaderMenuRect(layout, leaderMenuContentRows(visible))
 	buckets := leaderMenuSplitByColumn(visible)
-	showDirectKeys := leaderMenuShowDirectKeys(layout, items)
+	showDirectKeys := LeaderMenuShowDirectKeys(layout, items)
 	xs, _, _ := leaderMenuMacroColumnLayout(rect, buckets, showDirectKeys)
 	return xs[macroCol]
 }
@@ -201,7 +201,7 @@ func TestDrawLeaderMenuOmitsDirectKeyWhenWidthConstrained(t *testing.T) {
 		{Key: 'f', Label: "Find files", GroupColumn: 1, DirectKey: "C-f"},
 	}
 	layout := geom.Layout{Width: 40, Height: 50, Footer: geom.Rect{Y: 49, Height: 1}}
-	if leaderMenuShowDirectKeys(layout, items) {
+	if LeaderMenuShowDirectKeys(layout, items) {
 		t.Fatal("expected direct keys suppressed at minimum width")
 	}
 

@@ -2,6 +2,7 @@ package app
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
@@ -721,5 +722,69 @@ func TestAltSOpensSortDialog(t *testing.T) {
 
 	if !app.model.SortDialog.Open {
 		t.Fatal("expected sort dialog after Alt+S")
+	}
+}
+
+// compareLeaderDirectKey returns the hint on the open leader menu's row labelled label.
+func compareLeaderDirectKey(t *testing.T, app *App, label string) string {
+	t.Helper()
+	for _, it := range app.model.LeaderMenu.Items {
+		if it.Label == label {
+			return it.DirectKey
+		}
+	}
+	t.Fatalf("no leader row %q in %+v", label, app.model.LeaderMenu.Items)
+	return ""
+}
+
+// TestCompareLeaderMenuChordHintsToggle verifies view-only actions show their overlay chord and
+// that F3 toggles the hints on those rows as well as on global ones.
+func TestCompareLeaderMenuChordHintsToggle(t *testing.T) {
+	app := testLeaderMenuApp(t)
+	app.model.ViewMode = ui.ViewCompare
+	app.config.UI.LeaderMenuShowDirectKeys = true
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone))
+
+	f3 := tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone)
+	want := map[string]string{"Merge": "F5", "Left only": "C-←", "Rename file": "F6", "Delete": "F8"}
+	for label, chord := range want {
+		if got := compareLeaderDirectKey(t, app, label); got != chord {
+			t.Errorf("%s hint = %q, want %q", label, got, chord)
+		}
+	}
+	app.handleKey(f3)
+	if !app.model.LeaderMenu.Open {
+		t.Fatal("F3 closed the menu")
+	}
+	if app.model.CompareFilterDialog.Open {
+		t.Fatal("F3 reached the compare view's Category dialog")
+	}
+	for label := range want {
+		if got := compareLeaderDirectKey(t, app, label); got != "" {
+			t.Errorf("%s hint after toggle off = %q, want none", label, got)
+		}
+	}
+	app.handleKey(f3)
+	for label, chord := range want {
+		if got := compareLeaderDirectKey(t, app, label); got != chord {
+			t.Errorf("%s hint after toggle on = %q, want %q", label, got, chord)
+		}
+	}
+}
+
+// TestLeaderMenuChordToggleExplainsNoRoom verifies the toggle says why turning hints on shows
+// nothing on a terminal too narrow to fit them.
+func TestLeaderMenuChordToggleExplainsNoRoom(t *testing.T) {
+	dir := t.TempDir()
+	opts := testOptions(dir)
+	opts.Paths = config.Paths{ConfigDir: filepath.Join(dir, "config")}
+	app := newTestApp(t, newScreen(t, 80, 50), opts)
+	app.model.ViewMode = ui.ViewCompare
+	app.config.UI.LeaderMenuShowDirectKeys = false
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone))
+	app.render()
+	if text := screenText(app); !strings.Contains(text, "no room") {
+		t.Fatalf("toggle message missing the reason:\n%s", text)
 	}
 }
