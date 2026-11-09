@@ -15,7 +15,7 @@ import (
 
 // DedupFiles lists every indexed file under root with its content hash (the
 // metadata-free hash for JPEGs, else SHA-256), keyed by Rel. Nothing on
-// disk is read. Files in a potential duplicate set (same size and first 8 KB, at
+// disk is read. Files in a potential duplicate set (same size and sample hash, at
 // least one only fast-hashed) carry FileRecord.Potential. Other entries without a
 // valid hash are skipped.
 func (x *Index) DedupFiles(ctx context.Context, root pathloc.Path) ([]compare.FileRecord, map[string][32]byte, error) {

@@ -105,7 +105,7 @@ func TestUniqueFiles(t *testing.T) {
 
 func TestUniqueFilesFlagsWhatItCannotRuleOut(t *testing.T) {
 	head := func(first byte) []byte {
-		b := make([]byte, 9000)
+		b := make([]byte, 30000)
 		b[0] = first
 		return b
 	}
@@ -151,7 +151,7 @@ func TestUniqueFilesFlagsWhatItCannotRuleOut(t *testing.T) {
 
 // The file outside a potential match is hashed too: only the fast-hashed side can settle it.
 func TestUniqueFilesHashTargetsTheFastHashedSideOutside(t *testing.T) {
-	head := make([]byte, 9000)
+	head := make([]byte, 30000)
 	root, x := uniqueTree(t, map[string][]byte{"orchard/anchor.bin": head})
 	writeUniqueFiles(t, root, map[string][]byte{"harbor/willow.bin": head})
 	if err := x.ScanFastTask([]string{root}).Run(context.Background(), &recReporter{}); err != nil {
@@ -168,7 +168,7 @@ func TestUniqueFilesHashTargetsTheFastHashedSideOutside(t *testing.T) {
 
 func TestUniqueFilesOtherSideOfPotentialMatchIsFlagged(t *testing.T) {
 	head := func(first byte) []byte {
-		b := make([]byte, 9000)
+		b := make([]byte, 30000)
 		b[0] = first
 		return b
 	}

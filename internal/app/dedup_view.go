@@ -45,7 +45,7 @@ func (h dedupHost) BrowserMenuDefinitions() []menu.Definition { return h.app.bro
 
 func (a *App) openFindDuplicates() { a.dedupCtrl.Open() }
 
-const dedupPotentialDeleteNote = "Some marked files are potential duplicates: only their first 8 KB were compared."
+const dedupPotentialDeleteNote = "Some marked files are potential duplicates: only their size and sample were compared."
 
 // openDedupDeleteDialog opens the standard delete confirmation for the marked
 // duplicate files, reusing the browser dialog (list + impact summary + Yes/No).

@@ -2,6 +2,7 @@ package fileindex
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/gdamore/tcell/v2"
 	fi "github.com/paranoidi/paras-commander/internal/fileindex"
@@ -178,8 +179,9 @@ func (h *Handler) TagDialogOK() {
 	}()
 }
 
-// HandleTags reports a finished tag edit and refreshes the tags column. When adding, a scan is
-// queued that records and tags the paths the index lacks; a remove alone counts them.
+// HandleTags reports a finished tag edit and refreshes the tags column. When adding, a tag scan
+// is queued that records and tags the paths the index lacks and samples the files of known paths
+// that have neither a full hash nor a sample; a remove alone counts the unknown paths.
 func (h *Handler) HandleTags(p TagsPayload) {
 	h.host.RefreshMetaColumns()
 	if p.Err != nil {
@@ -208,14 +210,19 @@ func (h *Handler) HandleTags(p TagsPayload) {
 	}
 	urgency := ui.MessageUrgencySuccess
 	switch {
-	case len(p.AddRes.Unknown) > 0:
-		n := len(p.AddRes.Unknown)
-		h.queueTask("fileindex scan", h.index.ScanTagTask(p.AddRes.Unknown, p.Added, p.Recursive), p.AddRes.Unknown)
-		scanning := fmt.Sprintf("canning %d %s to tag", n, jobbridge.Plural(n, "entry", "entries"))
-		if targeted == 0 {
-			msg = "S" + scanning
-		} else {
-			msg += "; s" + scanning
+	case len(p.AddRes.Unknown) > 0 || len(p.AddRes.Unsampled) > 0:
+		paths := slices.Concat(p.AddRes.Unknown, p.AddRes.Unsampled)
+		h.queueTask("fileindex tag scan", h.index.ScanTagTask(paths, p.Added, p.Recursive), paths)
+		if n := len(p.AddRes.Unknown); n > 0 {
+			scanning := fmt.Sprintf("canning %d %s to tag", n, jobbridge.Plural(n, "entry", "entries"))
+			if targeted == 0 {
+				msg = "S" + scanning
+			} else {
+				msg += "; s" + scanning
+			}
+		}
+		if n := len(p.AddRes.Unsampled); n > 0 {
+			msg += fmt.Sprintf("; sampling %d %s", n, jobbridge.Plural(n, "entry", "entries"))
 		}
 		urgency = ui.MessageUrgencyInfo
 	case len(p.RemoveRes.Unknown) > 0:

@@ -537,7 +537,7 @@ const (
 	dedupLegendJob           = "job in progress"
 	dedupLegendPinned        = "pinned"
 	dedupLegendRangeAnchor   = "range start"
-	dedupLegendPotential     = "potential duplicate, only the first 8 KB compared"
+	dedupLegendPotential     = "potential duplicate, only size and sample compared"
 )
 
 // dedupSuffixIcon is one trailing icon after the subtree mark. Legend is empty for icons the

@@ -31,11 +31,14 @@ func (x *Index) ScanTask(paths []string) *jobs.Task {
 	return x.scanTask(paths, false, "fileindex scan", "Hash new files", nil)
 }
 
-// ScanTagTask is ScanTask adding tags to each path (recursive as in EditTags) once the scan has
-// committed that path's files, so the tags do not wait for hashing and survive a cancel during
-// it. A path the scan did not record (its rules skip it) gets a warning.
+// ScanTagTask records paths in the index and adds tags to each (recursive as in EditTags) once
+// the scan has committed that path's files, so the tags show at once and survive a cancel. It
+// never fully hashes: it only samples the files (ScanFastTask), which is what keeps their pending
+// tags if they move before a full hash. A path the scan did not record (its rules skip it) gets a
+// warning. Re-adding tags a path already has changes nothing, so known paths that only need
+// their samples may be passed too.
 func (x *Index) ScanTagTask(paths, tags []string, recursive bool) *jobs.Task {
-	return x.scanTask(paths, false, "fileindex scan", "Hash new files", func(path string, warn func(string)) {
+	return x.scanTask(paths, true, "fileindex tag scan", "Sample new files", func(path string, warn func(string)) {
 		res, err := x.EditTags([]string{path}, tags, true, recursive)
 		switch {
 		case err != nil:
@@ -47,8 +50,9 @@ func (x *Index) ScanTagTask(paths, tags []string, recursive bool) *jobs.Task {
 	})
 }
 
-// ScanFastTask is ScanTask hashing only the first 8 KB of files larger than that (scan --fast):
-// they stay unhashed until a plain scan. Asked for explicitly, it hashes even with hash off.
+// ScanFastTask is ScanTask hashing only the sample (first, middle and last 8 KB) of files larger
+// than that (scan --fast): they stay unhashed until a plain scan. Asked for explicitly, it hashes
+// even with hash off.
 func (x *Index) ScanFastTask(paths []string) *jobs.Task {
 	return x.scanTask(paths, true, "fileindex fast scan", "Fast-hash new files", nil)
 }

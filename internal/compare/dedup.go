@@ -44,7 +44,7 @@ type DedupFile struct {
 }
 
 // DedupGroup is a set of files with identical content (same size + SHA-256). A Potential group
-// only shares its size and first 8 KB (fast-hashed in the index), so its content may still differ.
+// only shares its size and sample (first, middle and last 8 KB) (fast-hashed in the index), so its content may still differ.
 type DedupGroup struct {
 	Hash      [32]byte
 	Size      int64

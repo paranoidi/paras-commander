@@ -261,7 +261,7 @@ func (h *Handler) addTask(task *jobs.Task, paths []string) {
 // real paths, also from a fileindex:// panel), and clears the selection.
 func (h *Handler) Scan() { h.queueScan("fileindex scan", h.index.ScanTask) }
 
-// ScanFast is Scan hashing only the first 8 KB of larger files.
+// ScanFast is Scan hashing only the sample (first, middle and last 8 KB) of larger files.
 func (h *Handler) ScanFast() { h.queueScan("fileindex fast scan", h.index.ScanFastTask) }
 
 func (h *Handler) queueScan(title string, task func([]string) *jobs.Task) {

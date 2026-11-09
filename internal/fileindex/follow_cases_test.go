@@ -271,3 +271,59 @@ func TestShownDirFollowsSymlinkAfterOverlay(t *testing.T) {
 		t.Fatalf("ShownDir of a fileindex:// path = %q, want %q", got, root)
 	}
 }
+
+// A tag scan records and tags an unknown tree without fully hashing it, even with hashing on: it
+// only samples the files, so their pending tags survive a move before a full hash.
+func TestScanTagTaskSamplesInsteadOfHashing(t *testing.T) {
+	x := testIndex(t, initIndex(t)) // Hash: true
+	root := t.TempDir()
+	reel := filepath.Join(root, "cinema", "harbor-lights.mkv")
+	if err := os.MkdirAll(filepath.Dir(reel), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(reel, make([]byte, 100_000), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Dir(reel)
+	if err := x.ScanTagTask([]string{dir}, []string{"watched"}, true).Run(context.Background(), &recReporter{}); err != nil {
+		t.Fatal(err)
+	}
+	d, err := x.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var full, sampled bool
+	if err := d.QueryRow("SELECT file_id IS NOT NULL, sha256_sample IS NOT NULL FROM instance WHERE filename = ?", filepath.Base(reel)).Scan(&full, &sampled); err != nil {
+		t.Fatal(err)
+	}
+	if full || !sampled {
+		t.Fatalf("after a tag scan: full hash %v, sample %v", full, sampled)
+	}
+	tags, err := d.EntryTags(dir, []string{filepath.Base(reel)})
+	if err != nil || !slices.Equal(tags[filepath.Base(reel)], []string{"watched"}) {
+		t.Fatalf("tags = %v, %v", tags, err)
+	}
+}
+
+// Tagging a known tree reports it when some of its files have neither a full hash nor a sample.
+func TestEditTagsReportsUnsampled(t *testing.T) {
+	x := testIndex(t, initIndex(t))
+	x.cfg.Hash = false
+	root := tree(t)
+	if err := x.ScanTask([]string{root}).Run(context.Background(), &recReporter{}); err != nil {
+		t.Fatal(err)
+	}
+	res, err := x.EditTags([]string{root}, []string{"amber"}, true, true)
+	if err != nil || !slices.Equal(res.Unsampled, []string{root}) || len(res.Unknown) != 0 {
+		t.Fatalf("walked only: %+v, %v", res, err)
+	}
+	if err := x.ScanTagTask(res.Unsampled, []string{"amber"}, true).Run(context.Background(), &recReporter{}); err != nil {
+		t.Fatal(err)
+	}
+	if res, err = x.EditTags([]string{root}, []string{"amber"}, true, true); err != nil || len(res.Unsampled) != 0 {
+		t.Fatalf("after the tag scan: %+v, %v", res, err)
+	}
+	if res, err = x.EditTags([]string{root}, []string{"amber"}, false, true); err != nil || len(res.Unsampled) != 0 {
+		t.Fatalf("a removal: %+v, %v", res, err)
+	}
+}

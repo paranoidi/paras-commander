@@ -480,11 +480,11 @@ func TestUpgradeInitialisesExistingDatabase(t *testing.T) {
 	}
 }
 
-// A fast scan hashes only the first 8 KB of a larger file, even with hash off, and a plain scan
+// A fast scan hashes only the sample of a larger file, even with hash off, and a plain scan
 // finishes it.
-func TestScanFastTaskHashesHeadOfLargerFiles(t *testing.T) {
+func TestScanFastTaskHashesSampleOfLargerFiles(t *testing.T) {
 	root := t.TempDir()
-	for name, size := range map[string]int{"lantern.bin": 9000, "pebble.bin": 100} {
+	for name, size := range map[string]int{"lantern.bin": 30000, "pebble.bin": 100} {
 		if err := os.WriteFile(filepath.Join(root, name), make([]byte, size), 0o644); err != nil {
 			t.Fatal(err)
 		}
@@ -501,7 +501,7 @@ func TestScanFastTaskHashesHeadOfLargerFiles(t *testing.T) {
 	}
 	hashed := func(name string) (full, head bool) {
 		t.Helper()
-		if err := d.QueryRow("SELECT file_id IS NOT NULL, sha256_8kb IS NOT NULL FROM instance WHERE filename = ?", name).Scan(&full, &head); err != nil {
+		if err := d.QueryRow("SELECT file_id IS NOT NULL, sha256_sample IS NOT NULL FROM instance WHERE filename = ?", name).Scan(&full, &head); err != nil {
 			t.Fatal(err)
 		}
 		return full, head
@@ -521,13 +521,13 @@ func TestScanFastTaskHashesHeadOfLargerFiles(t *testing.T) {
 	}
 }
 
-// A fast-hashed file groups with a file of the same size and first 8 KB; a same-size file with
+// A fast-hashed file groups with a file of the same size and sample; a same-size file with
 // another head stays out, and a plain scan settles the set.
 func TestDedupFilesPotentialDuplicates(t *testing.T) {
 	root := t.TempDir()
 	write := func(name string, head byte) {
 		t.Helper()
-		b := make([]byte, 9000)
+		b := make([]byte, 30000)
 		b[0] = head
 		if err := os.WriteFile(filepath.Join(root, name), b, 0o644); err != nil {
 			t.Fatal(err)
@@ -581,8 +581,8 @@ func TestHashPotentialTask(t *testing.T) {
 	root := t.TempDir()
 	write := func(name string, head, tail byte) {
 		t.Helper()
-		b := make([]byte, 9000)
-		b[0], b[8999] = head, tail
+		b := make([]byte, 30000)
+		b[0], b[10000] = head, tail // 10000 lies between the sampled head and middle
 		if err := os.WriteFile(filepath.Join(root, name), b, 0o644); err != nil {
 			t.Fatal(err)
 		}
@@ -1147,7 +1147,7 @@ func TestDedupOutside(t *testing.T) {
 	}
 	// Added after the full scan, so this pair spanning the boundary is only fast-hashed.
 	for _, name := range []string{"willow/fast.bin", "marsh/fast.bin"} {
-		b := make([]byte, 9000)
+		b := make([]byte, 30000)
 		b[0] = 'z'
 		if err := os.WriteFile(filepath.Join(root, name), b, 0o644); err != nil {
 			t.Fatal(err)

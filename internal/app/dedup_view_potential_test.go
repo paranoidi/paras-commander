@@ -28,8 +28,8 @@ func TestDedupHashPotentialRefreshesView(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, tail := range map[string]byte{"anchor.bin": 1, "lantern.bin": 1, "willow.bin": 2} {
-		b := make([]byte, 9000)
-		b[8999] = tail
+		b := make([]byte, 30000)
+		b[10000] = tail // between the sampled head and middle, so only a full hash sees it
 		if err := os.WriteFile(filepath.Join(root, name), b, 0o644); err != nil {
 			t.Fatal(err)
 		}

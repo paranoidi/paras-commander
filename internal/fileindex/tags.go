@@ -23,11 +23,14 @@ func ParseTags(raw string) []string {
 }
 
 // TagEdit is the outcome of EditTags: how many associations changed, how many paths the index does
-// not know, the empty files an add skipped (all empty files are one content, so they can't be
-// tagged) and the copies outside the paths that the change also reached.
+// not know, the known paths an add left with files that have neither a full hash nor a sample
+// (their pending tags would not survive a move until sampled), the empty files an add skipped (all
+// empty files are one content, so they can't be tagged) and the copies outside the paths that the
+// change also reached.
 type TagEdit struct {
 	Changed      int
 	Unknown      []string
+	Unsampled    []string
 	Targeted     int
 	SkippedEmpty int
 	OtherCopies  int
@@ -35,7 +38,8 @@ type TagEdit struct {
 
 // EditTags adds (add) or removes tags on paths (local or fileindex://), resolved in the index,
 // so a file gone from disk can still be tagged. recursive extends a directory to its whole
-// tree; it never applies to files. Paths the index lacks are listed in Unknown, not an error.
+// tree; it never applies to files. Paths the index lacks are listed in Unknown, not an error,
+// and on add, known paths with unsampled files in Unsampled.
 func (x *Index) EditTags(paths []string, tags []string, add, recursive bool) (TagEdit, error) {
 	var res TagEdit
 	d, err := x.DB()
@@ -63,6 +67,13 @@ func (x *Index) EditTags(paths []string, tags []string, add, recursive bool) (Ta
 		t, err := d.IndexTagTarget(host, recursive && isDir)
 		if err != nil {
 			return res, err
+		}
+		if add {
+			if n, err := d.UnsampledInstances(t); err != nil {
+				return res, err
+			} else if n > 0 {
+				res.Unsampled = append(res.Unsampled, filepath.Clean(host))
+			}
 		}
 		target.Dirs = append(target.Dirs, t.Dirs...)
 		target.Instances = append(target.Instances, t.Instances...)

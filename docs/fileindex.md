@@ -49,7 +49,7 @@ fileindex. The keys below are the defaults; rebind the shortcuts under
 | `M-D` | `d` | [Copies outside directory](#copies-outside-directory): files under the current directory that also exist elsewhere in the index |
 | `M-U` | `u` | [Find unique files](#find-unique-files): a view of the files under the current or selected directories with no copy outside them, to copy, move or delete |
 | `M-S` | `s` | Scan the selected entries, else the current directory (the menu says which) |
-| `M-A` | `S` | [Fast scan](#scan-and-prune) the selected entries, else the current directory: hash only the first 8 KB of larger files |
+| `M-A` | `S` | [Fast scan](#scan-and-prune) the selected entries, else the current directory: hash only a sample (first, middle and last 8 KB) of larger files |
 | `M-P` | `p` | Remove what is gone from disk under the current directory |
 | `M-E` | `e` | [Report differences](#report-differences) between the disk and the index under the directory under the cursor, else the current directory |
 | `M-T` | `t` | [Edit tags](#tags) |
@@ -87,7 +87,7 @@ not watched.
 | State | Legend | Meaning |
 |---|---|---|
 | `indexed` | indexed | In the index, the same size and modification time (files) |
-| `unhashed` | not hashed yet | A file in the index with the same size and modification time that has not been hashed yet (a scan is still hashing, `hash` is off, or a fast scan hashed only its first 8 KB) |
+| `unhashed` | not hashed yet | A file in the index with the same size and modification time that has not been hashed yet (a scan is still hashing, `hash` is off, or a fast scan hashed only its sample) |
 | `changed` | changed | A file whose size or modification time differs from the index |
 | `new` | not in index | On disk but not in the index |
 | `missing` | only in index | Only in the index (ghost row) |
@@ -261,7 +261,7 @@ edit refuse a file that is missing from disk.
 - Copies are files with the same content hash. JPEGs differing only in metadata
   count as copies, as in the Copies column below.
 - A file that is only partly hashed (a [fast scan](#scan-and-prune) hashed its
-  first 8 KB, or a scan has not reached it yet) has no known copies until it is fully hashed:
+  sample, or a scan has not reached it yet) has no known copies until it is fully hashed:
   the action says "Not fully hashed yet". A file the index does not
   know says "Not in the index", and one with no other copy "No other copies".
 - An empty file has no copies to list, since all empty files have the same content: the action
@@ -410,10 +410,22 @@ Nothing is written until OK; Cancel or Esc discards the edits.
   add it again with Recursive on.
 
 Tags work on entries that are gone from disk too. Adding tags to a path the
-index does not know queues a scan of it (a task job, see below) that applies the
-tags once the walk has recorded the path, before hashing; a path the scan rules
-skip stays untagged and is listed as a warning on the job. Removing tags only
-counts such paths in the message after OK. The tags column updates when the edit
+index does not know queues a tag scan of it (a task job, see below) that applies
+the tags once the walk has recorded the path; a path the scan rules skip stays
+untagged and is listed as a warning on the job. Removing tags only counts such
+paths in the message after OK.
+
+A tag scan never reads whole files, whatever `hash` says: like a
+[fast scan](#scan-and-prune) it reads only a sample of each larger file (its
+first, middle and last 8 KB), so tagging a directory of large videos as
+watched takes seconds. A file's tag belongs to its content once a plain scan
+has fully hashed it, and then follows the file wherever it goes. Until then the
+sample stands in: if the file is moved, renamed or deleted first, the tag is kept
+by its size and sample, and returns when a scan with hashing or a fast scan finds a
+file with the same size and sample. Adding tags to indexed files that have
+neither a full hash nor a sample queues the same tag scan for them, so their tags
+are kept the same way. A file still being written, or cut short, has another
+sample than the finished file, so it does not take the tag. The tags column updates when the edit
 finishes. A tag no entry uses any more stays in the list.
 
 ## Scan and prune
@@ -433,8 +445,8 @@ including unhashed ones left by an earlier scan. With `hash = false` under
 or copies column, left out of duplicate detection) until a scan with hashing
 runs.
 `M-A` is the same scan with its last stage reduced: it hashes
-only the first 8 KB of files larger than that, so a big tree is done in a
-fraction of the time, even with `hash = false`. Those files keep the `unhashed`
+only a sample of files larger than 24 KB (their first, middle and last 8 KB), so a
+big tree is done in a fraction of the time, even with `hash = false`. Those files keep the `unhashed`
 state, count only as potential duplicates in [Find duplicates](find-duplicates.md)
 and stay out of the hash and copies columns until a plain scan hashes
 them fully; running a fast scan again skips them.
