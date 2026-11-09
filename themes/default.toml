@@ -158,7 +158,7 @@ new = { fg = "red" }
 missing = { fg = "bright_red" }
 excluded = { fg = "bright_black" }
 differs = { fg = "yellow", bold = true }
-unchecked = { fg = "yellow" }
+unchecked = { fg = "cyan" }
 tagged = { fg = "blue" }
 
 [panel.meta]                  # meta cells matching a warn/critical rule; black under the active cursor
@@ -380,7 +380,7 @@ excluded = "\U000F1640"   # nf-md-database_off: not indexed, skipped by the scan
 scanning = "\U000F0CFF"   # nf-md-database_sync: a scan or prune job works on it
 checking = "\U000F0866"   # nf-md-database_search: indexed directory, background check still running
 differs = "\U000F163A"    # nf-md-database_alert: indexed directory with differences below
-unchecked = "\U000F1920"  # nf-md-database_eye_off: indexed directory too deep to check automatically
+unchecked = "\U000F1640"  # nf-md-database_off: indexed directory too deep to check automatically
 tagged = "\U000F12F6"     # nf-md-database_marker: indexed and tagged
 unhashed = "\U000F163F"   # nf-md-database_clock: indexed, not hashed yet
 
