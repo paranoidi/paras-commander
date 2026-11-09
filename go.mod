@@ -13,7 +13,7 @@ require (
 	github.com/mattn/go-shellwords v1.0.16
 	github.com/mattn/go-sixel v0.0.14
 	github.com/micro-editor/terminal v0.0.0-20250324214352-e587e959c6b5
-	github.com/paranoidi/fileindex v0.4.0
+	github.com/paranoidi/fileindex v0.5.0
 	github.com/pkg/sftp v1.13.12
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
 	github.com/yuin/goldmark v1.8.7

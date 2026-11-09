@@ -160,7 +160,7 @@ func (x *Index) hashTask(title string, done func(), targets func(*db.DB) ([]stri
 			rep := newScanReporter(r, false)
 			rep.hashing, rep.p.TotalFiles = true, len(paths)
 			stats, err := scan.HashPaths(ctx, d, paths, workers, rep.Worker, rep.Speed, rep.FileDone)
-			for _, e := range stats.Errors {
+			for _, e := range slices.Concat(stats.Errors, stats.Restored) {
 				rep.Log(e)
 			}
 			rep.finish(stats)

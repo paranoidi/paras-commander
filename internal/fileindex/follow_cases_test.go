@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 
@@ -325,5 +326,61 @@ func TestEditTagsReportsUnsampled(t *testing.T) {
 	}
 	if res, err = x.EditTags([]string{root}, []string{"amber"}, false, true); err != nil || len(res.Unsampled) != 0 {
 		t.Fatalf("a removal: %+v, %v", res, err)
+	}
+}
+
+// A directory tagged in pc keeps its tag when it is renamed outside pc: the tag scan samples its
+// files, the rename's scan keeps a print of it at the prune and gives the tag back to the dir
+// holding the same files, and the job lists the restore.
+func TestDirTagSurvivesRenameOutsidePc(t *testing.T) {
+	x := testIndex(t, initIndex(t))
+	x.cfg.Hash = false
+	root := t.TempDir()
+	dir := filepath.Join(root, "harbor-lights")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	reel := make([]byte, 3<<20/2)
+	for i := range reel {
+		reel[i] = byte(i * 31)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "feature.mkv"), reel, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := x.ScanTagTask([]string{dir}, []string{"watched"}, false).Run(context.Background(), &recReporter{}); err != nil {
+		t.Fatal(err)
+	}
+	moved := filepath.Join(root, "lights-of-the-harbor")
+	if err := os.Rename(dir, moved); err != nil {
+		t.Fatal(err)
+	}
+	rep := &recReporter{}
+	if err := x.ScanFastTask([]string{root}).Run(context.Background(), rep); err != nil {
+		t.Fatal(err)
+	}
+	d, err := x.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tags, err := d.EntryTags(root, []string{filepath.Base(moved)})
+	if err != nil || !slices.Equal(tags[filepath.Base(moved)], []string{"watched"}) {
+		t.Fatalf("tags of the renamed dir = %v, %v", tags, err)
+	}
+	if !slices.ContainsFunc(rep.warns, func(w string) bool { return strings.HasPrefix(w, "Restored tag #watched on directory: "+moved) }) {
+		t.Errorf("job lines = %q", rep.warns)
+	}
+}
+
+// A directory tag asks for its whole tree to be sampled, recursive or not.
+func TestEditTagsDirAsksForTreeSamples(t *testing.T) {
+	x := testIndex(t, initIndex(t))
+	x.cfg.Hash = false
+	root := tree(t)
+	if err := x.ScanTask([]string{root}).Run(context.Background(), &recReporter{}); err != nil {
+		t.Fatal(err)
+	}
+	res, err := x.EditTags([]string{root}, []string{"amber"}, true, false)
+	if err != nil || !slices.Equal(res.Unsampled, []string{root}) {
+		t.Fatalf("non-recursive dir tag: %+v, %v", res, err)
 	}
 }

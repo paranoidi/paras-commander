@@ -428,6 +428,23 @@ are kept the same way. A file still being written, or cut short, has another
 sample than the finished file, so it does not take the tag. The tags column updates when the edit
 finishes. A tag no entry uses any more stays in the list.
 
+A directory has no content of its own, so its tags are kept by its files. When a
+tagged directory leaves the index (a prune finds it gone, or it is deleted or
+moved across file systems in pc), the index keeps a print of its 64 largest files.
+A later scan or prune that finds a directory holding the same files at another
+path, hashed or sampled, gives it the tags back, and the job lists each such
+directory as "Restored tag". A tagged directory renamed outside pc and scanned
+only at its new path gets its tags there at once ("Copied tag"); the old path keeps
+them until a prune. Every matching directory gets the tags, so copies share them,
+as with files. To match, the files must cover at least 90% of the bytes on both
+sides, at least half of the bytes must match by content rather than by name and
+size, and the directory must hold at least 1 MiB or three matching files, so a
+directory of one small common file never takes a tag from another. Tagging a
+directory queues the tag scan for its files when any of them has neither a full
+hash nor a sample, recursive or not, so its print can be matched. A directory with
+no files keeps no print, and its tags go with it. Prints of directories that never
+return are kept until `fileindex tag-gc`.
+
 ## Scan and prune
 
 A user menu command can queue a scan by itself once it has run: see
