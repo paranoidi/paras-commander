@@ -1399,6 +1399,12 @@ func (h *Handler) updateJobMessage(ev jobs.Event) {
 		}
 	case jobs.EventCompleted:
 		if !h.reportsOwnOutcome(ev.JobID) {
+			if job := h.state.Job(ev.JobID); job != nil && job.DeleteEmptyDirsOnly {
+				if kept := job.Ops.Stats().Skipped; kept > 0 {
+					h.host.SetTransientMessage(fmt.Sprintf("%d %s kept: no longer empty or not removable", kept, jobbridge.Plural(kept, "directory", "directories")), ui.MessageUrgencyWarn)
+					return
+				}
+			}
 			h.host.SetTransientMessage("Job completed", ui.MessageUrgencySuccess)
 		}
 	case jobs.EventFailed:

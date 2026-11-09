@@ -177,7 +177,8 @@ for move). Move always asks for a destination; renaming in place is Rename.
 - When a move or delete leaves directories empty, a prompt offers to remove
   them (`remove_dangling_directories`). Removing them, here and with **Remove
   empty directories**, only ever removes empty directories: one that holds a
-  file by then stays, with the file, and shows as skipped in the jobs view.
+  file by then stays, with the file. A warning says how many were kept, and they
+  show as skipped in the jobs view.
 
 Name collisions are resolved in the jobs view or the quick dialog, including
 the size and time based Conflict rules, content verification (Same / Differ)

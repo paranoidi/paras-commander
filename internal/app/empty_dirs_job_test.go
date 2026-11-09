@@ -3,8 +3,10 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
@@ -52,5 +54,28 @@ func TestDanglingPromptNeverDeletesAFileThatArrived(t *testing.T) {
 	}
 	if st := j.Ops.Stats(); st.Skipped != 1 || st.Done != 1 {
 		t.Fatalf("operation stats = %+v, want one done and one skipped", st)
+	}
+	if app.model.MessageUrgency != ui.MessageUrgencyWarn || !strings.Contains(app.model.Message, "1 directory kept") {
+		t.Fatalf("urgency = %v message = %q", app.model.MessageUrgency, app.model.Message)
+	}
+}
+
+// Nothing kept: the usual success message.
+func TestDanglingPromptAllRemovedReportsSuccess(t *testing.T) {
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	hollow := filepath.Join(root, "meadow")
+	if err := os.Mkdir(hollow, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.dialogCtrl.PromptDanglingDirDelete([]string{hollow})
+	app.dialogCtrl.ExecuteDelete()
+	flushBackgroundJobs(t, app)
+	if app.model.MessageUrgency != ui.MessageUrgencySuccess || app.model.Message != "Job completed" {
+		t.Fatalf("urgency = %v message = %q", app.model.MessageUrgency, app.model.Message)
 	}
 }
