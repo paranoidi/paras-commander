@@ -57,6 +57,8 @@ With the cursor on a marked folder, its twin folders are drawn in the hint color
 
 With the cursor on a row, the focused pane's bottom border explains that row's trailing icons (job, pin, marked/kept subtree, exact or same-content folder, contains copies, skipped items) in a comma-separated list; this applies to file rows' marks too. The related-copy `+` is not explained.
 
+When a delete would leave directories empty, a second question lists them and offers to remove them too, parents included at any depth, up to and including the directories scanned and never above them (Yes is the default; Cancel deletes nothing and keeps the marks).
+
 Deleting files drops folders that held them from their groups. Folders of only zero-byte files follow the ignore-empty toggle. **View: Groups** has no folder rows, so the icons appear only in Dirs view. Icon order is: duplicate-directory icon, related-copy icon, skipped-items icon.
 
 ## Leaving and returning

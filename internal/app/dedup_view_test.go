@@ -3,6 +3,7 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
@@ -1662,5 +1664,47 @@ func TestDedupViewEmptyDirsConfirmCancelDeletesNothing(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// Find duplicates climbs through emptied parents up to what was scanned: the scan root, or the
+// selected directory of a scoped scan.
+func TestDedupViewEmptyDirsClimbToScanRoot(t *testing.T) {
+	for _, scoped := range []bool{false, true} {
+		root, err := filepath.EvalSymlinks(t.TempDir())
+		if err != nil {
+			t.Fatal(err)
+		}
+		deep := filepath.Join(root, "marsh", "north", "east")
+		if err := os.MkdirAll(deep, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		for _, f := range []string{filepath.Join(deep, "a.txt"), filepath.Join(deep, "b.txt")} {
+			if err := os.WriteFile(f, []byte("dup"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := os.WriteFile(filepath.Join(root, "other.txt"), []byte("not a copy"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		screen := newScreen(t, 80, 24)
+		app := newApp(t, screen, root)
+		snap := comparepkg.DedupSnapshot{Root: pathloc.MustParse(root), Phase: comparepkg.DedupDone}
+		want := []string{"marsh/north/east", "marsh/north", "marsh"}
+		if scoped {
+			snap.Scope = []string{"marsh/north"}
+			want = []string{"marsh/north/east", "marsh/north"}
+		}
+		snap.Groups = []comparepkg.DedupGroup{{Files: []comparepkg.DedupFile{
+			{Abs: pathloc.MustParse(filepath.Join(deep, "a.txt")), Rel: "marsh/north/east/a.txt"},
+			{Abs: pathloc.MustParse(filepath.Join(deep, "b.txt")), Rel: "marsh/north/east/b.txt"},
+		}}}
+		app.model.DedupSnapshot = snap
+		app.model.DedupView = ui.DedupViewState{Marked: map[string]bool{
+			filepath.Join(deep, "a.txt"): true, filepath.Join(deep, "b.txt"): true,
+		}}
+		if got := app.dedupCtrl.EmptyDirsAfterDelete(); !slices.Equal(got, want) {
+			t.Fatalf("scoped=%v: dirs = %v, want %v", scoped, got, want)
+		}
 	}
 }

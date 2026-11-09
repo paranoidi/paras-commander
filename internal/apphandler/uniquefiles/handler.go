@@ -47,8 +47,8 @@ type Host interface {
 	// AddTaskJob queues a task job working on sources.
 	AddTaskJob(task *jobs.Task, sources []pathloc.Path)
 	// EnqueueDeleteJob queues a delete of paths from disk, which the index follows; with
-	// removeEmptyDirs it also removes the directories that leaves empty.
-	EnqueueDeleteJob(paths []string, removeEmptyDirs bool)
+	// removeEmptyDirs it also removes the directories that leaves empty, up to emptyDirStops.
+	EnqueueDeleteJob(paths []string, removeEmptyDirs bool, emptyDirStops []pathloc.Path)
 	UniqueMenuDefinitions() []menu.Definition
 	BrowserMenuDefinitions() []menu.Definition
 	Config() config.Config
@@ -571,7 +571,7 @@ func (h *Handler) CancelDelete() { h.pendingDelete = nil }
 func (h *Handler) emptyDirsAfterDelete(paths []string) []string {
 	removed := make(map[string]bool, len(paths))
 	seen := map[string]bool{}
-	var roots []pathloc.Path
+	var parents []pathloc.Path
 	for _, p := range paths {
 		loc, err := pathloc.Parse(p)
 		if err != nil {
@@ -581,10 +581,15 @@ func (h *Handler) emptyDirsAfterDelete(paths []string) []string {
 		parent := loc.Parent()
 		if key := parent.String(); !seen[key] {
 			seen[key] = true
-			roots = append(roots, parent)
+			parents = append(parents, parent)
 		}
 	}
-	dirs, err := ops.PreviewEmptyDirsUnder(context.Background(), roots, removed)
+	ctx := context.Background()
+	roots, err := ops.EmptyDirRoots(ctx, parents, h.scopePaths(), removed)
+	if err != nil {
+		return nil
+	}
+	dirs, err := ops.PreviewEmptyDirsUnder(ctx, roots, removed)
 	if err != nil {
 		return nil
 	}
@@ -595,7 +600,7 @@ func (h *Handler) emptyDirsAfterDelete(paths []string) []string {
 			continue
 		}
 		rel, err := filepath.Rel(h.model.UniqueView.Root, path)
-		if err != nil {
+		if err != nil || rel == ".." || strings.HasPrefix(rel, "../") { // a selected directory off Root
 			rel = path
 		}
 		out = append(out, filepath.ToSlash(rel))
@@ -604,7 +609,7 @@ func (h *Handler) emptyDirsAfterDelete(paths []string) []string {
 }
 
 func (h *Handler) deleteQueued(paths []string, removeEmptyDirs bool) {
-	h.host.EnqueueDeleteJob(paths, removeEmptyDirs)
+	h.host.EnqueueDeleteJob(paths, removeEmptyDirs, h.scopePaths())
 	h.host.SetTransientMessage(fmt.Sprintf("Delete queued (%d %s)", len(paths), plural(len(paths))), ui.MessageUrgencyInfo)
 	h.FilesQueued(paths, true)
 }
@@ -626,14 +631,19 @@ func (h *Handler) HashUnverified() {
 	}
 	root := st.Root
 	task := h.index.HashFilesTask(slices.Clone(st.ToHash), func() { h.post(HashedPayload{Root: root}) })
-	var sources []pathloc.Path
-	for _, dir := range st.Scope {
+	h.host.AddTaskJob(task, h.scopePaths())
+	h.host.SetTransientMessage(fmt.Sprintf("Hashing queued (%d %s)", len(st.ToHash), plural(len(st.ToHash))), ui.MessageUrgencyInfo)
+}
+
+// scopePaths is the checked directories as paths.
+func (h *Handler) scopePaths() []pathloc.Path {
+	var out []pathloc.Path
+	for _, dir := range h.model.UniqueView.Scope {
 		if loc, err := pathloc.Parse(dir); err == nil {
-			sources = append(sources, loc)
+			out = append(out, loc)
 		}
 	}
-	h.host.AddTaskJob(task, sources)
-	h.host.SetTransientMessage(fmt.Sprintf("Hashing queued (%d %s)", len(st.ToHash), plural(len(st.ToHash))), ui.MessageUrgencyInfo)
+	return out
 }
 
 // SwitchPane moves focus between the tree and the destination panel.

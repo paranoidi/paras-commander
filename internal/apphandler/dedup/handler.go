@@ -48,7 +48,7 @@ type Deps struct {
 // Host is the app shell surface dedup needs.
 type Host interface {
 	host.PanelNavigationHost
-	EnqueueDeleteJob(paths []string, removeEmptyDirs bool)
+	EnqueueDeleteJob(paths []string, removeEmptyDirs bool, emptyDirStops []pathloc.Path)
 	// AddTaskJob queues a task job working on sources.
 	AddTaskJob(task *jobs.Task, sources []pathloc.Path)
 	SetTransientMessage(text string, urgency ui.MessageUrgency)
@@ -1862,21 +1862,26 @@ func (h *Handler) EmptyDirsAfterDelete() []string {
 		return nil
 	}
 	removed := make(map[string]bool, len(files))
-	var roots []pathloc.Path
+	var parents []pathloc.Path
 	seen := map[string]bool{}
 	for _, f := range files {
 		removed[f.Abs.String()] = true
 		parent := f.Abs.Parent()
 		if key := parent.String(); !seen[key] {
 			seen[key] = true
-			roots = append(roots, parent)
+			parents = append(parents, parent)
 		}
 	}
-	dirs, err := ops.PreviewEmptyDirsUnder(context.Background(), roots, removed)
+	ctx := context.Background()
+	roots, err := ops.EmptyDirRoots(ctx, parents, h.emptyDirStops(), removed)
+	if err != nil {
+		return nil
+	}
+	dirs, err := ops.PreviewEmptyDirsUnder(ctx, roots, removed)
 	if err != nil || len(dirs) == 0 {
 		return nil
 	}
-	rootFP, err := h.model.DedupSnapshot.EffectiveDisplayRoot().FilePath()
+	rootFP, err := h.model.DedupSnapshot.EffectiveDisplayRoot().Local().FilePath()
 	if err != nil {
 		return nil
 	}
@@ -1887,12 +1892,36 @@ func (h *Handler) EmptyDirsAfterDelete() []string {
 			continue
 		}
 		rel, err := filepath.Rel(rootFP, dfp)
-		if err != nil {
-			continue
+		if err != nil || rel == ".." || strings.HasPrefix(rel, "../") { // above a trimmed display root
+			rel = dfp
 		}
 		out = append(out, filepath.ToSlash(rel))
 	}
 	return out
+}
+
+// emptyDirStops are the directories this scan covers, which the empty-directories cleanup climbs
+// up to: the selected directories of a scoped scan, the directory of a copies-outside view (its
+// copies elsewhere were not scanned, so their directories do not climb), else the scan root.
+func (h *Handler) emptyDirStops() []pathloc.Path {
+	snap := h.model.DedupSnapshot
+	if h.outsideOf != "" {
+		loc, err := pathloc.Parse(h.outsideOf)
+		if err != nil {
+			return nil
+		}
+		return []pathloc.Path{loc}
+	}
+	if len(snap.Scope) == 0 {
+		return []pathloc.Path{snap.Root}
+	}
+	stops := make([]pathloc.Path, 0, len(snap.Scope))
+	for _, rel := range snap.Scope {
+		if loc, err := snap.Root.Join(rel); err == nil {
+			stops = append(stops, loc)
+		}
+	}
+	return stops
 }
 
 // DeleteMarked enqueues a delete job for marked files and optimistically prunes them
@@ -1903,7 +1932,7 @@ func (h *Handler) DeleteMarked(removeEmptyDirs bool) {
 	if len(paths) == 0 {
 		return
 	}
-	h.host.EnqueueDeleteJob(paths, removeEmptyDirs)
+	h.host.EnqueueDeleteJob(paths, removeEmptyDirs, h.emptyDirStops())
 	noun := "files"
 	if len(paths) == 1 {
 		noun = "file"

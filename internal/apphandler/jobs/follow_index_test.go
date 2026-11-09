@@ -117,7 +117,7 @@ func TestDeleteJobKeepsIndexPaths(t *testing.T) {
 
 func TestDedupDeleteJobDeletesOnDisk(t *testing.T) {
 	h, state := followHandler(t, "/orchard", false)
-	h.EnqueueDedupDeleteJob([]string{"fileindex:///orchard/harbor.txt"}, true)
+	h.EnqueueDedupDeleteJob([]string{"fileindex:///orchard/harbor.txt"}, true, nil)
 	j := onlyJob(t, state)
 	if !j.DeleteOnDisk || !j.DeleteRemoveEmptyDirs || j.PromptDanglingDirs || j.Sources[0].Scheme() != pathloc.SchemeFileIndex {
 		t.Fatalf("dedup delete job = %+v; want on disk, cleaning empty dirs, no prompt, source kept", j)

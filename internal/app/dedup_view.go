@@ -25,12 +25,12 @@ func (h dedupHost) NavigatePanelToPath(panelID int, path string, selectName stri
 	return h.app.navigatePanelToDirectory(panelID, path, selectName)
 }
 
-func (h dedupHost) EnqueueDeleteJob(paths []string, removeEmptyDirs bool) {
+func (h dedupHost) EnqueueDeleteJob(paths []string, removeEmptyDirs bool, emptyDirStops []pathloc.Path) {
 	// Dedup has its own empty-dirs confirm (apphandler/dialog's ExecuteDelete opens it via
 	// Deps.Dedup for the dedup-view branch); never double-prompt with the generic
 	// dangling-dirs cleanup. Dedup paths may be fileindex:// ones: those are deleted from disk
 	// and index, unlike a delete on a fileindex:// panel.
-	h.app.jobsCtrl.EnqueueDedupDeleteJob(paths, removeEmptyDirs)
+	h.app.jobsCtrl.EnqueueDedupDeleteJob(paths, removeEmptyDirs, emptyDirStops)
 }
 
 func (h dedupHost) AddTaskJob(task *jobs.Task, sources []pathloc.Path) {

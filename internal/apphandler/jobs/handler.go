@@ -1524,17 +1524,17 @@ func (h *Handler) applySizeEstimate(job *jobs.Job, sources []string) {
 // gate is applied here, the single place that decides the job field — callers only
 // say whether they want prompting at all.
 func (h *Handler) EnqueueDeleteJob(sources []string, removeEmptyDirs, promptDangling bool) {
-	h.enqueueDeleteJob(sources, removeEmptyDirs, promptDangling, false)
+	h.enqueueDeleteJob(sources, removeEmptyDirs, promptDangling, false, nil)
 }
 
 // EnqueueDedupDeleteJob queues the dedup view's delete: fileindex:// sources still on disk are
 // deleted there (and their records follow), those already gone only lose their record
 // (Job.DeleteOnDisk). The view has its own empty-dirs confirm, so there is no dangling prompt.
-func (h *Handler) EnqueueDedupDeleteJob(sources []string, removeEmptyDirs bool) {
-	h.enqueueDeleteJob(sources, removeEmptyDirs, false, true)
+func (h *Handler) EnqueueDedupDeleteJob(sources []string, removeEmptyDirs bool, emptyDirStops []pathloc.Path) {
+	h.enqueueDeleteJob(sources, removeEmptyDirs, false, true, emptyDirStops)
 }
 
-func (h *Handler) enqueueDeleteJob(sources []string, removeEmptyDirs, promptDangling, onDisk bool) {
+func (h *Handler) enqueueDeleteJob(sources []string, removeEmptyDirs, promptDangling, onDisk bool, emptyDirStops []pathloc.Path) {
 	srcLocs, err := pathloc.ParseAll(sources)
 	if err != nil {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue delete: %v", err), ui.MessageUrgencyError)
@@ -1547,6 +1547,7 @@ func (h *Handler) enqueueDeleteJob(sources []string, removeEmptyDirs, promptDang
 		Sources:               srcLocs,
 		TotalFiles:            len(sources),
 		DeleteRemoveEmptyDirs: removeEmptyDirs,
+		DeleteEmptyDirStops:   emptyDirStops,
 		DeleteOnDisk:          onDisk,
 		PromptDanglingDirs:    promptDangling && h.config.Operations.RemoveDanglingDirs,
 	}

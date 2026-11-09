@@ -36,8 +36,8 @@ func (h uniqueHost) AddTaskJob(task *jobs.Task, sources []pathloc.Path) {
 
 // EnqueueDeleteJob deletes from disk. The view has asked about empty directories already, so the
 // generic dangling-directories cleanup must not ask again, as in the duplicates view.
-func (h uniqueHost) EnqueueDeleteJob(paths []string, removeEmptyDirs bool) {
-	h.app.jobsCtrl.EnqueueDedupDeleteJob(paths, removeEmptyDirs)
+func (h uniqueHost) EnqueueDeleteJob(paths []string, removeEmptyDirs bool, emptyDirStops []pathloc.Path) {
+	h.app.jobsCtrl.EnqueueDedupDeleteJob(paths, removeEmptyDirs, emptyDirStops)
 }
 
 func (h uniqueHost) UniqueMenuDefinitions() []menu.Definition { return h.app.uniqueMenuDefinitions() }

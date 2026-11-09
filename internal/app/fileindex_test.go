@@ -1464,7 +1464,7 @@ func TestFileIndexDedupDeleteRemovesFileAndRecord(t *testing.T) {
 	dedupHost{appShellHost: appShellHost{app: a}}.EnqueueDeleteJob([]string{
 		pathloc.FileIndexPrefix + filepath.Join(dir, "harbor.txt"),
 		pathloc.FileIndexPrefix + filepath.Join(dir, "meadow.txt"),
-	}, false)
+	}, false, nil)
 	drainInterruptEventsUntil(t, a, screen, 5*time.Second, func() bool {
 		_, harbor, _ := d.FileInfo(filepath.Join(dir, "harbor.txt"))
 		_, meadow, _ := d.FileInfo(filepath.Join(dir, "meadow.txt"))

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"slices"
 
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -319,13 +320,90 @@ func removeEmptyDirsPostOrder(ctx context.Context, dir pathloc.Path) error {
 	return err
 }
 
-// PreviewEmptyDirsUnder dry-runs RemoveEmptyDirsUnder: it reports which
-// directories under each root would be removed if the paths in removed were
-// deleted first, without touching the filesystem. removed keys are
-// pathloc.Path.String() values of files about to be deleted.
-func PreviewEmptyDirsUnder(ctx context.Context, roots []pathloc.Path, removed map[string]bool) ([]pathloc.Path, error) {
-	var out []pathloc.Path
-	// fileindex:// roots and removed paths are previewed on disk, as the cleanup will run there.
+// EmptyDirRoots is where a cleanup of the directories that held deleted files starts: each of dirs,
+// or its highest ancestor up to and including the stop directory holding it that would be empty
+// too, with nested results dropped. A directory under no stop does not climb. removed holds the
+// files about to be deleted (nil once they are gone), as in PreviewEmptyDirsUnder. Hand the result
+// to PreviewEmptyDirsUnder and RemoveEmptyDirsUnder, so what is asked is what gets removed.
+func EmptyDirRoots(ctx context.Context, dirs, stops []pathloc.Path, removed map[string]bool) ([]pathloc.Path, error) {
+	removed = localRemovedPaths(removed)
+	localStops := make([]pathloc.Path, len(stops))
+	for i, s := range stops {
+		localStops[i] = s.Local()
+	}
+	wouldEmpty := map[string]bool{} // siblings ask about the same ancestors
+	var climbed []pathloc.Path
+	seen := map[string]bool{}
+	for _, dir := range skipIndexPaths(OnDiskPaths(dirs)) {
+		stopAt := slices.IndexFunc(localStops, func(s pathloc.Path) bool { return pathloc.EqualOrUnder(s, dir) })
+		for stopAt >= 0 && !dir.Equal(localStops[stopAt]) {
+			up := dir.Parent()
+			if up.Equal(dir) {
+				break
+			}
+			key := up.String()
+			empty, known := wouldEmpty[key]
+			if !known {
+				var err error
+				if empty, err = dirWouldBeEmpty(ctx, up, removed); err != nil {
+					return nil, err
+				}
+				wouldEmpty[key] = empty
+			}
+			if !empty {
+				break
+			}
+			dir = up
+		}
+		if key := dir.String(); !seen[key] {
+			seen[key] = true
+			climbed = append(climbed, dir)
+		}
+	}
+	out := climbed[:0]
+	for _, dir := range climbed {
+		nested := false
+		for cur, up := dir, dir.Parent(); !up.Equal(cur) && !nested; cur, up = up, up.Parent() {
+			nested = seen[up.String()]
+		}
+		if !nested {
+			out = append(out, dir)
+		}
+	}
+	return out, nil
+}
+
+// dirWouldBeEmpty reports whether dir holds only removed files and directories that would be
+// empty themselves. It stops at the first entry that stays.
+func dirWouldBeEmpty(ctx context.Context, dir pathloc.Path, removed map[string]bool) (bool, error) {
+	be, err := backendFor(dir)
+	if err != nil {
+		return false, err
+	}
+	entries, err := be.List(ctx, dir)
+	if err != nil {
+		return false, &Error{Op: "flatten", Text: fmt.Sprintf("list %q: %v", dir, err), Err: err}
+	}
+	for _, e := range entries {
+		if e.Name == "." || e.Name == ".." {
+			continue
+		}
+		if e.Type != fsbackend.EntryDirectory {
+			if !removed[e.Loc.String()] {
+				return false, nil
+			}
+			continue
+		}
+		empty, err := dirWouldBeEmpty(ctx, e.Loc, removed)
+		if err != nil || !empty {
+			return false, err
+		}
+	}
+	return true, nil
+}
+
+// localRemovedPaths maps removed's fileindex:// keys to their paths on disk, where cleanup runs.
+func localRemovedPaths(removed map[string]bool) map[string]bool {
 	local := make(map[string]bool, len(removed))
 	for k := range removed {
 		if loc, err := pathloc.Parse(k); err == nil {
@@ -333,7 +411,17 @@ func PreviewEmptyDirsUnder(ctx context.Context, roots []pathloc.Path, removed ma
 		}
 		local[k] = true
 	}
-	removed = local
+	return local
+}
+
+// PreviewEmptyDirsUnder dry-runs RemoveEmptyDirsUnder: it reports which
+// directories under each root would be removed if the paths in removed were
+// deleted first, without touching the filesystem. removed keys are
+// pathloc.Path.String() values of files about to be deleted.
+func PreviewEmptyDirsUnder(ctx context.Context, roots []pathloc.Path, removed map[string]bool) ([]pathloc.Path, error) {
+	var out []pathloc.Path
+	// fileindex:// roots and removed paths are previewed on disk, as the cleanup will run there.
+	removed = localRemovedPaths(removed)
 	for _, root := range skipIndexPaths(OnDiskPaths(roots)) {
 		if _, err := previewEmptyDirsPostOrder(ctx, root, removed, &out); err != nil {
 			return nil, err

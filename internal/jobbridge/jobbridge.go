@@ -729,7 +729,11 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 		}
 		doneFiles, doneBytes, err = ops.ExecuteDeletePaths(tc.ctx, pathloc.Strings(sources), deleteProgress, job.RecordOperation, job.StartSource)
 		if err == nil && job.DeleteRemoveEmptyDirs {
-			if cleanErr := ops.RemoveEmptyDirsUnder(tc.ctx, uniqueParents(sources)); cleanErr != nil {
+			roots, cleanErr := ops.EmptyDirRoots(tc.ctx, uniqueParents(sources), job.DeleteEmptyDirStops, nil)
+			if cleanErr == nil {
+				cleanErr = ops.RemoveEmptyDirsUnder(tc.ctx, roots)
+			}
+			if cleanErr != nil {
 				err = cleanErr
 			}
 		}

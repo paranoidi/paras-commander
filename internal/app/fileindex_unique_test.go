@@ -373,6 +373,47 @@ func TestUniqueViewDeleteAsksAboutEmptyDirs(t *testing.T) {
 	}
 }
 
+// The question and the job climb through emptied parents and stop at the checked directory.
+func TestUniqueViewEmptyDirsClimbToScope(t *testing.T) {
+	a, screen, dir, _, _ := uniqueApp(t)
+	deep := filepath.Join(dir, "marsh", "north", "east")
+	if err := os.MkdirAll(deep, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	fern := filepath.Join(deep, "fern.txt")
+	if err := os.WriteFile(fern, []byte("words"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	d, err := a.fileIndex.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := strings.Repeat("9", 32)
+	if _, err := d.CommitScanBatch([]db.ScannedFile{{Dir: deep, Name: "fern.txt", Size: 5, Mtime: time.Now(), MD5: sum, SHA256: sum + sum}}); err != nil {
+		t.Fatal(err)
+	}
+	openUnique(t, a, screen)
+	a.model.UniqueView.SetMark(ui.UniqueFile{Path: fern, Size: 5}, true)
+	a.dispatch(keymap.ActionFileDelete)
+	a.dialogCtrl.ExecuteDelete()
+	want := []string{"marsh/north/east", "marsh/north", "marsh"}
+	if got := a.model.DedupEmptyDirsConfirm.Dirs; !slices.Equal(got, want) {
+		t.Fatalf("question = %v, want %v", got, want)
+	}
+	a.answerDedupEmptyDirsConfirm(dialog.DedupEmptyDirsYes)
+	flushBackgroundJobs(t, a)
+	if _, err := os.Stat(filepath.Join(dir, "marsh")); !os.IsNotExist(err) {
+		t.Fatalf("marsh still there: %v", err)
+	}
+	if _, err := os.Stat(dir); err != nil {
+		t.Fatalf("the scope directory went: %v", err)
+	}
+	all := a.jobState.AllJobs()
+	if len(all) != 1 || len(all[0].DeleteEmptyDirStops) != 1 || all[0].DeleteEmptyDirStops[0].String() != dir {
+		t.Fatalf("jobs = %+v", all)
+	}
+}
+
 // Leaving keeps the results and marks; the same scope shows them without a new lookup.
 func TestUniqueViewKeepsResultsOnLeave(t *testing.T) {
 	a, screen, dir, _, _ := uniqueApp(t)
