@@ -754,7 +754,7 @@ func (h *Handler) ExecuteDelete() {
 			paths[i] = e.Path
 		}
 		h.CloseFileDialog()
-		h.jobs.EnqueueDeleteJob(paths, false, false)
+		h.jobs.EnqueueEmptyDirsDeleteJob(paths)
 		h.host.SetTransientMessage(fmt.Sprintf("Delete queued (%d %s)", len(paths), jobbridge.Plural(len(paths), "directory", "directories")), ui.MessageUrgencyInfo)
 		return
 	}

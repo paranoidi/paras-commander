@@ -234,6 +234,10 @@ type Job struct {
 	// DeleteRemoveEmptyDirs enables post-delete removal of directories left empty
 	// under the parent directories of Sources (TypeDelete only).
 	DeleteRemoveEmptyDirs bool
+	// DeleteEmptyDirsOnly makes this delete job remove empty directories only, with rmdir: Sources
+	// are directories found empty earlier, and any that holds a file by now stays
+	// (ops.ExecuteRemoveEmptyDirs).
+	DeleteEmptyDirsOnly bool
 	// DeleteEmptyDirStops are the directories that cleanup climbs up to, emptied parents included
 	// (ops.EmptyDirRoots): the scan's directories.
 	DeleteEmptyDirStops []pathloc.Path
@@ -424,6 +428,7 @@ func (j *Job) RetryClone() *Job {
 		FlattenRecursive:      j.FlattenRecursive,
 		DeleteRemoveEmptyDirs: j.DeleteRemoveEmptyDirs,
 		DeleteEmptyDirStops:   j.DeleteEmptyDirStops,
+		DeleteEmptyDirsOnly:   j.DeleteEmptyDirsOnly,
 		DeleteOnDisk:          j.DeleteOnDisk,
 		PromptDanglingDirs:    j.PromptDanglingDirs,
 		RemoveDanglingDirs:    j.RemoveDanglingDirs,

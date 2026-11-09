@@ -29,7 +29,7 @@ func (h *dedupHandlerHost) NavigatePanelToPath(p int, path, sel string) error {
 func (*dedupHandlerHost) AddTaskJob(*jobs.Task, []pathloc.Path) {}
 
 func (h *dedupHandlerHost) EnqueueDeleteJob([]string, bool, []pathloc.Path) {}
-func (h *dedupHandlerHost) Config() config.Config           { return config.Default() }
+func (h *dedupHandlerHost) Config() config.Config                           { return config.Default() }
 func (h *dedupHandlerHost) SetTransientMessage(text string, _ ui.MessageUrgency) {
 	h.msg = text
 }

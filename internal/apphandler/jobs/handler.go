@@ -141,7 +141,7 @@ func (h *Handler) stashDanglingSourcesForCompletedJob(job *jobs.Job) {
 // a convenience, not part of the job itself. Must only run from ApplyRefreshes.
 func (h *Handler) promptDanglingDirsIfAny() {
 	if paths := danglingPaths(&h.pendingRemoveDanglingSources); len(paths) > 0 {
-		h.EnqueueDeleteJob(paths, false, false)
+		h.EnqueueEmptyDirsDeleteJob(paths)
 	}
 	if paths := danglingPaths(&h.pendingDanglingSources); len(paths) > 0 {
 		h.host.PromptDanglingDirDelete(paths)
@@ -1532,6 +1532,24 @@ func (h *Handler) EnqueueDeleteJob(sources []string, removeEmptyDirs, promptDang
 // (Job.DeleteOnDisk). The view has its own empty-dirs confirm, so there is no dangling prompt.
 func (h *Handler) EnqueueDedupDeleteJob(sources []string, removeEmptyDirs bool, emptyDirStops []pathloc.Path) {
 	h.enqueueDeleteJob(sources, removeEmptyDirs, false, true, emptyDirStops)
+}
+
+// EnqueueEmptyDirsDeleteJob queues the removal of directories found empty earlier: rmdir only, so a
+// file that arrived in one since then is safe and that directory stays.
+func (h *Handler) EnqueueEmptyDirsDeleteJob(dirs []string) {
+	srcLocs, err := pathloc.ParseAll(dirs)
+	if err != nil {
+		h.host.SetTransientMessage(fmt.Sprintf("Queue delete: %v", err), ui.MessageUrgencyError)
+		return
+	}
+	h.commitJob(&jobs.Job{
+		ID:                  jobs.NewJobID(),
+		Type:                jobs.TypeDelete,
+		Status:              jobs.StatusQueued,
+		Sources:             srcLocs,
+		TotalFiles:          len(dirs),
+		DeleteEmptyDirsOnly: true,
+	})
 }
 
 func (h *Handler) enqueueDeleteJob(sources []string, removeEmptyDirs, promptDangling, onDisk bool, emptyDirStops []pathloc.Path) {

@@ -7,6 +7,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
@@ -154,5 +155,107 @@ func TestEmptyDirRootsClimbsToStop(t *testing.T) {
 	}
 	if _, err := os.Stat(at("scan/keep.txt")); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// The empty-directories job only ever uses rmdir: what gained a file since the check stays.
+func TestExecuteRemoveEmptyDirsNeverDeletesFiles(t *testing.T) {
+	ctx := context.Background()
+	root := t.TempDir()
+	at := func(rel string) string { return filepath.Join(root, rel) }
+	for _, d := range []string{"empty/a/b", "arrived/hollow", "arrived/busy", "linked-target/inner"} {
+		if err := os.MkdirAll(at(d), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Arrived while the prompt was open.
+	if err := os.WriteFile(at("arrived/busy/download.part"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(at("a-file"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(at("linked-target"), at("a-link")); err != nil {
+		t.Fatal(err)
+	}
+	paths := []string{at("empty"), at("arrived"), at("gone"), at("a-file"), at("a-link")}
+	results := map[string]string{}
+	started := 0
+	done, err := ExecuteRemoveEmptyDirs(ctx, paths, nil, func(item PlanItem, res ItemResult, reason string) {
+		if res == ItemDone {
+			reason = "done"
+		}
+		results[item.Src.Base()] = reason
+	}, func(int32) { started++ })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if done != 2 || started != len(paths) {
+		t.Fatalf("done = %d started = %d", done, started)
+	}
+	want := map[string]string{"empty": "done", "gone": "done", "arrived": ReasonNotEmpty, "a-file": ReasonNotEmpty, "a-link": ReasonNotEmpty}
+	for name, reason := range want {
+		if results[name] != reason {
+			t.Errorf("%s: %q, want %q", name, results[name], reason)
+		}
+	}
+	for _, kept := range []string{"arrived/busy/download.part", "a-file", "a-link", "linked-target/inner"} {
+		if _, err := os.Lstat(at(kept)); err != nil {
+			t.Errorf("%s went: %v", kept, err)
+		}
+	}
+	for _, gone := range []string{"empty", "arrived/hollow"} {
+		if _, err := os.Lstat(at(gone)); !os.IsNotExist(err) {
+			t.Errorf("%s stayed: %v", gone, err)
+		}
+	}
+}
+
+func TestExecuteRemoveEmptyDirsCancelStops(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	root := t.TempDir()
+	if _, err := ExecuteRemoveEmptyDirs(ctx, []string{root}, nil, nil, nil); err == nil {
+		t.Fatal("no error from a canceled context")
+	}
+	if _, err := os.Stat(root); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRmdirRefusesAFile(t *testing.T) {
+	f := filepath.Join(t.TempDir(), "meadow.txt")
+	if err := os.WriteFile(f, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := localfs.Rmdir(f); err == nil {
+		t.Fatal("rmdir on a file succeeded")
+	}
+	if _, err := os.Stat(f); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// A directory it may not remove is retried as root with rmdir, never rm -rf.
+func TestExecuteRemoveEmptyDirsElevatesWithRmdir(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root is never denied")
+	}
+	parent := filepath.Join(t.TempDir(), "harbor")
+	dir := filepath.Join(parent, "locked")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(parent, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(parent, 0o755) })
+	h := &elevHarness{answers: []PermissionAnswer{{Decision: PermissionElevate, Password: "heron"}}}
+	done, err := ExecuteRemoveEmptyDirs(h.ctx(true), []string{dir}, nil, nil, nil)
+	if err != nil || done != 1 {
+		t.Fatalf("done = %d err = %v", done, err)
+	}
+	if len(h.runs) != 1 || !slices.Equal(h.runs[0], []string{"rmdir", "--", dir}) {
+		t.Fatalf("ran %v, want rmdir", h.runs)
 	}
 }

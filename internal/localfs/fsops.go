@@ -6,6 +6,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"strconv"
+	"syscall"
 )
 
 // Rename performs a same-directory rename.
@@ -28,6 +29,14 @@ func Mkdir(path string, perm os.FileMode) error {
 func Remove(path string) error {
 	if err := os.Remove(path); err != nil {
 		return fmt.Errorf("remove %q: %w", path, err)
+	}
+	return nil
+}
+
+// Rmdir removes an empty directory and nothing else: unlike Remove, it fails on a file.
+func Rmdir(path string) error {
+	if err := syscall.Rmdir(path); err != nil {
+		return fmt.Errorf("rmdir %q: %w", path, err)
 	}
 	return nil
 }

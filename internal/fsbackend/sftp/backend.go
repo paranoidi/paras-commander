@@ -290,6 +290,13 @@ func (b *Backend) Remove(ctx context.Context, loc pathloc.Path) error {
 	})
 }
 
+// RemoveDir implements fsbackend.DirRemover.
+func (b *Backend) RemoveDir(ctx context.Context, dir pathloc.Path) error {
+	return b.withClient(ctx, dir, false, func(client *pkgsftp.Client, remote string) error {
+		return client.RemoveDirectory(remote)
+	})
+}
+
 // Rename implements fsbackend.Backend.
 func (b *Backend) Rename(ctx context.Context, oldLoc, newLoc pathloc.Path) error {
 	client, release, err := b.pool.withSFTP(ctx, oldLoc)

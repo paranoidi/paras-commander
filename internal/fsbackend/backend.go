@@ -73,6 +73,13 @@ type Backend interface {
 	Symlink(ctx context.Context, loc pathloc.Path, target string) error
 }
 
+// DirRemover is implemented by a backend that can remove an empty directory with a call that never
+// deletes anything else: it fails on a directory holding entries and on a non-directory. Empty
+// directory cleanup prefers it to Remove, which also deletes files.
+type DirRemover interface {
+	RemoveDir(ctx context.Context, dir pathloc.Path) error
+}
+
 // TreeRemover is implemented by a backend that removes a directory and everything under it in
 // one call (the fileindex backend's index-only remove); recursive deletes use it instead of
 // listing and removing child by child.

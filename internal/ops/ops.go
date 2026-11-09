@@ -160,6 +160,7 @@ const (
 	ReasonIdentical     = "identical"
 	ReasonSourceDeleted = "source deleted"
 	ReasonPermission    = "permission denied"
+	ReasonNotEmpty      = "not empty"
 )
 
 // itemDone reports item, tagged with the current source, through o.OnItemDone when set.

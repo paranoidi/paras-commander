@@ -125,6 +125,104 @@ func ExecuteDeletePaths(ctx context.Context, paths []string, progress func(path 
 	return doneFiles, doneBytes, nil
 }
 
+// ExecuteRemoveEmptyDirs removes the directories at paths and the empty directories below them with
+// rmdir only, so it can never delete a file: a directory that holds a file by now stays, with what
+// is above it (ItemSkipped, ReasonNotEmpty), and its empty subdirectories still go. A path that is
+// gone counts as done, and one that is no longer a directory (a symlink, say) is left alone. The
+// callbacks work as in ExecuteDeletePaths, for each of paths.
+func ExecuteRemoveEmptyDirs(ctx context.Context, paths []string, progress func(path string, doneFiles int, doneBytes int64), onItem ItemFunc, onSourceStart func(int32)) (int, error) {
+	done := 0
+	for i, path := range paths {
+		if err := itemBoundaryErr(ctx); err != nil {
+			return done, err
+		}
+		if onSourceStart != nil {
+			onSourceStart(int32(i))
+		}
+		loc, err := pathloc.Parse(path)
+		if err != nil {
+			return done, &Error{Op: "delete", Text: "invalid path " + path, Err: err}
+		}
+		report := func(res ItemResult, reason string) {
+			if onItem != nil {
+				onItem(PlanItem{Src: loc, IsDir: true, Source: int32(i)}, res, reason)
+			}
+		}
+		removed := true
+		ent, err := statEntry(ctx, loc)
+		switch {
+		case err != nil && !isNotExist(err):
+		case err != nil:
+			err = nil // gone already
+		case ent.Type != fsbackend.EntryDirectory:
+			removed = false
+		default:
+			removed, err = rmdirEmptyTree(ctx, loc)
+		}
+		switch {
+		case errors.Is(err, ErrPermissionSkipped):
+			report(ItemSkipped, ReasonPermission)
+			continue
+		case errors.Is(err, ErrUserCanceled) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded):
+			return done, err
+		case err != nil:
+			return done, &Error{Op: "delete", Text: "failed to remove " + loc.Base(), Err: err}
+		case !removed:
+			report(ItemSkipped, ReasonNotEmpty)
+			continue
+		}
+		done++
+		report(ItemDone, "")
+		if progress != nil {
+			progress(path, done, 0)
+		}
+	}
+	return done, nil
+}
+
+// rmdirEmptyTree removes the empty directories at and below dir, deepest first, and reports whether
+// dir itself went. A directory it may not remove asks for elevation with rmdir, never rm.
+func rmdirEmptyTree(ctx context.Context, dir pathloc.Path) (bool, error) {
+	if err := itemBoundaryErr(ctx); err != nil {
+		return false, err
+	}
+	be, err := backendFor(dir)
+	if err != nil {
+		return false, err
+	}
+	entries, err := be.List(ctx, dir)
+	if err != nil {
+		if isNotExist(err) {
+			return true, nil
+		}
+		return false, err
+	}
+	for _, e := range entries {
+		if e.Name == "." || e.Name == ".." || e.Type != fsbackend.EntryDirectory {
+			continue
+		}
+		if _, err := rmdirEmptyTree(ctx, e.Loc); err != nil && !errors.Is(err, ErrPermissionSkipped) {
+			return false, err
+		}
+	}
+	host := hostPathOf(dir)
+	removed, refused := false, false
+	err = withElevation(ctx, "delete", host, []string{"rmdir", "--", host}, func() error {
+		var rmErr error
+		removed, rmErr = removeDirIfEmpty(ctx, be, dir, "delete")
+		refused = rmErr != nil
+		return rmErr
+	})
+	if err != nil {
+		return false, err
+	}
+	if refused { // removed as root
+		reportRemoved(ctx, dir, true)
+		return true, nil
+	}
+	return removed, nil
+}
+
 // deletePathRecursive removes loc and its descendants, checking ctx before each
 // child so a cancel stops the current tree instead of finishing it.
 func deletePathRecursive(ctx context.Context, loc pathloc.Path) error {

@@ -178,7 +178,7 @@ func removeDirIfEmpty(ctx context.Context, be fsbackend.Backend, dir pathloc.Pat
 		// and its listing hides unindexed files: never decide "empty" from it.
 		return false, nil
 	}
-	removeErr := be.Remove(ctx, dir)
+	removeErr := rmdir(ctx, be, dir)
 	if removeErr == nil {
 		reportRemoved(ctx, dir, true)
 		return true, nil
@@ -197,6 +197,15 @@ func removeDirIfEmpty(ctx context.Context, be fsbackend.Backend, dir pathloc.Pat
 		return false, nil
 	}
 	return false, &Error{Op: op, Text: fmt.Sprintf("remove empty directory %q: %v", dir, removeErr), Err: removeErr}
+}
+
+// rmdir removes the directory dir with the backend's directory-only call when it has one, so a file
+// that took dir's place since it was listed is not deleted.
+func rmdir(ctx context.Context, be fsbackend.Backend, dir pathloc.Path) error {
+	if dr, ok := be.(fsbackend.DirRemover); ok {
+		return dr.RemoveDir(ctx, dir)
+	}
+	return be.Remove(ctx, dir)
 }
 
 // finishDeferred parks each deferred item as dest/<name>.flatten, removes the directories that

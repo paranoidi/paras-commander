@@ -149,6 +149,16 @@ func (b *Backend) Remove(ctx context.Context, loc pathloc.Path) error {
 	return localfs.Remove(host)
 }
 
+// RemoveDir implements fsbackend.DirRemover.
+func (b *Backend) RemoveDir(ctx context.Context, dir pathloc.Path) error {
+	_ = ctx
+	host, err := dir.FilePath()
+	if err != nil {
+		return err
+	}
+	return localfs.Rmdir(host)
+}
+
 // Rename implements fsbackend.Backend.
 func (b *Backend) Rename(ctx context.Context, oldLoc, newLoc pathloc.Path) error {
 	_ = ctx
