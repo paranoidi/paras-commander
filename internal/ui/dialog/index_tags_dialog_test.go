@@ -125,8 +125,22 @@ func TestIndexTagsJumpTextInSeparator(t *testing.T) {
 	}
 }
 
+func TestIndexTagsGridComesFirst(t *testing.T) {
+	st := indexTagsState("coral", "birch")
+	if st.Focus != IndexTagsGrid {
+		t.Fatalf("focus = %q, want the grid", st.Focus)
+	}
+	got := renderIndexTags(t, st, 80, 24)
+	if strings.Index(got, "coral") > strings.Index(got, "New tags") {
+		t.Fatalf("the grid should sit above the new-tags input:\n%s", got)
+	}
+}
+
 func TestIndexTagsEmptyDatabase(t *testing.T) {
 	st := indexTagsState()
+	if st.Focus != IndexTagsInput {
+		t.Fatalf("focus = %q, want the input", st.Focus)
+	}
 	spec := IndexTagsDialogView(&st, Layout{Width: 80, Height: 24}, theme.Default())
 	if _, ok := spec.Item(IndexTagsGrid); ok {
 		t.Fatal("no grid expected without tags")
@@ -172,6 +186,9 @@ func TestIndexTagsGoldenRender(t *testing.T) {
 	grid := state()
 	grid.Focus, grid.Cursor, grid.Col = IndexTagsGrid, 1, 1
 	add(&cases, "80x24_grid", 80, 24, grid)
+	input := state()
+	input.Focus, input.Input, input.InputCursor = IndexTagsInput, "clover", 6
+	add(&cases, "80x24_input", 80, 24, input)
 	jump := state()
 	jump.Focus = IndexTagsGrid
 	jump.TypeJump('b')

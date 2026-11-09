@@ -40,9 +40,13 @@ type IndexTagsDialogState struct {
 }
 
 // NewIndexTagsDialog opens the editor for targets over every tag of the database: a tag is on when
-// all of the total targets carry it (counts[name]) and mixed when only some do.
+// all of the total targets carry it (counts[name]) and mixed when only some do. Focus starts on the
+// grid, or on the new-tags input when the database has no tags.
 func NewIndexTagsDialog(targetPaths []string, names []string, counts map[string]int, total int) IndexTagsDialogState {
-	st := IndexTagsDialogState{Open: true, Targets: targetPaths, Focus: IndexTagsInput}
+	st := IndexTagsDialogState{Open: true, Targets: targetPaths, Focus: IndexTagsGrid}
+	if len(names) == 0 {
+		st.Focus = IndexTagsInput
+	}
 	for _, name := range names {
 		state := dlg.CheckOff
 		switch n := counts[name]; {
@@ -182,7 +186,7 @@ func (st *IndexTagsDialogState) CycleJump(delta int) {
 // ClearJump ends type-to-jump; the cursor stays where it is.
 func (st *IndexTagsDialogState) ClearJump() { st.JumpQuery, st.JumpIndex = "", 0 }
 
-// jumpLabel is the separator text above the grid: the jump text, with the position among several
+// jumpLabel is the separator text below the grid: the jump text, with the position among several
 // matches.
 func (st *IndexTagsDialogState) jumpLabel() string {
 	if st.JumpQuery == "" {

@@ -388,17 +388,18 @@ tag that only some of the selected entries carry shows as mixed (`[-]`).
 
 Nothing is written until OK; Cancel or Esc discards the edits.
 
-- **New tags:** type one or more tags separated by commas or spaces and press
-  Enter. They appear checked in the list and the dialog stays open for more.
-  OK also takes whatever is still in the input.
-- **Checkboxes:** Tab moves into the list. Space, Enter or a click toggles a
-  tag. A mixed tag cycles through set on all, removed from all, and mixed,
-  which leaves each entry as it was.
-- **Leaving the list:** Tab, or Up on the first row and Down on the last.
+- **Checkboxes:** the list comes first and has focus when the dialog opens.
+  Space, Enter or a click toggles a tag. A mixed tag cycles through set on all,
+  removed from all, and mixed, which leaves each entry as it was.
+- **Leaving the list:** Tab, or Down on the last row.
 - **Jump:** typing in the list jumps to the best fuzzy match, and the typed
-  text shows in the border above the list. With several matches, Up and Down
+  text shows in the border below the list. With several matches, Up and Down
   cycle through them. Backspace trims the text and Esc clears it. Toggling a tag
   clears it too, so you can type the next search straight away.
+- **New tags:** the input below the list. Type one or more tags separated by
+  commas or spaces and press Enter. They appear checked in the list and the
+  dialog stays open for more. OK also takes whatever is still in the input. With
+  no tags in the database yet, the dialog opens here.
 - **Recursive** applies the edits to a directory, every directory under it and
   every file in them, instead of the directory alone. Only the tags you changed
   are applied, so a tag the directory already has does not spread down the tree

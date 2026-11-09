@@ -303,12 +303,10 @@ func TestFileIndexTagEditorShowsAndTogglesTags(t *testing.T) {
 		t.Fatalf("tags = %+v", st.Tags)
 	}
 	checkDialogInvariants(t, a)
-	// Into the grid, then jump to and swap two tags with the keyboard.
-	a.handleKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
+	// The grid has focus on open: jump to and swap two tags with the keyboard.
 	if st.Focus != dialog.IndexTagsGrid {
 		t.Fatalf("focus = %q, want the grid", st.Focus)
 	}
-	checkDialogInvariants(t, a)
 	typeTags(a, "c")
 	a.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if !st.Open || st.JumpQuery != "" {
@@ -349,18 +347,18 @@ func TestFileIndexTagEditorArrowsLeaveTheGrid(t *testing.T) {
 			t.Fatalf("focus = %q, want %q", st.Focus, want)
 		}
 	}
-	press(tcell.KeyDown, dialog.IndexTagsGrid)
-	press(tcell.KeyUp, dialog.IndexTagsInput)
-	press(tcell.KeyDown, dialog.IndexTagsGrid)
+	press(tcell.KeyUp, dialog.IndexTagsGrid)   // nothing above the first row
 	press(tcell.KeyDown, dialog.IndexTagsGrid) // the second row
+	press(tcell.KeyDown, dialog.IndexTagsInput)
 	press(tcell.KeyDown, dialog.IndexTagsRecursive)
 	press(tcell.KeyDown, dlg.OK)
 	press(tcell.KeyUp, dialog.IndexTagsRecursive)
+	press(tcell.KeyUp, dialog.IndexTagsInput)
 	press(tcell.KeyUp, dialog.IndexTagsGrid)
 
 	// One jump match leaves nothing to cycle: arrows move on and drop the jump text.
 	typeTags(a, "cedar")
-	press(tcell.KeyDown, dialog.IndexTagsRecursive)
+	press(tcell.KeyDown, dialog.IndexTagsInput)
 	if st.JumpQuery != "" {
 		t.Fatalf("jump text = %q", st.JumpQuery)
 	}
@@ -374,17 +372,17 @@ func TestFileIndexTagEditorPlainLettersOutsideTheGrid(t *testing.T) {
 		t.Helper()
 		a.dispatch(keymap.ActionFileIndexTags)
 		waitTagPrompt(t, a, screen)
-		st := &a.model.IndexTagsDialog
-		a.handleKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)) // the grid
-		return st
+		return &a.model.IndexTagsDialog
 	}
+	tab := func() { a.handleKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)) }
 
 	st := open()
 	typeTags(a, "o") // a jump in the grid, not OK
 	if !st.Open || st.JumpQuery != "o" {
 		t.Fatalf("open %v, jump text %q", st.Open, st.JumpQuery)
 	}
-	a.handleKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)) // Recursive
+	tab() // the input
+	tab() // Recursive
 	typeTags(a, "r")
 	if st.Focus != dialog.IndexTagsRecursive || !st.Recursive {
 		t.Fatalf("focus %q, recursive %v", st.Focus, st.Recursive)
@@ -395,8 +393,9 @@ func TestFileIndexTagEditorPlainLettersOutsideTheGrid(t *testing.T) {
 	}
 
 	st = open()
-	a.handleKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)) // Recursive
-	a.handleKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)) // the buttons
+	tab() // the input
+	tab() // Recursive
+	tab() // the buttons
 	typeTags(a, "o")
 	if st.Open {
 		t.Fatal("o on the buttons should press OK")
@@ -430,6 +429,7 @@ func TestFileIndexTagEditorKeepsMixedTag(t *testing.T) {
 	if got := a.model.IndexTagsDialog.Tags[0].State; got != dlg.CheckMixed {
 		t.Fatalf("state = %v, want mixed", got)
 	}
+	a.handleKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)) // the input
 	typeTags(a, "clover")
 	a.handleKey(altKey('o'))
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {

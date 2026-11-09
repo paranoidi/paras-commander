@@ -21,21 +21,20 @@ const (
 	indexTagsWidthPadding = 8 // borders, margins and the gap between the columns
 )
 
-// IndexTagsDialogView is the tag editor's widget spec, fitted to layout: the new-tags input, the
-// checkbox grid of every tag under a separator that shows the jump text, the Recursive checkbox
-// and OK / Cancel. AltOnly holds only while the grid has focus, where plain letters are type-to-jump.
+// IndexTagsDialogView is the tag editor's widget spec, fitted to layout: the checkbox grid of every
+// tag, a separator that shows the jump text, the new-tags input, the Recursive checkbox and
+// OK / Cancel. AltOnly holds only while the grid has focus, where plain letters are type-to-jump.
 func IndexTagsDialogView(st *IndexTagsDialogState, layout Layout, styles theme.Theme) dlg.Spec {
-	items := []dlg.Item{
-		{Kind: dlg.KindLabel, Label: "New tags (comma or space separated):"},
-		{ID: IndexTagsInput, Kind: dlg.KindInput, Value: st.Input, Cursor: st.InputCursor, Scroll: st.InputScroll},
-		{Kind: dlg.KindSeparator, Label: st.jumpLabel()},
-	}
+	var items []dlg.Item
 	if len(st.Tags) == 0 {
 		items = append(items, dlg.Item{Kind: dlg.KindLabel, Label: "No tags yet"})
 	} else {
 		items = append(items, indexTagsGrid(st))
 	}
 	items = append(items,
+		dlg.Item{Kind: dlg.KindSeparator, Label: st.jumpLabel()},
+		dlg.Item{Kind: dlg.KindLabel, Label: "New tags (comma or space separated):"},
+		dlg.Item{ID: IndexTagsInput, Kind: dlg.KindInput, Value: st.Input, Cursor: st.InputCursor, Scroll: st.InputScroll},
 		dlg.Item{Kind: dlg.KindSeparator},
 		dlg.Item{ID: IndexTagsRecursive, Kind: dlg.KindCheckbox, Label: "Recursive (whole directory trees)", Mnemonic: 'R', On: st.Recursive},
 	)
