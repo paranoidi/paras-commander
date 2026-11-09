@@ -387,3 +387,32 @@ func TestParseLeaderKeyRejectsNonString(t *testing.T) {
 		t.Fatalf("err = %v, want expected string", err)
 	}
 }
+
+// TestCompareLeaderMenuShortLabels verifies Compare rows use LeaderLabel under their groups while
+// the help title stays spelled out.
+func TestCompareLeaderMenuShortLabels(t *testing.T) {
+	groupOf := map[string]string{}
+	labelOf := map[string]string{}
+	var group string
+	for _, e := range BuildLeaderMenuEntriesForView(DefaultLeaderKeys(), HelpCompare) {
+		if e.GroupTitle != "" {
+			group = e.GroupTitle
+			continue
+		}
+		groupOf[e.ActionID], labelOf[e.ActionID] = group, e.Label
+	}
+	for _, tc := range []struct{ id, group, label string }{
+		{ActionCompareFilterLeftOnly, LeaderMenuGroupCategories, "Left only"},
+		{ActionCompareResetFilter, LeaderMenuGroupFilter, "Reset all filters"},
+		{ActionCompareMerge, LeaderMenuGroupMerge, "Merge"},
+		{ActionCompareClose, LeaderMenuGroupCompare, "Close"},
+		{ActionCompareToggleEmpty, LeaderMenuGroupFilter, "Toggle empty files"},
+	} {
+		if groupOf[tc.id] != tc.group || labelOf[tc.id] != tc.label {
+			t.Errorf("%s = %q under %q, want %q under %q", tc.id, labelOf[tc.id], groupOf[tc.id], tc.label, tc.group)
+		}
+	}
+	if got := actionSpecTitle(ActionCompareClose); got != "Close compare view" {
+		t.Errorf("help title = %q, want it spelled out", got)
+	}
+}

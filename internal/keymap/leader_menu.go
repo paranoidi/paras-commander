@@ -20,6 +20,9 @@ const (
 // Per-view leader-menu group titles (used by leaderMenuViewSpecs below), in addition to the
 // shared LeaderMenuGroupApp/LeaderMenuGroupDisplay groups every per-view menu also carries.
 const (
+	LeaderMenuGroupCategories = "Categories"
+	LeaderMenuGroupFilter     = "Filter"
+	LeaderMenuGroupMerge      = "Merge"
 	LeaderMenuGroupCompare    = "Compare"
 	LeaderMenuGroupQueue      = "Queue"
 	LeaderMenuGroupCommands   = "Commands"
@@ -178,39 +181,39 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 	},
 	HelpCompare: {
 		order: []string{
-			LeaderMenuGroupFile, LeaderMenuGroupSelection, LeaderMenuGroupCompare,
+			LeaderMenuGroupFile, LeaderMenuGroupSelection,
+			LeaderMenuGroupCategories, LeaderMenuGroupFilter,
+			LeaderMenuGroupMerge, LeaderMenuGroupCompare,
 			LeaderMenuGroupAddMark, LeaderMenuGroupDisplay, LeaderMenuGroupApp,
 		},
 		actions: map[string][]string{
 			LeaderMenuGroupFile:      {ActionCompareRename, ActionCompareMassRename, ActionFileDelete},
 			LeaderMenuGroupSelection: {ActionPanelSelectRange, ActionPanelSelectGroup, ActionPanelUnselectGroup, ActionPanelClearSelection},
-			LeaderMenuGroupCompare: {
-				ActionCompareClose,
+			LeaderMenuGroupCategories: {
 				ActionCompareCycleFilter,
+				ActionCompareFilterAll,
 				ActionCompareFilterLeftOnly,
 				ActionCompareFilterRightOnly,
 				ActionCompareFilterModified,
 				ActionCompareFilterRelocated,
-				ActionCompareFilterAll,
-				ActionCompareResetFilter,
-				ActionCompareFilterDialog,
-				ActionCompareRefresh,
-				ActionCompareMerge,
-				ActionCompareToggleEmpty,
-				ActionCompareRelocatedName,
-				ActionPanelExternalBrowser,
 			},
+			LeaderMenuGroupFilter:  {ActionCompareFilterDialog, ActionCompareToggleEmpty, ActionCompareResetFilter},
+			LeaderMenuGroupMerge:   {ActionCompareMerge, ActionCompareRelocatedName},
+			LeaderMenuGroupCompare: {ActionCompareRefresh, ActionPanelExternalBrowser, ActionCompareClose},
 			LeaderMenuGroupAddMark: {ActionPanelPinToggle},
 			LeaderMenuGroupDisplay: {ActionDedupOpen, ActionJobsOpen, ActionMessagesOpen, ActionCommandsOpen},
 			LeaderMenuGroupApp:     {ActionAppShowHelp, ActionAppQuit},
 		},
 		column: map[string]int{
-			LeaderMenuGroupFile:      0,
-			LeaderMenuGroupSelection: 0,
-			LeaderMenuGroupCompare:   1,
-			LeaderMenuGroupAddMark:   2,
-			LeaderMenuGroupDisplay:   2,
-			LeaderMenuGroupApp:       2,
+			LeaderMenuGroupFile:       0,
+			LeaderMenuGroupSelection:  0,
+			LeaderMenuGroupCategories: 1,
+			LeaderMenuGroupFilter:     1,
+			LeaderMenuGroupMerge:      2,
+			LeaderMenuGroupCompare:    2,
+			LeaderMenuGroupAddMark:    3,
+			LeaderMenuGroupDisplay:    3,
+			LeaderMenuGroupApp:        3,
 		},
 	},
 	HelpDedup: {
@@ -349,10 +352,14 @@ func leaderMenuEntryForAction(keys map[string]string, actionID string) (LeaderMe
 	if !ok {
 		return LeaderMenuEntry{}, false
 	}
+	label := actionSpecTitle(actionID)
+	if spec, ok := SpecForAction(actionID); ok && spec.LeaderLabel != "" {
+		label = spec.LeaderLabel
+	}
 	return LeaderMenuEntry{
 		ActionID: actionID,
 		Key:      key,
-		Label:    actionSpecTitle(actionID),
+		Label:    label,
 	}, true
 }
 

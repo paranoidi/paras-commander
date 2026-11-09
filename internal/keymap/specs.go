@@ -48,6 +48,9 @@ type ActionSpec struct {
 	// Lowercase and uppercase are distinct (f vs F). Use lowercase for the frequent action
 	// and uppercase for a related secondary action on the same letter. Non-letters (e.g. ?) allowed.
 	LeaderKey string
+	// LeaderLabel overrides Title for the leader-menu row label (empty = Title), for an action
+	// whose group title already supplies the context the help title has to spell out.
+	LeaderLabel string
 	// CopyMenuKey is the activation character for the `"` copy menu (empty = excluded).
 	CopyMenuKey string
 	// CopyMenuLabel overrides Title for the copy-menu row label (empty = Title).
@@ -637,6 +640,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
 			Keywords:    []string{"back", "browser"},
 			LeaderKey:   "c",
+			LeaderLabel: "Close",
 		},
 		{
 			ID:          ActionCompareCycleFilter,
@@ -646,6 +650,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
 			Keywords:    []string{"equal", "relocated", "missing", "diff"},
 			LeaderKey:   "C",
+			LeaderLabel: "Choose categories…",
 		},
 		{
 			ID:          ActionCompareResetFilter,
@@ -655,6 +660,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
 			Keywords:    []string{"clear", "all", "show all"},
 			LeaderKey:   "r",
+			LeaderLabel: "Reset all filters",
 		},
 		{
 			ID:          ActionCompareFilterDialog,
@@ -664,6 +670,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
 			Keywords:    []string{"regex", "glob", "pattern", "narrow", "hide", "name"},
 			LeaderKey:   "f",
+			LeaderLabel: "Filter by name",
 		},
 		{
 			ID:          ActionCompareRefresh,
@@ -673,6 +680,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
 			Keywords:    []string{"rescan", "rehash"},
 			LeaderKey:   "R",
+			LeaderLabel: "Refresh",
 		},
 		{
 			ID:          ActionCompareMerge,
@@ -682,6 +690,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
 			Keywords:    []string{"sync", "reconcile", "copy", "duplicate"},
 			LeaderKey:   "m",
+			LeaderLabel: "Merge",
 		},
 		{
 			ID:          ActionCompareToggleEmpty,
@@ -700,6 +709,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
 			Keywords:    []string{"relocated", "rename", "name", "merge", "moved"},
 			LeaderKey:   "N",
+			LeaderLabel: "Name from this column",
 		},
 		{
 			ID:          ActionCompareRename,
@@ -727,6 +737,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
 			Keywords:    []string{"category", "filter", "missing", "one-sided"},
 			LeaderKey:   "l",
+			LeaderLabel: "Left only",
 		},
 		{
 			ID:          ActionCompareFilterRightOnly,
@@ -736,6 +747,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
 			Keywords:    []string{"category", "filter", "missing", "one-sided"},
 			LeaderKey:   "i",
+			LeaderLabel: "Right only",
 		},
 		{
 			ID:          ActionCompareFilterModified,
@@ -745,6 +757,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
 			Keywords:    []string{"category", "filter", "content", "diff", "different"},
 			LeaderKey:   "D",
+			LeaderLabel: "Modified",
 		},
 		{
 			ID:          ActionCompareFilterRelocated,
@@ -754,6 +767,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
 			Keywords:    []string{"category", "filter", "moved", "renamed"},
 			LeaderKey:   "o",
+			LeaderLabel: "Relocated",
 		},
 		{
 			ID:          ActionCompareFilterAll,
@@ -763,6 +777,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
 			Keywords:    []string{"category", "filter", "check", "every"},
 			LeaderKey:   "A",
+			LeaderLabel: "All",
 		},
 		{
 			ID:          ActionDedupClose,

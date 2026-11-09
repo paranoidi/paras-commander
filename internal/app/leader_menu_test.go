@@ -610,7 +610,7 @@ func TestColonKeyOpensPerViewLeaderMenuInCompare(t *testing.T) {
 		if it.GroupTitle == keymap.LeaderMenuGroupCompare {
 			foundGroup = true
 		}
-		if it.Key == 'c' && it.Label == "Close compare view" {
+		if it.Key == 'c' && it.Label == "Close" {
 			foundClose = true
 		}
 	}
@@ -618,7 +618,7 @@ func TestColonKeyOpensPerViewLeaderMenuInCompare(t *testing.T) {
 		t.Fatal("expected Compare group header")
 	}
 	if !foundClose {
-		t.Fatalf("items = %+v, want Close compare view with key c", app.model.LeaderMenu.Items)
+		t.Fatalf("items = %+v, want Close with key c", app.model.LeaderMenu.Items)
 	}
 
 	// Activating 'c' runs it through activateCompareHelpAction (tryDispatchCompare), closing
