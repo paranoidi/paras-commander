@@ -2086,7 +2086,7 @@ func TestFileIndexDriftPendingEndsWithThePass(t *testing.T) {
 
 	// The panel left the directory: the result is dropped, the wait still ends.
 	other, _ := pathloc.File(filepath.Join(dir, "elsewhere"))
-	if !a.applyIndexDrift(indexDriftPayload{panelID: a.model.ActivePanel, dir: other, seq: reqs[len(reqs)-1].Seq}) {
+	if !a.applyIndexDrift(indexDriftPayload{panelID: a.model.ActivePanel, dir: other, seq: reqs[len(reqs)-1].Seq, done: true}) {
 		t.Fatal("ending a pass the row waited on asks for no render")
 	}
 	if pending() {
@@ -2117,5 +2117,43 @@ func TestFileIndexDriftPendingEndsWithThePass(t *testing.T) {
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return !pending() })
 	if st, _ := entryStatus(a, name); st != localfs.IndexStatusIndexed {
 		t.Fatalf("status after a cancelled pass = %q, want indexed", st)
+	}
+}
+
+// A finished subdirectory settles its own row while the rest of the pass still runs.
+func TestFileIndexDriftSettlesEachDirectoryAsItFinishes(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	var reqs []panel.IndexDriftRequest
+	openIndexedParent(t, a, screen, dir, &reqs)
+	p, id, name, sibling := a.activePanel(), a.model.ActivePanel, filepath.Base(dir), "lantern"
+	p.Entries = append(p.Entries, localfs.Entry{Name: sibling, Path: filepath.Join(filepath.Dir(dir), sibling), Type: localfs.EntryDirectory, IndexStatus: localfs.IndexStatusIndexed})
+	pending := func(n string) bool {
+		for _, e := range p.Entries {
+			if e.Name == n {
+				return p.IndexDriftPending(e)
+			}
+		}
+		t.Fatalf("no row %s", n)
+		return false
+	}
+	reqs = nil
+	p.RequestIndexDrift(name, sibling)
+	seq := reqs[0].Seq
+	if !pending(name) || !pending(sibling) {
+		t.Fatal("rows are not waiting on the pass")
+	}
+
+	if !a.applyIndexDrift(indexDriftPayload{panelID: id, dir: p.Path, seq: seq, explicit: true, dirs: map[string]string{name: localfs.IndexStatusUnchecked}}) {
+		t.Fatal("a finished subdirectory asks for no render")
+	}
+	if st, _ := entryStatus(a, name); st != localfs.IndexStatusUnchecked || pending(name) {
+		t.Fatalf("finished row status = %q pending = %v, want its result and no wait", st, pending(name))
+	}
+	if !pending(sibling) {
+		t.Fatal("the other row stopped waiting before the pass reached it")
+	}
+
+	if !a.applyIndexDrift(indexDriftPayload{panelID: id, dir: p.Path, seq: seq, done: true}) || pending(sibling) {
+		t.Fatal("the end of the pass did not end the last row's wait")
 	}
 }

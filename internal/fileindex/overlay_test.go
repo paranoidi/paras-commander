@@ -180,7 +180,7 @@ func TestDirDrift(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got, err := x.DirDrift(context.Background(), root, []string{"orchard", "pasture", "marsh", "quarry", "meadow"}, 0)
+	got, err := dirDriftResults(x, context.Background(), root, []string{"orchard", "pasture", "marsh", "quarry", "meadow"}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -192,7 +192,7 @@ func TestDirDrift(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if _, err := x.DirDrift(ctx, root, []string{"orchard"}, 0); err == nil {
+	if _, err := dirDriftResults(x, ctx, root, []string{"orchard"}, 0); err == nil {
 		t.Fatal("a cancelled drift pass must return the context error")
 	}
 }
@@ -210,7 +210,7 @@ func TestDirDriftDepthLimit(t *testing.T) {
 	writeFile(t, root, "bramble/a/b/c/d/rush.txt", "new below depth")  // only visible unlimited
 	names := []string{"willow", "thistle", "bramble"}
 
-	got, err := x.DirDrift(context.Background(), root, names, 3)
+	got, err := dirDriftResults(x, context.Background(), root, names, 3)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,7 +223,7 @@ func TestDirDriftDepthLimit(t *testing.T) {
 
 	// A deep clean tree is indexed once the depth is unlimited; a difference below the limit
 	// shows only then.
-	got, err = x.DirDrift(context.Background(), root, names, 0)
+	got, err = dirDriftResults(x, context.Background(), root, names, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -311,5 +311,35 @@ func TestStatusOfSymlinksFollowsTheTarget(t *testing.T) {
 		if byName[name] != "" {
 			t.Errorf("index panel: %s = %q, want no status", name, byName[name])
 		}
+	}
+}
+
+// dirDriftResults collects what DirDrift yields.
+func dirDriftResults(x *Index, ctx context.Context, host string, subdirs []string, maxDepth int) (map[string]string, error) {
+	out := map[string]string{}
+	err := x.DirDrift(ctx, host, subdirs, maxDepth, func(name, status string) { out[name] = status })
+	return out, err
+}
+
+// DirDrift hands over each directory when its walk ends, so a cancel keeps what came before it.
+func TestDirDriftYieldsEachDirectoryAsItFinishes(t *testing.T) {
+	root := tree(t)
+	x := testIndex(t, initIndex(t))
+	writeFile(t, root, "orchard/apple/pear.txt", "pear")
+	writeFile(t, root, "quarry/stone/slate.txt", "slate")
+	overlayFixture(t, x, root, "orchard/apple/pear.txt", "quarry/stone/slate.txt")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var got []string
+	err := x.DirDrift(ctx, root, []string{"orchard", "quarry"}, 0, func(name, status string) {
+		got = append(got, name+"="+status)
+		cancel()
+	})
+	if err == nil {
+		t.Fatal("a cancelled drift pass must return the context error")
+	}
+	if len(got) != 1 || got[0] != "orchard="+StatusIndexed {
+		t.Fatalf("yielded %v, want only orchard, before the cancel", got)
 	}
 }

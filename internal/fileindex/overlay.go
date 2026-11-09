@@ -128,30 +128,29 @@ func (x *Index) ShownDir(dir pathloc.Path) string {
 	return ""
 }
 
-// DirDrift checks each of host's indexed subdirectories (names) against the index and returns
-// IndexStatusDiffers (driftWalk found a difference: a file the scan would add under the same rules,
+// DirDrift checks host's indexed subdirectories (names) against the index, one after the other, and
+// hands each to yield as its walk finishes, with IndexStatusDiffers (driftWalk found a difference: a file the scan would add under the same rules,
 // a file whose size or mtime differs, or a recorded file that Stat says is gone; unhashed files
 // count as indexed), IndexStatusUnchecked (nothing differs within maxDepth, but a directory lies
 // deeper) or IndexStatusIndexed. maxDepth counts directory levels below the subdirectory; 0 means
 // unlimited (never unchecked). Only recorded files within the depth are compared, and a recorded
 // file the walk does not reach (under an excluded directory, in an unreadable one, or no longer a
 // regular file) differs only when it is really gone. It walks each subtree, so it runs on its own
-// goroutine and stops when ctx is cancelled.
+// goroutine and stops with an error when ctx is cancelled; a name the index does not have is skipped.
 // ponytail: a full walk per subdir; cache by dir mtime if it proves slow. The depth-limited walk
 // re-implements scan.Rules.Walk's file filters; share them if fileindex exports a depth option.
-func (x *Index) DirDrift(ctx context.Context, host string, subdirs []string, maxDepth int) (map[string]string, error) {
+func (x *Index) DirDrift(ctx context.Context, host string, subdirs []string, maxDepth int, yield func(name, status string)) error {
 	if len(subdirs) == 0 {
-		return nil, nil
+		return nil
 	}
 	d, err := x.DB()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	rules, _, err := x.scanSettings()
 	if err != nil {
-		return nil, err
+		return err
 	}
-	out := map[string]string{}
 	for _, name := range subdirs {
 		differs := false
 		deeper, err := driftWalk(ctx, d, rules, filepath.Join(host, name), maxDepth, nil, func(Difference) bool {
@@ -162,18 +161,18 @@ func (x *Index) DirDrift(ctx context.Context, host string, subdirs []string, max
 			continue
 		}
 		if err != nil {
-			return nil, err
+			return err
 		}
 		switch {
 		case differs:
-			out[name] = StatusDiffers
+			yield(name, StatusDiffers)
 		case deeper:
-			out[name] = StatusUnchecked
+			yield(name, StatusUnchecked)
 		default:
-			out[name] = StatusIndexed
+			yield(name, StatusIndexed)
 		}
 	}
-	return out, nil
+	return nil
 }
 
 // ErrNotIndexed is returned by driftWalk (and the differences task) for a directory the index does

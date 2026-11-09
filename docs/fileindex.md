@@ -102,7 +102,8 @@ When several apply, the first of: scanning, missing, changed, excluded, new,
 differs, checking, unhashed, tagged, unchecked, indexed (a file that is both unhashed
 and tagged shows `unhashed`). A directory does not count unhashed files as a
 difference. Directories are checked in the background
-(flat layout only), and show `checking` until the check reports back. After each
+(flat layout only), one after the other, and each shows `checking` until its own
+check finishes. After each
 listing, every indexed directory is checked down to `browser_scan_max_depth`
 levels (default 3). A difference within that depth shows as `differs`; if there
 is none but the directory has folders deeper than that, it shows `unchecked`

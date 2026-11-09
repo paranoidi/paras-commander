@@ -115,7 +115,7 @@ func TestDriftWalkScenarios(t *testing.T) {
 		}
 	}
 	// The icon is the same walk: any difference is "differs".
-	got, err := x.DirDrift(context.Background(), root, []string{"clean", "new-file", "excluded-recorded", "unreadable", "symlink-dangling"}, 0)
+	got, err := dirDriftResults(x, context.Background(), root, []string{"clean", "new-file", "excluded-recorded", "unreadable", "symlink-dangling"}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +149,7 @@ func TestDriftWalkDepth(t *testing.T) {
 	if got := diffsOf(t, x, deep, 0); !slices.Equal(got, []string{"missing a/b/c/d/moss.txt", "new a/b/c/d/fern.txt"}) {
 		t.Errorf("unlimited differences = %q", got)
 	}
-	if got, _ := x.DirDrift(context.Background(), root, []string{"deep"}, 3); got["deep"] != StatusUnchecked {
+	if got, _ := dirDriftResults(x, context.Background(), root, []string{"deep"}, 3); got["deep"] != StatusUnchecked {
 		t.Errorf("DirDrift depth 3 = %q, want unchecked", got["deep"])
 	}
 }

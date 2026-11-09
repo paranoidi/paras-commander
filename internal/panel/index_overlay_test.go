@@ -181,3 +181,27 @@ func TestIndexDriftPendingFollowsThePass(t *testing.T) {
 		t.Fatalf("pending after a refused pass = %v", s.indexDriftPending)
 	}
 }
+
+func TestFinishIndexDriftDirsEndsOnlyTheNamedRows(t *testing.T) {
+	root, _ := pathloc.File("/vol")
+	var reqs []IndexDriftRequest
+	s := State{Path: root, WithIndex: true, ScheduleIndexDrift: func(r IndexDriftRequest) bool { reqs = append(reqs, r); return true }, Entries: []localfs.Entry{
+		{Name: "orchard", Path: "/vol/orchard", Type: localfs.EntryDirectory, IndexStatus: localfs.IndexStatusIndexed},
+		{Name: "marsh", Path: "/vol/marsh", Type: localfs.EntryDirectory, IndexStatus: localfs.IndexStatusIndexed},
+		{Name: "quarry", Path: "/vol/quarry", Type: localfs.EntryDirectory, IndexStatus: localfs.IndexStatusIndexed},
+	}}
+	pending := func(i int) bool { return s.IndexDriftPending(s.Entries[i]) }
+
+	s.scheduleIndexDrift()
+	first := reqs[0].Seq
+	s.RequestIndexDrift("marsh") // the newer pass owns marsh
+
+	s.FinishIndexDriftDirs(map[string]uint64{"orchard": first, "marsh": first})
+	if pending(0) || !pending(1) || !pending(2) {
+		t.Fatalf("pending after the first pass reported orchard and marsh = %v", s.indexDriftPending)
+	}
+	s.FinishIndexDriftDirs(map[string]uint64{"marsh": reqs[1].Seq})
+	if pending(1) || !pending(2) {
+		t.Fatalf("pending after the newer pass reported marsh = %v", s.indexDriftPending)
+	}
+}

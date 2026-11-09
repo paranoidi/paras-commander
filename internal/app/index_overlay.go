@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"maps"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -17,14 +18,15 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-// indexDriftPayload carries the end of one panel's drift pass: seq (panel.IndexDriftRequest.Seq)
-// and the result (subdirectory name to differs, unchecked or indexed), nil when the pass failed
-// or was cancelled.
+// indexDriftPayload carries progress of one panel's drift pass seq (panel.IndexDriftRequest.Seq):
+// a finished subdirectory (dirs, name to differs, unchecked or indexed) or the end of the pass
+// (done), however it ended.
 type indexDriftPayload struct {
 	panelID int
 	dir     pathloc.Path
 	seq     uint64
 	dirs    map[string]string
+	done    bool
 	// explicit marks the result of an explicit (unlimited) request; it is never overwritten by
 	// a later automatic result.
 	explicit bool
@@ -189,32 +191,38 @@ func (a *App) indexDriftScheduler(panelID int) panel.IndexDriftScheduler {
 		ctx := st.ctx[panelID]
 		st.mu.Unlock()
 		go func() {
-			var dirs map[string]string
-			if host, err := fileindex.IndexPath(req.Dir.String()); err == nil {
-				if res, err := a.fileIndex.DirDrift(ctx, filepath.Clean(host), req.Subdirs, req.MaxDepth); err == nil {
-					dirs = res
+			post := func(p indexDriftPayload) {
+				p.panelID, p.dir, p.seq, p.explicit = panelID, req.Dir, req.Seq, req.Explicit
+				if asyncWakes(a).indexDrift.push(p) {
+					postGuaranteedWake(a.screen, indexDriftPayload{})
 				}
 			}
-			if asyncWakes(a).indexDrift.push(indexDriftPayload{panelID: panelID, dir: req.Dir, seq: req.Seq, dirs: dirs, explicit: req.Explicit}) {
-				postGuaranteedWake(a.screen, indexDriftPayload{})
+			if host, err := fileindex.IndexPath(req.Dir.String()); err == nil {
+				// A failed or cancelled pass keeps what it reported; the end below settles the rest.
+				_ = a.fileIndex.DirDrift(ctx, filepath.Clean(host), req.Subdirs, req.MaxDepth, func(name, status string) {
+					post(indexDriftPayload{dirs: map[string]string{name: status}})
+				})
 			}
+			post(indexDriftPayload{done: true})
 		}()
 		return true
 	}
 }
 
-// applyIndexDrift ends the panels' wait on the finished passes and applies their results on the
-// UI goroutine; results for panels that left the directory or no longer browse with fileindex are
-// dropped.
+// applyIndexDrift applies the queued drift progress on the UI goroutine, merged per panel so a
+// batch walks each listing once. Results for panels that left the directory or no longer browse
+// with fileindex are dropped; the end of a pass ends the wait on its rows regardless.
 func (a *App) applyIndexDrift(p indexDriftPayload) bool {
 	items := asyncWakes(a).indexDrift.drain()
 	if len(items) == 0 {
 		items = []indexDriftPayload{p}
 	}
 	changed := false
+	var results [ui.PanelIDCount]map[string]string
+	var finished [ui.PanelIDCount]map[string]uint64
 	for _, it := range items {
 		pan := a.panelByID(it.panelID)
-		if pan.FinishIndexDrift(it.seq) {
+		if it.done && pan.FinishIndexDrift(it.seq) {
 			changed = true
 		}
 		if it.dirs == nil || !pan.WithIndex || !pan.Path.Equal(it.dir) {
@@ -234,8 +242,21 @@ func (a *App) applyIndexDrift(p indexDriftPayload) bool {
 				}
 			}
 		}
-		pan.ApplyIndexDrift(res)
+		if results[it.panelID] == nil {
+			results[it.panelID], finished[it.panelID] = map[string]string{}, map[string]uint64{}
+		}
+		maps.Copy(results[it.panelID], res)
+		for n := range it.dirs {
+			finished[it.panelID][n] = max(finished[it.panelID][n], it.seq)
+		}
 		changed = true
+	}
+	for id, res := range results {
+		if res != nil {
+			pan := a.panelByID(id)
+			pan.ApplyIndexDrift(res)
+			pan.FinishIndexDriftDirs(finished[id])
+		}
 	}
 	return changed
 }

@@ -65,8 +65,8 @@ func (s *State) requestIndexDrift(maxDepth int, explicit bool, want func(name st
 	}
 }
 
-// FinishIndexDrift ends the wait on the drift pass seq, leaving directories a newer pass also
-// covers, and reports whether any row stopped waiting.
+// FinishIndexDrift ends the wait on the whole drift pass seq, leaving directories a newer pass
+// also covers, and reports whether any row stopped waiting.
 func (s *State) FinishIndexDrift(seq uint64) bool {
 	changed := false
 	for p, pending := range s.indexDriftPending {
@@ -76,6 +76,16 @@ func (s *State) FinishIndexDrift(seq uint64) bool {
 		}
 	}
 	return changed
+}
+
+// FinishIndexDriftDirs ends the wait on the named rows of the listing, each only if the given
+// pass (name to Seq) is the newest that covers it.
+func (s *State) FinishIndexDriftDirs(seqs map[string]uint64) {
+	for _, e := range s.Entries {
+		if seq, ok := seqs[e.Name]; ok && s.indexDriftPending[e.Path] == seq {
+			delete(s.indexDriftPending, e.Path)
+		}
+	}
 }
 
 // IndexDriftPending reports whether the row is a directory whose state a running drift pass has
