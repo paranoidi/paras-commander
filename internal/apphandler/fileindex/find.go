@@ -24,7 +24,9 @@ type FindPayload struct {
 	Gen       int
 	Results   []dialog.IndexFindResult
 	Truncated bool
-	Err       error
+	// Unverified counts the Results flagged Unverified (Find unique files).
+	Unverified int
+	Err        error
 }
 
 // OpenFindDialog opens the find-in-index dialog for panel panelID, a fileindex:// or local panel
@@ -44,7 +46,7 @@ func (h *Handler) openFindDialog(panelID int, jump bool) {
 		return
 	}
 	if st := &h.model.IndexFindDialog; st.Parked {
-		if st.PanelID == panelID && st.JumpMode == jump && st.Root == root {
+		if !st.UniqueMode && st.PanelID == panelID && st.JumpMode == jump && st.Root == root {
 			h.RestoreParkedFind()
 			return
 		}
@@ -91,6 +93,8 @@ func (h *Handler) CloseFindDialog() {
 		h.findTimer.Stop()
 		h.findTimer = nil
 	}
+	h.uniqueGen++
+	h.uniqueScanning, h.unique = false, fi.UniqueResult{}
 	gen := h.model.IndexFindDialog.Gen + 1
 	h.model.IndexFindDialog = dialog.IndexFindDialogState{Gen: gen} // a late result never matches
 }
@@ -104,6 +108,10 @@ func (h *Handler) scheduleFind(delay time.Duration) {
 	}
 	st.Gen++
 	st.Err = ""
+	if st.UniqueMode {
+		h.scheduleUniqueFilter(delay)
+		return
+	}
 	if strings.TrimSpace(st.Query) == "" {
 		st.Results, st.Truncated, st.Searching = nil, false, false
 		st.Selected, st.ListScroll = 0, 0
@@ -142,7 +150,7 @@ func (h *Handler) HandleFind(p FindPayload) {
 		return
 	}
 	st.Searching = false
-	st.Results, st.Truncated, st.Selected, st.ListScroll = p.Results, p.Truncated, 0, 0
+	st.Results, st.Truncated, st.UnverifiedCount, st.Selected, st.ListScroll = p.Results, p.Truncated, p.Unverified, 0, 0
 	if p.Err != nil {
 		st.Err = p.Err.Error()
 	}
@@ -178,7 +186,7 @@ func (h *Handler) debounce() time.Duration {
 // toggling, the widget engine, then query editing.
 func (h *Handler) HandleFindKey(ev *tcell.EventKey) {
 	st := &h.model.IndexFindDialog
-	if id, ok := h.keys.Lookup(ev); ok && findctrl.IsParkKey(id, st.JumpMode) {
+	if id, ok := h.keys.Lookup(ev); ok && parksFind(st, id) {
 		st.Open, st.Parked = false, true // hidden with its state kept; the opener key shows it again
 		return
 	}
@@ -227,12 +235,23 @@ func (h *Handler) HandleFindKey(ev *tcell.EventKey) {
 	}
 }
 
+// parksFind reports whether action id parks the dialog: the action that opened it.
+func parksFind(st *dialog.IndexFindDialogState, id string) bool {
+	if st.UniqueMode {
+		return id == keymap.ActionFileIndexFindUnique
+	}
+	return findctrl.IsParkKey(id, st.JumpMode)
+}
+
 // runFindAction runs a [dialog.find] action this dialog supports; the other find.* actions are
 // swallowed, anything else is not handled (false). The advanced criteria need file metadata the
 // index does not keep, so their toggle and reset are swallowed; the match mode cycle steps
-// Pattern / Boolean.
+// Pattern / Boolean, which Find unique files does not have.
 func (h *Handler) runFindAction(id string) bool {
 	st := &h.model.IndexFindDialog
+	if st.UniqueMode && id == keymap.ActionFindCycleMatchMode {
+		return true
+	}
 	switch id {
 	case keymap.ActionPanelSelectToggle, keymap.ActionFindView, keymap.ActionFindEdit, keymap.ActionFindUnselectAll,
 		keymap.ActionFindSelectAll, keymap.ActionFindSelectGroup, keymap.ActionFindUnselectGroup,

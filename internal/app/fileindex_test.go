@@ -42,6 +42,7 @@ var fileIndexActions = []string{
 	keymap.ActionFileIndexFindDuplicates,
 	keymap.ActionFileIndexCopies,
 	keymap.ActionFileIndexCopiesOutside,
+	keymap.ActionFileIndexFindUnique,
 }
 
 func TestFileIndexActionsInHelpAndMenus(t *testing.T) {

@@ -111,6 +111,10 @@ _Avoid_: index panel, database view
 A local panel (`State.WithIndex`) whose listing has the index merged in: each row carries an `IndexStatus` shown as an icon in the git strip, and entries only the index knows appear as ghost rows. Contrast with the index view, which replaces the filesystem.
 _Avoid_: index overlay mode
 
+**Unique file**:
+An indexed file with no confirmed copy outside a scope of directories: what deleting that scope would lose, as far as the index knows. Copies inside the scope do not count. A file whose copies cannot be ruled out (not fully hashed, or a potential duplicate outside) is still unique, flagged unverified.
+_Avoid_: orphan, singleton
+
 **Ghost row**:
 A row of a browse-with-fileindex panel for an entry recorded in the index but gone from disk. Its path is a `fileindex://` path, so delete removes it from the index; copy, move, view and edit refuse it.
 

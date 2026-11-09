@@ -108,12 +108,11 @@ func (x *Index) DedupOutside(ctx context.Context, dir string) ([]compare.FileRec
 	if err != nil {
 		return nil, nil, err
 	}
-	prefix := strings.TrimSuffix(host, "/") + "/"
+	prefixes := []string{dirPrefix(host)}
 	// spans reports whether g has a member inside dir and one outside it.
 	spans := func(g db.DupGroup) bool {
-		in := slices.ContainsFunc(g.Locations, func(p string) bool { return strings.HasPrefix(p, prefix) })
-		out := slices.ContainsFunc(g.Locations, func(p string) bool { return !strings.HasPrefix(p, prefix) })
-		return in && out
+		in := slices.ContainsFunc(g.Locations, func(p string) bool { return underAnyPrefix(p, prefixes) })
+		return in && hasLocationOutside(g, prefixes)
 	}
 	potential, err := d.PotentialDuplicates(filter, false)
 	if err != nil {

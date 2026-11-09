@@ -1581,6 +1581,16 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:         []string{"fileindex", "index", "duplicate", "dedup", "dupes", "identical"},
 			FileIndexMenuKey: "F", // uppercase of fileindex.find's letter
 		},
+		{
+			ID:               ActionFileIndexFindUnique,
+			Views:            HelpBrowser,
+			Title:            "Find unique files",
+			Section:          "File Index",
+			DefaultKeys:      []string{"M-U"},
+			PreferredKey:     "M-U",
+			Keywords:         []string{"fileindex", "index", "unique", "copies", "outside", "backup", "only", "safe", "delete"},
+			FileIndexMenuKey: "u",
+		},
 
 		// ── File operations ──
 		{

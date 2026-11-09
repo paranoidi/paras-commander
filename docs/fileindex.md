@@ -47,6 +47,7 @@ fileindex. The keys below are the defaults; rebind the shortcuts under
 | `M-W` | `F` | [Find duplicates](find-duplicates.md) from the index for the current directory, also from a normal panel: it never reads the disk, so it only sees indexed files (selected directories on a normal panel are ignored) |
 | `M-O` | `o` | [Other copies](#other-copies) of the file under the cursor, from the index |
 | `M-D` | `d` | [Copies outside directory](#copies-outside-directory): files under the current directory that also exist elsewhere in the index |
+| `M-U` | `u` | [Find unique files](#find-unique-files): files under the current or selected directories with no copy outside them |
 | `M-S` | `s` | Scan the selected entries, else the current directory (the menu says which) |
 | `M-A` | `S` | [Fast scan](#scan-and-prune) the selected entries, else the current directory: hash only the first 8 KB of larger files |
 | `M-P` | `p` | Remove what is gone from disk under the current directory |
@@ -288,6 +289,41 @@ root itself has nothing outside it.
   potential duplicate, as in Find duplicates.
 - Copies are matched as in [Other copies](#other-copies); the answer is what the last scans
   recorded. A JPEG copy that differs only in metadata is listed with the group's smallest size.
+
+## Find unique files
+
+`M-U` answers "what would I lose if I deleted this?". It opens a dialog like
+[Find in index](#finding-in-the-index) listing the files with no copy outside the directory. It
+works on local and `fileindex://` panels and never reads the disk. What it checks depends on the
+panel selection:
+
+| Selection | Checked |
+|---|---|
+| None | The current directory |
+| Directories | Those directories, as one scope: a copy in another selected directory is not outside, so the list is what deleting all of them would lose |
+| Only files | The current directory; the selection is ignored and kept |
+| Files and directories | Nothing: an error toast says to select one kind, and the dialog does not open |
+
+The index root has nothing outside it, so it is refused. A selected directory the index does not
+know is named in a warning above the list.
+
+The list loads when the dialog opens and shows everything from an empty query. Typing narrows it
+by name, like Pattern mode in Find in index. The depth box works the same way, and **Include hidden**
+starts on here, so a hidden unique file is not missed; untick it to leave out directories
+like `.git`. Results are capped at `[ui.find].max_results`, and the title shows `N+` when more
+matched. Marks, `F3`, `F4`, opening in a panel, pinning, and hiding the dialog with the key that opened
+it all work as in Find in index.
+
+- A file is hidden only when a fully hashed copy outside is confirmed. Copies are matched as in
+  [Other copies](#other-copies), so a JPEG copy differing only in metadata counts as a copy.
+- Files whose copies cannot be ruled out are still listed, with the "not hashed yet" icon, and the
+  title counts them (`12, 3 not fully hashed`). That covers files not fully hashed, and files with
+  a [potential duplicate](find-duplicates.md) outside. A full [scan](#scan-and-prune) settles them.
+- Empty files are not listed: they have no content to lose, and their copies are not tracked.
+- Copies inside the scope do not count, so all copies of a file that exists only inside it are listed.
+- The answer is what the last scans recorded. A copy deleted from disk still counts until it is
+  [pruned](#scan-and-prune), and a copy never scanned is unknown, so scan and prune the places you
+  rely on before deleting anything based on this list.
 
 ## Columns
 

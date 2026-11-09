@@ -249,6 +249,7 @@ const (
 	ActionFileIndexCopiesOutside     = "fileindex.copies-outside"
 	ActionFileIndexReportDifferences = "fileindex.report-differences"
 	ActionFileIndexFindDuplicates    = "fileindex.find-duplicates"
+	ActionFileIndexFindUnique        = "fileindex.find-unique"
 
 	// Jobs dialog
 	ActionJobsOpen          = "jobs.open"
@@ -607,6 +608,7 @@ var KnownActions = map[string]struct{}{
 	ActionFileIndexCopiesOutside:     {},
 	ActionFileIndexReportDifferences: {},
 	ActionFileIndexFindDuplicates:    {},
+	ActionFileIndexFindUnique:        {},
 
 	ActionMenuFileChattr: {},
 

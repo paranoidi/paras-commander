@@ -13,6 +13,8 @@ const (
 	copiesTitle         = "Other copies"
 	copiesOutsideTitle  = "Copies outside directory"
 	findDuplicatesTitle = "Find duplicates"
+	// indexRootNothingOutside refuses the checks against "elsewhere in the index" at its root.
+	indexRootNothingOutside = "The index root has nothing outside it"
 )
 
 // CopiesPayload carries the outcome of one fileindex.other-copies lookup for the file at Path (the
@@ -64,7 +66,7 @@ func (h *Handler) CopiesOutside() {
 		return
 	}
 	if dir == "/" { // the index root: everything is inside it
-		h.host.SetTransientMessage("The index root has nothing outside it", ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage(indexRootNothingOutside, ui.MessageUrgencyWarn)
 		return
 	}
 	h.host.OpenDedupOutside(dir)

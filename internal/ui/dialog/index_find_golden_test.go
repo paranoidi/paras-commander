@@ -2,6 +2,7 @@ package dialog
 
 import (
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
@@ -65,5 +66,17 @@ func TestIndexFindGoldenRender(t *testing.T) {
 	ok.Focus = dlg.OK
 	add("focus-ok", 100, 30, ok)
 	add("narrow60", 60, 24, st)
+	unique := st
+	unique.UniqueMode, unique.IncludeHidden, unique.Query, unique.QueryCursor = true, true, "", 0
+	unique.Results = slices.Clone(st.Results)
+	unique.Results[1].Unverified, unique.Results[2].Unverified = true, true
+	unique.UnverifiedCount = 2
+	add("unique", 100, 30, unique)
+	note := unique
+	note.Note = "Not in the index: /home/meadow/thistle"
+	add("unique_note", 100, 30, note)
+	scanning := unique
+	scanning.Results, scanning.UnverifiedCount, scanning.Searching = nil, 0, true
+	add("unique_searching", 100, 30, scanning)
 	runSimpleGoldens(t, "index_find", cases)
 }

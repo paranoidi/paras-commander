@@ -21,6 +21,7 @@ type FindRelocateState struct {
 	Index   bool   // the parked search is Find in index
 	PanelID int    // where a new search starts
 	Jump    bool
+	Unique  bool   // a new search is Find unique files
 	Root    string // where the parked search searches
 }
 

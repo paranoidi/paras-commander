@@ -5,6 +5,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
@@ -40,15 +41,24 @@ func IndexFindListRows(layout Layout) int {
 	return fittedListHeight(IndexFindDialogView(&IndexFindDialogState{}, IndexFindViewContext{Layout: layout}), layout, IndexFindList)
 }
 
+// FindUniqueTitle names the Find unique files form of the dialog.
+const FindUniqueTitle = "Find unique files"
+
 func indexFindTitle(st *IndexFindDialogState, styles theme.Theme) string {
 	title := "Find in index"
-	if st.JumpMode {
+	switch {
+	case st.JumpMode:
 		title = "Jump to directory"
+	case st.UniqueMode:
+		title = FindUniqueTitle
 	}
-	if st.Err == "" && st.Query != "" && !st.Searching {
+	if st.Err == "" && (st.Query != "" || st.UniqueMode) && !st.Searching {
 		suffix := ""
 		if st.Truncated {
 			suffix = "+"
+		}
+		if st.UnverifiedCount > 0 {
+			suffix += fmt.Sprintf(", %d not fully hashed", st.UnverifiedCount)
 		}
 		title = fmt.Sprintf("%s (%d%s)", title, len(st.Results), suffix)
 	}
@@ -59,8 +69,8 @@ func indexFindTitle(st *IndexFindDialogState, styles theme.Theme) string {
 }
 
 // IndexFindDialogView is the find-in-index dialog's widget spec: the query, the Pattern / Boolean and
-// Only directories / Only files radios (hidden in jump mode), the result list driven by the
-// query and OK / Cancel.
+// Only directories / Only files radios (hidden in jump and unique mode), the result list driven by
+// the query and OK / Cancel.
 func IndexFindDialogView(st *IndexFindDialogState, ctx IndexFindViewContext) dlg.Spec {
 	const gap = 5
 	query := dlg.Item{ID: IndexFindQuery, Kind: dlg.KindInput, Grow: true, Drives: IndexFindList, Invalid: st.NoMatches(),
@@ -70,7 +80,7 @@ func IndexFindDialogView(st *IndexFindDialogState, ctx IndexFindViewContext) dlg
 		Tooltip: findDepthSyntax + "\nIt filters the indexed results; nothing is read from disk."}
 	col := []dlg.Item{{Kind: dlg.KindRow, Cells: []dlg.Item{query, depth}}}
 	options := []dlg.Item{}
-	if !st.JumpMode {
+	if !st.JumpMode && !st.UniqueMode {
 		col = append(col, dlg.Item{Kind: dlg.KindRow, Cells: []dlg.Item{
 			{ID: IndexFindPattern, Kind: dlg.KindRadio, Label: "Pattern", Mnemonic: 'P', On: !st.Boolean, Gap: gap},
 			{ID: IndexFindBoolean, Kind: dlg.KindRadio, Label: "Boolean", Mnemonic: 'B', On: st.Boolean},
@@ -86,6 +96,9 @@ func IndexFindDialogView(st *IndexFindDialogState, ctx IndexFindViewContext) dlg
 		col = append(col, dlg.Item{ID: IndexFindSelections, Kind: dlg.KindCheckbox, Label: "Search only from selected directories", Mnemonic: 'S', On: st.SearchOnlySelections})
 	}
 	col = append(col, dlg.Item{Kind: dlg.KindSeparator})
+	if st.Note != "" {
+		col = append(col, dlg.Item{Kind: dlg.KindLabel, Label: st.Note, Style: dlg.TextWarn, Fit: dlg.FitPath})
+	}
 	if st.Err != "" {
 		col = append(col, dlg.Item{Kind: dlg.KindLabel, Label: st.Err, Style: dlg.TextError})
 	}
@@ -106,6 +119,9 @@ func IndexFindDialogView(st *IndexFindDialogState, ctx IndexFindViewContext) dlg
 				if r.IsDir {
 					row.Icon = ctx.Styles.IconFolder()
 				}
+			}
+			if glyph := ctx.Styles.IconFileIndexState(localfs.IndexStatusUnhashed); r.Unverified && glyph != 0 {
+				row.Icon = string(glyph) // shown with devicons off too: it carries meaning
 			}
 			if ctx.RowMarks != nil {
 				row.Marks = ctx.RowMarks(pathloc.FileIndexPrefix + r.Path)

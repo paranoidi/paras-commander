@@ -99,6 +99,12 @@ type Handler struct {
 	// viewer it opened (find.view): IndexFindDialog.Open is false, a query in flight still lands,
 	// and ReopenFindAfterPreviewClose shows the dialog again as it was.
 	findHiddenForView bool
+	// uniqueGen identifies the current Find unique files lookup; a later close moves it on, so a
+	// lookup still running lands on nothing. uniqueScanning is set while that lookup runs and
+	// unique holds what it found (UI goroutine only; a filter goroutine only reads a landed unique).
+	uniqueGen      int
+	uniqueScanning bool
+	unique         fi.UniqueResult
 	// pendingInit is the action waiting on the open "create the database?" prompt (nil: none).
 	pendingInit func()
 	// initRunning is set while a confirmed create or upgrade runs (menu-bar spinner).
@@ -148,6 +154,10 @@ func (h *Handler) Dispatch(actionID string) bool {
 		if h.localOrIndex() {
 			h.OpenFindDialog(h.model.ActivePanel, false)
 		}
+	case keymap.ActionFileIndexFindUnique:
+		if h.localOrIndex() {
+			h.withIndex(h.FindUnique)
+		}
 	case keymap.ActionFileIndexBrowseWith:
 		h.withIndex(h.BrowseWith)
 	case keymap.ActionFileIndexBrowse:
@@ -184,6 +194,8 @@ func (h *Handler) HandleWake(data any) bool {
 		h.HandleNavigate(p)
 	case FindPayload:
 		h.HandleFind(p)
+	case UniquePayload:
+		h.HandleUnique(p)
 	case CopiesPayload:
 		h.HandleCopies(p)
 	case DifferencesPayload:
