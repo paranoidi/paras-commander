@@ -67,3 +67,9 @@ type Handler struct {
 	// ops is the Operations window's background fetch and fuzzy-scan bookkeeping (operations.go).
 	ops opsState
 }
+
+// SetConfig replaces the handler's configuration snapshot (configuration reload). Called on the
+// UI goroutine; work already started keeps the values it read.
+func (h *Handler) SetConfig(cfg config.Config) {
+	h.config = cfg
+}

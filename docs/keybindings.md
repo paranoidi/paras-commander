@@ -62,7 +62,7 @@ Problems abort startup with a message naming the problem:
 - values that are not lists of strings
 - `[leader_key]`, `[copy_menu]`, `[preview_menu]` and `[fileindex_menu]` values that are not valid letters, or are duplicated within one menu
 
-Fix the file or move it aside and run `pc` again.
+Fix the file or move it aside and run `pc` again. While `pc` is running, Options → Reload configuration applies an edited file; a file with any of these problems shows an error toast and the current shortcuts stay in effect.
 
 ## Terminal limits
 

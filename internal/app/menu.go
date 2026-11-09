@@ -249,16 +249,7 @@ func (a *App) activateMenuSelection(def menu.Definition, item menu.Item) bool {
 			a.dispatchFileMenuItem(item)
 		}
 	case menu.TopOptions:
-		switch item.Action {
-		case keymap.ActionUIOpenTheme:
-			a.openThemeDialog()
-		case keymap.ActionUIOpenConfig:
-			a.openConfigDialog()
-		case keymap.ActionPreviewSettingsDialog:
-			a.openPreviewSettingsDialog()
-		case keymap.ActionUICalibrateDebounce:
-			a.openDebounceCalibrateDialog()
-		default:
+		if !a.runOptionsAction(item.Action) {
 			a.setUnsupportedMessage(item.Label)
 		}
 	case menu.TopJobs, menu.TopCommands, menu.TopMessages, menu.TopCompare, menu.TopDedup, menu.TopUnique:
@@ -362,4 +353,24 @@ func (a *App) selectMenuShortcut(shortcut rune) bool {
 		return true
 	}
 	return false
+}
+
+// runOptionsAction runs an Options pulldown action (also reachable through a key binding) and
+// reports whether actionID is one.
+func (a *App) runOptionsAction(actionID string) bool {
+	switch actionID {
+	case keymap.ActionUIOpenTheme:
+		a.openThemeDialog()
+	case keymap.ActionUIOpenConfig:
+		a.openConfigDialog()
+	case keymap.ActionPreviewSettingsDialog:
+		a.openPreviewSettingsDialog()
+	case keymap.ActionUICalibrateDebounce:
+		a.openDebounceCalibrateDialog()
+	case keymap.ActionUIReloadConfig:
+		a.reloadConfiguration()
+	default:
+		return false
+	}
+	return true
 }

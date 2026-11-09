@@ -26,6 +26,27 @@ left unchanged. It's the fastest way to get a copy of every available key, corre
 named and up to date with the installed binary — treat it as more
 authoritative than any example in this document if the two ever disagree.
 
+## Reloading while running
+
+**Options → Reload configuration** (F9 opens the menu bar) re-reads
+`config.toml`, `keybindings.toml` and the themes directory without restarting.
+All three are loaded and checked first. If any of them fails (an unknown key, an
+invalid shortcut, a theme that cannot be found), an error toast names the
+problem and nothing changes. Otherwise everything is applied at once and a toast
+confirms it. Session-only toggles of saved settings, such as the zoom and pane
+split overrides, return to their configured values.
+
+These settings drive background machinery that is set up once at startup. A
+reload keeps them at their running values and the toast warns that a restart is
+needed:
+
+- `[jobs]`, `[operations]`, `[adaptive_io]`, `[fileindex]`, `[pools]`
+- `[compare].read_buffer_kib`, `[commands].force_color`
+- `[panels].watch_directories`, `[panels].refresh_interval_ms`, `[panels].respect_gitignore`
+
+`menu.toml`, `meta.toml` and `status.toml` are read when they are used, so they
+need no reload.
+
 ## Related but separate files
 
 These live alongside `config.toml` in the same config directory but are

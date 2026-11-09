@@ -76,6 +76,7 @@ func Definitions() []Definition {
 		{Action: keymap.ActionPreviewSettingsDialog, Label: "Preview settings", Shortcut: 'p'},
 		{Action: keymap.ActionUICalibrateDebounce, Label: "Calibrate Debounce", Shortcut: 'd'},
 		{Action: keymap.ActionUIOpenTheme, Label: "Theme", Shortcut: 't'},
+		{Action: keymap.ActionUIReloadConfig, Label: "Reload configuration", Shortcut: 'r'},
 	}
 
 	return []Definition{

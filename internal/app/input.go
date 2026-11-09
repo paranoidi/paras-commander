@@ -1349,14 +1349,9 @@ func (a *App) dispatch(actionID string) bool {
 		a.openCopyGitMenu()
 	case keymap.ActionAppUserMenuEdit:
 		a.editUserMenu()
-	case keymap.ActionUIOpenTheme:
-		a.openThemeDialog()
-	case keymap.ActionUIOpenConfig:
-		a.openConfigDialog()
-	case keymap.ActionPreviewSettingsDialog:
-		a.openPreviewSettingsDialog()
-	case keymap.ActionUICalibrateDebounce:
-		a.openDebounceCalibrateDialog()
+	case keymap.ActionUIOpenTheme, keymap.ActionUIOpenConfig, keymap.ActionPreviewSettingsDialog,
+		keymap.ActionUICalibrateDebounce, keymap.ActionUIReloadConfig:
+		a.runOptionsAction(actionID)
 	case keymap.ActionUIStatusCommands:
 		a.openStatusCommandsDialog()
 	case keymap.ActionPanelViMotionToggle:

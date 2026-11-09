@@ -677,13 +677,6 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 			Primary:                    left,
 			Secondary:                  right,
 			ActivePanel:                ui.PrimaryPanel,
-			SelectedPanelMaxRows:       cfg.UI.SelectedPanelMaxRows,
-			SelectedPanelActivePercent: cfg.UI.SelectedPanelActivePercent,
-			HideMenuBar:                !cfg.UI.ShowMenuBar,
-			UseNerdfontIcons:           cfg.UI.UseNerdfontIcons,
-			CarouselLayout:             carouselLayoutFromConfig(cfg.Carousel),
-			NarrowPanelsNameOnly:       cfg.UI.NarrowPanelsNameOnly,
-			OtherPanelMatchMarks:       cfg.UI.OtherPanelMatchMarks,
 			JobsThroughputChartEnabled: cfg.Jobs.ThroughputChartEnabled,
 			JobsOpsBottom:              cfg.Jobs.OperationsLayout == config.JobsOperationsLayoutBottom,
 			JobsOpsNewestLast:          cfg.Jobs.OperationsOrder == config.JobsOperationsOrderNewestLast,
@@ -692,7 +685,6 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 			DiskUsage:                  duEngine,
 			DiskUsageShown:             false,
 			ViewMode:                   ui.ViewBrowser,
-			JobsFilterCaseInsensitive:  cfg.Filter.CaseInsensitive,
 			MenuDefinitions:            menu.BrowserDefinitions(keys.Global, opts.DevMode),
 			ThemeDialog: dialog.ThemeDialogState{
 				CurrentName: styles.Name,
@@ -702,10 +694,6 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 				ActiveMenu: menu.DefaultIndex(),
 			},
 			FooterKeys: menu.FunctionKeys,
-			// TerminalPanel starts hidden; input.go (later phase) owns toggle/resize/focus.
-			TerminalPanel: ui.TerminalPanelState{
-				Rows: cfg.Shell.TerminalPanelHeight,
-			},
 		},
 		jobState:     jobState,
 		jobStopCh:    make(chan struct{}),
@@ -718,6 +706,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		gitignoreCache: giCache,
 		gitStatusCache: gitstatus.NewCache(),
 	}
+	applyConfigToModel(&app.model, cfg)
 	app.syncCarouselQuickViewOrdering()
 	// Live config: the settings dialog replaces app.config in place, so read it on every call.
 	app.model.Primary.FilterOptions = app.quickFilterOptions
@@ -1029,19 +1018,26 @@ func resolveThemes(opts Options) (styles theme.Theme, availableThemes map[string
 			return theme.Theme{}, nil, nil, fmt.Errorf("load theme choices: %w", err)
 		}
 	}
-	availableThemes = map[string]theme.Theme{}
-	for _, choice := range themeChoices {
-		availableThemes[choice.Name] = choice.Theme
+	availableThemes, themeChoices = themeRegistry(styles, themeChoices)
+	return styles, availableThemes, themeChoices, nil
+}
+
+// themeRegistry indexes themeChoices by name and registers the active theme as a choice when it
+// is not one already (e.g. a config-only custom theme).
+func themeRegistry(active theme.Theme, choices []theme.NamedTheme) (map[string]theme.Theme, []theme.NamedTheme) {
+	available := map[string]theme.Theme{}
+	for _, choice := range choices {
+		available[choice.Name] = choice.Theme
 	}
-	if _, ok := availableThemes[styles.Name]; styles.Name != "" && !ok {
-		availableThemes[styles.Name] = styles
-		themeChoices = append(themeChoices, theme.NamedTheme{
-			Name:  styles.Name,
-			Label: styles.Name,
-			Theme: styles,
+	if _, ok := available[active.Name]; active.Name != "" && !ok {
+		available[active.Name] = active
+		choices = append(choices, theme.NamedTheme{
+			Name:  active.Name,
+			Label: active.Name,
+			Theme: active,
 		})
 	}
-	return styles, availableThemes, themeChoices, nil
+	return available, choices
 }
 
 // browserPanelOptions bundles the config-derived settings applied identically

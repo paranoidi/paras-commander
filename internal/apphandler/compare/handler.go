@@ -433,3 +433,9 @@ func (h *Handler) navigateSide(panelID int, root pathloc.Path, rel string) error
 	parent := abs.Parent()
 	return h.host.NavigatePanelToPath(panelID, parent.String(), selectName)
 }
+
+// SetConfig replaces the handler's configuration snapshot (configuration reload). Called on the
+// UI goroutine; work already started keeps the values it read.
+func (h *Handler) SetConfig(cfg config.Config) {
+	h.config = cfg
+}

@@ -18,6 +18,7 @@ How default shortcuts are declared, layered and validated. Add-a-shortcut proced
 ## Layering and validation
 
 - `keymap.LoadFromPaths` layers each table independently: defaults < `keybindings.toml`. Overlay maps resolve before the global map while their view/dialog is focused.
+- **Reload**: handlers keep the `*keymap.Map` pointers from startup, so a configuration reload swaps bindings in place: `Bundle.ReplaceFrom` pairs every map field (`Bundle.mapFields`; a test checks it covers every `*Map` field) and calls `Map.ReplaceWith`, which swaps the chord table and resets the `ActionBindings` cache; the letter-menu maps are replaced outright.
 - Shortcut tables in `config.toml` fail `config.LoadFromPaths` (unknown field). `[jobs]` in `config.toml` is job settings; the jobs-view shortcuts are `[jobs]` in `keybindings.toml`.
 - **Dialog OK / Cancel**: `ui.input.dialog-ok` and `ui.input.dialog-cancel` are `[dialog.input]` defaults and the only place their chords are bound. `App.handleKey` resolves them once (`dispatchDialogButton`, `internal/app/dialog_buttons.go`, reading the buttons of `App.activeDialog`); dialog key handlers must not look for them. `F9` stays "edit config" in the Configuration and meta dialogs.
 - Namespace restrictions: `jobs.*` only under `[jobs]`; `commands.*` only under `[commands]`; `ui.input.*` only under `[dialog.input]`; `file.rename.open-sanitize`/`open-slugify` only under `[dialog.rename]`; other dialog actions only under their `[dialog.*]` table.

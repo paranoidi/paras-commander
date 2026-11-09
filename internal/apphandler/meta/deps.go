@@ -206,3 +206,9 @@ type metaRun struct {
 	cancel context.CancelFunc
 	defs   []metacmds.MetaEntry
 }
+
+// SetConfig replaces the handler's configuration snapshot (configuration reload). Called on the
+// UI goroutine; work already started keeps the values it read.
+func (h *Handler) SetConfig(cfg config.Config) {
+	h.config = cfg
+}

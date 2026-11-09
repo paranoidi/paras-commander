@@ -113,3 +113,19 @@ func Build(bindings map[string][]string) (*Map, error) {
 func Default() (*Map, error) {
 	return Build(DefaultActionKeys())
 }
+
+// ReplaceWith makes m resolve exactly what src resolves, keeping m's identity so every holder of
+// the *Map (handler Deps capture the pointers at startup) sees the new bindings. A nil src
+// empties m. The UI goroutine is the only reader and writer of a live Map.
+func (m *Map) ReplaceWith(src *Map) {
+	if m == nil {
+		return
+	}
+	next := map[Chord]string{}
+	if src != nil {
+		next = src.keyToAction
+	}
+	m.keyToAction = next
+	m.bindings = nil
+	m.bindingsOnce = sync.Once{}
+}

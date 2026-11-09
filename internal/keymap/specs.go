@@ -2345,6 +2345,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"settings", "toml"},
 		},
 		{
+			ID:          ActionUIReloadConfig,
+			Views:       HelpBrowser,
+			Title:       "Reload configuration",
+			Section:     "UI",
+			DefaultKeys: nil,
+			Keywords:    []string{"reload", "settings", "toml", "keybindings", "theme"},
+		},
+		{
 			ID:          ActionPreviewSettingsDialog,
 			Views:       HelpBrowser | HelpFilePreview,
 			Title:       "Preview settings",

@@ -108,3 +108,36 @@ func (b *Bundle) actionForLeaderKeyInScope(r rune, scope map[string]struct{}) (s
 	}
 	return "", false
 }
+
+// mapFields returns a pointer to every *Map field (Global first, then the overlays in Overlays
+// order), so ReplaceFrom can pair fields of two bundles.
+func (b *Bundle) mapFields() []**Map {
+	return []**Map{
+		&b.Global,
+		&b.Jobs, &b.Commands, &b.Messages, &b.FilePreview, &b.DialogInput, &b.RenameDialog, &b.MkdirDialog,
+		&b.BookmarkDialog, &b.FindDialog, &b.HistoryDialog, &b.FlattenDialog, &b.TransferDialog,
+		&b.Compare, &b.Dedup, &b.Terminal, &b.MassRenameDialog, &b.RunForEachDialog, &b.PinDialog,
+		&b.HelpDialog, &b.UserMenu, &b.CommandOutputDialog, &b.ColumnsDialog, &b.FilePreviewSearch, &b.Unique,
+	}
+}
+
+// ReplaceFrom makes b resolve what src resolves. Existing maps are replaced in place
+// (Map.ReplaceWith) so pointers already handed out keep working; a map b does not have yet is
+// taken from src. The single-letter menu tables are replaced outright.
+func (b *Bundle) ReplaceFrom(src *Bundle) {
+	if b == nil || src == nil {
+		return
+	}
+	dst, from := b.mapFields(), src.mapFields()
+	for i, field := range dst {
+		if *field == nil {
+			*field = *from[i]
+			continue
+		}
+		(*field).ReplaceWith(*from[i])
+	}
+	b.LeaderKey = src.LeaderKey
+	b.CopyMenuKey = src.CopyMenuKey
+	b.PreviewMenuKey = src.PreviewMenuKey
+	b.FileIndexMenuKey = src.FileIndexMenuKey
+}

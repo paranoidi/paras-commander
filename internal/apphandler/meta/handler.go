@@ -840,6 +840,7 @@ func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.
 		h.host.NoteMetaColumnResolved(panelID)
 	}
 
+	defaultWorkers := h.config.Meta.DefaultEntryWorkers // read here: SetConfig runs on the UI goroutine
 	go func() {
 		var wg sync.WaitGroup
 		var notifyExecFailed sync.Once
@@ -857,7 +858,7 @@ func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.
 			}
 			workers := cmdDef.Workers
 			if workers < 1 {
-				workers = h.config.Meta.DefaultEntryWorkers
+				workers = defaultWorkers
 			}
 
 			var items []dispatchItem

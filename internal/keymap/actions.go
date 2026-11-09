@@ -310,6 +310,7 @@ const (
 	ActionUIOpenTheme         = "ui.open-theme"
 	ActionUIOpenConfig        = "ui.open-config"
 	ActionUICalibrateDebounce = "ui.calibrate-debounce"
+	ActionUIReloadConfig      = "ui.reload-config"
 	// ActionUIStatusCommands opens the dialog choosing which status.toml status commands are
 	// drawn at the top-left of the menu bar.
 	ActionUIStatusCommands = "ui.status-commands"
@@ -672,6 +673,7 @@ var KnownActions = map[string]struct{}{
 	ActionUIOpenTheme:           {},
 	ActionUIOpenConfig:          {},
 	ActionUICalibrateDebounce:   {},
+	ActionUIReloadConfig:        {},
 	ActionUIStatusCommands:      {},
 	ActionPreviewSettingsDialog: {},
 

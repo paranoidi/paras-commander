@@ -297,13 +297,9 @@ func (a *App) resetConfigToDefaults() {
 		a.setErrorMessage("Reset to defaults", err)
 		return
 	}
-	a.config = cfg
-	a.syncCarouselQuickViewOrdering()
-	a.applyMouseConfig()
-	a.applyDiskUsageConfig()
-	a.setStyles(a.styles) // re-stamp the config-driven theme flags (icons, tooltips)
+	restart := a.applyLoadedConfig(cfg)
 	a.openConfigDialog()
-	a.setTransientMessage("Configuration reset to defaults", ui.MessageUrgencyInfo)
+	a.setReloadedMessage("Configuration reset to defaults", restart)
 }
 
 // editConfigTOMLFromDialog handles F9 in the Configuration dialog: opens config.toml in the
@@ -358,13 +354,9 @@ func (a *App) openConfigTOMLInEditor(path string) {
 		a.setErrorMessage("Edit config", err)
 		return
 	}
-	a.config = cfg
-	a.syncCarouselQuickViewOrdering()
-	a.applyMouseConfig()
-	a.applyDiskUsageConfig()
-	a.setStyles(a.styles) // re-stamp the config-driven theme flags (icons, tooltips)
+	restart := a.applyLoadedConfig(cfg)
 	a.openConfigDialog()
-	a.setTransientMessage("config.toml reloaded", ui.MessageUrgencyInfo)
+	a.setReloadedMessage("config.toml reloaded", restart)
 }
 
 // Group selection dialog handlers

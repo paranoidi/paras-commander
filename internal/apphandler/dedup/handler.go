@@ -1993,3 +1993,9 @@ func (h *Handler) filterOptions() quickfilter.Options {
 	f := h.host.Config().Filter
 	return quickfilter.OptionsFrom(f.CaseInsensitive, f.CycleMatches)
 }
+
+// SetConfig replaces the handler's configuration snapshot (configuration reload). Called on the
+// UI goroutine; work already started keeps the values it read.
+func (h *Handler) SetConfig(cfg config.Config) {
+	h.config = cfg
+}
