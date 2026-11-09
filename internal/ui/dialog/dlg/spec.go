@@ -355,9 +355,9 @@ func OKCancelButtons() []Button { return []Button{OKButton, CancelButton} }
 // Width is the preferred width; Place widens it to fit the button strip between the borders.
 type Spec struct {
 	Title string
-	// TitleQuery, when set, takes the place of Title: type-to-jump text drawn as the "> query"
-	// fuzzy indicator on the top border with a caret after it, in fuzzy.input, or in
-	// fuzzy.input.nomatch with TitleQueryNoMatch.
+	// TitleQuery, when set, is type-to-jump text drawn as the "> query" fuzzy indicator at the left
+	// of the top border, with a caret after it and clipped to stay clear of Title, in fuzzy.input,
+	// or in fuzzy.input.nomatch with TitleQueryNoMatch.
 	TitleQuery                 string
 	TitleQueryNoMatch          bool
 	Width, MinWidth, MinHeight int

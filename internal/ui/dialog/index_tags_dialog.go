@@ -23,7 +23,7 @@ const (
 
 // IndexTagsDialogView is the tag editor's widget spec, fitted to layout: the checkbox grid of every
 // tag, the new-tags input, the Recursive checkbox when a target is a directory and OK / Cancel. The
-// jump text replaces the title on the top border. AltOnly holds only while the grid has focus, where
+// jump text shows at the left of the top border. AltOnly holds only while the grid has focus, where
 // plain letters are type-to-jump.
 func IndexTagsDialogView(st *IndexTagsDialogState, layout Layout, styles theme.Theme) dlg.Spec {
 	var items []dlg.Item

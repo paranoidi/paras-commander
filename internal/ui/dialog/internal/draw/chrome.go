@@ -20,17 +20,8 @@ func DrawCenteredDialogTitle(screen tcell.Screen, rect Rect, title string, title
 	innerLeft := rect.X + 1
 	topY := rect.Y
 
-	tr := strings.TrimSpace(title)
-	var titleRunes []rune
-	if tr != "" {
-		titleRunes = append(append(titleRunes, ' '), []rune(tr)...)
-		titleRunes = append(titleRunes, ' ')
-	}
+	titleRunes := paddedTitleRunes(title, innerWidth)
 	tlen := len(titleRunes)
-	if tlen > innerWidth {
-		titleRunes = titleRunes[:innerWidth]
-		tlen = innerWidth
-	}
 	leftPad := (innerWidth - tlen) / 2
 
 	col := innerLeft
@@ -48,6 +39,27 @@ func DrawCenteredDialogTitle(screen tcell.Screen, rect Rect, title string, title
 		screen.SetContent(col, topY, r, nil, st)
 		col++
 	}
+}
+
+// paddedTitleRunes is title as the top border shows it: one space on each side, cut to width.
+func paddedTitleRunes(title string, width int) []rune {
+	tr := strings.TrimSpace(title)
+	if tr == "" {
+		return nil
+	}
+	runes := append(append([]rune{' '}, []rune(tr)...), ' ')
+	return runes[:min(len(runes), max(width, 0))]
+}
+
+// CenteredTitleX is the column DrawCenteredDialogTitle starts title at, including its leading
+// space; without a title it is the right corner, where the free part of the border ends.
+func CenteredTitleX(rect Rect, title string) int {
+	innerWidth := rect.Width - 2
+	titleRunes := paddedTitleRunes(title, innerWidth)
+	if len(titleRunes) == 0 {
+		return rect.X + rect.Width - 1
+	}
+	return rect.X + 1 + (innerWidth-len(titleRunes))/2
 }
 
 // DrawDialogHSeparator draws ├ ─ ─ ┤ between left and right border at y.

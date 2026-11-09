@@ -393,8 +393,8 @@ Nothing is written until OK; Cancel or Esc discards the edits.
   removed from all, and mixed, which leaves each entry as it was.
 - **Leaving the list:** Tab, or Down on the last row.
 - **Jump:** typing in the list jumps to the best fuzzy match, and the typed
-  text shows as `> text` on the dialog's top border, in place of the title. It
-  is yellow, or red when no tag matches. With several matches, Up and Down
+  text, up to 14 characters, shows as `> text` at the left of the dialog's top
+  border. It is yellow, or red when no tag matches. With several matches, Up and Down
   cycle through them. Backspace trims the text and Esc clears it. Toggling a tag
   clears it too, so you can type the next search straight away.
 - **New tags:** the input below the list. Type one or more tags separated by

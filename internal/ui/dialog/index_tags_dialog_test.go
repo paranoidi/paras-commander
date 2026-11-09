@@ -143,8 +143,8 @@ func TestIndexTagsJumpTextOnTopBorder(t *testing.T) {
 			DrawIndexTagsDialog(screen, Layout{Width: w, Height: h}, st, styles)
 			screen.Show()
 			dump := tcelltest.DumpRect(screen, 0, 0, w, h)
-			if !strings.Contains(dump, "─> "+tc.query) || strings.Contains(dump, " Tags ") {
-				t.Fatalf("the query should replace the title on the top border:\n%s", dump)
+			if !strings.Contains(dump, "─> "+tc.query) || !strings.Contains(dump, "─ Tags ─") {
+				t.Fatalf("the query should sit beside the title on the top border:\n%s", dump)
 			}
 			for y := range h {
 				for x := range w {
@@ -158,6 +158,24 @@ func TestIndexTagsJumpTextOnTopBorder(t *testing.T) {
 			}
 			t.Fatal("no query on screen")
 		})
+	}
+}
+
+func TestIndexTagsJumpTextIsLimitedAndKeepsTheTitle(t *testing.T) {
+	st := indexTagsState("coral", "birch")
+	full := strings.Repeat("q", indexTagsJumpMaxRunes)
+	for range indexTagsJumpMaxRunes + 5 {
+		st.TypeJump('q')
+	}
+	if st.JumpQuery != full {
+		t.Fatalf("query = %q, want %q", st.JumpQuery, full)
+	}
+	if got := renderIndexTags(t, st, indexTagsMinWidth+4, 24); !strings.Contains(got, "─> "+full) || !strings.Contains(got, "─ Tags ─") {
+		t.Fatalf("the longest query should fit beside the title:\n%s", got)
+	}
+	// A screen too narrow for the minimum width clips the query, never the title.
+	if got := renderIndexTags(t, st, 30, 24); !strings.Contains(got, "─ Tags ─") {
+		t.Fatalf("the title should stay on a narrow screen:\n%s", got)
 	}
 }
 

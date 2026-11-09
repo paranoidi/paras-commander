@@ -504,18 +504,17 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 	if spec.PanelChrome {
 		styles = styles.DialogOnPanelChrome()
 	}
-	title := spec.Title
-	if spec.TitleQuery != "" {
-		title = ""
-	}
-	borderStyle := draw.DrawDialogFrame(screen, p.Rect, title, styles)
+	borderStyle := draw.DrawDialogFrame(screen, p.Rect, spec.Title, styles)
 	_, surface, _ := styles.DialogSurface.Decompose()
 	if spec.TitleQuery != "" {
 		queryStyle := styles.FuzzyInput
 		if spec.TitleQueryNoMatch {
 			queryStyle = styles.FuzzyInputNomatch
 		}
-		primitive.FuzzyQueryTitle(screen, draw.DialogTextX(p.Rect), p.Rect.Y, draw.DialogContentWidth(p.Rect), spec.TitleQuery,
+		// As wide as "> query" and its caret, stopping one border cell before the title.
+		x := draw.DialogTextX(p.Rect)
+		w := min(2+runewidth.StringWidth(spec.TitleQuery)+1, draw.CenteredTitleX(p.Rect, spec.Title)-1-x)
+		primitive.FuzzyQueryTitle(screen, x, p.Rect.Y, w, spec.TitleQuery,
 			utf8.RuneCountInString(spec.TitleQuery), true, queryStyle.Background(surface))
 	}
 	bottom := p.ContentBottom         // content stops above the button separator (or the bottom border)

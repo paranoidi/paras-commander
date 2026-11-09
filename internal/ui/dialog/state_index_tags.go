@@ -9,8 +9,12 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
-// indexTagsColumns is how many columns the tag checkboxes are laid out in.
-const indexTagsColumns = 2
+const (
+	// indexTagsColumns is how many columns the tag checkboxes are laid out in.
+	indexTagsColumns = 2
+	// indexTagsJumpMaxRunes is the longest jump text: what fits left of the title at indexTagsMinWidth.
+	indexTagsJumpMaxRunes = 14
+)
 
 // IndexTag is one checkbox of the fileindex tag editor: State as staged, Initial as it opened
 // (dlg.CheckMixed when only some targets carry the tag).
@@ -157,8 +161,12 @@ func (st *IndexTagsDialogState) jumpNoMatch() bool {
 	return st.JumpQuery != "" && len(st.jumpMatches(st.JumpQuery)) == 0
 }
 
-// TypeJump appends r to the jump text.
-func (st *IndexTagsDialogState) TypeJump(r rune) { st.setJump(st.JumpQuery + string(r)) }
+// TypeJump appends r to the jump text, up to indexTagsJumpMaxRunes.
+func (st *IndexTagsDialogState) TypeJump(r rune) {
+	if utf8.RuneCountInString(st.JumpQuery) < indexTagsJumpMaxRunes {
+		st.setJump(st.JumpQuery + string(r))
+	}
+}
 
 // BackspaceJump drops the last rune of the jump text.
 func (st *IndexTagsDialogState) BackspaceJump() {
