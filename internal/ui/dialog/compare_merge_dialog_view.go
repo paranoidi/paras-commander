@@ -2,6 +2,7 @@ package dialog
 
 import (
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
@@ -17,25 +18,21 @@ const (
 	CompareMergeSrcName  = dlg.ID("source-name")
 )
 
-// compareMergePathIndent is how far the destination paths sit in from the radio labels above them.
-const compareMergePathIndent = 4
+// compareMergePathIndent is how far each destination path sits in from the radio above it.
+const compareMergePathIndent = 2
 
-// CompareMergeView is the merge dialog's widget spec: the destination radios with their paths
-// below (home-tilde, shared prefix on its own row), the Transfer checkboxes, the Copy / Move
-// radios, the Relocated files name radios and the preview line, above OK / Cancel.
+// CompareMergeView is the merge dialog's widget spec: the destination radios, each with its full
+// path (home-tilde) below it, the Transfer checkboxes, the Copy / Move radios, the Relocated files
+// name radios and the preview line, above OK / Cancel.
 func CompareMergeView(s CompareMergeDialogState, userHomeDir string) dlg.Spec {
-	sharedPrefix, leftPath, rightPath := FormatCompareMergePaths(s.PrimaryPath, s.SecondaryPath, userHomeDir)
-	dest := []dlg.Item{{Kind: dlg.KindLabel, Label: "Destination:"}}
-	if sharedPrefix != "" {
-		dest = append(dest, dlg.Item{Kind: dlg.KindLabel, Prefix: "Shared: ", Label: sharedPrefix, Fit: dlg.FitPath})
+	dest := []dlg.Item{
+		{Kind: dlg.KindLabel, Label: "Destination:"},
+		{ID: CompareMergeLeft, Kind: dlg.KindRadio, Label: "Left side", Mnemonic: 'L', On: s.Direction == comparepkg.MergeTowardPrimary},
+		{Kind: dlg.KindLabel, Label: primitive.PathWithHomeTilde(s.PrimaryPath, userHomeDir), Fit: dlg.FitPath, Indent: compareMergePathIndent},
+		{ID: CompareMergeRight, Kind: dlg.KindRadio, Label: "Right side", Mnemonic: 'R', On: s.Direction == comparepkg.MergeTowardSecondary},
+		{Kind: dlg.KindLabel, Label: primitive.PathWithHomeTilde(s.SecondaryPath, userHomeDir), Fit: dlg.FitPath, Indent: compareMergePathIndent},
+		{Kind: dlg.KindSeparator},
 	}
-	dest = append(dest,
-		dlg.Item{ID: CompareMergeLeft, Kind: dlg.KindRadio, Label: "Left side", Mnemonic: 'L', On: s.Direction == comparepkg.MergeTowardPrimary},
-		dlg.Item{Kind: dlg.KindLabel, Label: leftPath, Fit: dlg.FitPath, Indent: compareMergePathIndent},
-		dlg.Item{ID: CompareMergeRight, Kind: dlg.KindRadio, Label: "Right side", Mnemonic: 'R', On: s.Direction == comparepkg.MergeTowardSecondary},
-		dlg.Item{Kind: dlg.KindLabel, Label: rightPath, Fit: dlg.FitPath, Indent: compareMergePathIndent},
-		dlg.Item{Kind: dlg.KindSeparator},
-	)
 	return dlg.Spec{
 		Title: "Merge", Width: PreferredFormDialogWidth, Unclamped: true,
 		Groups: []dlg.Group{

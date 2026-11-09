@@ -1,11 +1,10 @@
 -- text --
      ┌────────────────────────────── Merge ───────────────────────────────┐     
      │ Destination:                                                       │     
-     │ Shared: ~/projects/harbor                                          │     
      │ (*) Left side                                                      │     
-     │     orchard/meadow                                                 │     
+     │   ~/projects/harbor/orchard/meadow                                 │     
      │ ( ) Right side                                                     │     
-     │     willow                                                         │     
+     │   ~/projects/harbor/willow                                         │     
      ├────────────────────────────────────────────────────────────────────┤     
      │ Transfer:                                                          │     
      │ [x] Missing files                                                  │     
@@ -19,6 +18,7 @@
      │ (*) Keep destination names                                         │     
      │ ( ) Rename to source names                                         │     
      ├────────────────────────────────────────────────────────────────────┤     
+     ├────────────────────────────────────────────────────────────────────┤     
      │                        [ OK ]    [ Cancel ]                        │     
      └────────────────────────────────────────────────────────────────────┘     
 -- legend --
@@ -31,7 +31,6 @@ f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabdddddceeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
@@ -49,6 +48,7 @@ aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabdddddbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbfffgffffbbfffgffffffffbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa

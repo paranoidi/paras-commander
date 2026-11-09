@@ -11,9 +11,8 @@ import (
 
 const compareMergeGoldenHome = "/home/alice"
 
-// compareMergeGoldenState builds a merge dialog. paths: shared (a common prefix is shown), plain
-// (nothing in common), here (one side is the shared prefix itself), long (paths wider than the
-// dialog). opts: letters r (merge toward the right side), m (Missing files), f (Modified files),
+// compareMergeGoldenState builds a merge dialog. paths: shared (a common parent), plain (nothing
+// in common), here (one side is the other's parent), long (paths wider than the dialog). opts: letters r (merge toward the right side), m (Missing files), f (Modified files),
 // d (Move). focus: left, right, missing, modified, copy, move, ok, cancel.
 func compareMergeGoldenState(paths, opts, focus string) CompareMergeDialogState {
 	st := CompareMergeDialogState{

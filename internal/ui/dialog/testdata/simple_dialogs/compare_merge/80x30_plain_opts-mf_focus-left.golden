@@ -2,9 +2,9 @@
      ┌────────────────────────────── Merge ───────────────────────────────┐     
      │ Destination:                                                       │     
      │ (*) Left side                                                      │     
-     │     /srv/orchard/meadow                                            │     
+     │   /srv/orchard/meadow                                              │     
      │ ( ) Right side                                                     │     
-     │     /mnt/willow/lantern                                            │     
+     │   /mnt/willow/lantern                                              │     
      ├────────────────────────────────────────────────────────────────────┤     
      │ Transfer:                                                          │     
      │ [x] Missing files                                                  │     

@@ -1,11 +1,10 @@
 -- text --
      ┌────────────────────────────── Merge ───────────────────────────────┐     
      │ Destination:                                                       │     
-     │ Shared: ~/projects/harbor                                          │     
      │ (*) Left side                                                      │     
-     │     (here)                                                         │     
+     │   ~/projects/harbor                                                │     
      │ ( ) Right side                                                     │     
-     │     orchard                                                        │     
+     │   ~/projects/harbor/orchard                                        │     
      ├────────────────────────────────────────────────────────────────────┤     
      │ Transfer:                                                          │     
      │ [x] Missing files                                                  │     
@@ -23,6 +22,7 @@
      ├────────────────────────────────────────────────────────────────────┤     
      │                        [ OK ]    [ Cancel ]                        │     
      └────────────────────────────────────────────────────────────────────┘     
+                                                                                
 -- legend --
 a fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
 b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
@@ -33,7 +33,6 @@ f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabdddddcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
@@ -56,3 +55,4 @@ aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbfffgffffbbfffgffffffffbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

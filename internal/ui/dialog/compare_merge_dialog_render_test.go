@@ -10,7 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
-func TestDrawCompareMergeDialogLeftRightAndShortPaths(t *testing.T) {
+func TestDrawCompareMergeDialogShowsFullPaths(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -18,17 +18,16 @@ func TestDrawCompareMergeDialogLeftRightAndShortPaths(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 30)
 
-	home := "/home/alice"
 	state := CompareMergeDialogState{
 		Open:          true,
 		Direction:     comparepkg.MergeTowardSecondary,
 		CopyMissing:   true,
 		CopyModified:  true,
 		PreviewText:   "Preview: 0 to copy (0 B)",
-		PrimaryPath:   "/home/alice/projects/paras-commander/test-cases/diff-b",
-		SecondaryPath: "/home/alice/projects/paras-commander/test-cases/diff-a",
+		PrimaryPath:   "/home/alice/harbor/orchard/meadow",
+		SecondaryPath: "/home/alice/harbor/orchard/willow",
 	}
-	DrawCompareMergeDialog(screen, Layout{Width: 80, Height: 30}, state, theme.Default(), home)
+	DrawCompareMergeDialog(screen, Layout{Width: 80, Height: 30}, state, theme.Default(), "/home/alice")
 
 	var body strings.Builder
 	for y := 0; y < 30; y++ {
@@ -36,17 +35,17 @@ func TestDrawCompareMergeDialogLeftRightAndShortPaths(t *testing.T) {
 		body.WriteByte('\n')
 	}
 	painted := body.String()
-	for _, want := range []string{"Left side", "Right side", "Shared:", "test-cases", "diff-b", "diff-a"} {
+	for _, want := range []string{"Left side", "Right side", "~/harbor/orchard/meadow", "~/harbor/orchard/willow"} {
 		if !strings.Contains(painted, want) {
 			t.Fatalf("painted dialog missing %q", want)
 		}
 	}
-	if strings.Contains(painted, "/home/alice/projects/paras-commander/test-cases/diff-b") {
-		t.Fatal("dialog should not paint full duplicated absolute primary path")
+	if strings.Contains(painted, "Shared:") {
+		t.Fatal("dialog should not paint a shared path row")
 	}
 }
 
-func TestCompareMergeDialogHeightSharedPrefix(t *testing.T) {
+func TestCompareMergeDialogHeightIgnoresSharedParent(t *testing.T) {
 	height := func(primary, secondary string) int {
 		p, ok := dlg.Place(80, 40, CompareMergeView(CompareMergeDialogState{PrimaryPath: primary, SecondaryPath: secondary}, "/home/alice"))
 		if !ok {
@@ -54,9 +53,9 @@ func TestCompareMergeDialogHeightSharedPrefix(t *testing.T) {
 		}
 		return p.Rect.Height
 	}
-	base := height("/srv/orchard", "/mnt/willow")
-	withShared := height("/srv/harbor/orchard", "/srv/harbor/willow")
-	if withShared != base+1 {
-		t.Fatalf("height with shared = %d, base = %d, want base+1", withShared, base)
+	unrelated := height("/srv/orchard", "/mnt/willow")
+	sharedParent := height("/srv/harbor/orchard", "/srv/harbor/willow")
+	if sharedParent != unrelated {
+		t.Fatalf("height with shared parent = %d, unrelated = %d, want equal", sharedParent, unrelated)
 	}
 }
