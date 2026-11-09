@@ -3,8 +3,6 @@ package dialog
 import (
 	"cmp"
 	"slices"
-	"strconv"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/paranoidi/paras-commander/internal/search"
@@ -144,19 +142,20 @@ func (st *IndexTagsDialogState) jumpMatches(query string) []int {
 	return out
 }
 
-// setJump makes query the jump text and moves to its best match. ok is false, changing nothing,
-// when no tag matches.
-func (st *IndexTagsDialogState) setJump(query string) (ok bool) {
-	matches := st.jumpMatches(query)
-	if len(matches) == 0 {
-		return false
-	}
+// setJump makes query the jump text and moves to its best match; with no match the cursor stays.
+func (st *IndexTagsDialogState) setJump(query string) {
 	st.JumpQuery, st.JumpIndex = query, 0
-	st.moveTo(matches[0])
-	return true
+	if matches := st.jumpMatches(query); len(matches) > 0 {
+		st.moveTo(matches[0])
+	}
 }
 
-// TypeJump appends r to the jump text; a rune that leaves no match is ignored.
+// jumpNoMatch reports whether there is jump text that no tag matches.
+func (st *IndexTagsDialogState) jumpNoMatch() bool {
+	return st.JumpQuery != "" && len(st.jumpMatches(st.JumpQuery)) == 0
+}
+
+// TypeJump appends r to the jump text.
 func (st *IndexTagsDialogState) TypeJump(r rune) { st.setJump(st.JumpQuery + string(r)) }
 
 // BackspaceJump drops the last rune of the jump text.
@@ -185,16 +184,3 @@ func (st *IndexTagsDialogState) CycleJump(delta int) {
 
 // ClearJump ends type-to-jump; the cursor stays where it is.
 func (st *IndexTagsDialogState) ClearJump() { st.JumpQuery, st.JumpIndex = "", 0 }
-
-// jumpLabel is the separator text below the grid: the jump text, with the position among several
-// matches.
-func (st *IndexTagsDialogState) jumpLabel() string {
-	if st.JumpQuery == "" {
-		return ""
-	}
-	n := len(st.jumpMatches(st.JumpQuery))
-	if n < 2 {
-		return st.JumpQuery
-	}
-	return strings.Join([]string{st.JumpQuery, strconv.Itoa(st.JumpIndex+1) + "/" + strconv.Itoa(n)}, " ")
-}

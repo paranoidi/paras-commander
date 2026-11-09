@@ -1442,24 +1442,5 @@ func drawQuickFilterTitle(screen tcell.Screen, x, y, w int, f quickfilter.Filter
 	if f.Active && !f.HasMatches() {
 		inputStyle = styles.FuzzyInputNomatch
 	}
-	drawFuzzyQueryTitle(screen, x, y, w, f.Query, f.Cursor, f.Editing, inputStyle)
-}
-
-// drawFuzzyQueryTitle paints "> query" in inputStyle on a panel's top border, with a reversed
-// caret at rune offset cursor when caret is set.
-func drawFuzzyQueryTitle(screen tcell.Screen, x, y, w int, query string, cursor int, caret bool, inputStyle tcell.Style) {
-	display := "> " + query
-	if !caret {
-		primitive.Text(screen, x, y, w, display, inputStyle)
-		return
-	}
-	cursorCol := 2 + min(max(cursor, 0), utf8.RuneCountInString(query))
-	if cursorCol >= utf8.RuneCountInString(display) {
-		// Widen past end-of-text so the caret span lands on a real cell
-		// (StyledText's trailing pad columns don't apply spans).
-		display += " "
-	}
-	primitive.StyledText(screen, x, y, w, display, inputStyle, []primitive.Span{
-		{Start: cursorCol, End: cursorCol + 1, Style: inputStyle.Reverse(true)},
-	})
+	primitive.FuzzyQueryTitle(screen, x, y, w, f.Query, f.Cursor, f.Editing, inputStyle)
 }

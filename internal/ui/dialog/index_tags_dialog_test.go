@@ -77,16 +77,20 @@ func TestIndexTagsJump(t *testing.T) {
 	for _, r := range "br" {
 		st.TypeJump(r)
 	}
-	if st.JumpQuery != "br" || st.jumpLabel() != "br 1/2" {
-		t.Fatalf("query %q label %q", st.JumpQuery, st.jumpLabel())
+	if st.JumpQuery != "br" || !st.CanCycleJump() {
+		t.Fatalf("query %q, can cycle %v", st.JumpQuery, st.CanCycleJump())
 	}
 	st.TypeJump('z') // birch drops out, bronze stays
-	if st.cursorTag() != 2 || st.jumpLabel() != "brz" {
-		t.Fatalf("tag %d label %q", st.cursorTag(), st.jumpLabel())
+	if st.cursorTag() != 2 || st.CanCycleJump() {
+		t.Fatalf("tag %d, can cycle %v", st.cursorTag(), st.CanCycleJump())
 	}
-	st.TypeJump('q') // no match: ignored
-	if st.JumpQuery != "brz" {
-		t.Fatalf("query = %q", st.JumpQuery)
+	st.TypeJump('q') // no match: kept, and the cursor stays
+	if st.JumpQuery != "brzq" || !st.jumpNoMatch() || st.cursorTag() != 2 {
+		t.Fatalf("query %q, no match %v, tag %d", st.JumpQuery, st.jumpNoMatch(), st.cursorTag())
+	}
+	st.BackspaceJump()
+	if st.JumpQuery != "brz" || st.jumpNoMatch() {
+		t.Fatalf("query %q, no match %v", st.JumpQuery, st.jumpNoMatch())
 	}
 	st.BackspaceJump()
 	first := st.cursorTag()
@@ -116,12 +120,44 @@ func renderIndexTags(t *testing.T, st IndexTagsDialogState, w, h int) string {
 	return tcelltest.DumpRect(screen, 0, 0, w, h)
 }
 
-func TestIndexTagsJumpTextInSeparator(t *testing.T) {
-	st := indexTagsState("coral", "birch")
-	st.Focus = IndexTagsGrid
-	st.TypeJump('b')
-	if got := renderIndexTags(t, st, 80, 24); !strings.Contains(got, "─ b ─") {
-		t.Fatalf("separator has no padded jump text:\n%s", got)
+func TestIndexTagsJumpTextOnTopBorder(t *testing.T) {
+	styles := theme.Default()
+	_, surface, _ := styles.DialogSurface.Decompose()
+	for _, tc := range []struct {
+		name, query string
+		want        tcell.Style
+	}{
+		{"match", "b", styles.FuzzyInput.Background(surface)},
+		{"no match", "q", styles.FuzzyInputNomatch.Background(surface)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			st := indexTagsState("coral", "birch")
+			st.TypeJump(rune(tc.query[0]))
+			const w, h = 80, 24
+			screen := tcell.NewSimulationScreen("UTF-8")
+			if err := screen.Init(); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(screen.Fini)
+			screen.SetSize(w, h)
+			DrawIndexTagsDialog(screen, Layout{Width: w, Height: h}, st, styles)
+			screen.Show()
+			dump := tcelltest.DumpRect(screen, 0, 0, w, h)
+			if !strings.Contains(dump, "─> "+tc.query) || strings.Contains(dump, " Tags ") {
+				t.Fatalf("the query should replace the title on the top border:\n%s", dump)
+			}
+			for y := range h {
+				for x := range w {
+					if r, style, _ := screen.Get(x, y); r == ">" {
+						if style != tc.want {
+							t.Fatalf("query style = %v, want %v", style, tc.want)
+						}
+						return
+					}
+				}
+			}
+			t.Fatal("no query on screen")
+		})
 	}
 }
 
@@ -194,6 +230,10 @@ func TestIndexTagsGoldenRender(t *testing.T) {
 	jump.TypeJump('b')
 	jump.TypeJump('r')
 	add(&cases, "80x24_jump", 80, 24, jump)
+	nomatch := state()
+	nomatch.Focus = IndexTagsGrid
+	nomatch.TypeJump('q')
+	add(&cases, "80x24_jump_nomatch", 80, 24, nomatch)
 	overflow := NewIndexTagsDialog([]string{"/a"}, many, nil, 1)
 	overflow.Focus, overflow.Cursor = IndexTagsGrid, 5
 	add(&cases, "80x20_overflow", 80, 20, overflow)

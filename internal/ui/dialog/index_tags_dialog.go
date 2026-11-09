@@ -22,8 +22,8 @@ const (
 )
 
 // IndexTagsDialogView is the tag editor's widget spec, fitted to layout: the checkbox grid of every
-// tag, a separator that shows the jump text, the new-tags input, the Recursive checkbox and
-// OK / Cancel. AltOnly holds only while the grid has focus, where plain letters are type-to-jump.
+// tag, the new-tags input, the Recursive checkbox and OK / Cancel. The jump text replaces the title
+// on the top border. AltOnly holds only while the grid has focus, where plain letters are type-to-jump.
 func IndexTagsDialogView(st *IndexTagsDialogState, layout Layout, styles theme.Theme) dlg.Spec {
 	var items []dlg.Item
 	if len(st.Tags) == 0 {
@@ -32,14 +32,15 @@ func IndexTagsDialogView(st *IndexTagsDialogState, layout Layout, styles theme.T
 		items = append(items, indexTagsGrid(st))
 	}
 	items = append(items,
-		dlg.Item{Kind: dlg.KindSeparator, Label: st.jumpLabel()},
+		dlg.Item{Kind: dlg.KindSeparator},
 		dlg.Item{Kind: dlg.KindLabel, Label: "New tags (comma or space separated):"},
 		dlg.Item{ID: IndexTagsInput, Kind: dlg.KindInput, Value: st.Input, Cursor: st.InputCursor, Scroll: st.InputScroll},
 		dlg.Item{Kind: dlg.KindSeparator},
 		dlg.Item{ID: IndexTagsRecursive, Kind: dlg.KindCheckbox, Label: "Recursive (whole directory trees)", Mnemonic: 'R', On: st.Recursive},
 	)
 	spec := dlg.Spec{
-		Title: "Tags", Width: indexTagsWidth(st, styles), MinWidth: indexTagsMinWidth,
+		Title: "Tags", TitleQuery: st.JumpQuery, TitleQueryNoMatch: st.jumpNoMatch(),
+		Width: indexTagsWidth(st, styles), MinWidth: indexTagsMinWidth,
 		MaxHeight: listDialogMaxHeight(layout.Height), Unclamped: true, AltOnly: st.Focus == IndexTagsGrid,
 		MarkerWidth: dlg.MarkerWidth(styles),
 		Groups:      []dlg.Group{{Columns: [][]dlg.Item{items}}},

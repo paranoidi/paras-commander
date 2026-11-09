@@ -504,8 +504,20 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 	if spec.PanelChrome {
 		styles = styles.DialogOnPanelChrome()
 	}
-	borderStyle := draw.DrawDialogFrame(screen, p.Rect, spec.Title, styles)
+	title := spec.Title
+	if spec.TitleQuery != "" {
+		title = ""
+	}
+	borderStyle := draw.DrawDialogFrame(screen, p.Rect, title, styles)
 	_, surface, _ := styles.DialogSurface.Decompose()
+	if spec.TitleQuery != "" {
+		queryStyle := styles.FuzzyInput
+		if spec.TitleQueryNoMatch {
+			queryStyle = styles.FuzzyInputNomatch
+		}
+		primitive.FuzzyQueryTitle(screen, draw.DialogTextX(p.Rect), p.Rect.Y, draw.DialogContentWidth(p.Rect), spec.TitleQuery,
+			utf8.RuneCountInString(spec.TitleQuery), true, queryStyle.Background(surface))
+	}
 	bottom := p.ContentBottom         // content stops above the button separator (or the bottom border)
 	for n, it := range leaves(spec) { // p.Items holds the group items in the same order
 		pi := p.Items[n]

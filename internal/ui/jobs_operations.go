@@ -158,7 +158,7 @@ func drawJobsOperationsPanel(screen tcell.Screen, rect Rect, state JobsViewState
 		case f.Query != "" && win.Total == 0 && !win.Scanning:
 			input = styles.FuzzyInputNomatch
 		}
-		drawFuzzyQueryTitle(screen, layout.TitleX, rect.Y, layout.TitleWidth, f.Query, f.Cursor, f.Editing && focused && !chromeBlocked, input)
+		primitive.FuzzyQueryTitle(screen, layout.TitleX, rect.Y, layout.TitleWidth, f.Query, f.Cursor, f.Editing && focused && !chromeBlocked, input)
 	}
 	drawJobsOperationsFilterLabel(screen, rect, state, win, styles, chromeBlocked, focused)
 

@@ -354,7 +354,12 @@ func OKCancelButtons() []Button { return []Button{OKButton, CancelButton} }
 //
 // Width is the preferred width; Place widens it to fit the button strip between the borders.
 type Spec struct {
-	Title                      string
+	Title string
+	// TitleQuery, when set, takes the place of Title: type-to-jump text drawn as the "> query"
+	// fuzzy indicator on the top border with a caret after it, in fuzzy.input, or in
+	// fuzzy.input.nomatch with TitleQueryNoMatch.
+	TitleQuery                 string
+	TitleQueryNoMatch          bool
 	Width, MinWidth, MinHeight int
 	// MaxHeight is the tallest the dialog wants to be (0 = the screen); its lists shrink to fit
 	// it like they do to fit the screen. It is a preference: it gives way to rows that cannot
