@@ -1,6 +1,7 @@
 package fileindex
 
 import (
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -91,12 +92,13 @@ func (x *Index) EditTags(paths []string, tags []string, add, recursive bool) (Ta
 }
 
 // TagState is what a tag editor shows for a set of paths: every tag in the database, sorted by
-// name, how many distinct paths were asked about, and how many of them carry each tag (absent:
-// none).
+// name, how many distinct paths were asked about, how many of them carry each tag (absent: none)
+// and whether any of them is a directory.
 type TagState struct {
 	Names   []string
 	Targets int
 	Counts  map[string]int
+	HasDir  bool
 }
 
 // TagState reads the tags of the index and of paths (local or fileindex://). A path the index
@@ -127,6 +129,11 @@ func (x *Index) TagState(paths []string) (TagState, error) {
 			state.Targets++
 			parent := filepath.Dir(host)
 			byParent[parent] = append(byParent[parent], filepath.Base(host))
+			if !state.HasDir {
+				if state.HasDir, err = isTagDir(d, host); err != nil {
+					return state, err
+				}
+			}
 		}
 	}
 	for parent, names := range byParent {
@@ -142,4 +149,15 @@ func (x *Index) TagState(paths []string) (TagState, error) {
 		}
 	}
 	return state, nil
+}
+
+// isTagDir reports whether a recursive tag edit of host would reach a tree: a directory of the
+// index, also when gone from disk, or a directory on disk the scan of an unknown path will walk.
+func isTagDir(d *db.DB, host string) (bool, error) {
+	_, isDir, err := db.DirByPath(d, host)
+	if err != nil || isDir {
+		return isDir, err
+	}
+	info, err := os.Stat(host)
+	return err == nil && info.IsDir(), nil
 }

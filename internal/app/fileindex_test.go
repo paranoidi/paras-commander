@@ -333,10 +333,40 @@ func TestFileIndexTagEditorShowsAndTogglesTags(t *testing.T) {
 	}
 }
 
+// selectFileAndDir selects harbor.txt and a new directory, so the tag editor shows Recursive.
+func selectFileAndDir(t *testing.T, a *App, dir string) {
+	t.Helper()
+	thicket := filepath.Join(dir, "thicket")
+	if err := os.Mkdir(thicket, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	a.activePanel().SelectedPaths = map[string]bool{filepath.Join(dir, "harbor.txt"): true, thicket: true}
+}
+
+func TestFileIndexTagEditorRecursiveOnlyWithADirectory(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	cursorTo(t, a, "harbor.txt")
+	hasRecursive := func() bool {
+		t.Helper()
+		a.dispatch(keymap.ActionFileIndexTags)
+		waitTagPrompt(t, a, screen)
+		defer a.fileindexCtrl.CloseTagDialog()
+		_, ok := a.fileindexCtrl.TagDialogSpec().Item(dialog.IndexTagsRecursive)
+		return ok
+	}
+	if hasRecursive() {
+		t.Fatal("a plain file should not offer Recursive")
+	}
+	selectFileAndDir(t, a, dir)
+	if !hasRecursive() {
+		t.Fatal("a selection with a directory should offer Recursive")
+	}
+}
+
 func TestFileIndexTagEditorArrowsLeaveTheGrid(t *testing.T) {
 	a, screen, dir, _ := fileIndexApp(t)
 	seedTags(t, a, dir, []string{"amber", "birch", "cedar"}, "harbor.txt")
-	cursorTo(t, a, "harbor.txt")
+	selectFileAndDir(t, a, dir)
 	a.dispatch(keymap.ActionFileIndexTags)
 	waitTagPrompt(t, a, screen)
 	st := &a.model.IndexTagsDialog
@@ -367,7 +397,7 @@ func TestFileIndexTagEditorArrowsLeaveTheGrid(t *testing.T) {
 func TestFileIndexTagEditorPlainLettersOutsideTheGrid(t *testing.T) {
 	a, screen, dir, _ := fileIndexApp(t)
 	seedTags(t, a, dir, []string{"orchid"}, "harbor.txt")
-	cursorTo(t, a, "harbor.txt")
+	selectFileAndDir(t, a, dir)
 	open := func() *dialog.IndexTagsDialogState {
 		t.Helper()
 		a.dispatch(keymap.ActionFileIndexTags)

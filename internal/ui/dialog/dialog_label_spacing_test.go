@@ -95,7 +95,7 @@ func TestDialogLabelsAreFollowedByContentRow(t *testing.T) {
 		{
 			name: "fileindex tags",
 			draw: func(screen tcell.Screen) {
-				st := NewIndexTagsDialog([]string{"/meadow"}, []string{"clover"}, nil, 1)
+				st := NewIndexTagsDialog([]string{"/meadow"}, []string{"clover"}, nil, 1, true)
 				st.Input = "clover, meadow"
 				DrawIndexTagsDialog(screen, layout, st, styles)
 			},

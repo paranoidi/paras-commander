@@ -1261,7 +1261,7 @@ func TestTagStateCountsTargetsAcrossParents(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Equal(st.Names, []string{"cobalt", "sienna", "umber"}) || st.Targets != 3 {
+	if !slices.Equal(st.Names, []string{"cobalt", "sienna", "umber"}) || st.Targets != 3 || st.HasDir {
 		t.Fatalf("state = %+v", st)
 	}
 	if st.Counts["cobalt"] != 2 || st.Counts["sienna"] != 1 || st.Counts["umber"] != 0 {
@@ -1270,6 +1270,17 @@ func TestTagStateCountsTargetsAcrossParents(t *testing.T) {
 	// A panel directory reads its own tags through its parent.
 	if st, err = x.TagState([]string{left}); err != nil || st.Counts["umber"] != 1 || st.Targets != 1 {
 		t.Fatalf("directory state = %+v, %v", st, err)
+	}
+	// One directory among files is enough: one the index has, gone from disk, or one only on disk.
+	if st, err = x.TagState([]string{a, left}); err != nil || !st.HasDir {
+		t.Fatalf("indexed directory state = %+v, %v", st, err)
+	}
+	unindexed := filepath.Join(root, "thicket")
+	if err := os.Mkdir(unindexed, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if st, err = x.TagState([]string{a, unindexed}); err != nil || !st.HasDir {
+		t.Fatalf("directory on disk state = %+v, %v", st, err)
 	}
 }
 

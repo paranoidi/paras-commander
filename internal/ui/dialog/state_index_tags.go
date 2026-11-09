@@ -33,15 +33,17 @@ type IndexTagsDialogState struct {
 	Cursor, Col, Offset int
 	JumpQuery           string
 	JumpIndex           int
+	HasDir              bool // a target is a directory, so Recursive can apply
 	Recursive           bool
 	Focus               dlg.ID
 }
 
 // NewIndexTagsDialog opens the editor for targets over every tag of the database: a tag is on when
 // all of the total targets carry it (counts[name]) and mixed when only some do. Focus starts on the
-// grid, or on the new-tags input when the database has no tags.
-func NewIndexTagsDialog(targetPaths []string, names []string, counts map[string]int, total int) IndexTagsDialogState {
-	st := IndexTagsDialogState{Open: true, Targets: targetPaths, Focus: IndexTagsGrid}
+// grid, or on the new-tags input when the database has no tags. hasDir tells whether any target is a
+// directory.
+func NewIndexTagsDialog(targetPaths []string, names []string, counts map[string]int, total int, hasDir bool) IndexTagsDialogState {
+	st := IndexTagsDialogState{Open: true, Targets: targetPaths, HasDir: hasDir, Focus: IndexTagsGrid}
 	if len(names) == 0 {
 		st.Focus = IndexTagsInput
 	}

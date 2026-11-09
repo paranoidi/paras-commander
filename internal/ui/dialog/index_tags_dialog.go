@@ -22,8 +22,9 @@ const (
 )
 
 // IndexTagsDialogView is the tag editor's widget spec, fitted to layout: the checkbox grid of every
-// tag, the new-tags input, the Recursive checkbox and OK / Cancel. The jump text replaces the title
-// on the top border. AltOnly holds only while the grid has focus, where plain letters are type-to-jump.
+// tag, the new-tags input, the Recursive checkbox when a target is a directory and OK / Cancel. The
+// jump text replaces the title on the top border. AltOnly holds only while the grid has focus, where
+// plain letters are type-to-jump.
 func IndexTagsDialogView(st *IndexTagsDialogState, layout Layout, styles theme.Theme) dlg.Spec {
 	var items []dlg.Item
 	if len(st.Tags) == 0 {
@@ -35,9 +36,13 @@ func IndexTagsDialogView(st *IndexTagsDialogState, layout Layout, styles theme.T
 		dlg.Item{Kind: dlg.KindSeparator},
 		dlg.Item{Kind: dlg.KindLabel, Label: "New tags (comma or space separated):"},
 		dlg.Item{ID: IndexTagsInput, Kind: dlg.KindInput, Value: st.Input, Cursor: st.InputCursor, Scroll: st.InputScroll},
-		dlg.Item{Kind: dlg.KindSeparator},
-		dlg.Item{ID: IndexTagsRecursive, Kind: dlg.KindCheckbox, Label: "Recursive (whole directory trees)", Mnemonic: 'R', On: st.Recursive},
 	)
+	if st.HasDir {
+		items = append(items,
+			dlg.Item{Kind: dlg.KindSeparator},
+			dlg.Item{ID: IndexTagsRecursive, Kind: dlg.KindCheckbox, Label: "Recursive (whole directory trees)", Mnemonic: 'R', On: st.Recursive},
+		)
+	}
 	spec := dlg.Spec{
 		Title: "Tags", TitleQuery: st.JumpQuery, TitleQueryNoMatch: st.jumpNoMatch(),
 		Width: indexTagsWidth(st, styles), MinWidth: indexTagsMinWidth,

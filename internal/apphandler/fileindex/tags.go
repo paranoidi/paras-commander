@@ -50,7 +50,7 @@ func (h *Handler) HandleTagsLoaded(p TagsLoadedPayload) {
 	if h.model.AnyModalOpen() {
 		return
 	}
-	h.model.IndexTagsDialog = dialog.NewIndexTagsDialog(p.Targets, p.State.Names, p.State.Counts, p.State.Targets)
+	h.model.IndexTagsDialog = dialog.NewIndexTagsDialog(p.Targets, p.State.Names, p.State.Counts, p.State.Targets, p.State.HasDir)
 }
 
 // TagDialogSpec is the tag editor's widget spec for the current screen.

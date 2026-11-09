@@ -401,10 +401,11 @@ Nothing is written until OK; Cancel or Esc discards the edits.
   commas or spaces and press Enter. They appear checked in the list and the
   dialog stays open for more. OK also takes whatever is still in the input. With
   no tags in the database yet, the dialog opens here.
-- **Recursive** applies the edits to a directory, every directory under it and
-  every file in them, instead of the directory alone. Only the tags you changed
-  are applied, so a tag the directory already has does not spread down the tree
-  until you remove it, then add it again with Recursive on.
+- **Recursive** shows only when the entries include a directory. It applies the
+  edits to a directory, every directory under it and every file in them, instead
+  of the directory alone. Only the tags you changed are applied, so a tag the
+  directory already has does not spread down the tree until you remove it, then
+  add it again with Recursive on.
 
 Tags work on entries that are gone from disk too. Adding tags to a path the
 index does not know queues a scan of it (a task job, see below) that applies the

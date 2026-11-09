@@ -12,11 +12,11 @@ import (
 )
 
 func indexTagsState(names ...string) IndexTagsDialogState {
-	return NewIndexTagsDialog([]string{"/orchard"}, names, nil, 1)
+	return NewIndexTagsDialog([]string{"/orchard"}, names, nil, 1, true)
 }
 
 func TestIndexTagsInitialStates(t *testing.T) {
-	st := NewIndexTagsDialog([]string{"/a", "/b"}, []string{"amber", "birch", "cedar"}, map[string]int{"amber": 2, "birch": 1}, 2)
+	st := NewIndexTagsDialog([]string{"/a", "/b"}, []string{"amber", "birch", "cedar"}, map[string]int{"amber": 2, "birch": 1}, 2, true)
 	got := []dlg.CheckState{st.Tags[0].State, st.Tags[1].State, st.Tags[2].State}
 	if !slices.Equal(got, []dlg.CheckState{dlg.CheckOn, dlg.CheckMixed, dlg.CheckOff}) {
 		t.Fatalf("states = %v", got)
@@ -24,7 +24,7 @@ func TestIndexTagsInitialStates(t *testing.T) {
 }
 
 func TestIndexTagsToggleCycles(t *testing.T) {
-	st := NewIndexTagsDialog([]string{"/a", "/b"}, []string{"amber", "birch"}, map[string]int{"amber": 1}, 2)
+	st := NewIndexTagsDialog([]string{"/a", "/b"}, []string{"amber", "birch"}, map[string]int{"amber": 1}, 2, true)
 	var got []dlg.CheckState
 	for range 3 {
 		st.ToggleCell(0, 0)
@@ -44,7 +44,7 @@ func TestIndexTagsToggleCycles(t *testing.T) {
 }
 
 func TestIndexTagsEdits(t *testing.T) {
-	st := NewIndexTagsDialog([]string{"/a", "/b"}, []string{"amber", "birch", "cedar", "dune"}, map[string]int{"amber": 2, "birch": 1, "dune": 2}, 2)
+	st := NewIndexTagsDialog([]string{"/a", "/b"}, []string{"amber", "birch", "cedar", "dune"}, map[string]int{"amber": 2, "birch": 1, "dune": 2}, 2, true)
 	st.ToggleCell(0, 0)           // amber off
 	st.ToggleCell(0, 1)           // birch mixed -> on
 	st.ToggleCell(1, 1)           // dune off ...
@@ -172,6 +172,18 @@ func TestIndexTagsGridComesFirst(t *testing.T) {
 	}
 }
 
+func TestIndexTagsRecursiveNeedsDirectory(t *testing.T) {
+	layout := Layout{Width: 80, Height: 24}
+	files := NewIndexTagsDialog([]string{"/a"}, []string{"coral"}, nil, 1, false)
+	if _, ok := IndexTagsDialogView(&files, layout, theme.Default()).Item(IndexTagsRecursive); ok {
+		t.Fatal("no Recursive expected for plain files")
+	}
+	dirs := NewIndexTagsDialog([]string{"/a"}, []string{"coral"}, nil, 1, true)
+	if _, ok := IndexTagsDialogView(&dirs, layout, theme.Default()).Item(IndexTagsRecursive); !ok {
+		t.Fatal("Recursive expected with a directory among the targets")
+	}
+}
+
 func TestIndexTagsEmptyDatabase(t *testing.T) {
 	st := indexTagsState()
 	if st.Focus != IndexTagsInput {
@@ -205,7 +217,7 @@ func TestIndexTagsGridScrollsOnShortScreen(t *testing.T) {
 func TestIndexTagsGoldenRender(t *testing.T) {
 	names := []string{"amber", "birch", "bronze", "cedar", "dune"}
 	counts := map[string]int{"amber": 2, "bronze": 1}
-	state := func() IndexTagsDialogState { return NewIndexTagsDialog([]string{"/a", "/b"}, names, counts, 2) }
+	state := func() IndexTagsDialogState { return NewIndexTagsDialog([]string{"/a", "/b"}, names, counts, 2, true) }
 	var many []string
 	for _, a := range "abcdefgh" {
 		for _, b := range "abcd" {
@@ -222,6 +234,7 @@ func TestIndexTagsGoldenRender(t *testing.T) {
 	grid := state()
 	grid.Focus, grid.Cursor, grid.Col = IndexTagsGrid, 1, 1
 	add(&cases, "80x24_grid", 80, 24, grid)
+	add(&cases, "80x24_files_only", 80, 24, NewIndexTagsDialog([]string{"/a"}, names, nil, 1, false))
 	input := state()
 	input.Focus, input.Input, input.InputCursor = IndexTagsInput, "clover", 6
 	add(&cases, "80x24_input", 80, 24, input)
@@ -234,10 +247,10 @@ func TestIndexTagsGoldenRender(t *testing.T) {
 	nomatch.Focus = IndexTagsGrid
 	nomatch.TypeJump('q')
 	add(&cases, "80x24_jump_nomatch", 80, 24, nomatch)
-	overflow := NewIndexTagsDialog([]string{"/a"}, many, nil, 1)
+	overflow := NewIndexTagsDialog([]string{"/a"}, many, nil, 1, true)
 	overflow.Focus, overflow.Cursor = IndexTagsGrid, 5
 	add(&cases, "80x20_overflow", 80, 20, overflow)
-	add(&cases, "80x24_empty", 80, 24, NewIndexTagsDialog([]string{"/a"}, nil, nil, 1))
+	add(&cases, "80x24_empty", 80, 24, NewIndexTagsDialog([]string{"/a"}, nil, nil, 1, true))
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			checkGoldenFile(t, simpleGoldenRoot+"/index_tags", c.name, dumpDialogBand(t, c, c.h))
