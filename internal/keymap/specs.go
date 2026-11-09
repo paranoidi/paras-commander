@@ -720,6 +720,51 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:   "M",
 		},
 		{
+			ID:          ActionCompareFilterLeftOnly,
+			Views:       HelpCompare,
+			Title:       "Show left only category",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
+			Keywords:    []string{"category", "filter", "missing", "one-sided"},
+			LeaderKey:   "l",
+		},
+		{
+			ID:          ActionCompareFilterRightOnly,
+			Views:       HelpCompare,
+			Title:       "Show right only category",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
+			Keywords:    []string{"category", "filter", "missing", "one-sided"},
+			LeaderKey:   "i",
+		},
+		{
+			ID:          ActionCompareFilterModified,
+			Views:       HelpCompare,
+			Title:       "Show modified category",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
+			Keywords:    []string{"category", "filter", "content", "diff", "different"},
+			LeaderKey:   "D",
+		},
+		{
+			ID:          ActionCompareFilterRelocated,
+			Views:       HelpCompare,
+			Title:       "Show relocated category",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
+			Keywords:    []string{"category", "filter", "moved", "renamed"},
+			LeaderKey:   "o",
+		},
+		{
+			ID:          ActionCompareFilterAll,
+			Views:       HelpCompare,
+			Title:       "Show all categories",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
+			Keywords:    []string{"category", "filter", "check", "every"},
+			LeaderKey:   "A",
+		},
+		{
 			ID:          ActionDedupClose,
 			Views:       HelpDedup,
 			Title:       "Close view",

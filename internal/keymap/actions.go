@@ -136,16 +136,21 @@ const (
 	ActionPinView        = "pin.view"
 
 	// Compare view
-	ActionCompareClose         = "compare.close"
-	ActionCompareCycleFilter   = "compare.cycle-filter"
-	ActionCompareResetFilter   = "compare.reset-filter"
-	ActionCompareFilterDialog  = "compare.filter-dialog"
-	ActionCompareRefresh       = "compare.refresh"
-	ActionCompareMerge         = "compare.merge"
-	ActionCompareToggleEmpty   = "compare.toggle-empty"
-	ActionCompareRelocatedName = "compare.relocated-name"
-	ActionCompareRename        = "compare.rename"
-	ActionCompareMassRename    = "compare.mass-rename"
+	ActionCompareClose           = "compare.close"
+	ActionCompareCycleFilter     = "compare.cycle-filter"
+	ActionCompareResetFilter     = "compare.reset-filter"
+	ActionCompareFilterDialog    = "compare.filter-dialog"
+	ActionCompareRefresh         = "compare.refresh"
+	ActionCompareMerge           = "compare.merge"
+	ActionCompareToggleEmpty     = "compare.toggle-empty"
+	ActionCompareRelocatedName   = "compare.relocated-name"
+	ActionCompareRename          = "compare.rename"
+	ActionCompareMassRename      = "compare.mass-rename"
+	ActionCompareFilterLeftOnly  = "compare.filter-left-only"
+	ActionCompareFilterRightOnly = "compare.filter-right-only"
+	ActionCompareFilterModified  = "compare.filter-modified"
+	ActionCompareFilterRelocated = "compare.filter-relocated"
+	ActionCompareFilterAll       = "compare.filter-all"
 
 	// Dedup (find-duplicates) view
 	ActionDedupClose          = "dedup.close"
@@ -502,16 +507,21 @@ var KnownActions = map[string]struct{}{
 	ActionPinRemoveAll:    {},
 	ActionPinView:         {},
 
-	ActionCompareClose:         {},
-	ActionCompareCycleFilter:   {},
-	ActionCompareResetFilter:   {},
-	ActionCompareFilterDialog:  {},
-	ActionCompareRefresh:       {},
-	ActionCompareMerge:         {},
-	ActionCompareToggleEmpty:   {},
-	ActionCompareRelocatedName: {},
-	ActionCompareRename:        {},
-	ActionCompareMassRename:    {},
+	ActionCompareClose:           {},
+	ActionCompareCycleFilter:     {},
+	ActionCompareResetFilter:     {},
+	ActionCompareFilterDialog:    {},
+	ActionCompareRefresh:         {},
+	ActionCompareMerge:           {},
+	ActionCompareToggleEmpty:     {},
+	ActionCompareRelocatedName:   {},
+	ActionCompareRename:          {},
+	ActionCompareMassRename:      {},
+	ActionCompareFilterLeftOnly:  {},
+	ActionCompareFilterRightOnly: {},
+	ActionCompareFilterModified:  {},
+	ActionCompareFilterRelocated: {},
+	ActionCompareFilterAll:       {},
 
 	ActionDedupClose:          {},
 	ActionDedupToggleSort:     {},

@@ -48,6 +48,21 @@ func (a *App) tryDispatchCompare(actionID string) bool {
 			a.compareCtrl.OpenFilterDialog()
 		}
 		return true
+	case keymap.ActionCompareFilterLeftOnly:
+		a.setCompareCategories(comparepkg.FilterPrimaryOnly)
+		return true
+	case keymap.ActionCompareFilterRightOnly:
+		a.setCompareCategories(comparepkg.FilterSecondaryOnly)
+		return true
+	case keymap.ActionCompareFilterModified:
+		a.setCompareCategories(comparepkg.FilterContentDiff)
+		return true
+	case keymap.ActionCompareFilterRelocated:
+		a.setCompareCategories(comparepkg.FilterRelocated)
+		return true
+	case keymap.ActionCompareFilterAll:
+		a.setCompareCategories(comparepkg.FilterAll)
+		return true
 	case keymap.ActionCompareResetFilter:
 		if a.model.ViewMode == ui.ViewCompare {
 			a.compareCtrl.SetFilter(comparepkg.FilterAll)
@@ -158,6 +173,13 @@ func (a *App) tryDispatchCompare(actionID string) bool {
 		return true
 	default:
 		return false
+	}
+}
+
+// setCompareCategories replaces the category checkboxes with f, leaving the name filter alone.
+func (a *App) setCompareCategories(f comparepkg.Filter) {
+	if a.model.ViewMode == ui.ViewCompare {
+		a.compareCtrl.SetFilter(f)
 	}
 }
 

@@ -5,16 +5,21 @@ import "strings"
 // DefaultCompareOverlayKeys holds built-in chords for the Compare full-screen view ([compare]).
 func DefaultCompareOverlayKeys() map[string][]string {
 	return map[string][]string{
-		ActionCompareClose:         {"esc"},
-		ActionCompareCycleFilter:   {"F3"},
-		ActionCompareResetFilter:   {"S-F3"},
-		ActionCompareFilterDialog:  {"M-f"},
-		ActionCompareRefresh:       {"M-r"},
-		ActionCompareMerge:         {"F5"},
-		ActionCompareToggleEmpty:   {"M-e"},
-		ActionCompareRelocatedName: {"M-n"},
-		ActionCompareRename:        {"F6"},
-		ActionCompareMassRename:    {"S-F6"},
+		ActionCompareClose:           {"esc"},
+		ActionCompareCycleFilter:     {"F3"},
+		ActionCompareResetFilter:     {"S-F3"},
+		ActionCompareFilterDialog:    {"M-f"},
+		ActionCompareRefresh:         {"M-r"},
+		ActionCompareMerge:           {"F5"},
+		ActionCompareToggleEmpty:     {"M-e"},
+		ActionCompareRelocatedName:   {"M-n"},
+		ActionCompareRename:          {"F6"},
+		ActionCompareMassRename:      {"S-F6"},
+		ActionCompareFilterLeftOnly:  {"C-left"},
+		ActionCompareFilterRightOnly: {"C-right"},
+		ActionCompareFilterModified:  {"C-down"},
+		ActionCompareFilterRelocated: {"C-M-down"},
+		ActionCompareFilterAll:       {"C-up"},
 	}
 }
 

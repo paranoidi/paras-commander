@@ -29,7 +29,12 @@ Files are compared in parallel (`hash_concurrency`); rows show Pending or Hashin
 | `Up` / `Down`, `PgUp` / `PgDn` | move through rows |
 | `Enter` | go to the file in the browser and close |
 | `F3` | Category dialog, show any mix of the classes |
-| `S-F3` | reset the filters |
+| `C-Left` | show only the Left only category |
+| `C-Right` | show only the Right only category |
+| `C-Down` | show only the Content diff category (modified files) |
+| `C-M-Down` | show only the Relocated category |
+| `C-Up` | show all categories, keeping the name filter |
+| `S-F3` | reset the filters, including the name filter |
 | `M-f` | filter by name, see [Panel filter](panel-filter.md#compare-view) |
 | `M-e` | show or hide empty files |
 | `M-r` | rescan, keeping cursor and filters |

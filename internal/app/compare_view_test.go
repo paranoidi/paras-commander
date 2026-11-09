@@ -542,3 +542,52 @@ func TestCompareViewExternalBrowserUsesFocusedColumn(t *testing.T) {
 		t.Fatalf("opened = %v, want %v", opened, want)
 	}
 }
+
+// TestCompareCategoryChords verifies the Ctrl+arrow chords replace the Category checkboxes,
+// keep the name filter, and shadow the global tree expand/collapse chords in this view.
+func TestCompareCategoryChords(t *testing.T) {
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, t.TempDir())
+	left, right := t.TempDir(), t.TempDir()
+	writeCompareFile(t, left, "lantern.txt", "same")
+	writeCompareFile(t, right, "lantern.txt", "same")
+	writeCompareFile(t, left, "meadow.txt", "left")
+	writeCompareFile(t, right, "orchard.txt", "right")
+	writeCompareFile(t, left, "quiver.txt", "aa")
+	writeCompareFile(t, right, "quiver.txt", "bbb")
+	writeCompareFile(t, left, "harbor.txt", "drifting cargo")
+	writeCompareFile(t, right, "willow.txt", "drifting cargo")
+	openCompareOn(t, app, left, right)
+	waitCompareDone(t, app)
+	nameFilter := func(string) bool { return true }
+	app.model.CompareView.NameFilter = nameFilter
+	app.model.CompareView.NameFilterLabel = "keep"
+
+	for _, tc := range []struct {
+		key  tcell.Key
+		mod  tcell.ModMask
+		want comparepkg.Filter
+		rows int
+	}{
+		{tcell.KeyLeft, tcell.ModCtrl, comparepkg.FilterPrimaryOnly, 1},
+		{tcell.KeyRight, tcell.ModCtrl, comparepkg.FilterSecondaryOnly, 1},
+		{tcell.KeyDown, tcell.ModCtrl, comparepkg.FilterContentDiff, 1},
+		{tcell.KeyDown, tcell.ModCtrl | tcell.ModAlt, comparepkg.FilterRelocated, 1},
+		{tcell.KeyUp, tcell.ModCtrl, comparepkg.FilterAll, 5},
+	} {
+		app.handleKey(tcell.NewEventKey(tc.key, 0, tc.mod))
+		st := app.model.CompareView
+		if st.Filter != tc.want {
+			t.Fatalf("key %v: filter = %v, want %v", tc.key, st.Filter, tc.want)
+		}
+		if n := len(app.compareCtrl.FilteredRows()); n != tc.rows {
+			t.Fatalf("key %v: rows = %d, want %d", tc.key, n, tc.rows)
+		}
+		if st.NameFilter == nil || st.NameFilterLabel != "keep" {
+			t.Fatalf("key %v: name filter was cleared", tc.key)
+		}
+		if st.FocusColumn != ui.CompareColumnPrimary {
+			t.Fatalf("key %v: moved the column focus", tc.key)
+		}
+	}
+}
