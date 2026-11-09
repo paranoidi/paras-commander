@@ -61,6 +61,7 @@ func gitStatusCellStyle(st gitstatus.Status, rowStyle tcell.Style, styles theme.
 	}
 	if barIconKey != "" {
 		fg = styles.PanelFileIconFG[barIconKey]
+		attrs &^= tcell.AttrBold // bold-as-bright would turn the icon color into the bar's grey
 	}
 	return tcell.StyleDefault.Foreground(fg).Background(rowBG).Attributes(attrs)
 }
@@ -108,6 +109,7 @@ func paintIndexColumn(screen tcell.Screen, x, y int, state string, rowStyle tcel
 		}
 		if barIconKey != "" {
 			fg = styles.PanelFileIconFG[barIconKey]
+			attrs &^= tcell.AttrBold // bold-as-bright would turn the icon color into the bar's grey
 		}
 		s = tcell.StyleDefault.Foreground(fg).Background(rowBG).Attributes(attrs)
 	}

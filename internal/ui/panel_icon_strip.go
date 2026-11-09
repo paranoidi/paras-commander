@@ -133,6 +133,11 @@ func paintPanelIconStrip(
 		}
 	}
 	iconStyle := rowStyle.Foreground(fg)
+	if _, ok := th.PanelFileIconFG[ctx.CursorStyleKey]; ok {
+		// A themed icon color must not inherit the row's bold: terminals that render bold as
+		// bright turn an icon = "black" into bright black, the disk-usage bar's own grey.
+		iconStyle = iconStyle.Bold(false)
+	}
 
 	col := 0
 	for _, r := range icon {

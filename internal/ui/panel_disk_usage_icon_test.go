@@ -328,3 +328,30 @@ func TestDiskUsageBarIconColorOnGitColumn(t *testing.T) {
 		t.Errorf("cursor row staged fg=%v, want the cursor row foreground", fg)
 	}
 }
+
+// A folder row is bold; its icon on the bar must not be, or bold-as-bright terminals paint the
+// black bar icon in the bar's own grey.
+func TestDiskUsageBarFolderIconNotBold(t *testing.T) {
+	t.Parallel()
+	root := "/scan/root"
+	dir := func(name string) localfs.Entry {
+		return localfs.Entry{Name: name, Path: root + "/" + name, Type: localfs.EntryDirectory}
+	}
+	state := panel.State{Columns: panel.ColumnsBrief, Path: pathloc.MustParse(root),
+		Entries: []localfs.Entry{dir("acorn"), dir("harbor")}}
+	sizes := map[string]int64{root + "/acorn": 1, root + "/harbor": 1000}
+	screen := drawBarIconPanel(t, state, sizes, PanelContext{FileListActive: true, CursorRowActive: true}, nil)
+	nameX, y := barIconNameCell(t, screen, "harbor")
+	for x := nameX - 1; x > 0; x-- {
+		s, st, _ := screen.Get(x, y)
+		if strings.TrimSpace(s) == "" {
+			continue
+		}
+		fg, _, attrs := st.Decompose()
+		if fg != tcell.ColorBlack || attrs&tcell.AttrBold != 0 {
+			t.Fatalf("folder icon fg=%v bold=%v, want black not bold", fg, attrs&tcell.AttrBold != 0)
+		}
+		return
+	}
+	t.Fatal("folder icon not found")
+}
