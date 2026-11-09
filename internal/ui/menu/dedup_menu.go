@@ -26,7 +26,7 @@ func DefinitionsDedup(ignoreEmpty, treeDirs bool) []Definition {
 	}
 	items = append(items,
 		Item{Action: keymap.ActionDedupToggleEmpty, Label: DedupToggleEmptyMenuLabel(ignoreEmpty), Shortcut: 'e'},
-		Item{Action: keymap.ActionDedupToggleTree, Label: "Directory / group view", Shortcut: 'g'},
+		Item{Action: keymap.ActionDedupToggleTree, Label: "Directory / group view", Shortcut: 'i'},
 		Item{Action: keymap.ActionDedupCollapseAll, Label: "Collapse all", Shortcut: 'c'},
 		Item{Action: keymap.ActionDedupExpandAll, Label: "Expand all", Shortcut: 'a'},
 	)
@@ -38,6 +38,8 @@ func DefinitionsDedup(ignoreEmpty, treeDirs bool) []Definition {
 	}
 	items = append(items,
 		Item{Action: keymap.ActionPanelSelectRange, Label: "Select range", Shortcut: 'k'},
+		Item{Action: keymap.ActionPanelSelectGroup, Label: "Select group", Shortcut: 'g'},
+		Item{Action: keymap.ActionPanelUnselectGroup, Label: "Unselect group", Shortcut: 'n'},
 		Item{Action: keymap.ActionPanelClearSelection, Label: "Unselect all", Shortcut: 'u'},
 		Item{Action: keymap.ActionFileDelete, Label: "Delete marked", Shortcut: 'd'},
 	)

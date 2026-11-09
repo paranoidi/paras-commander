@@ -145,7 +145,7 @@ type GroupSelectState struct {
 	// entry: drawn as a placeholder, replaced by the first typed rune, committed by other edits.
 	PrefillPending     bool
 	Mode               string // "select" or "unselect"
-	Context            string // "" or "panel" (default), "find", "output"
+	Context            string // "" or "panel" (default), "find", "index-find", "output", "dedup"
 	PatternMode        panel.GroupPatternMode
 	PatternCompileHint string
 	FilesOnly          bool

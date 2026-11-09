@@ -456,6 +456,8 @@ func (a *App) groupSelectCursorEntry(context string) (name string, isDir, ok boo
 			r := st.Results[st.Selected]
 			return filepath.Base(r.Path), r.IsDir, true
 		}
+	case "dedup":
+		return a.filterCursorEntry(dialog.FilterTargetDedup)
 	case "output":
 		st := &a.model.CommandOutputDialog
 		if st.PathCursor >= 0 && st.PathCursor < len(st.Paths) {
@@ -564,6 +566,14 @@ func (a *App) updateGroupSelectPreview() {
 		}
 		return
 	}
+	if context == "dedup" {
+		match, err := a.dedupGroupMatcher(gs)
+		gs.PreviewFiles, gs.PreviewFolders, gs.PreviewShow = 0, 0, err == nil
+		if err == nil {
+			gs.PreviewFiles = a.dedupCtrl.GroupSelectCount(match, selectMode)
+		}
+		return
+	}
 	if context == "index-find" {
 		gs.PreviewFiles, gs.PreviewFolders = a.fileindexCtrl.CountGroupMatches(a.groupSelectRequest(gs), !selectMode)
 		gs.PreviewShow = true
@@ -624,6 +634,35 @@ func (a *App) outputGroupMatches(gs *dialog.GroupSelectState) ([]dialog.OutputPa
 		out = append(out, m)
 	}
 	return out, nil
+}
+
+// dedupGroupMatcher is the dedup-context predicate on a file's absolute path. Dedup rows to
+// (un)mark are all files, so Directories only matches nothing.
+func (a *App) dedupGroupMatcher(gs *dialog.GroupSelectState) (func(string) bool, error) {
+	if gs.DirsOnly {
+		return func(string) bool { return false }, nil
+	}
+	return findctrl.NewPathMatcher(a.groupSelectRequest(gs))
+}
+
+// applyDedupGroupSelect marks or unmarks the matching Find duplicates files and reports the result.
+func (a *App) applyDedupGroupSelect(gs *dialog.GroupSelectState) {
+	match, err := a.dedupGroupMatcher(gs)
+	if err != nil {
+		a.setTransientMessage(err.Error(), ui.MessageUrgencyCritical)
+		return
+	}
+	selectMode := gs.Mode == "select"
+	n := a.dedupCtrl.GroupSelect(match, selectMode)
+	if n == 0 {
+		a.setTransientMessage("No matches", ui.MessageUrgencyWarn)
+		return
+	}
+	verb := "Unselected"
+	if selectMode {
+		verb = "Selected"
+	}
+	a.setTransientMessage(fmt.Sprintf("%s %d files matching %s", verb, n, a.groupSelectRequest(gs).Describe()), ui.MessageUrgencyInfo)
 }
 
 // applyOutputGroupSelect selects or unselects the matching detected output paths in the active
@@ -718,6 +757,8 @@ func (a *App) executeGroupSelect() {
 		a.fileindexCtrl.ApplyGroupSelect(a.groupSelectRequest(gs))
 	case "output":
 		a.applyOutputGroupSelect(gs)
+	case "dedup":
+		a.applyDedupGroupSelect(gs)
 	default:
 		p := a.activePanel()
 		meta := a.groupSelectMeta(gs)

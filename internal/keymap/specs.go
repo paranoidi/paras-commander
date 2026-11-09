@@ -841,7 +841,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"tree", "view", "mode", "directory", "group"},
-			LeaderKey:   "g",
+			LeaderKey:   "G",
 		},
 		{
 			ID:          ActionDedupCollapseAll,
@@ -1063,7 +1063,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelSelectGroup,
-			Views:       HelpBrowser | HelpCompare,
+			Views:       HelpBrowser | HelpCompare | HelpDedup,
 			Title:       "Select group",
 			Section:     "Selection",
 			DefaultKeys: []string{"+"},
@@ -1072,7 +1072,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelUnselectGroup,
-			Views:       HelpBrowser | HelpCompare,
+			Views:       HelpBrowser | HelpCompare | HelpDedup,
 			Title:       "Unselect group",
 			Section:     "Selection",
 			DefaultKeys: []string{"-", "M-u"},

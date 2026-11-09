@@ -23,7 +23,7 @@ The dialog has the same mode radios and type checkboxes as the [panel Filter](pa
 
 The pattern opens prefilled with the extension of the file under the cursor (e.g. `*.stl`), shown dimmed: Enter uses it, typing replaces it, editing keys keep it. Directories and files without an extension open empty.
 
-A live count beside the Pattern label shows how many files and folders the pattern would newly select (or unselect). The input turns red when the pattern is invalid or matches nothing. With "Directories only" the type checkboxes are disabled. An empty pattern with types checked selects every entry of those types; an empty pattern and no types selects nothing. The dialog also works inside Find results (with "Match full path") and on the paths detected in a user-menu output dialog.
+A live count beside the Pattern label shows how many files and folders the pattern would newly select (or unselect). The input turns red when the pattern is invalid or matches nothing. With "Directories only" the type checkboxes are disabled. An empty pattern with types checked selects every entry of those types; an empty pattern and no types selects nothing. The dialog also works inside Find results (with "Match full path"), in the [Find duplicates](find-duplicates.md) results (marking duplicates, also with "Match full path") and on the paths detected in a user-menu output dialog.
 
 ## Selected strip
 

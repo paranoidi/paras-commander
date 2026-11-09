@@ -229,6 +229,12 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 	case keymap.ActionDedupHashPotential:
 		a.dedupCtrl.HashPotential()
 		return true
+	case keymap.ActionPanelSelectGroup:
+		a.openGroupSelect("select", "dedup")
+		return true
+	case keymap.ActionPanelUnselectGroup:
+		a.openGroupSelect("unselect", "dedup")
+		return true
 	case keymap.ActionPanelClearSelection:
 		a.dedupCtrl.ClearMarks()
 		return true

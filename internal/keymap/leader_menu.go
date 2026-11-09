@@ -219,7 +219,7 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 	HelpDedup: {
 		order: []string{LeaderMenuGroupTree, LeaderMenuGroupSelection, LeaderMenuGroupDuplicates, LeaderMenuGroupDisplay, LeaderMenuGroupApp},
 		actions: map[string][]string{
-			LeaderMenuGroupSelection: {ActionPanelSelectRange, ActionPanelInvertSelection, ActionPanelClearSelection},
+			LeaderMenuGroupSelection: {ActionPanelSelectRange, ActionPanelSelectGroup, ActionPanelUnselectGroup, ActionPanelInvertSelection, ActionPanelClearSelection},
 			LeaderMenuGroupApp:       {ActionAppQuit},
 			LeaderMenuGroupDisplay:   {ActionJobsOpen, ActionMessagesOpen, ActionCommandsOpen},
 			LeaderMenuGroupTree: {
