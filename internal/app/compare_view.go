@@ -12,6 +12,8 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
+const compareNothingToRename = "Nothing to rename on this side"
+
 func (a *App) openComparePanels() {
 	if ui.IsAuxiliaryView(a.model.ViewMode) {
 		return // compareCtrl.Open would refuse; don't ask about the selection first
@@ -144,6 +146,16 @@ func (a *App) tryDispatchCompare(actionID string) bool {
 			a.compareCtrl.ToggleRelocatedName()
 		}
 		return true
+	case keymap.ActionCompareRename:
+		if a.model.ViewMode == ui.ViewCompare {
+			a.openCompareRenameDialog()
+		}
+		return true
+	case keymap.ActionCompareMassRename:
+		if a.model.ViewMode == ui.ViewCompare {
+			a.openCompareMassRenameDialog()
+		}
+		return true
 	default:
 		return false
 	}
@@ -173,6 +185,32 @@ func (a *App) openCompareDeleteDialog() {
 		return
 	}
 	a.dialogCtrl.OpenDeleteDialogForPath(path, filepath.Base(path))
+}
+
+// openCompareRenameDialog renames the file under the cursor in the focused column.
+func (a *App) openCompareRenameDialog() {
+	path, _, ok := a.compareCtrl.SelectedColumnTarget()
+	if !ok {
+		a.setTransientMessage(compareNothingToRename, ui.MessageUrgencyInfo)
+		return
+	}
+	a.dialogCtrl.OpenRenameDialogForPath(path)
+}
+
+// openCompareMassRenameDialog mass-renames the focused column's panel selection or, without one,
+// the file under the cursor on that side.
+func (a *App) openCompareMassRenameDialog() {
+	p := a.panelByID(a.model.CompareView.FocusedPanelID())
+	if len(p.SelectedPaths) > 0 {
+		a.dialogCtrl.OpenMassRenameDialog(p)
+		return
+	}
+	path, _, ok := a.compareCtrl.SelectedColumnTarget()
+	if !ok {
+		a.setTransientMessage(compareNothingToRename, ui.MessageUrgencyInfo)
+		return
+	}
+	a.dialogCtrl.OpenMassRenameDialogForPath(path)
 }
 
 // compareVisibleRows returns the merged twin-panel list row count used for Compare-list
@@ -298,6 +336,7 @@ func compareViewFooterKeys(global, keys *keymap.Map, filter comparepkg.Filter, i
 		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: hint, ActionID: keymap.ActionCompareToggleEmpty})
 	}
 	out = append(out, menu.FunctionKey{Key: tcell.KeyF5, KeyLabel: "F5", Hint: "Merge", ActionID: keymap.ActionCompareMerge})
+	out = appendShiftTwinFooterKey(out, keys, keymap.ActionCompareRename, keymap.ActionCompareMassRename, "Rename", "Mass", "Mass rename")
 	if global != nil {
 		if lbl := global.MenuBindingLabel(keymap.ActionFileDelete); lbl != "" {
 			out = append(out, menu.FunctionKey{Key: tcell.KeyF8, KeyLabel: lbl, Hint: "Delete", ActionID: keymap.ActionFileDelete})

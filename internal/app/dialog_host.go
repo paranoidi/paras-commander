@@ -40,6 +40,8 @@ func (h dialogHost) FilterCursorEntry(target dialog.FilterTarget) (string, bool,
 
 func (h dialogHost) ForgetComparePaths(paths []string) { h.app.compareCtrl.ForgetPaths(paths) }
 
+func (h dialogHost) RefreshCompare() { h.app.compareCtrl.Refresh() }
+
 func (h dialogHost) Config() config.Config { return h.app.config }
 
 func (h dialogHost) Styles() theme.Theme { return h.app.styles }

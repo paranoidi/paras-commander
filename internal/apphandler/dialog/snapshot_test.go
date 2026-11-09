@@ -67,6 +67,7 @@ func (f *identityTestHost) Styles() theme.Theme                         { return
 func (f *identityTestHost) OpenMessageDialog(string, string)            {}
 func (f *identityTestHost) InQuickFilterUI() bool                       { return false }
 func (f *identityTestHost) ForgetComparePaths([]string)                 {}
+func (f *identityTestHost) RefreshCompare()                             {}
 func (f *identityTestHost) FilterCursorEntry(uidialog.FilterTarget) (string, bool, bool) {
 	return "", false, false
 }

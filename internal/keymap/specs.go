@@ -702,6 +702,24 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:   "N",
 		},
 		{
+			ID:          ActionCompareRename,
+			Views:       HelpCompare,
+			Title:       "Rename file",
+			Section:     "File",
+			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
+			Keywords:    []string{"rename", "name"},
+			LeaderKey:   "a",
+		},
+		{
+			ID:          ActionCompareMassRename,
+			Views:       HelpCompare,
+			Title:       "Mass rename",
+			Section:     "File",
+			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
+			Keywords:    []string{"rename", "mass", "batch", "regex"},
+			LeaderKey:   "M",
+		},
+		{
 			ID:          ActionDedupClose,
 			Views:       HelpDedup,
 			Title:       "Close view",

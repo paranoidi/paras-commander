@@ -31,6 +31,9 @@ type Host interface {
 	// ForgetComparePaths prunes deleted paths from the open Compare view's results.
 	ForgetComparePaths(paths []string)
 
+	// RefreshCompare rescans the open Compare view, keeping its filters, focus and cursor.
+	RefreshCompare()
+
 	// CloseJobsView leaves the jobs view for the browser (jobs.close); a no-op elsewhere.
 	CloseJobsView()
 

@@ -144,6 +144,8 @@ const (
 	ActionCompareMerge         = "compare.merge"
 	ActionCompareToggleEmpty   = "compare.toggle-empty"
 	ActionCompareRelocatedName = "compare.relocated-name"
+	ActionCompareRename        = "compare.rename"
+	ActionCompareMassRename    = "compare.mass-rename"
 
 	// Dedup (find-duplicates) view
 	ActionDedupClose          = "dedup.close"
@@ -508,6 +510,8 @@ var KnownActions = map[string]struct{}{
 	ActionCompareMerge:         {},
 	ActionCompareToggleEmpty:   {},
 	ActionCompareRelocatedName: {},
+	ActionCompareRename:        {},
+	ActionCompareMassRename:    {},
 
 	ActionDedupClose:          {},
 	ActionDedupToggleSort:     {},

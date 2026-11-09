@@ -182,7 +182,7 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 			LeaderMenuGroupAddMark, LeaderMenuGroupDisplay, LeaderMenuGroupApp,
 		},
 		actions: map[string][]string{
-			LeaderMenuGroupFile:      {ActionFileDelete},
+			LeaderMenuGroupFile:      {ActionCompareRename, ActionCompareMassRename, ActionFileDelete},
 			LeaderMenuGroupSelection: {ActionPanelSelectRange, ActionPanelSelectGroup, ActionPanelUnselectGroup, ActionPanelClearSelection},
 			LeaderMenuGroupCompare: {
 				ActionCompareClose,

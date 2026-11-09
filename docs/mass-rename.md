@@ -11,6 +11,9 @@ single-entry [Rename](fileoperations.md#rename) dialog. Rebind it in
 file or is illegal, the affected rows are flagged and OK stays blocked until
 the conflicts are gone.
 
+In the [Compare view](compare-directories.md#renaming) it opens with `S-F6` and acts on the
+focused column.
+
 ## Modes
 
 - **Simple (replace text)**: replaces every occurrence of Find with Replace.

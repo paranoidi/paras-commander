@@ -25,6 +25,8 @@ func DefinitionsCompare(ignoreEmpty bool) []Definition {
 				{Action: keymap.ActionCompareRefresh, Label: "Refresh", Shortcut: 'r'},
 				{Action: keymap.ActionCompareMerge, Label: "Merge", Shortcut: 'm'},
 				{Action: keymap.ActionCompareRelocatedName, Label: "Name from this column", Shortcut: 'f'},
+				{Action: keymap.ActionCompareRename, Label: "Rename", Shortcut: 'a'},
+				{Action: keymap.ActionCompareMassRename, Label: "Mass rename", Shortcut: 's'},
 				{Action: keymap.ActionFileDelete, Label: "Delete", Shortcut: 'd'},
 				{Action: keymap.ActionPanelSelectRange, Label: "Select range", Shortcut: 'k'},
 				{Action: keymap.ActionPanelSelectGroup, Label: "Select group", Shortcut: 'g'},

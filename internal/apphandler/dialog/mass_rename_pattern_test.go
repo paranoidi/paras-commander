@@ -51,6 +51,7 @@ func (f *fakeMassRenamePatternHost) Styles() theme.Theme                        
 func (f *fakeMassRenamePatternHost) OpenMessageDialog(string, string)              {}
 func (f *fakeMassRenamePatternHost) InQuickFilterUI() bool                         { return false }
 func (f *fakeMassRenamePatternHost) ForgetComparePaths([]string)                   {}
+func (f *fakeMassRenamePatternHost) RefreshCompare()                               {}
 func (f *fakeMassRenamePatternHost) FilterCursorEntry(uidialog.FilterTarget) (string, bool, bool) {
 	return "", false, false
 }

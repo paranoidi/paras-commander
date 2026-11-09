@@ -38,9 +38,28 @@ func (h *Handler) OpenMassRenameDialog(p *panel.State) {
 		if !filepath.IsAbs(ap) {
 			ap = filepath.Join(p.PathString(), ap)
 		}
-		ap = filepath.Clean(ap)
-		sources = append(sources, dialog.MassRenameSource{Path: ap, Name: filepath.Base(ap), IsDir: e.Type == localfs.EntryDirectory})
+		sources = append(sources, massRenameSource(ap, e.Type))
 	}
+	h.openMassRenameDialog(sources)
+}
+
+// OpenMassRenameDialogForPath opens the mass-rename dialog for the single file at path (Compare
+// cursor row), whatever the panel's cursor.
+func (h *Handler) OpenMassRenameDialogForPath(path string) {
+	entry, err := localfs.EntryFromPath(path)
+	if err != nil {
+		h.host.SetErrorMessage("Mass rename", err)
+		return
+	}
+	h.openMassRenameDialog([]dialog.MassRenameSource{massRenameSource(entry.Path, entry.Type)})
+}
+
+func massRenameSource(path string, t localfs.EntryType) dialog.MassRenameSource {
+	path = filepath.Clean(path)
+	return dialog.MassRenameSource{Path: path, Name: filepath.Base(path), IsDir: t == localfs.EntryDirectory}
+}
+
+func (h *Handler) openMassRenameDialog(sources []dialog.MassRenameSource) {
 	fields := []dialog.FileDialogField{
 		{Label: "Find", Value: "", Cursor: 0},
 		{Label: "Replace", Value: "", Cursor: 0},
@@ -147,7 +166,7 @@ func (h *Handler) RecomputeMassRenamePreview() {
 	}
 
 	entries := massRenameEntries(d)
-	panelPath := h.host.ActivePanel().PathString()
+	panelPath := h.renameTargetPanel().PathString()
 	find, replace := "", ""
 	if len(d.Fields) > 0 {
 		find = d.Fields[0].Value
@@ -277,7 +296,7 @@ func (h *Handler) recomputeMassRenameExternalEditorPreview() {
 func (h *Handler) recomputeMassRenameCapitalizePreview() {
 	d := &h.model.FileDialog
 	entries := massRenameEntries(d)
-	panelPath := h.host.ActivePanel().PathString()
+	panelPath := h.renameTargetPanel().PathString()
 	rows, err := ops.MassRenameComputeCapitalize(entries, panelPath, d.MassRenameCapEachWord, d.MassRenameCapPunctSep, d.MassRenameStripSpaces, d.MassRenameIgnoreExt)
 	if err != nil {
 		setMassRenameComputeError(d, err.Error())
@@ -464,7 +483,7 @@ func (h *Handler) massRenameComputeRows(d *dialog.FileDialogState) ([]ops.MassRe
 		return rows, nil
 	}
 	entries := massRenameEntries(d)
-	panelPath := h.host.ActivePanel().PathString()
+	panelPath := h.renameTargetPanel().PathString()
 	if d.MassRenameMode == dialog.MassRenameModeUICapitalize {
 		return ops.MassRenameComputeCapitalize(entries, panelPath, d.MassRenameCapEachWord, d.MassRenameCapPunctSep, d.MassRenameStripSpaces, d.MassRenameIgnoreExt)
 	}
@@ -492,7 +511,7 @@ func (h *Handler) massRenameComputeRows(d *dialog.FileDialogState) ([]ops.MassRe
 }
 
 // ExecuteMassRename runs the mass-rename dialog's OK action: validates the computed rows and,
-// if clean, renames every source and refreshes the active panel's selection/marks.
+// if clean, renames every source and refreshes the target panel's selection/marks.
 func (h *Handler) ExecuteMassRename() {
 	d := &h.model.FileDialog
 	h.RecomputeMassRenamePreview()
@@ -532,18 +551,20 @@ func (h *Handler) ExecuteMassRename() {
 	renamedPaths := h.applyMassRenameRows(rows)
 	h.CloseFileDialog()
 	h.RefreshBothPanels()
-	h.addRenameMarks(renamedPaths)
-	h.host.ActivePanel().ClearSelection()
+	target := h.renameTargetPanel()
+	h.addRenameMarks(target, renamedPaths)
+	target.ClearSelection()
 	h.host.SetTransientMessage(fmt.Sprintf("Renamed %d file(s)", len(renamedPaths)), ui.MessageUrgencySuccess)
 }
 
-// applyMassRenameRows patches the active panel for each row that changed name, records the batch
+// applyMassRenameRows patches the target panel for each row that changed name, records the batch
 // as one finished rename job, and returns the new paths.
 func (h *Handler) applyMassRenameRows(rows []ops.MassRenameRow) []string {
 	var renamedPaths []string
 	var steps []ops.UndoStep
-	active := h.host.ActivePanel()
-	vr := h.host.ActiveViewportRows()
+	panelID := h.renameTargetPanelID()
+	target := h.host.PanelByID(panelID)
+	vr := h.host.PanelViewportRows(panelID)
 	for _, r := range rows {
 		if r.NewBase == r.OldBase {
 			continue
@@ -551,9 +572,10 @@ func (h *Handler) applyMassRenameRows(rows []ops.MassRenameRow) []string {
 		newPath := r.NewPath()
 		renamedPaths = append(renamedPaths, newPath)
 		steps = append(steps, renameStep(r.SourcePath, newPath, r.IsDir)...)
-		active.RenameEntry(r.SourcePath, r.NewBase, vr)
+		target.RenameEntry(r.SourcePath, r.NewBase, vr)
 	}
 	h.recordRename(steps)
+	h.refreshCompareAfterRename()
 	return renamedPaths
 }
 
@@ -606,10 +628,11 @@ func (h *Handler) ApplyMassRenameKeepOpen() {
 	}
 
 	h.RefreshBothPanels()
-	h.addRenameMarks(renamedPaths)
-	h.host.ActivePanel().ClearSelection()
+	target := h.renameTargetPanel()
+	h.addRenameMarks(target, renamedPaths)
+	target.ClearSelection()
 	for _, np := range newPaths {
-		h.host.ActivePanel().AddSelection(np)
+		target.AddSelection(np)
 	}
 
 	d.MassRenameSources = newSources

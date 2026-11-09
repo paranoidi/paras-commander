@@ -35,6 +35,8 @@ Files are compared in parallel (`hash_concurrency`); rows show Pending or Hashin
 | `M-r` | rescan, keeping cursor and filters |
 | `F5` | merge dialog, see [Merge](#merge) |
 | `M-n` | choose the focused column's name for a relocated file when merging; press again to drop the choice |
+| `F6` | rename the focused column's file, see [Renaming](#renaming) |
+| `S-F6` | mass rename the focused column's selection or file, see [Renaming](#renaming) |
 | `F8` | delete the focused column's file(s) |
 | `Esc` | close the view |
 
@@ -43,6 +45,17 @@ Files are compared in parallel (`hash_concurrency`); rows show Pending or Hashin
 Selection acts on the focused column's panel: `Insert` / `Space` toggle the row's path, `M-k` selects a range, `*` inverts, `C-u` clears. `+` and `-` open the category dialog in select or unselect mode, choosing every visible row of the ticked classes (including one-sided classes). Selections persist in the panels after leaving the view and feed copy, move and delete as usual ([Selections](selections.md)).
 
 Because delete in the view acts on the whole panel selection, opening Compare (from the panels or from Find duplicates) while either panel has selected paths first asks what to do with the selection: **Drop** clears it, **Stash** (the default) moves it into each panel's stash (merging with a stash already there) so the stash toggle (`C-M-Insert`) brings it back later, and **Cancel** leaves the selection and does not open Compare. Deleted files drop out of the results without a rescan.
+
+## Renaming
+
+Both commands act on the focused column and are also in the Actions menu.
+
+- **Rename** (`F6`) renames the file under the cursor, even when files are selected. If that file is selected, it stays selected under its new name.
+- **Mass rename** (`S-F6`) opens the [Mass rename](mass-rename.md) dialog for that column's selected files, or for the file under the cursor when nothing is selected. The files may be in different directories; each keeps its own directory.
+
+A row with no file on the focused side has nothing to rename. After a rename the view rescans, because a new name changes how a file compares: an identical pair becomes a relocated file, or a file on each side only. Filters and column focus are kept.
+
+In the browser `F6` stays Move. Rebind these keys in the `[compare]` table of `keybindings.toml`.
 
 ## Merge
 

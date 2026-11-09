@@ -547,20 +547,29 @@ func findDialogMarkingFooterKeys(keys *keymap.Map) []menu.FunctionKey {
 }
 
 // appendSelectFooterKey appends the footer entry of a select action with its unselect twin as
-// the Shift-alternative "Unselect" word (or as an entry of its own when the two bindings are not
-// a key and its Shift variant).
+// the Shift-alternative "Unselect" word.
 func appendSelectFooterKey(out []menu.FunctionKey, keys *keymap.Map, selectID, unselectID, hint string) []menu.FunctionKey {
-	sel := keys.MenuBindingLabel(selectID)
-	unsel := keys.MenuBindingLabel(unselectID)
+	return appendShiftTwinFooterKey(out, keys, selectID, unselectID, hint, "Unselect", "Un"+strings.ToLower(hint[:1])+hint[1:])
+}
+
+// appendShiftTwinFooterKey appends the footer entry of action mainID with twinID as its
+// Shift-alternative shiftWord, or one entry each (twinHint naming twinID) when the two bindings
+// are not a key and its Shift variant.
+func appendShiftTwinFooterKey(out []menu.FunctionKey, keys *keymap.Map, mainID, twinID, hint, shiftWord, twinHint string) []menu.FunctionKey {
+	mainKey := keys.MenuBindingLabel(mainID)
+	twinKey := keys.MenuBindingLabel(twinID)
+	mainEntry := menu.FunctionKey{KeyLabel: mainKey, Hint: hint, ActionID: mainID}
+	twinEntry := menu.FunctionKey{KeyLabel: twinKey, Hint: twinHint, ActionID: twinID}
 	switch {
-	case sel != "" && unsel == "S-"+sel:
-		return append(out, menu.FunctionKey{KeyLabel: sel, Hint: hint, HintShiftPrefix: "Unselect", ShiftKeyLabel: unsel})
-	case sel != "" && unsel != "":
-		return append(out, menu.FunctionKey{KeyLabel: sel, Hint: hint}, menu.FunctionKey{KeyLabel: unsel, Hint: "Un" + strings.ToLower(hint[:1]) + hint[1:]})
-	case sel != "":
-		return append(out, menu.FunctionKey{KeyLabel: sel, Hint: hint})
-	case unsel != "":
-		return append(out, menu.FunctionKey{KeyLabel: unsel, Hint: "Un" + strings.ToLower(hint[:1]) + hint[1:]})
+	case mainKey != "" && twinKey == "S-"+mainKey:
+		mainEntry.HintShiftPrefix, mainEntry.ShiftKeyLabel = shiftWord, twinKey
+		return append(out, mainEntry)
+	case mainKey != "" && twinKey != "":
+		return append(out, mainEntry, twinEntry)
+	case mainKey != "":
+		return append(out, mainEntry)
+	case twinKey != "":
+		return append(out, twinEntry)
 	}
 	return out
 }

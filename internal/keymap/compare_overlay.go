@@ -13,6 +13,8 @@ func DefaultCompareOverlayKeys() map[string][]string {
 		ActionCompareMerge:         {"F5"},
 		ActionCompareToggleEmpty:   {"M-e"},
 		ActionCompareRelocatedName: {"M-n"},
+		ActionCompareRename:        {"F6"},
+		ActionCompareMassRename:    {"S-F6"},
 	}
 }
 

@@ -34,7 +34,7 @@ func (h *Handler) CloseFileDialog() {
 		h.model.DestinationTargetSecondary = false
 	}
 	if massRenameApplied {
-		h.host.ActivePanel().ClearSelection()
+		h.renameTargetPanel().ClearSelection()
 	}
 	if wasSFTPPassword {
 		h.host.CancelSFTPPassword()
@@ -152,6 +152,21 @@ func (h *Handler) OpenRenameDialog(p *panel.State) {
 		h.host.SetErrorMessage("Rename", err)
 		return
 	}
+	h.openRenameDialogForEntry(entry, h.indexOnlyNote(p, renameIndexNote))
+}
+
+// OpenRenameDialogForPath opens the single-entry rename dialog for the file at path (Compare
+// cursor row), whatever the panel's selection or cursor.
+func (h *Handler) OpenRenameDialogForPath(path string) {
+	entry, err := localfs.EntryFromPath(path)
+	if err != nil {
+		h.host.SetErrorMessage("Rename", err)
+		return
+	}
+	h.openRenameDialogForEntry(entry, "")
+}
+
+func (h *Handler) openRenameDialogForEntry(entry localfs.Entry, note string) {
 	name := entry.Name
 	nameRunes := len([]rune(name))
 	encCands := filenameenc.DetectCandidates(name)
@@ -173,7 +188,7 @@ func (h *Handler) OpenRenameDialog(p *panel.State) {
 		RenameSourceIsDir:        entry.ResolvesToDir(),
 		RenameEncodingCandidates: renameEnc,
 		RenameEncodingSelected:   0,
-		Note:                     h.indexOnlyNote(p, renameIndexNote),
+		Note:                     note,
 	}
 }
 
@@ -439,8 +454,22 @@ func (h *Handler) ExecuteFileDialog() {
 	}
 }
 
+// renameTargetPanelID is the one source of the panel a rename acts on: the focused column's panel
+// in Compare (which need not be the active panel), otherwise the active panel.
+func (h *Handler) renameTargetPanelID() int {
+	if h.model.ViewMode == ui.ViewCompare {
+		return h.model.CompareView.FocusedPanelID()
+	}
+	return h.model.ActivePanel
+}
+
+func (h *Handler) renameTargetPanel() *panel.State {
+	return h.host.PanelByID(h.renameTargetPanelID())
+}
+
 func (h *Handler) executeRename() {
-	p := h.host.ActivePanel()
+	panelID := h.renameTargetPanelID()
+	p := h.host.PanelByID(panelID)
 	d := &h.model.FileDialog
 	if len(d.Fields) == 0 {
 		h.CloseFileDialog()
@@ -454,7 +483,6 @@ func (h *Handler) executeRename() {
 	}
 	focusAfter := d.RenameFocusAfter
 	openInOther := d.RenameOpenInOther && d.RenameSourceIsDir
-	panelID := h.model.ActivePanel
 	panelPath := p.PathString()
 	if h.useRemoteFileOp(sourcePath, panelPath) {
 		entry := localfs.Entry{Name: sourcePath, Path: sourcePath}
@@ -499,8 +527,7 @@ func (h *Handler) executeRename() {
 }
 
 // addRenameMarks records each renamed row under its own parent directory (tree rows can be nested).
-func (h *Handler) addRenameMarks(newPaths []string) {
-	p := h.host.ActivePanel()
+func (h *Handler) addRenameMarks(p *panel.State, newPaths []string) {
 	for _, np := range newPaths {
 		if loc, err := pathloc.Parse(np); err == nil {
 			p.AddRenameMarks(loc.Parent(), []string{loc.Base()})
@@ -518,6 +545,14 @@ func renameStep(from, to string, isDir bool) []ops.UndoStep {
 	return []ops.UndoStep{{Kind: ops.UndoMoveBack, Path: t, From: f, IsDir: isDir}}
 }
 
+// refreshCompareAfterRename rescans the open Compare view: a new name changes how a row classifies
+// (an equal pair turns relocated or one-sided), so its rows cannot simply be patched.
+func (h *Handler) refreshCompareAfterRename() {
+	if h.model.ViewMode == ui.ViewCompare {
+		h.host.RefreshCompare()
+	}
+}
+
 // recordRename shows a finished rename in the jobs view (nil-safe for tests without a jobs handler).
 func (h *Handler) recordRename(steps []ops.UndoStep) {
 	if h.jobs != nil {
@@ -526,9 +561,14 @@ func (h *Handler) recordRename(steps []ops.UndoStep) {
 }
 
 func (h *Handler) applyRenameSuccess(st renameApply) {
-	p := h.host.ActivePanel()
+	p := h.host.PanelByID(st.panelID)
 	h.recordRename(renameStep(st.entry.Path, st.plan.NewPath, st.entry.Type == localfs.EntryDirectory))
 	p.RenameEntry(st.entry.Path, st.plan.NewName, h.host.PanelViewportRows(st.panelID))
+	// RenameEntry only carries the selection of a listed entry; a Compare row can be nested.
+	if p.IsSelectedPath(st.entry.Path) {
+		p.TogglePathSelection(st.entry.Path)
+		p.AddSelection(st.plan.NewPath)
+	}
 	if st.focusAfter {
 		h.RefreshBothPanelsWithFocus(st.panelID, func() {
 			newPath := filepath.Join(filepath.Dir(st.entry.Path), st.plan.NewName)
@@ -537,7 +577,8 @@ func (h *Handler) applyRenameSuccess(st renameApply) {
 	} else {
 		h.RefreshBothPanels()
 	}
-	h.addRenameMarks([]string{st.plan.NewPath})
+	h.addRenameMarks(p, []string{st.plan.NewPath})
+	h.refreshCompareAfterRename()
 	if st.openInOther {
 		if err := h.host.NavigatePanelToPath(h.host.InactivePanelID(), st.plan.NewPath, ""); err != nil {
 			h.host.SetErrorMessage("Rename", err)
