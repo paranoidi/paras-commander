@@ -442,6 +442,65 @@ func TestCompareViewDeleteClearsFocusedPanelSelectionWhenSwapped(t *testing.T) {
 	}
 }
 
+// A selected path highlights in its own column whichever panel holds that column's selection.
+func TestCompareViewHighlightsSelectionInEitherPaneOrder(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		swap      bool
+		leftOwner int
+		rightOwn  int
+	}{
+		{"normal", false, ui.PrimaryPanel, ui.SecondaryPanel},
+		{"swapped", true, ui.SecondaryPanel, ui.PrimaryPanel},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			screen := newScreen(t, 100, 30)
+			app := newApp(t, screen, t.TempDir())
+			app.model.ViewMode = ui.ViewCompare
+			app.model.CompareView = ui.CompareViewState{Filter: comparepkg.FilterAll, SwapPanels: tc.swap}
+			app.model.CompareSnapshot = comparepkg.Snapshot{
+				PrimaryRoot:   pathloc.MustParse("/left-root"),
+				SecondaryRoot: pathloc.MustParse("/right-root"),
+				Phase:         comparepkg.PhaseDone,
+				Rows: []comparepkg.Row{
+					{Kind: comparepkg.KindContentDiff, PrimaryRel: "anchor.txt", SecondaryRel: "anchor.txt", Size: 1, HashDone: true},
+					{Kind: comparepkg.KindContentDiff, PrimaryRel: "lantern.txt", SecondaryRel: "lantern.txt", Size: 1, HashDone: true},
+					{Kind: comparepkg.KindContentDiff, PrimaryRel: "willow.txt", SecondaryRel: "willow.txt", Size: 1, HashDone: true},
+				},
+			}
+			app.panelByID(tc.leftOwner).AddSelection("/left-root/lantern.txt")
+			app.panelByID(tc.rightOwn).AddSelection("/right-root/willow.txt")
+			app.render()
+
+			leftX, rightX, lineY := compareViewColumnCoords(t, app)
+			fg := func(x, y int) tcell.Color {
+				t.Helper()
+				for dx := 0; dx < 12; dx++ {
+					if ch, st, _ := screen.Get(x+dx, y); ch != "" && ch != " " {
+						f, _, _ := st.Decompose()
+						return f
+					}
+				}
+				t.Fatalf("no text at (%d,%d)", x, y)
+				return tcell.ColorDefault
+			}
+			selected, _, _ := app.styles.PanelListingSelectedStyle(false).Decompose()
+			if got := fg(leftX, lineY+1); got != selected {
+				t.Errorf("selected left path fg = %v, want %v", got, selected)
+			}
+			if got := fg(rightX, lineY+2); got != selected {
+				t.Errorf("selected right path fg = %v, want %v", got, selected)
+			}
+			if got := fg(rightX, lineY+1); got == selected {
+				t.Error("unselected right path is highlighted")
+			}
+			if got := fg(leftX, lineY+2); got == selected {
+				t.Error("unselected left path is highlighted")
+			}
+		})
+	}
+}
+
 // TestCompareViewExternalBrowserUsesFocusedColumn verifies M-x reveals the focused side's
 // file directory, and that side's root when the row has no entry there.
 func TestCompareViewExternalBrowserUsesFocusedColumn(t *testing.T) {

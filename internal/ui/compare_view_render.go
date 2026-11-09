@@ -22,10 +22,11 @@ const (
 
 // compareViewData groups the data inputs to drawCompareView.
 type compareViewData struct {
-	Snap      comparepkg.Snapshot
-	Rows      []comparepkg.Row
-	Primary   panel.State
-	Secondary panel.State
+	Snap comparepkg.Snapshot
+	Rows []comparepkg.Row
+	// LeftPanel / RightPanel own the left and right columns' selections (CompareViewState.PanelID).
+	LeftPanel  panel.State
+	RightPanel panel.State
 	// RowMarks resolves the pin/in-progress-job trailing marks for one row's absolute path;
 	// nil (the zero value, used by existing test literals) paints no marks.
 	RowMarks dialog.RowMarksFunc
@@ -59,8 +60,8 @@ func drawCompareView(
 ) {
 	snap := data.Snap
 	rows := data.Rows
-	primary := data.Primary
-	secondary := data.Secondary
+	leftPanel := data.LeftPanel
+	rightPanel := data.RightPanel
 	rect := MergeTwinPanelRects(layout.Primary, layout.Secondary, orientation)
 	endLabel := panelSelectionSizePadded(comparepkg.EndLabel(view.Filter, view.IgnoreEmpty, snap, view.NameFilterLabel))
 	title := compareViewTitle(snap)
@@ -154,8 +155,8 @@ func drawCompareView(
 			}
 		}
 		absentStyle := styles.PanelBlockedText.Background(bg)
-		leftStyle := comparePathCellStyle(leftBase, view.FocusColumn == CompareColumnPrimary, rowSelected, primary.IsSelectedPath(entryPrimaryAbs(snap, entry)), styles, dimLeft, bg, view.RangeAnchor != "")
-		rightStyle := comparePathCellStyle(rightBase, view.FocusColumn == CompareColumnSecondary, rowSelected, secondary.IsSelectedPath(entrySecondaryAbs(snap, entry)), styles, dimRight, bg, view.RangeAnchor != "")
+		leftStyle := comparePathCellStyle(leftBase, view.FocusColumn == CompareColumnPrimary, rowSelected, leftPanel.IsSelectedPath(entryPrimaryAbs(snap, entry)), styles, dimLeft, bg, view.RangeAnchor != "")
+		rightStyle := comparePathCellStyle(rightBase, view.FocusColumn == CompareColumnSecondary, rowSelected, rightPanel.IsSelectedPath(entrySecondaryAbs(snap, entry)), styles, dimRight, bg, view.RangeAnchor != "")
 
 		primitive.Text(screen, rect.X+1, lineY, 1, "", leftStyle)
 		if leftPath == "" {

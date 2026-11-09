@@ -273,7 +273,6 @@ func TestCompareRenameOnEmptySideShowsToast(t *testing.T) {
 	}
 }
 
-
 // Apply rescans while the dialog stays open, and the batch stays selected under its new names.
 func TestCompareMassRenameApplyKeepsDialogOpenThroughRescan(t *testing.T) {
 	screen := newScreen(t, 100, 30)

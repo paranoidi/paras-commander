@@ -869,8 +869,12 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) (out RenderedO
 	case ViewCompare:
 		filtered := comparepkg.FilteredRows(model.CompareSnapshot, model.CompareView.Filter, model.CompareView.IgnoreEmpty, model.CompareView.NameFilter)
 		dimLeft, dimRight := compareDimmedSides(model.CompareFilterDialog)
+		leftPanel, rightPanel := model.Primary, model.Secondary
+		if model.CompareView.PanelID(false) == SecondaryPanel {
+			leftPanel, rightPanel = rightPanel, leftPanel
+		}
 		drawCompareView(screen, layout, model.CompareView,
-			compareViewData{Snap: model.CompareSnapshot, Rows: filtered, Primary: model.Primary, Secondary: model.Secondary, RowMarks: withRangeAnchor(rowMarksResolver(model.PinnedItems, model.JobPathMarks), model.CompareView.RangeAnchor), DimLeft: dimLeft, DimRight: dimRight, Hover: model.AuxListHover},
+			compareViewData{Snap: model.CompareSnapshot, Rows: filtered, LeftPanel: leftPanel, RightPanel: rightPanel, RowMarks: withRangeAnchor(rowMarksResolver(model.PinnedItems, model.JobPathMarks), model.CompareView.RangeAnchor), DimLeft: dimLeft, DimRight: dimRight, Hover: model.AuxListHover},
 			styles, chromeBlocked, model.UserHomeDir, model.SplitOrientation)
 		if model.CompareMergeDialog.Open {
 			dialog.DrawCompareMergeDialog(screen, layout, model.CompareMergeDialog, styles, model.UserHomeDir)
