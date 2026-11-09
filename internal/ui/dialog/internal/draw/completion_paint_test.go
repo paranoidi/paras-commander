@@ -75,3 +75,40 @@ func TestPaintScrollingInputWideGlyphs(t *testing.T) {
 		t.Fatalf("caret cell after last glyph is not reversed")
 	}
 }
+
+// The caret keeps the input's own colors whatever text it sits next to: reversing the dimmed
+// placeholder style would paint it in the dialog surface color.
+func TestPaintScrollingInputCaretUsesInputStyle(t *testing.T) {
+	th := theme.Default()
+	value := "/meadow/lantern"
+	end := len([]rune(value))
+	cases := []struct {
+		name          string
+		suffix        string
+		cursor        int
+		invalid       bool
+		asPlaceholder bool
+		want          tcell.Style
+	}{
+		{name: "pending prefill", cursor: end, asPlaceholder: true, want: th.DialogInputActive.Reverse(true)},
+		{name: "ghost completion", suffix: "-harbor", cursor: end, want: th.DialogInputActive.Reverse(true)},
+		{name: "typed text", cursor: end, want: th.DialogInputActive.Reverse(true)},
+		{name: "invalid ghost completion", suffix: "-harbor", cursor: end, invalid: true, want: th.DialogInputActiveError.Reverse(true)},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			screen := tcell.NewSimulationScreen("UTF-8")
+			if err := screen.Init(); err != nil {
+				t.Fatalf("Init: %v", err)
+			}
+			t.Cleanup(screen.Fini)
+			screen.SetSize(40, 4)
+
+			PaintScrollingInputContent(screen, 0, 0, 30, value, tc.suffix, tc.cursor, 0, true, tc.invalid, true, tc.asPlaceholder, "", th)
+
+			if _, got, _ := screen.Get(tc.cursor, 0); got != tc.want {
+				t.Fatalf("caret style = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}

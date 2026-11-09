@@ -282,6 +282,8 @@ Pay attention to following details:
 
 Logic lives in `internal/ui/dialog/dialog_field.go`. When opening a dialog with a suggested value, set `Value` and `Prefill` to the suggestion and set `PrefillPending` when the suggestion is non-empty.
 
+The suggestion and ghost completion text paint in `dialog.input.*.placeholder`; the caret always reverses the input's own style (`dialog.input.active`, or `.error` when invalid), never the placeholder, because a reversed placeholder blends into `dialog.surface`.
+
 - **First printable (`InsertRune`)**: clear `Value`, reset cursor, clear `PrefillPending`, then insert the rune (replace-from-scratch on top of the suggestion).
 - **Backspace, Delete, cursor moves (`MoveCursor` / Home / End via handlers)** call `commitPrefill()` first: drop `PrefillPending` but **keep** `Value`, then apply the usual edit/move.
 - **`Clear`** (file dialog `ui.input.kill-line`): empty `Value`, cursor `0`, `PrefillPending` false.

@@ -352,7 +352,9 @@ func AdjustScrollRevealOnErase(value string, cursor, scroll, width, suffixLen in
 // PaintScrollingInputContent paints a horizontally scrolling input slice with optional
 // ghost completion at the caret (value[:cursor]+suffix+value[cursor:]).
 // Ghost text always uses dialog input placeholder styling, not error styles.
-// textFocused controls caret reverse-video highlighting.
+// textFocused controls caret reverse-video highlighting. The caret always reverses the input's own
+// style (error style when invalid), never the placeholder: a reversed placeholder is the dialog
+// surface color.
 // valueAsPlaceholder, when true and not invalid, paints the committed value runes in the
 // placeholder/ghost style too (for pending-prefill/suggested-default rendering).
 // leadingIcon, when non-empty, paints that icon plus one separator space at the start of the
@@ -369,6 +371,7 @@ func PaintScrollingInputContent(
 		return cursor, scroll
 	}
 	committedStyle := styles.DialogInputBaseStyle(focused, invalid)
+	caretStyle := committedStyle.Reverse(true)
 	markerStyle := styles.DialogInputBaseStyle(focused, false)
 	_, ghostStyle := styles.DialogInputPair(focused)
 
@@ -463,11 +466,7 @@ func PaintScrollingInputContent(
 			st = ghostStyle
 		}
 		if textFocused && idx == cursor {
-			if ghost {
-				st = ghostStyle.Reverse(true)
-			} else {
-				st = committedStyle.Reverse(true)
-			}
+			st = caretStyle
 		}
 		screen.SetContent(x+lay.LeftPad+col, y, ch, nil, st)
 		col += w
