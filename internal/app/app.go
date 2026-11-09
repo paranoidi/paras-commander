@@ -27,6 +27,7 @@ import (
 	metactrl "github.com/paranoidi/paras-commander/internal/apphandler/meta"
 	pinctrl "github.com/paranoidi/paras-commander/internal/apphandler/pin"
 	previewctrl "github.com/paranoidi/paras-commander/internal/apphandler/preview"
+	uniquefilesctrl "github.com/paranoidi/paras-commander/internal/apphandler/uniquefiles"
 	"github.com/paranoidi/paras-commander/internal/columnprofile"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/dirwatch"
@@ -218,6 +219,7 @@ type App struct {
 	commandsCtrl   *commandsctrl.Handler
 	compareCtrl    *comparectrl.Handler
 	dedupCtrl      *dedupctrl.Handler
+	uniqueCtrl     *uniquefilesctrl.Handler
 	previewCtrl    *previewctrl.Handler
 	dialogCtrl     *dialogctrl.Handler
 	pinCtrl        *pinctrl.Handler
@@ -815,6 +817,12 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		DiskIgnore: duIgnorer,
 		FileIndex:  app.fileIndex,
 	})
+	app.uniqueCtrl = uniquefilesctrl.New(uniquefilesctrl.Deps{
+		Host:   uniqueHost{appShellHost: appShellHost{app: app}},
+		Screen: screen,
+		Model:  &app.model,
+		Index:  app.fileIndex,
+	})
 	app.previewCtrl = previewctrl.New(previewctrl.Deps{
 		Host:                  previewHost{appShellHost: appShellHost{app: app}},
 		Screen:                screen,
@@ -845,6 +853,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Commands:             app.commandsCtrl,
 		Preview:              app.previewCtrl,
 		Dedup:                app.dedupCtrl,
+		Unique:               app.uniqueCtrl,
 		DiskUsage:            app.disk.engine,
 		DiskUsageIgnore:      duIgnorer,
 		FSSink:               fsSink,
@@ -989,6 +998,7 @@ func resolveKeymapBundle(opts Options) (*keymap.Bundle, error) {
 		{&rk.TransferDialog, keymap.DefaultTransferDialogOverlayKeys, "transfer dialog overlay"},
 		{&rk.Compare, keymap.DefaultCompareOverlayKeys, "compare overlay"},
 		{&rk.Dedup, keymap.DefaultDedupOverlayKeys, "dedup overlay"},
+		{&rk.Unique, keymap.DefaultUniqueOverlayKeys, "unique files overlay"},
 		{&rk.Terminal, keymap.DefaultTerminalOverlayKeys, "terminal overlay"},
 	} {
 		if *step.km != nil {
@@ -1333,6 +1343,10 @@ func (a *App) handleEarlyInterruptPayload(data any) (eventOutcome, bool) {
 	if _, ok := data.(metaFSWakePayload); ok {
 		a.handleMetaFSWake()
 		return eventOutcome{}, true
+	}
+	if a.uniqueCtrl.HandleWake(data) {
+		a.render()
+		return eventOutcome{didRender: true}, true
 	}
 	if a.fileindexCtrl.HandleWake(data) {
 		a.render()

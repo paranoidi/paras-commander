@@ -47,7 +47,7 @@ fileindex. The keys below are the defaults; rebind the shortcuts under
 | `M-W` | `F` | [Find duplicates](find-duplicates.md) from the index for the current directory, also from a normal panel: it never reads the disk, so it only sees indexed files (selected directories on a normal panel are ignored) |
 | `M-O` | `o` | [Other copies](#other-copies) of the file under the cursor, from the index |
 | `M-D` | `d` | [Copies outside directory](#copies-outside-directory): files under the current directory that also exist elsewhere in the index |
-| `M-U` | `u` | [Find unique files](#find-unique-files): files under the current or selected directories with no copy outside them |
+| `M-U` | `u` | [Find unique files](#find-unique-files): a view of the files under the current or selected directories with no copy outside them, to copy, move or delete |
 | `M-S` | `s` | Scan the selected entries, else the current directory (the menu says which) |
 | `M-A` | `S` | [Fast scan](#scan-and-prune) the selected entries, else the current directory: hash only the first 8 KB of larger files |
 | `M-P` | `p` | Remove what is gone from disk under the current directory |
@@ -292,33 +292,61 @@ root itself has nothing outside it.
 
 ## Find unique files
 
-`M-U` answers "what would I lose if I deleted this?". It opens a dialog like
-[Find in index](#finding-in-the-index) listing the files with no copy outside the directory. It
-works on local and `fileindex://` panels and never reads the disk. What it checks depends on the
-panel selection:
+`M-U` answers "what would I lose if I deleted this?". It opens a full-screen view of the files with
+no copy outside the directory, as a tree, for acting on them: mark what matters and copy it to a
+backup. It works on local and `fileindex://` panels and reads only the index. What it checks depends
+on the panel selection:
 
 | Selection | Checked |
 |---|---|
 | None | The current directory |
 | Directories | Those directories, as one scope: a copy in another selected directory is not outside, so the list is what deleting all of them would lose |
 | Only files | The current directory; the selection is ignored and kept |
-| Files and directories | Nothing: an error toast says to select one kind, and the dialog does not open |
+| Files and directories | Nothing: an error toast says to select one kind, and the view does not open |
 
 The index root has nothing outside it, so it is refused. A selected directory the index does not
-know is named in a warning above the list.
+know is named in a warning when the list loads.
 
-The list loads when the dialog opens and shows everything from an empty query. Typing narrows it
-by name, like Pattern mode in Find in index. The depth box works the same way, and **Include hidden**
-starts on here, so a hidden unique file is not missed; untick it to leave out directories
-like `.git`. Results are capped at `[ui.find].max_results`, and the title shows `N+` when more
-matched. Marks, `F3`, `F4`, opening in a panel, pinning, and hiding the dialog with the key that opened
-it all work as in Find in index.
+**The view.** The tree takes the active panel's place, with a file count and size on each row.
+Directories start collapsed and a directory holding only one directory is shown as one row. The
+other panel stays beside it: `Tab` focuses it, and you browse it as usual to choose where files go.
+It is the real panel, so it stays where you left it when you close the view. `Esc` or `M-U` closes
+the view and keeps the results and marks; `M-U` on the same scope brings them back. A different scope
+starts over. Refresh (`C-y`) reads the index again, keeping marks and open directories that
+still apply.
+
+**Keys in the tree.** `Right` and `Left` open and close directories, or step in and to the parent;
+`M-up` and `M-down` jump between directories. `Insert` or `Space` marks a file, or every file in a
+directory, including inside collapsed ones. Typing jumps to matching names. Enter opens a file with
+the default application.
+The panel's show-hidden-files key hides or shows files under dot-prefixed names (also in the view's
+Actions menu); hiding one also drops its mark. They are shown at first, so a hidden unique file is not missed; hide
+them to leave out directories like `.git`.
+
+**Operations.** They act on the marked files, else the file under the cursor, else every file in the
+directory under the cursor.
+
+| Key | Action |
+|---|---|
+| `F5` | Copy to the other panel, through the usual copy dialog. Files from several directories can keep their layout below their common directory, or be flattened |
+| `F6` | Move to the other panel; the files leave the list |
+| `F8` | Delete, after a confirmation that warns the index knows no other copy; the files leave the list |
+| `M-H` | Fully hash what the flagged files need, in a background job; the list refreshes when it ends |
+| `F3` / `F4` | View or edit the file |
+| `S-Left` / `S-Right` | Show the row in the left or right panel |
+| `Alt+Insert` | Pin the row |
+
+A copy does not make a file drop off the list by itself: the index records new files only when it
+scans them. Scan the destination, then refresh, and files now copied elsewhere go away. That also
+works as a check that the backup holds what you copied.
+
+**What the list means.**
 
 - A file is hidden only when a fully hashed copy outside is confirmed. Copies are matched as in
   [Other copies](#other-copies), so a JPEG copy differing only in metadata counts as a copy.
 - Files whose copies cannot be ruled out are still listed, with the "not hashed yet" icon, and the
   title counts them (`12, 3 not fully hashed`). That covers files not fully hashed, and files with
-  a [potential duplicate](find-duplicates.md) outside. A full [scan](#scan-and-prune) settles them.
+  a [potential duplicate](find-duplicates.md) outside. `M-H` settles them.
 - Empty files are not listed: they have no content to lose, and their copies are not tracked.
 - Copies inside the scope do not count, so all copies of a file that exists only inside it are listed.
 - The answer is what the last scans recorded. A copy deleted from disk still counts until it is

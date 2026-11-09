@@ -22,6 +22,7 @@ import (
 	dedupctrl "github.com/paranoidi/paras-commander/internal/apphandler/dedup"
 	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	previewctrl "github.com/paranoidi/paras-commander/internal/apphandler/preview"
+	uniquefilesctrl "github.com/paranoidi/paras-commander/internal/apphandler/uniquefiles"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/fschange"
@@ -110,6 +111,8 @@ type Deps struct {
 	// Dedup drives the "N directories left empty" confirmation shown after a dedup-view
 	// delete leaves directories dangling (ExecuteDelete's dedup branch).
 	Dedup *dedupctrl.Handler
+	// Unique is the Find unique files view while it runs a transfer or delete on its files.
+	Unique *uniquefilesctrl.Handler
 
 	// DiskUsage / DiskUsageIgnore back the delete confirmation dialog's live size estimate;
 	// both are constructed once at startup and never reassigned, so passing them as plain Deps
@@ -173,6 +176,7 @@ type Handler struct {
 	commands             *commandsctrl.Handler
 	preview              *previewctrl.Handler
 	dedup                *dedupctrl.Handler
+	unique               *uniquefilesctrl.Handler
 	diskUsage            *diskusage.Engine
 	diskUsageIgnore      diskusage.ShouldIgnoreFolder
 	fsSink               fschange.Sink
@@ -273,6 +277,7 @@ func New(d Deps) *Handler {
 		commands:             d.Commands,
 		preview:              d.Preview,
 		dedup:                d.Dedup,
+		unique:               d.Unique,
 		diskUsage:            d.DiskUsage,
 		diskUsageIgnore:      d.DiskUsageIgnore,
 		fsSink:               d.FSSink,

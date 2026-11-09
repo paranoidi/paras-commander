@@ -152,6 +152,17 @@ const (
 	ActionCompareFilterRelocated = "compare.filter-relocated"
 	ActionCompareFilterAll       = "compare.filter-all"
 
+	// Find unique files view
+	ActionUniqueClose          = "unique.close"
+	ActionUniqueToggleNode     = "unique.toggle-node"
+	ActionUniqueCollapse       = "unique.collapse"
+	ActionUniqueCollapseAll    = "unique.collapse-all"
+	ActionUniqueExpandAll      = "unique.expand-all"
+	ActionUniquePrevDir        = "unique.prev-dir"
+	ActionUniqueNextDir        = "unique.next-dir"
+	ActionUniquePrevPane       = "unique.prev-pane"
+	ActionUniqueHashUnverified = "unique.hash-unverified"
+
 	// Dedup (find-duplicates) view
 	ActionDedupClose          = "dedup.close"
 	ActionDedupToggleSort     = "dedup.toggle-sort"
@@ -609,6 +620,15 @@ var KnownActions = map[string]struct{}{
 	ActionFileIndexReportDifferences: {},
 	ActionFileIndexFindDuplicates:    {},
 	ActionFileIndexFindUnique:        {},
+	ActionUniqueClose:                {},
+	ActionUniqueToggleNode:           {},
+	ActionUniqueCollapse:             {},
+	ActionUniqueCollapseAll:          {},
+	ActionUniqueExpandAll:            {},
+	ActionUniquePrevDir:              {},
+	ActionUniqueNextDir:              {},
+	ActionUniquePrevPane:             {},
+	ActionUniqueHashUnverified:       {},
 
 	ActionMenuFileChattr: {},
 

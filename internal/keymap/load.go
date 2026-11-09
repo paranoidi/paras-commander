@@ -113,6 +113,7 @@ func buildBundle(global map[string][]string, overlayLayers []map[string][]string
 		CommandOutputDialog: overlayMaps[20],
 		ColumnsDialog:       overlayMaps[21],
 		FilePreviewSearch:   overlayMaps[22],
+		Unique:              overlayMaps[23],
 		LeaderKey:           menus[LeaderKeyShortcutsTable],
 		CopyMenuKey:         menus[CopyMenuShortcutsTable],
 		PreviewMenuKey:      menus[PreviewMenuShortcutsTable],
@@ -197,7 +198,7 @@ func validateKeybindingsTopLevel(top map[string]interface{}, label string) error
 			continue
 		}
 		switch k {
-		case MainShortcutsTable, JobsShortcutsTable, CommandsShortcutsTable, MessagesShortcutsTable, FilePreviewShortcutsTable, FilePreviewSearchShortcutsTable, CompareShortcutsTable, DedupShortcutsTable, TerminalShortcutsTable:
+		case MainShortcutsTable, JobsShortcutsTable, CommandsShortcutsTable, MessagesShortcutsTable, FilePreviewShortcutsTable, FilePreviewSearchShortcutsTable, CompareShortcutsTable, DedupShortcutsTable, UniqueShortcutsTable, TerminalShortcutsTable:
 			if _, ok := v.(map[string]interface{}); !ok {
 				return fmt.Errorf("parse keybindings %q: [%s] must be a table", label, k)
 			}
@@ -357,6 +358,7 @@ func EncodeDefaultStub(w io.Writer) error {
 		PreviewSearch map[string][]string `toml:"preview_search"`
 		Compare       map[string][]string `toml:"compare"`
 		Dedup         map[string][]string `toml:"dedup"`
+		Unique        map[string][]string `toml:"unique"`
 		Terminal      map[string][]string `toml:"terminal"`
 		Dialog        dialogShortcuts     `toml:"dialog"`
 	}{
@@ -372,6 +374,7 @@ func EncodeDefaultStub(w io.Writer) error {
 		PreviewSearch: DefaultFilePreviewSearchOverlayKeys(),
 		Compare:       DefaultCompareOverlayKeys(),
 		Dedup:         DefaultDedupOverlayKeys(),
+		Unique:        DefaultUniqueOverlayKeys(),
 		Terminal:      DefaultTerminalOverlayKeys(),
 		Dialog: dialogShortcuts{
 			Input:         DefaultDialogInputOverlayKeys(),

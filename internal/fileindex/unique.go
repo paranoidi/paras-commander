@@ -2,6 +2,7 @@ package fileindex
 
 import (
 	"cmp"
+	"maps"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -18,6 +19,9 @@ type UniqueResult struct {
 	Unverified map[string]bool
 	// NotIndexed are the scope directories the index does not know.
 	NotIndexed []string
+	// ToHash are the files whose full hash would settle Unverified: the listed files without one,
+	// and the only fast-hashed members of their potential sets, wherever those are.
+	ToHash []string
 }
 
 // UniqueFiles lists the indexed files under the scope directories that have no confirmed copy
@@ -87,6 +91,14 @@ func (x *Index) UniqueFiles(scope []string) (UniqueResult, error) {
 	possible := copiedOutside(potential, prefixes)
 	res.Unverified = map[string]bool{}
 	seen := make(map[string]bool, len(entries))
+	toHash := map[string]bool{}
+	for _, g := range potential {
+		if hasLocationOutside(g, prefixes) {
+			for _, p := range g.Unverified {
+				toHash[p] = true
+			}
+		}
+	}
 	for _, e := range entries {
 		if e.Size == 0 || hidden[e.Path] || seen[e.Path] {
 			continue
@@ -96,7 +108,11 @@ func (x *Index) UniqueFiles(scope []string) (UniqueResult, error) {
 		if !e.Hashed || possible[e.Path] {
 			res.Unverified[e.Path] = true
 		}
+		if !e.Hashed {
+			toHash[e.Path] = true
+		}
 	}
+	res.ToHash = slices.Sorted(maps.Keys(toHash))
 	slices.SortFunc(res.Files, func(a, b db.Found) int { return cmp.Compare(a.Path, b.Path) })
 	return res, nil
 }

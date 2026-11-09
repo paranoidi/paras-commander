@@ -15,6 +15,7 @@ const (
 	TopMessages   TopID = "top.messages-screen"
 	TopCompare    TopID = "top.compare"
 	TopDedup      TopID = "top.dedup"
+	TopUnique     TopID = "top.unique"
 	TopDev        TopID = "top.dev"
 )
 

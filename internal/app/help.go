@@ -32,6 +32,8 @@ func (a *App) helpContextFor(vm ui.ViewMode) helpContext {
 	switch vm {
 	case ui.ViewDedup:
 		return helpContext{title: "Help — Dedup", menuTitle: "Dedup — Actions", activate: (*App).activateDedupHelpAction}
+	case ui.ViewUnique:
+		return helpContext{title: "Help — Unique files", menuTitle: "Unique files — Actions", activate: (*App).activateUniqueHelpAction}
 	case ui.ViewJobs:
 		return helpContext{title: "Help — Jobs", menuTitle: "Jobs — Actions", activate: (*App).activateJobsHelpAction}
 	case ui.ViewCommands:
@@ -329,6 +331,9 @@ func (a *App) effectiveKeyStringsForView(actionID string, defaults []string, vm 
 	if vm == ui.ViewDedup && a.keys.Dedup != nil {
 		add(a.keys.Dedup.BindingsForAction(actionID))
 	}
+	if vm == ui.ViewUnique && a.keys.Unique != nil {
+		add(a.keys.Unique.BindingsForAction(actionID))
+	}
 	if vm == ui.ViewCompare && a.keys.Compare != nil {
 		add(a.keys.Compare.BindingsForAction(actionID))
 	}
@@ -377,6 +382,11 @@ func (a *App) effectiveKeyStringsForView(actionID string, defaults []string, vm 
 	}
 	if vm == ui.ViewDedup {
 		if od := keymap.DefaultDedupOverlayKeys()[actionID]; len(od) > 0 {
+			add(od)
+		}
+	}
+	if vm == ui.ViewUnique {
+		if od := keymap.DefaultUniqueOverlayKeys()[actionID]; len(od) > 0 {
 			add(od)
 		}
 	}

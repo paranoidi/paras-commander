@@ -42,7 +42,7 @@ Bindings are grouped by context. While a view or dialog has focus, its table is 
 | Table | Applies to |
 |---|---|
 | `[main]` | Global and file browser actions |
-| `[jobs]`, `[commands]`, `[messages]`, `[compare]`, `[dedup]` | The matching view |
+| `[jobs]`, `[commands]`, `[messages]`, `[compare]`, `[dedup]`, `[unique]` | The matching view |
 | `[preview]` | Fullscreen preview (F3) |
 | `[preview_search]` | Fullscreen preview, consulted only while typing a search query (match-jump chords) |
 | `[terminal]` | Embedded terminal panel |

@@ -115,22 +115,50 @@ func (a *App) handleDedupPanelKey(action string, event *tcell.EventKey) bool {
 	p := &a.model.DedupPanel
 	rows := a.panelViewportRows(ui.DedupBrowsePanel)
 	if action == "" {
-		switch event.Key() {
-		case tcell.KeyEsc:
-			action = keymap.ActionDedupClose
-		case tcell.KeyEnter, tcell.KeyRight:
-			action = keymap.ActionNavOpen
-		case tcell.KeyLeft, tcell.KeyBackspace, tcell.KeyBackspace2:
-			action = keymap.ActionNavParent
-		}
+		action = auxPanelRawKeyAction(event)
 	}
 	switch action {
-	case keymap.ActionDedupClose:
+	case keymap.ActionDedupClose, auxPanelRawKeyClose:
 		a.closeDedupView()
 	case keymap.ActionPanelSwitch:
 		a.dedupCtrl.SwitchPane()
 	case keymap.ActionDedupPrevPane:
 		a.dedupCtrl.SwitchPanePrev()
+	case keymap.ActionDedupToggleNode:
+		a.handleAuxPanelNavKey(p, rows, keymap.ActionNavOpen)
+	case keymap.ActionDedupCollapse:
+		a.handleAuxPanelNavKey(p, rows, keymap.ActionNavParent)
+	case keymap.ActionOpenInPrimary, keymap.ActionOpenInSecondary:
+		if e, ok := p.CurrentEntry(); ok {
+			a.dedupCtrl.OpenInPanel(a.openInPanelID(action), e.Path, e.ResolvesToDir())
+		}
+	default:
+		a.handleAuxPanelNavKey(p, rows, action)
+	}
+	return false
+}
+
+// auxPanelRawKeyClose is what auxPanelRawKeyAction returns for Esc: each view closes itself.
+const auxPanelRawKeyClose = "esc"
+
+// auxPanelRawKeyAction maps an unbound key of a panel inside a tree view to its action.
+func auxPanelRawKeyAction(event *tcell.EventKey) string {
+	switch event.Key() {
+	case tcell.KeyEsc:
+		return auxPanelRawKeyClose
+	case tcell.KeyEnter, tcell.KeyRight:
+		return keymap.ActionNavOpen
+	case tcell.KeyLeft, tcell.KeyBackspace, tcell.KeyBackspace2:
+		return keymap.ActionNavParent
+	}
+	return ""
+}
+
+// handleAuxPanelNavKey runs the browsing actions of a panel inside a tree view (the duplicates
+// view's browse panel, the unique files view's destination): cursor moves, directory enter and
+// parent, history, view, edit. Anything else is swallowed.
+func (a *App) handleAuxPanelNavKey(p *panel.State, rows int, action string) {
+	switch action {
 	case keymap.ActionNavUp:
 		p.Move(-1, rows)
 	case keymap.ActionNavDown:
@@ -143,7 +171,7 @@ func (a *App) handleDedupPanelKey(action string, event *tcell.EventKey) bool {
 		p.Top(rows)
 	case keymap.ActionNavBottom:
 		p.Bottom(rows)
-	case keymap.ActionNavOpen, keymap.ActionDedupToggleNode:
+	case keymap.ActionNavOpen:
 		entered, err := p.Enter(rows)
 		if err != nil {
 			a.setErrorMessage("Browse", err)
@@ -154,16 +182,12 @@ func (a *App) handleDedupPanelKey(action string, event *tcell.EventKey) bool {
 		}
 	case keymap.ActionPanelExternalBrowser:
 		a.openDirInExternalBrowser(p.PathString())
-	case keymap.ActionNavParent, keymap.ActionDedupCollapse:
+	case keymap.ActionNavParent:
 		if err := p.Parent(rows); err != nil {
 			a.setErrorMessage("Browse", err)
 		}
 	case keymap.ActionNavForward, keymap.ActionNavBackward:
 		a.stepPanelHistory(p, action, rows)
-	case keymap.ActionOpenInPrimary, keymap.ActionOpenInSecondary:
-		if e, ok := p.CurrentEntry(); ok {
-			a.dedupCtrl.OpenInPanel(a.openInPanelID(action), e.Path, e.ResolvesToDir())
-		}
 	case keymap.ActionFileView:
 		if e, ok := p.CurrentEntry(); ok && !e.ResolvesToDir() {
 			if err := a.previewCtrl.OpenFullscreenFilePreviewAt(e.Path, false); err != nil {
@@ -177,5 +201,4 @@ func (a *App) handleDedupPanelKey(action string, event *tcell.EventKey) bool {
 			}
 		}
 	}
-	return false
 }

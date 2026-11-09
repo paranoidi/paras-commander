@@ -32,8 +32,6 @@ func (a *App) answerFindRelocate(id dlg.ID) {
 		a.fileindexCtrl.RestoreParkedFind()
 	case id == dialog.FindRelocateRestore:
 		a.findCtrl.RestoreParked()
-	case id == dialog.FindRelocateNew && s.Unique:
-		a.fileindexCtrl.OpenFreshUnique(s.PanelID)
 	case id == dialog.FindRelocateNew && s.Index:
 		a.fileindexCtrl.OpenFreshFind(s.PanelID, s.Jump)
 	case id == dialog.FindRelocateNew:

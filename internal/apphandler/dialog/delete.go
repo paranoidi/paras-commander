@@ -193,6 +193,10 @@ func (h *Handler) deleteDialogPanel() (*panel.State, bool) {
 	if !h.deleteDialogOpen() || h.deleteDialogPanelID == deleteDialogNoPanel {
 		return nil, false
 	}
+	// These views list their own files and write the summary themselves: a panel has no part in it.
+	if h.model.ViewMode == ui.ViewDedup || h.model.ViewMode == ui.ViewUnique {
+		return nil, false
+	}
 	return h.host.PanelByID(h.deleteDialogPanelID), true
 }
 

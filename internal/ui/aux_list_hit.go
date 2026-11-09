@@ -139,3 +139,19 @@ func DedupBrowseEntryAt(layout Layout, model *Model, x, y int) (int, bool) {
 	_, rect := DedupSecondaryRects(layout.Secondary)
 	return auxListRowAt(rect, model.DedupPanel.ScrollOffset, model.DedupPanel.VisibleEntryCount(), x, y)
 }
+
+// UniqueListEntryAt returns the results-tree row of the Find unique files view drawn at (x, y).
+func UniqueListEntryAt(layout Layout, model *Model, x, y int) (int, bool) {
+	tree, _ := UniqueRects(layout, model.ActivePanel)
+	return auxListRowAt(tree, model.UniqueView.Pane.ListScroll, len(model.UniqueList), x, y)
+}
+
+// UniqueDestEntryAt returns the visible entry of the Find unique files destination panel at (x, y).
+func UniqueDestEntryAt(layout Layout, model *Model, x, y int) (int, bool) {
+	_, rect := UniqueRects(layout, model.ActivePanel)
+	dest := &model.Secondary
+	if model.inactivePanelID() == PrimaryPanel {
+		dest = &model.Primary
+	}
+	return auxListRowAt(rect, dest.ScrollOffset, dest.VisibleEntryCount(), x, y)
+}

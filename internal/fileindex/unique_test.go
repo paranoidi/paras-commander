@@ -133,8 +133,52 @@ func TestUniqueFilesFlagsWhatItCannotRuleOut(t *testing.T) {
 			t.Errorf("%s: unverified = %v, want %v", rel, !flagged, flagged)
 		}
 	}
+	if want := []string{filepath.Join(root, "harbor/sparrow.bin"), filepath.Join(root, "harbor/willow.bin")}; !slices.Equal(res.ToHash, want) {
+		t.Fatalf("toHash = %v, want %v", res.ToHash, want)
+	}
+	// Hashing them settles both: willow matches the file outside, sparrow is proven unique.
+	if err := x.HashFilesTask(res.ToHash, func() {}).Run(context.Background(), &recReporter{}); err != nil {
+		t.Fatal(err)
+	}
+	settled, err := x.UniqueFiles([]string{filepath.Join(root, "harbor")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := uniqueRels(t, root, settled.Files); !slices.Equal(got, []string{"harbor/lone.txt", "harbor/sparrow.bin"}) || len(settled.Unverified) != 0 || len(settled.ToHash) != 0 {
+		t.Fatalf("settled: files = %v unverified = %v toHash = %v", got, settled.Unverified, settled.ToHash)
+	}
+}
+
+// The file outside a potential match is hashed too: only the fast-hashed side can settle it.
+func TestUniqueFilesHashTargetsTheFastHashedSideOutside(t *testing.T) {
+	head := make([]byte, 9000)
+	root, x := uniqueTree(t, map[string][]byte{"orchard/anchor.bin": head})
+	writeUniqueFiles(t, root, map[string][]byte{"harbor/willow.bin": head})
+	if err := x.ScanFastTask([]string{root}).Run(context.Background(), &recReporter{}); err != nil {
+		t.Fatal(err)
+	}
+	res, err := x.UniqueFiles([]string{filepath.Join(root, "orchard")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(res.ToHash, []string{filepath.Join(root, "harbor/willow.bin")}) {
+		t.Fatalf("toHash = %v", res.ToHash)
+	}
+}
+
+func TestUniqueFilesOtherSideOfPotentialMatchIsFlagged(t *testing.T) {
+	head := func(first byte) []byte {
+		b := make([]byte, 9000)
+		b[0] = first
+		return b
+	}
+	root, x := uniqueTree(t, map[string][]byte{"orchard/anchor.bin": head('a')})
+	writeUniqueFiles(t, root, map[string][]byte{"harbor/willow.bin": head('a')})
+	if err := x.ScanFastTask([]string{root}).Run(context.Background(), &recReporter{}); err != nil {
+		t.Fatal(err)
+	}
 	// The other side of the potential match is fully hashed, and still cannot be ruled out.
-	res, err = x.UniqueFiles([]string{filepath.Join(root, "orchard")})
+	res, err := x.UniqueFiles([]string{filepath.Join(root, "orchard")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,44 +206,5 @@ func TestUniqueFilesReportsDirectoriesNotIndexed(t *testing.T) {
 	}
 	if len(res.Files) != 1 || !slices.Equal(res.NotIndexed, []string{missing}) {
 		t.Fatalf("partly indexed: files = %v, notIndexed = %v", res.Files, res.NotIndexed)
-	}
-}
-
-func TestFilterUnique(t *testing.T) {
-	const root = "/srv/harbor"
-	var files []db.Found
-	for _, p := range []string{"Lantern.txt", "meadow.jpg", "deep/lantern-two.txt", ".hidden/willow.txt", "fern[1].txt"} {
-		path := filepath.Join(root, p)
-		files = append(files, db.Found{Name: filepath.Base(path), Path: path})
-	}
-	original := slices.Clone(files)
-	paths := func(found []db.Found) []string {
-		return uniqueRels(t, root, found)
-	}
-	for _, tc := range []struct {
-		name      string
-		q         FindQuery
-		limit     int
-		want      []string
-		truncated bool
-	}{
-		{name: "blank lists all", q: FindQuery{Text: "  ", IncludeHidden: true}, want: []string{"Lantern.txt", "meadow.jpg", "deep/lantern-two.txt", ".hidden/willow.txt", "fern[1].txt"}},
-		{name: "substring ignores case", q: FindQuery{Text: "LANTERN", IncludeHidden: true}, want: []string{"Lantern.txt", "deep/lantern-two.txt"}},
-		{name: "glob matches the whole name", q: FindQuery{Text: "*.jpg", IncludeHidden: true}, want: []string{"meadow.jpg"}},
-		{name: "question mark", q: FindQuery{Text: "?eadow.jpg", IncludeHidden: true}, want: []string{"meadow.jpg"}},
-		{name: "bracket is literal", q: FindQuery{Text: "[1]", IncludeHidden: true}, want: []string{"fern[1].txt"}},
-		{name: "hidden off", q: FindQuery{Text: "*"}, want: []string{"Lantern.txt", "meadow.jpg", "deep/lantern-two.txt", "fern[1].txt"}},
-		{name: "depth", q: FindQuery{Text: "lantern", MaxDepth: 1, IncludeHidden: true}, want: []string{"Lantern.txt"}},
-		{name: "cap", q: FindQuery{IncludeHidden: true}, limit: 2, want: []string{"Lantern.txt", "meadow.jpg"}, truncated: true},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			got, truncated := FilterUnique(files, root, tc.q, tc.limit)
-			if !slices.Equal(paths(got), tc.want) || truncated != tc.truncated {
-				t.Fatalf("got %v truncated=%v, want %v truncated=%v", paths(got), truncated, tc.want, tc.truncated)
-			}
-			if !slices.Equal(files, original) {
-				t.Fatalf("the loaded list changed: %v", files)
-			}
-		})
 	}
 }

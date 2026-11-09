@@ -6,6 +6,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -59,7 +60,12 @@ func TransferPrefilledDestination(path string) dialog.FileDialogField {
 
 func (h *Handler) openTransferDialog(kind dialog.TransferKind) {
 	passive := h.host.InactivePanel()
-	if source, err := ops.ResolveSource(h.host.ActivePanel()); err == nil {
+	if source, err := h.transferSource(); err != nil {
+		if h.model.ViewMode == ui.ViewUnique {
+			h.host.SetTransientMessage(err.Error(), ui.MessageUrgencyWarn)
+			return
+		}
+	} else if h.model.ViewMode != ui.ViewUnique {
 		if msg := panel.GhostRefusal(h.host.ActivePanel().GhostSources(ops.SourcePaths(source)...)); msg != "" {
 			h.host.SetTransientMessage(msg, ui.MessageUrgencyWarn)
 			return
@@ -75,7 +81,7 @@ func (h *Handler) openTransferDialog(kind dialog.TransferKind) {
 		h.applyCopyDefaults(&st)
 	}
 	// A file can't land on another file when copying a directory or several entries.
-	if source, err := ops.ResolveSource(h.host.ActivePanel()); err == nil {
+	if source, err := h.transferSource(); err == nil {
 		st.Destination.CompletionDirsOnly = len(source.Entries) > 1 || source.Entries[0].IsDir()
 	}
 	if root, ok := h.multiDirSelectionCommonRoot(); ok {
@@ -91,7 +97,7 @@ func (h *Handler) openTransferDialog(kind dialog.TransferKind) {
 // selection resolved and labeled relative to root (not the panel's current path), so
 // the preview reflects where the transfer will read from.
 func (h *Handler) transferPreviewEntries(root string) []dialog.DeleteListEntry {
-	source, err := ops.ResolveSource(h.host.ActivePanel())
+	source, err := h.transferSource()
 	if err != nil {
 		return nil
 	}
@@ -112,6 +118,9 @@ func (h *Handler) transferPreviewEntries(root string) []dialog.DeleteListEntry {
 // current path. The transfer dialog always shows the multi-location Source/Result preview
 // in that case.
 func (h *Handler) multiDirSelectionCommonRoot() (string, bool) {
+	if h.model.ViewMode == ui.ViewUnique {
+		return h.uniqueCommonRoot()
+	}
 	root, multiDir, ok := h.host.ActivePanel().SelectedCommonRoot()
 	if !ok || !multiDir {
 		return "", false
@@ -421,9 +430,56 @@ func (h *Handler) confirmTransferSelfCopyRename(sources []string, startPaused bo
 	if !h.AddTransferJob(jobType, sourcesCopy, finalDest, startPaused, preserve) {
 		return // refused (shown); the dialog stays open
 	}
-	h.host.ActivePanel().ClearSelection()
+	h.transferQueued(jobType, sourcesCopy)
 	h.CloseTransferDialog()
 	h.setTransferQueuedMessage(jobType, startPaused)
+}
+
+// transferSource is what the transfer dialog acts on: the Find unique files view's files while
+// that view is open, else the active panel's selection or cursor entry.
+func (h *Handler) transferSource() (ops.Source, error) {
+	if h.model.ViewMode != ui.ViewUnique {
+		return ops.ResolveSource(h.host.ActivePanel())
+	}
+	files := h.unique.Sources()
+	if len(files) == 0 {
+		return ops.Source{}, ops.SourceError("no files to act on")
+	}
+	entries := make([]localfs.Entry, len(files))
+	for i, f := range files {
+		entries[i] = localfs.Entry{Name: filepath.Base(f.Path), Path: f.Path, Type: localfs.EntryFile, Size: f.Size}
+	}
+	return ops.Source{Kind: ops.SourceSelected, Entries: entries}, nil
+}
+
+// uniqueCommonRoot is the deepest common ancestor of the view's files when they span several
+// directories (multiDirSelectionCommonRoot's answer for that view).
+func (h *Handler) uniqueCommonRoot() (string, bool) {
+	files := h.unique.Sources()
+	if len(files) < 2 {
+		return "", false
+	}
+	root, multi := filepath.Dir(files[0].Path), false
+	for _, f := range files[1:] {
+		dir := filepath.Dir(f.Path)
+		if dir != root {
+			multi = true
+		}
+		for root != "/" && dir != root && !strings.HasPrefix(dir, root+"/") {
+			root = filepath.Dir(root)
+		}
+	}
+	return root, multi
+}
+
+// transferQueued finishes a queued transfer on its source: the view's list while the Find unique
+// files view is open, else the panel selection.
+func (h *Handler) transferQueued(jobType jobs.Type, sources []string) {
+	if h.model.ViewMode == ui.ViewUnique {
+		h.unique.FilesQueued(sources, jobType == jobs.TypeMove)
+		return
+	}
+	h.host.ActivePanel().ClearSelection()
 }
 
 func (h *Handler) setTransferQueuedMessage(jobType jobs.Type, paused bool) {
@@ -450,7 +506,7 @@ func (h *Handler) ConfirmCopy() {
 // ActivePanelSources returns file paths from the active panel: selected entries
 // if any, otherwise the cursor entry. Returns nil if no valid sources exist.
 func (h *Handler) ActivePanelSources() []string {
-	source, err := ops.ResolveSource(h.host.ActivePanel())
+	source, err := h.transferSource()
 	if err != nil {
 		return nil
 	}

@@ -6,6 +6,10 @@ func (a *App) browserMenuDefinitions() []menu.Definition {
 	return menu.BrowserDefinitions(a.keys.Global, a.devMode)
 }
 
+func (a *App) uniqueMenuDefinitions() []menu.Definition {
+	return menu.UniqueDefinitions(a.keys.Global, a.keys.Unique)
+}
+
 func (a *App) dedupMenuDefinitions() []menu.Definition {
 	return menu.DedupDefinitions(a.keys.Global, a.keys.Dedup, a.model.DedupView.IgnoreEmpty, a.model.DedupView.TreeDirs)
 }

@@ -14,14 +14,11 @@ type IndexFindResult struct {
 	Rel   string
 	IsDir bool
 	Size  int64
-	// Unverified flags a row of Find unique files whose copies cannot be ruled out yet.
-	Unverified bool
 }
 
-// IndexFindDialogState is the "Find in index" dialog (and its jump-to-directory and Find unique
-// files forms) on a fileindex:// panel. Its widgets are described by IndexFindDialogView; Focus
-// names the focused one (the IndexFind* IDs, OK or Cancel; empty = the query, which also drives
-// the result list).
+// IndexFindDialogState is the "Find in index" dialog (and its jump-to-directory form) on a
+// fileindex:// panel. Its widgets are described by IndexFindDialogView; Focus names the focused
+// one (the IndexFind* IDs, OK or Cancel; empty = the query, which also drives the result list).
 type IndexFindDialogState struct {
 	Open bool
 	// Parked: hidden with its state kept, like FindDialogState.Parked.
@@ -52,14 +49,7 @@ type IndexFindDialogState struct {
 	SelectionDirRoots          []string
 	// JumpMode is "Jump to directory": name search over directories only, no marking.
 	JumpMode bool
-	// UniqueMode is "Find unique files": the files under SelectionDirRoots with no copy outside
-	// them, loaded once and narrowed by the query (an empty query lists them all).
-	UniqueMode bool
-	// UnverifiedCount is how many Results are flagged Unverified.
-	UnverifiedCount int
-	// Note is a warning about the scope, kept while the query changes.
-	Note    string
-	Results []IndexFindResult
+	Results  []IndexFindResult
 	// Truncated is true when more results matched than Results holds.
 	Truncated bool
 	Searching bool

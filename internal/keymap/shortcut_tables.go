@@ -26,6 +26,7 @@ const (
 	DialogTransferShortcutsTable      = "dialog.transfer"
 	CompareShortcutsTable             = "compare"
 	DedupShortcutsTable               = "dedup"
+	UniqueShortcutsTable              = "unique"
 	TerminalShortcutsTable            = "terminal"
 	LeaderKeyShortcutsTable           = "leader_key"
 	CopyMenuShortcutsTable            = "copy_menu"
@@ -77,6 +78,7 @@ func AllShortcutTablePaths() []string {
 		DialogUserMenuShortcutsTable,
 		CompareShortcutsTable,
 		DedupShortcutsTable,
+		UniqueShortcutsTable,
 		TerminalShortcutsTable,
 	}
 }

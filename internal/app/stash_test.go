@@ -95,7 +95,7 @@ func TestPanelStashRestoreDialogMerge(t *testing.T) {
 func TestActionFromKeyMapsStashToggle(t *testing.T) {
 	km := defaultKeymap(t)
 	ev := tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModCtrl|tcell.ModAlt)
-	got := lookupActionForView(ev, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
+	got := lookupActionForView(ev, km, nil, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
 	if got != keymap.ActionPanelStashToggle {
 		t.Fatalf("C-M-insert = %q, want %s", got, keymap.ActionPanelStashToggle)
 	}
@@ -104,7 +104,7 @@ func TestActionFromKeyMapsStashToggle(t *testing.T) {
 func TestActionFromKeyMapsPinToggle(t *testing.T) {
 	km := defaultKeymap(t)
 	ev := tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModAlt)
-	got := lookupActionForView(ev, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
+	got := lookupActionForView(ev, km, nil, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
 	if got != keymap.ActionPanelPinToggle {
 		t.Fatalf("M-insert = %q, want %s", got, keymap.ActionPanelPinToggle)
 	}

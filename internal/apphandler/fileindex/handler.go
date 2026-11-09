@@ -69,6 +69,8 @@ type Host interface {
 	// OpenDedupIndexed opens the find-duplicates view over the indexed files under the host dir
 	// dir, whatever kind of panel is active.
 	OpenDedupIndexed(dir string)
+	// OpenUniqueFiles opens the Find unique files view for the active panel.
+	OpenUniqueFiles()
 }
 
 // Deps wires the fileindex handler at app construction.
@@ -99,12 +101,6 @@ type Handler struct {
 	// viewer it opened (find.view): IndexFindDialog.Open is false, a query in flight still lands,
 	// and ReopenFindAfterPreviewClose shows the dialog again as it was.
 	findHiddenForView bool
-	// uniqueGen identifies the current Find unique files lookup; a later close moves it on, so a
-	// lookup still running lands on nothing. uniqueScanning is set while that lookup runs and
-	// unique holds what it found (UI goroutine only; a filter goroutine only reads a landed unique).
-	uniqueGen      int
-	uniqueScanning bool
-	unique         fi.UniqueResult
 	// pendingInit is the action waiting on the open "create the database?" prompt (nil: none).
 	pendingInit func()
 	// initRunning is set while a confirmed create or upgrade runs (menu-bar spinner).
@@ -156,7 +152,7 @@ func (h *Handler) Dispatch(actionID string) bool {
 		}
 	case keymap.ActionFileIndexFindUnique:
 		if h.localOrIndex() {
-			h.withIndex(h.FindUnique)
+			h.withIndex(h.host.OpenUniqueFiles)
 		}
 	case keymap.ActionFileIndexBrowseWith:
 		h.withIndex(h.BrowseWith)
@@ -194,8 +190,6 @@ func (h *Handler) HandleWake(data any) bool {
 		h.HandleNavigate(p)
 	case FindPayload:
 		h.HandleFind(p)
-	case UniquePayload:
-		h.HandleUnique(p)
 	case CopiesPayload:
 		h.HandleCopies(p)
 	case DifferencesPayload:

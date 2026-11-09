@@ -765,6 +765,15 @@ func (h *Handler) ExecuteDelete() {
 		h.openDedupEmptyDirsConfirm()
 		return
 	}
+	if h.model.ViewMode == ui.ViewUnique {
+		paths := make([]string, len(h.model.FileDialog.DeleteEntries))
+		for i, e := range h.model.FileDialog.DeleteEntries {
+			paths[i] = e.Path
+		}
+		h.CloseFileDialog()
+		h.unique.DeleteQueued(paths)
+		return
+	}
 	if h.model.ViewMode == ui.ViewFilePreview {
 		path := h.model.FullscreenFilePreview.Path
 		h.CloseFileDialog()

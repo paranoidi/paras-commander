@@ -345,7 +345,7 @@ command = "true"
 
 func TestShiftF2MapsToEditUserMenu(t *testing.T) {
 	km := defaultKeymap(t)
-	got := lookupActionForView(tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModShift), km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
+	got := lookupActionForView(tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModShift), km, nil, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
 	if got != keymap.ActionAppUserMenuEdit {
 		t.Fatalf("got %q, want %q", got, keymap.ActionAppUserMenuEdit)
 	}

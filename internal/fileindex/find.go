@@ -79,36 +79,6 @@ func (x *Index) Find(root string, q FindQuery, limit int) (found []db.Found, tru
 	return found, truncated, nil
 }
 
-// FilterUnique narrows the files of a UniqueResult as Find narrows its results: a blank q.Text
-// keeps every name, else q.Text is the Pattern query; then q's depth and hidden rules under root,
-// and the cap at limit (limit <= 0: all). files is left untouched.
-func FilterUnique(files []db.Found, root string, q FindQuery, limit int) (found []db.Found, truncated bool) {
-	match := func(string) bool { return true }
-	if text := strings.TrimSpace(q.Text); text != "" {
-		pattern := db.Lower(q.Text)
-		if !strings.ContainsAny(pattern, "*?") {
-			pattern = "*" + pattern + "*"
-		}
-		// The library's glob knows only * and ?: everything else is literal.
-		pattern = strings.NewReplacer(`\`, `\\`, `[`, `\[`).Replace(pattern)
-		match = func(name string) bool {
-			ok, err := filepath.Match(pattern, db.Lower(name))
-			return err == nil && ok
-		}
-	}
-	found = make([]db.Found, 0, len(files))
-	for _, f := range files {
-		if match(f.Name) {
-			found = append(found, f)
-		}
-	}
-	found = filterFound(found, root, q, false)
-	if limit > 0 && len(found) > limit {
-		found, truncated = found[:limit], true
-	}
-	return found, truncated
-}
-
 // filterFound drops results beyond the depth limit or under a hidden component, and with dedupe
 // the repeats of nested scope roots.
 func filterFound(found []db.Found, root string, q FindQuery, dedupe bool) []db.Found {

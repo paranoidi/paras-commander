@@ -21,6 +21,8 @@ func (a *App) tryDispatchAuxiliaryScreens(actionID string) bool {
 			a.compareCtrl.Close()
 		case ui.ViewDedup:
 			a.closeDedupView()
+		case ui.ViewUnique:
+			a.closeUniqueView()
 		}
 		a.dispatch(actionID)
 		return true

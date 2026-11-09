@@ -24,7 +24,7 @@ func (a *App) toggleCopyMenu() {
 		return
 	}
 	switch a.model.ViewMode {
-	case ui.ViewBrowser, ui.ViewFilePreview, ui.ViewCompare, ui.ViewDedup:
+	case ui.ViewBrowser, ui.ViewFilePreview, ui.ViewCompare, ui.ViewDedup, ui.ViewUnique:
 	default:
 		return
 	}
@@ -100,6 +100,13 @@ func (a *App) copyTargets() (paths []string, entries []localfs.Entry, dirPath, w
 		return paths, entries, dirPath, "", true
 	case ui.ViewCompare:
 		path, _, found := a.compareCtrl.SelectedColumnTarget()
+		if !found {
+			return nil, nil, "", "Copy: no file selected", false
+		}
+		paths, entries, dirPath = singleCopyTarget(path)
+		return paths, entries, dirPath, "", true
+	case ui.ViewUnique:
+		path, _, found := a.uniqueCtrl.Target()
 		if !found {
 			return nil, nil, "", "Copy: no file selected", false
 		}

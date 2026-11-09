@@ -95,3 +95,5 @@ func (h fileindexHost) PinTogglePath(name, path string, isDir bool) {
 func (h fileindexHost) OpenGroupSelectDialog(mode findctrl.GroupSelectMode) {
 	h.app.openGroupSelect(string(mode), "index-find")
 }
+
+func (h fileindexHost) OpenUniqueFiles() { h.app.uniqueCtrl.Open() }

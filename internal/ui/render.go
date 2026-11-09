@@ -197,6 +197,8 @@ type Model struct {
 	DedupSnapshot       comparepkg.DedupSnapshot
 	DedupList           []DedupRow
 	DedupCopiesList     []DedupRow
+	UniqueView          UniqueViewState
+	UniqueList          []UniqueRow
 	// HideMenuBar mirrors !ui.show_menu_bar: when true, the top menu row is omitted and panels extend upward.
 	HideMenuBar bool
 	// UseNerdfontIcons mirrors ui.use_nerdfont_icons (when false, forces ASCII markers in dialogs and hides file icons).
@@ -885,6 +887,8 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) (out RenderedO
 	case ViewDedup:
 		drawDedupView(screen, layout, model.DedupView, model.DedupSnapshot, model.DedupList, model.DedupCopiesList, styles, chromeBlocked, model.UserHomeDir, model.SplitOrientation, rowMarksResolver(model.PinnedItems, model.JobPathMarks), model.AuxListHover)
 		drawDedupBrowsePanel(screen, layout, model, styles, chromeBlocked)
+	case ViewUnique:
+		drawUniqueView(screen, layout, model, styles, chromeBlocked)
 	case ViewMessages:
 		drawMessagesView(screen, layout, model.MessagesView, model.MessageLog, styles, chromeBlocked, model.SplitOrientation, model.AuxListHover)
 	default:

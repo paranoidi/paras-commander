@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/paranoidi/fileindex/db"
 	"github.com/paranoidi/fileindex/scan"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/jobs"
@@ -105,8 +106,37 @@ func (x *Index) scanTask(paths []string, fast bool, title, hashStep string, root
 // (local host paths) that are in a potential duplicate set, which confirms or rules out the match.
 // done runs when it ends, however it ends.
 func (x *Index) HashPotentialTask(paths []string, done func()) *jobs.Task {
+	return x.hashTask("fileindex hash potential duplicates", done, func(d *db.DB) ([]string, error) {
+		groups, err := d.PotentialDuplicates(nil, false)
+		if err != nil {
+			return nil, err
+		}
+		asked := make(map[string]bool, len(paths))
+		for _, p := range paths {
+			asked[p] = true
+		}
+		var targets []string
+		for _, g := range groups {
+			for _, p := range g.Unverified {
+				if asked[p] {
+					targets = append(targets, p)
+				}
+			}
+		}
+		return targets, nil
+	})
+}
+
+// HashFilesTask returns the task job fully hashing paths (local host paths, UniqueResult.ToHash).
+// done runs when it ends, however it ends.
+func (x *Index) HashFilesTask(paths []string, done func()) *jobs.Task {
+	return x.hashTask("fileindex hash files", done, func(*db.DB) ([]string, error) { return paths, nil })
+}
+
+// hashTask is the task job fully hashing the files targets picks.
+func (x *Index) hashTask(title string, done func(), targets func(*db.DB) ([]string, error)) *jobs.Task {
 	return &jobs.Task{
-		Title: "fileindex hash potential duplicates",
+		Title: title,
 		Lease: TaskLease,
 		Run: func(ctx context.Context, r jobs.TaskReporter) error {
 			defer done()
@@ -119,25 +149,13 @@ func (x *Index) HashPotentialTask(paths []string, done func()) *jobs.Task {
 			if err != nil {
 				return err
 			}
-			groups, err := d.PotentialDuplicates(nil, false)
+			paths, err := targets(d)
 			if err != nil {
 				return err
 			}
-			asked := make(map[string]bool, len(paths))
-			for _, p := range paths {
-				asked[p] = true
-			}
-			var targets []string
-			for _, g := range groups {
-				for _, p := range g.Unverified {
-					if asked[p] {
-						targets = append(targets, p)
-					}
-				}
-			}
 			rep := newScanReporter(r, false)
-			rep.hashing, rep.p.TotalFiles = true, len(targets)
-			stats, err := scan.HashPaths(ctx, d, targets, workers, rep.Worker, rep.Speed, rep.FileDone)
+			rep.hashing, rep.p.TotalFiles = true, len(paths)
+			stats, err := scan.HashPaths(ctx, d, paths, workers, rep.Worker, rep.Speed, rep.FileDone)
 			for _, e := range stats.Errors {
 				rep.Log(e)
 			}
