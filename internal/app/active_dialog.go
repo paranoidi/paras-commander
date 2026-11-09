@@ -229,7 +229,7 @@ func (a *App) modalActiveDialog(event *tcell.EventKey) (activeDialog, bool) {
 		// Cancel backs out: nothing is deleted and the dedup marks stay.
 		return found(a.dedupEmptyDirsConfirmView, &m.DedupEmptyDirsConfirm.Focus, noQuit(a.applyDedupEmptyDirsConfirmEvent), dialogButtons{
 			OK:     func() { a.answerDedupEmptyDirsConfirm(m.DedupEmptyDirsConfirm.Focus) },
-			Cancel: func() { m.DedupEmptyDirsConfirm = dialog.DedupEmptyDirsConfirmState{} },
+			Cancel: func() { a.answerDedupEmptyDirsConfirm(dlg.Cancel) },
 		})
 	case m.UndoConfirm.Open:
 		return found(func() dlg.Spec { return dialog.UndoConfirmView(m.UndoConfirm) }, &m.UndoConfirm.Focus, noQuit(a.applyUndoConfirmEvent), dialogButtons{

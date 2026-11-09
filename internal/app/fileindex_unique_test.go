@@ -16,6 +16,8 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // uniqueApp is fileIndexApp plus two indexed subdirectories: orchard/thistle.txt and
@@ -314,6 +316,60 @@ func TestUniqueViewDeleteConfirmsAndDropsFiles(t *testing.T) {
 	}
 	if slices.Contains(uniqueFiles(a), "harbor.txt") || a.model.FileDialog.Open {
 		t.Fatalf("files = %v dialog open = %v", uniqueFiles(a), a.model.FileDialog.Open)
+	}
+}
+
+// A delete that would empty directories asks first: Yes removes them, No keeps them, Cancel deletes
+// nothing and keeps the marks. Only the question's answer queues the job.
+func TestUniqueViewDeleteAsksAboutEmptyDirs(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		answer     dlg.ID
+		wantJob    bool
+		wantRemove bool
+	}{
+		{"yes", dialog.DedupEmptyDirsYes, true, true},
+		{"default", "", true, true},
+		{"no", dialog.DedupEmptyDirsNo, true, false},
+		{"cancel", dlg.Cancel, false, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			a, screen, _, _, willow := uniqueApp(t)
+			if err := os.Remove(filepath.Join(willow, "sedge.txt")); err != nil {
+				t.Fatal(err)
+			}
+			a.activePanel().AddSelection(willow)
+			openUnique(t, a, screen)
+			st := &a.model.UniqueView
+			bramble := filepath.Join(willow, "bramble.txt")
+			st.SetMark(ui.UniqueFile{Path: bramble, Size: 5}, true)
+			a.dispatch(keymap.ActionFileDelete)
+			a.dialogCtrl.ExecuteDelete()
+			if q := a.model.DedupEmptyDirsConfirm; !q.Open || q.Focus != dialog.DedupEmptyDirsYes || !slices.Equal(q.Dirs, []string{"willow"}) {
+				t.Fatalf("question = %+v", q)
+			}
+			if n := len(a.jobState.AllJobs()); n != 0 {
+				t.Fatalf("%d jobs before the answer", n)
+			}
+			a.answerDedupEmptyDirsConfirm(tc.answer)
+			all := a.jobState.AllJobs()
+			if a.model.DedupEmptyDirsConfirm.Open || (len(all) == 1) != tc.wantJob {
+				t.Fatalf("open = %v jobs = %+v", a.model.DedupEmptyDirsConfirm.Open, all)
+			}
+			if tc.wantJob {
+				if all[0].Sources[0].String() != bramble || all[0].DeleteRemoveEmptyDirs != tc.wantRemove {
+					t.Fatalf("job = %+v", all[0])
+				}
+				return
+			}
+			if !st.Marked[bramble] || !slices.Contains(uniqueFiles(a), "willow/bramble.txt") {
+				t.Fatalf("cancel: marks = %v files = %v", st.Marked, uniqueFiles(a))
+			}
+			a.uniqueCtrl.FinishDelete(true) // nothing is left waiting
+			if n := len(a.jobState.AllJobs()); n != 0 {
+				t.Fatalf("%d jobs after a cancel", n)
+			}
+		})
 	}
 }
 

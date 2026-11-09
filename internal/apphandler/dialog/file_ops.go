@@ -771,7 +771,9 @@ func (h *Handler) ExecuteDelete() {
 			paths[i] = e.Path
 		}
 		h.CloseFileDialog()
-		h.unique.DeleteQueued(paths)
+		if dirs := h.unique.BeginDelete(paths); len(dirs) > 0 {
+			h.model.DedupEmptyDirsConfirm = dialog.DedupEmptyDirsConfirmState{Open: true, Focus: dialog.DedupEmptyDirsYes, Dirs: dirs}
+		}
 		return
 	}
 	if h.model.ViewMode == ui.ViewFilePreview {

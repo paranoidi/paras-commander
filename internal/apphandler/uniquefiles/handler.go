@@ -17,6 +17,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/primitive"
@@ -45,8 +46,9 @@ type Host interface {
 	SetErrorMessage(title string, err error)
 	// AddTaskJob queues a task job working on sources.
 	AddTaskJob(task *jobs.Task, sources []pathloc.Path)
-	// EnqueueDeleteJob queues a delete of paths from disk, which the index follows.
-	EnqueueDeleteJob(paths []string)
+	// EnqueueDeleteJob queues a delete of paths from disk, which the index follows; with
+	// removeEmptyDirs it also removes the directories that leaves empty.
+	EnqueueDeleteJob(paths []string, removeEmptyDirs bool)
 	UniqueMenuDefinitions() []menu.Definition
 	BrowserMenuDefinitions() []menu.Definition
 	Config() config.Config
@@ -68,6 +70,9 @@ type Handler struct {
 	index  *fi.Index
 	// lookupGen identifies the latest lookup: a result carrying another is stale.
 	lookupGen int
+	// pendingDelete holds the files of a confirmed delete while the empty-directories question is
+	// open; its answer queues them (FinishDelete).
+	pendingDelete []string
 }
 
 // New constructs the handler.
@@ -537,9 +542,69 @@ func (h *Handler) FilesQueued(paths []string, gone bool) {
 	h.rebuild(h.cursorID())
 }
 
-// DeleteQueued queues the delete of the sources confirmed in the dialog.
-func (h *Handler) DeleteQueued(paths []string) {
-	h.host.EnqueueDeleteJob(paths)
+// BeginDelete takes the files of a confirmed delete. It queues them right away when that leaves no
+// directory empty; otherwise it returns those directories, relative to Root, for the caller to ask
+// about, and FinishDelete queues them with the answer.
+func (h *Handler) BeginDelete(paths []string) (emptyDirs []string) {
+	if dirs := h.emptyDirsAfterDelete(paths); len(dirs) > 0 {
+		h.pendingDelete = paths
+		return dirs
+	}
+	h.deleteQueued(paths, false)
+	return nil
+}
+
+// FinishDelete queues the delete waiting on the empty-directories question.
+func (h *Handler) FinishDelete(removeEmptyDirs bool) {
+	paths := h.pendingDelete
+	h.pendingDelete = nil
+	if len(paths) > 0 {
+		h.deleteQueued(paths, removeEmptyDirs)
+	}
+}
+
+// CancelDelete drops the delete waiting on the empty-directories question: nothing is deleted and
+// the marks stay.
+func (h *Handler) CancelDelete() { h.pendingDelete = nil }
+
+// emptyDirsAfterDelete dry-runs the cleanup a delete of paths would do.
+func (h *Handler) emptyDirsAfterDelete(paths []string) []string {
+	removed := make(map[string]bool, len(paths))
+	seen := map[string]bool{}
+	var roots []pathloc.Path
+	for _, p := range paths {
+		loc, err := pathloc.Parse(p)
+		if err != nil {
+			continue
+		}
+		removed[loc.String()] = true
+		parent := loc.Parent()
+		if key := parent.String(); !seen[key] {
+			seen[key] = true
+			roots = append(roots, parent)
+		}
+	}
+	dirs, err := ops.PreviewEmptyDirsUnder(context.Background(), roots, removed)
+	if err != nil {
+		return nil
+	}
+	out := make([]string, 0, len(dirs))
+	for _, d := range dirs {
+		path, err := d.FilePath()
+		if err != nil {
+			continue
+		}
+		rel, err := filepath.Rel(h.model.UniqueView.Root, path)
+		if err != nil {
+			rel = path
+		}
+		out = append(out, filepath.ToSlash(rel))
+	}
+	return out
+}
+
+func (h *Handler) deleteQueued(paths []string, removeEmptyDirs bool) {
+	h.host.EnqueueDeleteJob(paths, removeEmptyDirs)
 	h.host.SetTransientMessage(fmt.Sprintf("Delete queued (%d %s)", len(paths), plural(len(paths))), ui.MessageUrgencyInfo)
 	h.FilesQueued(paths, true)
 }

@@ -104,11 +104,17 @@ func (a *App) applyDedupEmptyDirsConfirmEvent(ev dlg.Event) {
 // comes through here.
 func (a *App) answerDedupEmptyDirsConfirm(id dlg.ID) {
 	a.model.DedupEmptyDirsConfirm = dialog.DedupEmptyDirsConfirmState{}
+	finish := a.dedupCtrl.DeleteMarked
+	if a.model.ViewMode == ui.ViewUnique {
+		finish = a.uniqueCtrl.FinishDelete
+	}
 	switch id {
 	case "", dialog.DedupEmptyDirsYes:
-		a.dedupCtrl.DeleteMarked(true)
+		finish(true)
 	case dialog.DedupEmptyDirsNo:
-		a.dedupCtrl.DeleteMarked(false)
+		finish(false)
+	default:
+		a.uniqueCtrl.CancelDelete()
 	}
 }
 

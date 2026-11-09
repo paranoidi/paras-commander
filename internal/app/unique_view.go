@@ -34,10 +34,10 @@ func (h uniqueHost) AddTaskJob(task *jobs.Task, sources []pathloc.Path) {
 	h.app.jobsCtrl.AddTaskJob(task, sources)
 }
 
-// EnqueueDeleteJob deletes from disk; the dialog already confirmed it, and a job that leaves a
-// directory empty is not asked about, as in the duplicates view.
-func (h uniqueHost) EnqueueDeleteJob(paths []string) {
-	h.app.jobsCtrl.EnqueueDedupDeleteJob(paths, false)
+// EnqueueDeleteJob deletes from disk. The view has asked about empty directories already, so the
+// generic dangling-directories cleanup must not ask again, as in the duplicates view.
+func (h uniqueHost) EnqueueDeleteJob(paths []string, removeEmptyDirs bool) {
+	h.app.jobsCtrl.EnqueueDedupDeleteJob(paths, removeEmptyDirs)
 }
 
 func (h uniqueHost) UniqueMenuDefinitions() []menu.Definition { return h.app.uniqueMenuDefinitions() }
