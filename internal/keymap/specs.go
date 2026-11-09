@@ -650,7 +650,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
 			Keywords:    []string{"equal", "relocated", "missing", "diff"},
 			LeaderKey:   "C",
-			LeaderLabel: "Choose categories…",
+			LeaderLabel: "Choose categories",
 		},
 		{
 			ID:          ActionCompareResetFilter,
