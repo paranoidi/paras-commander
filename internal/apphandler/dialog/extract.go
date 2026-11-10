@@ -85,7 +85,7 @@ func (h *Handler) ExecuteExtract() {
 	dest = destLoc.String()
 	// An indexed archive is read from the disk: the planner and the job work on disk paths.
 	sources = pathloc.Strings(pathloc.Locals(srcLocs))
-	if h.useRemoteFileOp(dest) {
+	if h.useRemoteFileOp(append([]string{dest}, sources...)...) {
 		h.startRemoteExtractProbe(sources, dest, asDir)
 		return
 	}

@@ -12,6 +12,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/archive"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
+	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/fschange"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -29,6 +30,7 @@ func (e *extractCancelError) Unwrap() error { return e.err }
 
 // ExtractItem is one archive scheduled for extraction.
 type ExtractItem struct {
+	// Path is the archive's host path or sftp:// URI.
 	Path   string
 	Format archive.Format
 	// Source is the index of the archive among the paths the plan was built from.
@@ -37,7 +39,10 @@ type ExtractItem struct {
 
 // ExtractPlan describes a validated extract operation.
 type ExtractPlan struct {
-	Items       []ExtractItem
+	Items []ExtractItem
+	// Destination is a directory: a host path or an sftp:// URI. A remote archive is downloaded to
+	// a local temporary directory first, a remote destination is extracted into one and uploaded
+	// (ExecuteExtract removes the directories again).
 	Destination string
 	Toolchain   archive.Toolchain
 	// AsDirectory extracts each container archive into Destination/<archive name minus suffix>,
@@ -85,20 +90,35 @@ func (p ExtractPlan) report(item ExtractItem, res ItemResult, reason string) {
 	p.OnItem(PlanItem{Src: src, Source: item.Source}, res, reason)
 }
 
-// PlanExtract builds an extract plan from source paths and destination directory.
-// Skips non-files, unknown formats, existing stream outputs, and later stream items
-// whose output basename collides with an earlier item. Returns error when no
-// runnable archives remain.
+// PlanExtract builds an extract plan from source paths and destination directory (host paths or
+// sftp:// URIs; remote ones are checked through their backend). Skips non-files, unknown formats,
+// existing stream outputs, and later stream items whose output basename collides with an earlier
+// item. Returns error when no runnable archives remain.
 func PlanExtract(paths []string, destDir string, tc archive.Toolchain) (ExtractPlan, []string, error) {
-	destDir = filepath.Clean(destDir)
-	if destDir == "" {
-		return ExtractPlan{}, nil, &Error{Op: "extract", Text: "destination is empty"}
+	return planExtract(context.Background(), paths, destDir, tc, false)
+}
+
+// PlanExtractForJob is PlanExtract for the job worker: a stream archive whose output already
+// exists, or collides with an earlier one, stays in the plan so ExtractPlan.Conflict decides.
+func PlanExtractForJob(ctx context.Context, paths []string, destDir string, tc archive.Toolchain) (ExtractPlan, []string, error) {
+	return planExtract(ctx, paths, destDir, tc, true)
+}
+
+func planExtract(ctx context.Context, paths []string, destDir string, tc archive.Toolchain, keepStreams bool) (ExtractPlan, []string, error) {
+	destLoc, err := pathloc.Parse(destDir)
+	if err != nil {
+		return ExtractPlan{}, nil, &Error{Op: "extract", Text: "destination is empty", Err: err}
 	}
-	info, err := os.Stat(destDir)
+	if destLoc.IsLocal() {
+		destDir = filepath.Clean(destDir)
+	} else {
+		destDir = destLoc.String()
+	}
+	info, err := extractStat(ctx, destLoc)
 	if err != nil {
 		return ExtractPlan{}, nil, &Error{Op: "extract", Text: fmt.Sprintf("destination %q: %v", destDir, err), Err: err}
 	}
-	if !info.IsDir() {
+	if !info.dir {
 		return ExtractPlan{}, nil, &Error{Op: "extract", Text: "destination is not a directory"}
 	}
 
@@ -108,28 +128,40 @@ func PlanExtract(paths []string, destDir string, tc archive.Toolchain) (ExtractP
 	claimedStream := make(map[string]string)
 
 	for i, p := range paths {
-		p = filepath.Clean(p)
-		fi, err := os.Stat(p)
+		loc, err := pathloc.Parse(p)
 		if err != nil {
-			skipped = append(skipped, fmt.Sprintf("%s: %v", filepath.Base(p), err))
+			skipped = append(skipped, fmt.Sprintf("%s: %v", p, err))
 			continue
 		}
-		if !fi.Mode().IsRegular() {
-			skipped = append(skipped, filepath.Base(p)+": not a regular file")
+		if loc.IsLocal() {
+			p = filepath.Clean(p)
+		} else {
+			p = loc.String()
+		}
+		name := loc.Base()
+		fi, err := extractStat(ctx, loc)
+		if err != nil {
+			skipped = append(skipped, fmt.Sprintf("%s: %v", name, err))
 			continue
 		}
-		f, ok := archive.FormatForName(p)
+		if !fi.regular {
+			skipped = append(skipped, name+": not a regular file")
+			continue
+		}
+		f, ok := archive.FormatForName(name)
 		if !ok {
-			skipped = append(skipped, filepath.Base(p)+": unsupported archive type")
+			skipped = append(skipped, name+": unsupported archive type")
 			continue
 		}
 		if !f.Available(tc) {
-			unavailable = append(unavailable, fmt.Sprintf("%s: %s not found", filepath.Base(p), f.RequiredToolName()))
+			unavailable = append(unavailable, fmt.Sprintf("%s: %s not found", name, f.RequiredToolName()))
 			continue
 		}
-		if reason, skip := streamOutputConflict(p, f, destDir, claimedStream); skip {
-			skipped = append(skipped, reason)
-			continue
+		if !keepStreams {
+			if reason, skip := streamOutputConflict(ctx, name, f, destLoc, claimedStream); skip {
+				skipped = append(skipped, reason)
+				continue
+			}
 		}
 		items = append(items, ExtractItem{Path: p, Format: f, Source: int32(i)})
 	}
@@ -187,7 +219,7 @@ func ExecuteExtract(ctx context.Context, plan ExtractPlan, progress ExtractProgr
 			}
 			claimedStream[name] = item.Path
 		}
-		err := extractOne(ctx, item, plan.Destination, plan.AsDirectory, plan.Toolchain, plan.Conflict, plan.Password, &pw)
+		err := extractStaged(ctx, item, plan, &pw)
 		if errors.Is(err, errExtractNoPassword) {
 			plan.report(item, ItemSkipped, ReasonNoPassword)
 			if progress != nil {
@@ -230,6 +262,80 @@ func ExecuteExtract(ctx context.Context, plan ExtractPlan, progress ExtractProgr
 		return done, firstErr
 	}
 	return done, nil
+}
+
+// extractStaged extracts one archive. When the archive or the destination is remote it works
+// through local temporary directories that are removed again whatever the outcome: a remote
+// archive is downloaded first, a remote destination receives the extracted top-level entries
+// afterwards through the copy executor (so ExtractPlan.Conflict decides about existing files). The
+// scratch work is not reported to ctx's fschange sink.
+func extractStaged(ctx context.Context, item ExtractItem, plan ExtractPlan, pw *string) error {
+	srcLoc, err := pathloc.Parse(item.Path)
+	if err != nil {
+		return err
+	}
+	destLoc, err := pathloc.Parse(plan.Destination)
+	if err != nil {
+		return err
+	}
+	ask := plan.Password
+	if ask != nil { // the prompt names the archive as the user knows it, not its temporary copy
+		ask = func(ctx context.Context, _ string, retry bool) (string, bool) {
+			return plan.Password(ctx, item.Path, retry)
+		}
+	}
+	local, destDir, extractCtx := item, plan.Destination, ctx
+	if !srcLoc.IsLocal() {
+		dir, err := os.MkdirTemp("", "pc-extract-src-")
+		if err != nil {
+			return err
+		}
+		defer func() { _ = os.RemoveAll(dir) }()
+		local.Path = filepath.Join(dir, srcLoc.Base())
+		dstLoc, err := pathloc.File(local.Path)
+		if err != nil {
+			return err
+		}
+		if res, err := copyFileTransfer(fschange.WithoutSink(ctx), srcLoc, dstLoc, DefaultOptions(), nil, nil, nil); err != nil || res != copyDone {
+			if err == nil {
+				err = errExtractSkipped
+			}
+			return fmt.Errorf("download: %w", err)
+		}
+	}
+	if !destLoc.IsLocal() {
+		stage, err := os.MkdirTemp("", "pc-extract-dst-")
+		if err != nil {
+			return err
+		}
+		defer func() { _ = os.RemoveAll(stage) }()
+		destDir, extractCtx = stage, fschange.WithoutSink(ctx)
+	}
+	if err := extractOne(extractCtx, local, destDir, plan.AsDirectory, plan.Toolchain, plan.Conflict, ask, pw); err != nil {
+		return err
+	}
+	if destLoc.IsLocal() {
+		return nil
+	}
+	entries, err := os.ReadDir(destDir)
+	if err != nil {
+		return err
+	}
+	staged := make([]pathloc.Path, 0, len(entries))
+	for _, e := range entries {
+		p, err := pathloc.File(filepath.Join(destDir, e.Name()))
+		if err != nil {
+			return err
+		}
+		staged = append(staged, p)
+	}
+	if len(staged) == 0 {
+		return nil
+	}
+	if _, _, err := ExecuteCopy(ctx, staged, destLoc, DefaultOptions(), ProgressEmitThrottle{}, nil, plan.Conflict, nil); err != nil {
+		return fmt.Errorf("upload: %w", err)
+	}
+	return nil
 }
 
 func extractOne(ctx context.Context, item ExtractItem, destDir string, asDir bool, tc archive.Toolchain, resolver ConflictResolver, askPassword ArchivePasswordFunc, pw *string) error {
@@ -289,23 +395,51 @@ func passwordFailed(f archive.Format, res cmdrun.RunResult) bool {
 	return res.ExitCode != 0 && archive.PasswordFailure(f, string(res.Stdout)+string(res.Stderr))
 }
 
-func streamOutputConflict(archivePath string, f archive.Format, destDir string, claimed map[string]string) (string, bool) {
+// extractStatResult is what the planner needs to know about a path.
+type extractStatResult struct{ dir, regular bool }
+
+// extractStat stats loc, following symlinks: on disk with os.Stat, elsewhere through its backend.
+func extractStat(ctx context.Context, loc pathloc.Path) (extractStatResult, error) {
+	if loc.IsLocal() {
+		fi, err := os.Stat(loc.String())
+		if err != nil {
+			return extractStatResult{}, err
+		}
+		return extractStatResult{dir: fi.IsDir(), regular: fi.Mode().IsRegular()}, nil
+	}
+	e, err := statEntry(ctx, loc)
+	if err != nil {
+		return extractStatResult{}, err
+	}
+	return extractStatResult{dir: e.Type == fsbackend.EntryDirectory, regular: e.Type == fsbackend.EntryFile}, nil
+}
+
+func streamOutputConflict(ctx context.Context, archiveName string, f archive.Format, destLoc pathloc.Path, claimed map[string]string) (string, bool) {
 	if !f.NeedsStdoutSink() {
 		return "", false
 	}
-	name := archive.OutputBasename(archivePath, f)
+	name := archive.OutputBasename(archiveName, f)
 	if prev, ok := claimed[name]; ok {
-		return fmt.Sprintf("%s: output %q collides with %s", filepath.Base(archivePath), name, prev), true
+		return fmt.Sprintf("%s: output %q collides with %s", archiveName, name, prev), true
 	}
-	destPath := filepath.Join(destDir, name)
-	_, err := os.Lstat(destPath)
+	destPath, err := destLoc.Join(name)
 	if err == nil {
-		return fmt.Sprintf("%s: output %q already exists", filepath.Base(archivePath), name), true
+		if destPath.IsLocal() {
+			_, err = os.Lstat(destPath.String())
+		} else {
+			_, err = statEntry(ctx, destPath)
+		}
+		if err == nil {
+			return fmt.Sprintf("%s: output %q already exists", archiveName, name), true
+		}
+		if isNotExist(err) {
+			err = nil
+		}
 	}
-	if !os.IsNotExist(err) {
-		return fmt.Sprintf("%s: %v", filepath.Base(archivePath), err), true
+	if err != nil {
+		return fmt.Sprintf("%s: %v", archiveName, err), true
 	}
-	claimed[name] = filepath.Base(archivePath)
+	claimed[name] = archiveName
 	return "", false
 }
 

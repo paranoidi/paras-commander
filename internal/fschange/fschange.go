@@ -53,6 +53,11 @@ func WithSink(ctx context.Context, s Sink) context.Context {
 	return context.WithValue(ctx, sinkKey{}, s)
 }
 
+// WithoutSink returns ctx with no sink, for work in scratch directories that must not be reported.
+func WithoutSink(ctx context.Context) context.Context {
+	return context.WithValue(ctx, sinkKey{}, Sink(nil))
+}
+
 // Report hands batch, with every path cleaned, to ctx's sink. A context without a sink, or an
 // empty batch, reports nothing.
 func Report(ctx context.Context, batch ...Change) {

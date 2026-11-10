@@ -1608,8 +1608,9 @@ func (h *Handler) EnqueueExtractJob(sources []string, dest string, asDirectory b
 		Status:      jobs.StatusQueued,
 		Sources:     srcLocs,
 		Destination: destLoc,
-		DestIsDir:   ops.DestinationIsDirAtEnqueue(destLoc),
-		TotalFiles:  len(sources),
+		// A remote destination was checked by the planner; no Stat on the UI goroutine.
+		DestIsDir:  !destLoc.IsLocal() || ops.DestinationIsDirAtEnqueue(destLoc),
+		TotalFiles: len(sources),
 
 		ExtractAsDirectory: asDirectory,
 	}
