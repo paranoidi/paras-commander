@@ -163,3 +163,23 @@ func TestFormatAvailable(t *testing.T) {
 		t.Fatal("zip should not be available without unzip")
 	}
 }
+
+func TestPasswordFailureAndArgv(t *testing.T) {
+	if !PasswordFailure(FormatZip, "   skipping: a.txt  unable to get password") ||
+		!PasswordFailure(FormatSevenZ, "Enter password (will not be echoed):") ||
+		!PasswordFailure(FormatRar, "The specified password is incorrect.") {
+		t.Fatal("password failure not detected")
+	}
+	if PasswordFailure(FormatTarGz, "wrong password") || PasswordFailure(FormatZip, "extracting: a.txt") {
+		t.Fatal("false positive")
+	}
+	tc := Toolchain{Unzip: "/bin/unzip", SevenZ: "/bin/7z"}
+	argv, stdin, err := PasswordArgv(FormatZip, "/src/a.zip", "/dst", tc, "heron")
+	if err != nil || stdin != nil || argv[1] != "-P" || argv[2] != "heron" {
+		t.Fatalf("zip: %v %q %v", argv, stdin, err)
+	}
+	argv, stdin, err = PasswordArgv(FormatSevenZ, "/src/a.7z", "/dst", tc, "heron")
+	if err != nil || string(stdin) != "heron\n" || strings.Contains(strings.Join(argv, " "), "heron") {
+		t.Fatalf("7z: %v %q %v", argv, stdin, err)
+	}
+}

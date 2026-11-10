@@ -85,6 +85,8 @@ func (a *App) applyElevateOpen(p elevateOpenPayload) {
 		Path:        p.req.Path,
 		NoPassword:  p.req.NoPassword,
 		BadPassword: p.req.BadPassword,
+
+		ArchivePassword: p.req.ArchivePassword,
 	}
 }
 
@@ -99,7 +101,7 @@ func (a *App) finishElevate(d ops.PermissionDecision) {
 // elevateDecision maps an activated widget to its decision: Enter in the password field elevates.
 func elevateDecision(id dlg.ID) ops.PermissionDecision {
 	switch id {
-	case dialog.ElevatePassword, dialog.ElevateRetry:
+	case dialog.ElevatePassword, dialog.ElevateRetry, dlg.OK:
 		return ops.PermissionElevate
 	case dialog.ElevateSkip:
 		return ops.PermissionSkip

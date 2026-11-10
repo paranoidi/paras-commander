@@ -20,13 +20,17 @@ func elevateGoldenState(variant, focus string) ElevateDialogState {
 	case "long":
 		v := strings.Repeat("lantern", 12)
 		st.Password = FileDialogField{Value: v, Cursor: len(v)}
+	case "archive", "archivebad":
+		st.ArchivePassword, st.BadPassword = true, variant == "archivebad"
+		st.Op, st.Path = "extract", "/srv/harbor/orchard.7z"
+		st.Password = FileDialogField{Value: "willow42", Cursor: 8}
 	case "nopw":
 		st.NoPassword = true
 	case "longpath":
 		st.Op = "delete"
 		st.Path = "/srv/" + strings.Repeat("harbor-orchard-meadow/", 5) + "lantern.txt"
 	}
-	st.BadPassword = variant == "badpw"
+	st.BadPassword = variant == "badpw" || variant == "archivebad"
 	if variant == "noop" {
 		st.Op = ""
 	}
@@ -52,6 +56,8 @@ func TestElevateGoldenRender(t *testing.T) {
 	add(80, 24, "badpw", "skip")
 	add(80, 24, "noop", "input")
 	add(80, 24, "longpath", "input")
+	add(80, 24, "archive", "input")
+	add(80, 24, "archivebad", "ok")
 	for _, focus := range []string{"elevate"} {
 		add(80, 24, "nopw", focus)
 	}

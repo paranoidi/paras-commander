@@ -61,6 +61,16 @@ func (r RunResult) Ran() bool {
 // cancellation. onStart may be nil. extraEnv (KEY=VALUE) is appended to the inherited environment.
 // live may be nil; when set it receives the output as it is produced.
 func RunTracked(ctx context.Context, argv, extraEnv []string, dir string, maxStreamBytes int, onStart func(*os.Process), live *Live) RunResult {
+	return runTracked(ctx, argv, extraEnv, dir, maxStreamBytes, onStart, live, nil)
+}
+
+// RunWithStdin behaves like Run but feeds stdin to the subprocess (which is otherwise detached
+// from any input), e.g. a password an archive tool reads when it has no terminal.
+func RunWithStdin(ctx context.Context, argv []string, dir string, maxStreamBytes int, stdin []byte) RunResult {
+	return runTracked(ctx, argv, nil, dir, maxStreamBytes, nil, nil, stdin)
+}
+
+func runTracked(ctx context.Context, argv, extraEnv []string, dir string, maxStreamBytes int, onStart func(*os.Process), live *Live, stdin []byte) RunResult {
 	if len(argv) == 0 {
 		return RunResult{LaunchErr: errors.New("empty argv"), ExitCode: -1}
 	}
@@ -70,6 +80,9 @@ func RunTracked(ctx context.Context, argv, extraEnv []string, dir string, maxStr
 
 	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
 	cmd.Dir = dir
+	if stdin != nil {
+		cmd.Stdin = bytes.NewReader(stdin)
+	}
 	if len(extraEnv) > 0 {
 		cmd.Env = append(os.Environ(), extraEnv...)
 	}

@@ -17,7 +17,10 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
-var errExtractSkipped = errors.New("extract skipped")
+var (
+	errExtractSkipped    = errors.New("extract skipped")
+	errExtractNoPassword = errors.New("extract skipped: no password")
+)
 
 type extractCancelError struct{ err error }
 
@@ -44,11 +47,31 @@ type ExtractPlan struct {
 	// A nil resolver fails that item without replacing the file. Returning false
 	// skips the item. Returning an error cancels remaining archives.
 	Conflict ConflictResolver
+	// Password, when set, is asked for the password of an encrypted archive (retry is true when
+	// the previous answer was rejected). ok=false skips that archive; nil fails it. The last
+	// accepted password is tried first on the following archives of the same ExecuteExtract.
+	Password ArchivePasswordFunc
 	// OnItem, when set, reports each archive extracted (ItemDone), skipped or failed, with the
 	// reason for the last two.
 	OnItem ItemFunc
 	// OnSourceStart, when set, reports each archive's ExtractItem.Source as it begins.
 	OnSourceStart func(i int32)
+}
+
+// ArchivePasswordFunc asks the user for archivePath's password. It blocks until answered; a
+// canceled ctx must return ok=false.
+type ArchivePasswordFunc func(ctx context.Context, archivePath string, retry bool) (pw string, ok bool)
+
+// ArchivePasswordFromPermission adapts the permission prompt (the same worker-to-UI wait as the
+// sudo retry) to an ArchivePasswordFunc. A nil wait gives nil.
+func ArchivePasswordFromPermission(wait PermissionWaitFunc) ArchivePasswordFunc {
+	if wait == nil {
+		return nil
+	}
+	return func(ctx context.Context, archivePath string, retry bool) (string, bool) {
+		ans := wait(ctx, PermissionRequest{Op: "extract", Path: archivePath, ArchivePassword: true, BadPassword: retry})
+		return ans.Password, ans.Decision == PermissionElevate
+	}
 }
 
 func (p ExtractPlan) report(item ExtractItem, res ItemResult, reason string) {
@@ -140,6 +163,7 @@ func ExecuteExtract(ctx context.Context, plan ExtractPlan, progress ExtractProgr
 	var firstErr error
 	var failCount int
 	claimedStream := make(map[string]string)
+	var pw string // last accepted archive password, in memory for this call only
 
 	for _, item := range plan.Items {
 		if err := itemBoundaryErr(ctx); err != nil {
@@ -163,7 +187,14 @@ func ExecuteExtract(ctx context.Context, plan ExtractPlan, progress ExtractProgr
 			}
 			claimedStream[name] = item.Path
 		}
-		err := extractOne(ctx, item, plan.Destination, plan.AsDirectory, plan.Toolchain, plan.Conflict)
+		err := extractOne(ctx, item, plan.Destination, plan.AsDirectory, plan.Toolchain, plan.Conflict, plan.Password, &pw)
+		if errors.Is(err, errExtractNoPassword) {
+			plan.report(item, ItemSkipped, ReasonNoPassword)
+			if progress != nil {
+				progress(item.Path, done)
+			}
+			continue
+		}
 		if errors.Is(err, errExtractSkipped) {
 			plan.report(item, ItemSkipped, ReasonExists)
 			if progress != nil {
@@ -201,7 +232,7 @@ func ExecuteExtract(ctx context.Context, plan ExtractPlan, progress ExtractProgr
 	return done, nil
 }
 
-func extractOne(ctx context.Context, item ExtractItem, destDir string, asDir bool, tc archive.Toolchain, resolver ConflictResolver) error {
+func extractOne(ctx context.Context, item ExtractItem, destDir string, asDir bool, tc archive.Toolchain, resolver ConflictResolver, askPassword ArchivePasswordFunc, pw *string) error {
 	target := destDir
 	if asDir && !item.Format.NeedsStdoutSink() {
 		target = filepath.Join(destDir, archive.OutputBasename(item.Path, item.Format))
@@ -220,7 +251,23 @@ func extractOne(ctx context.Context, item ExtractItem, destDir string, asDir boo
 	if err := os.MkdirAll(target, 0o755); err != nil {
 		return err
 	}
-	res := cmdrun.Run(ctx, argv, filepath.Dir(item.Path), cmdrun.MaxStreamBytes)
+	run := func(pw string) cmdrun.RunResult {
+		argv, stdin, err := archive.PasswordArgv(item.Format, item.Path, target, tc, pw)
+		if err != nil {
+			return cmdrun.RunResult{LaunchErr: err, ExitCode: -1}
+		}
+		return cmdrun.RunWithStdin(ctx, argv, filepath.Dir(item.Path), cmdrun.MaxStreamBytes, stdin)
+	}
+	res := run(*pw)
+	for retry := false; askPassword != nil && res.LaunchErr == nil && passwordFailed(item.Format, res); retry = true {
+		typed, ok := askPassword(ctx, item.Path, retry)
+		if !ok {
+			return errExtractNoPassword
+		}
+		if res = run(typed); !passwordFailed(item.Format, res) {
+			*pw = typed
+		}
+	}
 	if res.LaunchErr != nil {
 		return res.LaunchErr
 	}
@@ -235,6 +282,11 @@ func extractOne(ctx context.Context, item ExtractItem, destDir string, asDir boo
 		return fmt.Errorf("%s", msg)
 	}
 	return nil
+}
+
+// passwordFailed reports whether a failed run shows a missing or rejected archive password.
+func passwordFailed(f archive.Format, res cmdrun.RunResult) bool {
+	return res.ExitCode != 0 && archive.PasswordFailure(f, string(res.Stdout)+string(res.Stderr))
 }
 
 func streamOutputConflict(archivePath string, f archive.Format, destDir string, claimed map[string]string) (string, bool) {

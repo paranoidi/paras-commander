@@ -11,6 +11,9 @@ type ElevateDialogState struct {
 	NoPassword bool
 	// BadPassword shows that the previous password was rejected.
 	BadPassword bool
+	// ArchivePassword turns the prompt into an extract's archive password prompt: Path is the
+	// archive, BadPassword says the last password was wrong, the buttons are OK / Cancel.
+	ArchivePassword bool
 	// Password is the masked input row.
 	Password FileDialogField
 	// Focus is the focused widget (ElevatePassword, ElevateRetry, ElevateSkip or dlg.Cancel); empty

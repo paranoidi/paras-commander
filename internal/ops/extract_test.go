@@ -391,3 +391,94 @@ func TestExecuteExtractAsDirectory(t *testing.T) {
 		t.Fatal("member also extracted at destination top level")
 	}
 }
+
+// TestExecuteExtractPassword extracts two archives sharing one password: the first answer is
+// wrong (so the prompt repeats with retry=true), the accepted one is reused for the second archive.
+func TestExecuteExtractPassword(t *testing.T) {
+	tc := archive.ProbeToolchain()
+	for _, tt := range []struct {
+		name string
+		f    archive.Format
+		pack func(archivePath, member string) *exec.Cmd
+	}{
+		{"zip", archive.FormatZip, func(a, m string) *exec.Cmd { return exec.Command("zip", "-q", "-P", "willow", a, m) }},
+		{"7z", archive.FormatSevenZ, func(a, m string) *exec.Cmd { return exec.Command(tc.SevenZ, "a", "-pwillow", "-mhe=on", a, m) }},
+		{"rar", archive.FormatRar, func(a, m string) *exec.Cmd { return exec.Command("rar", "a", "-pwillow", a, m) }},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if !tt.f.Available(tc) {
+				t.Skipf("%s not available", tt.f.RequiredToolName())
+			}
+			srcDir, destDir := t.TempDir(), t.TempDir()
+			var paths []string
+			for _, base := range []string{"lantern", "orchard"} {
+				member := base + ".txt"
+				if err := os.WriteFile(filepath.Join(srcDir, member), []byte("hi"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				cmd := tt.pack(filepath.Join(srcDir, base+tt.f.Suffix()), member)
+				cmd.Dir = srcDir
+				if out, err := cmd.CombinedOutput(); err != nil {
+					t.Skipf("cannot create encrypted archive: %v: %s", err, out)
+				}
+				paths = append(paths, filepath.Join(srcDir, base+tt.f.Suffix()))
+			}
+			plan, _, err := PlanExtract(paths, destDir, tc)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var retries []bool
+			plan.Password = func(_ context.Context, _ string, retry bool) (string, bool) {
+				retries = append(retries, retry)
+				if !retry {
+					return "meadow", true // wrong
+				}
+				return "willow", true
+			}
+			done, err := ExecuteExtract(context.Background(), plan, nil)
+			if err != nil || done != 2 {
+				t.Fatalf("done=%d err=%v", done, err)
+			}
+			// The wrong guess is rejected, the right one is remembered for the second archive.
+			if len(retries) != 2 || retries[0] || !retries[1] {
+				t.Fatalf("password asked with retry=%v, want [false true]", retries)
+			}
+			for _, m := range []string{"lantern.txt", "orchard.txt"} {
+				if _, err := os.Stat(filepath.Join(destDir, m)); err != nil {
+					t.Fatalf("not extracted: %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestExecuteExtractPasswordCanceledSkipsArchive(t *testing.T) {
+	tc := archive.ProbeToolchain()
+	if _, err := exec.LookPath("zip"); err != nil || !archive.FormatZip.Available(tc) {
+		t.Skip("zip/unzip not available")
+	}
+	srcDir, destDir := t.TempDir(), t.TempDir()
+	if err := os.WriteFile(filepath.Join(srcDir, "heron.txt"), []byte("hi"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("zip", "-q", "-P", "willow", "meadow.zip", "heron.txt")
+	cmd.Dir = srcDir
+	if err := cmd.Run(); err != nil {
+		t.Skipf("cannot create encrypted zip: %v", err)
+	}
+	plan, _, err := PlanExtract([]string{filepath.Join(srcDir, "meadow.zip")}, destDir, tc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan.Password = func(context.Context, string, bool) (string, bool) { return "", false }
+	var reason string
+	plan.OnItem = func(_ PlanItem, res ItemResult, r string) {
+		if res == ItemSkipped {
+			reason = r
+		}
+	}
+	done, err := ExecuteExtract(context.Background(), plan, nil)
+	if err != nil || done != 0 || reason != ReasonNoPassword {
+		t.Fatalf("done=%d err=%v reason=%q", done, err, reason)
+	}
+}

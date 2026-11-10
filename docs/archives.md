@@ -22,6 +22,7 @@ Extract works on the highlighted archive or on all selected archives. The dialog
 
 - **Extract as directory** (checked each time the dialog opens, `M-e`): each archive such as `foo.tar.gz` or `bar.zip` is extracted into its own subdirectory `<destination>/foo` or `<destination>/bar`, created if missing. Uncheck it to extract straight into the destination. Single-file stream formats (`.gz`, `.bz2`, `.xz`, `.Z`) are not affected.
 - Existing files are kept: the tools run with their "do not overwrite" options (`unzip -n`, `7z -aos`, `unrar -o-`, `tar -k`). Stream files (`.gz`, `.bz2`, `.xz`, `.Z`) decompress to `<destination>/<name without suffix>` and, if that file exists, go through the normal job conflict prompt ([Jobs](jobs.md)).
+- Encrypted zip, jar, 7z and rar archives prompt for a password (the dialog names the archive). A wrong password asks again; Cancel skips that archive and the rest of the batch continues. The last accepted password is tried first on the following archives of the same extract, so one password covers a batch; it is kept in memory only for that job. For zip the password is passed on the `unzip` command line, so other local users can see it in the process list while the archive extracts.
 - Items the installed tools cannot handle are skipped with a toast naming the reason.
 - The destination may be a remote `sftp://` path ([SFTP](sftp.md)).
 

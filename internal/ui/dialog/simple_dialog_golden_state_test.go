@@ -121,7 +121,7 @@ func dedupReturnGoldenState(scope, focus string) DedupReturnDialogState {
 }
 
 func setElevateGoldenFocus(st *ElevateDialogState, focus string) {
-	st.Focus = map[string]dlg.ID{"input": ElevatePassword, "elevate": ElevateRetry, "skip": ElevateSkip, "cancel": dlg.Cancel}[focus]
+	st.Focus = map[string]dlg.ID{"input": ElevatePassword, "elevate": ElevateRetry, "skip": ElevateSkip, "ok": dlg.OK, "cancel": dlg.Cancel}[focus]
 }
 
 func setDebounceGoldenFocus(st *DebounceCalibrateDialogState, focus string) {

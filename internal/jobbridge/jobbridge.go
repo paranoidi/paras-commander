@@ -347,6 +347,7 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, com
 				resolver:      resolver,
 				diskWait:      diskWait,
 				emit:          emit,
+				permWait:      permWait,
 				countInterval: time.Duration(jobsCfg.ScanProgressMinIntervalMS) * time.Millisecond,
 			})
 		}
@@ -398,6 +399,7 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, com
 			resolver: resolver,
 			diskWait: diskWait,
 			emit:     emit,
+			permWait: permWait,
 		})
 	}
 }
@@ -663,6 +665,8 @@ type transferExecCtx struct {
 	resolver ops.ConflictResolver
 	diskWait ops.DiskWaitFunc
 	emit     func(jobs.Event)
+	// permWait is the permission prompt; an extract also asks it for archive passwords.
+	permWait ops.PermissionWaitFunc
 	// countInterval paces a move's background count totals (jobs.scan_progress_min_interval_ms).
 	countInterval time.Duration
 }
@@ -761,6 +765,7 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 			extractPlanErr = nil
 		}
 		plan.AsDirectory = job.ExtractAsDirectory
+		plan.Password = ops.ArchivePasswordFromPermission(tc.permWait)
 		plan.Conflict = tc.resolver
 		plan.OnItem = job.RecordOperation
 		plan.OnSourceStart = job.StartSource

@@ -161,6 +161,7 @@ const (
 	ReasonSourceDeleted = "source deleted"
 	ReasonPermission    = "permission denied"
 	ReasonNotEmpty      = "not empty"
+	ReasonNoPassword    = "no password"
 )
 
 // itemDone reports item, tagged with the current source, through o.OnItemDone when set.
