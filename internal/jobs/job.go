@@ -231,6 +231,10 @@ type Job struct {
 	// from the index only.
 	DeleteOnDisk bool
 
+	// ExtractAsDirectory extracts each container archive into Destination/<archive name minus
+	// suffix> (TypeExtract only); stream formats ignore it.
+	ExtractAsDirectory bool
+
 	// DeleteRemoveEmptyDirs enables post-delete removal of directories left empty
 	// under the parent directories of Sources (TypeDelete only).
 	DeleteRemoveEmptyDirs bool
@@ -433,6 +437,7 @@ func (j *Job) RetryClone() *Job {
 		DeleteEmptyDirStops:   j.DeleteEmptyDirStops,
 		DeleteEmptyDirsOnly:   j.DeleteEmptyDirsOnly,
 		DeleteOnDisk:          j.DeleteOnDisk,
+		ExtractAsDirectory:    j.ExtractAsDirectory,
 		PromptDanglingDirs:    j.PromptDanglingDirs,
 		RemoveDanglingDirs:    j.RemoveDanglingDirs,
 		ConflictRules:         j.ConflictRules,

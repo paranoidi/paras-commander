@@ -143,10 +143,11 @@ func TestFileDialogSFTPPasswordGoldenRender(t *testing.T) {
 // longer than the dialog, i invalid input.
 func extractGoldenState(value, opts, focus string) FileDialogState {
 	st := FileDialogState{
-		Open:           true,
-		DialogType:     FileDialogExtract,
-		Fields:         []FileDialogField{{Label: "Destination", PathPicker: true}},
-		ExtractSources: []string{"/srv/harbor/orchard.zip"},
+		Open:               true,
+		DialogType:         FileDialogExtract,
+		Fields:             []FileDialogField{{Label: "Destination", PathPicker: true}},
+		ExtractSources:     []string{"/srv/harbor/orchard.zip"},
+		ExtractAsDirectory: true,
 	}
 	if value == "typed" {
 		value = "path"

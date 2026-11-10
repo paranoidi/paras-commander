@@ -37,6 +37,9 @@ type ExtractPlan struct {
 	Items       []ExtractItem
 	Destination string
 	Toolchain   archive.Toolchain
+	// AsDirectory extracts each container archive into Destination/<archive name minus suffix>,
+	// created by the worker; stream formats ignore it.
+	AsDirectory bool
 	// Conflict is consulted when a stream extract would replace an existing file.
 	// A nil resolver fails that item without replacing the file. Returning false
 	// skips the item. Returning an error cancels remaining archives.
@@ -160,7 +163,7 @@ func ExecuteExtract(ctx context.Context, plan ExtractPlan, progress ExtractProgr
 			}
 			claimedStream[name] = item.Path
 		}
-		err := extractOne(ctx, item, plan.Destination, plan.Toolchain, plan.Conflict)
+		err := extractOne(ctx, item, plan.Destination, plan.AsDirectory, plan.Toolchain, plan.Conflict)
 		if errors.Is(err, errExtractSkipped) {
 			plan.report(item, ItemSkipped, ReasonExists)
 			if progress != nil {
@@ -198,17 +201,25 @@ func ExecuteExtract(ctx context.Context, plan ExtractPlan, progress ExtractProgr
 	return done, nil
 }
 
-func extractOne(ctx context.Context, item ExtractItem, destDir string, tc archive.Toolchain, resolver ConflictResolver) error {
-	argv, err := archive.BuildArgv(item.Format, item.Path, destDir, tc)
+func extractOne(ctx context.Context, item ExtractItem, destDir string, asDir bool, tc archive.Toolchain, resolver ConflictResolver) error {
+	target := destDir
+	if asDir && !item.Format.NeedsStdoutSink() {
+		target = filepath.Join(destDir, archive.OutputBasename(item.Path, item.Format))
+	}
+	argv, err := archive.BuildArgv(item.Format, item.Path, target, tc)
 	if err != nil {
 		return err
 	}
 	if item.Format.NeedsStdoutSink() {
 		return extractViaStdout(ctx, argv, item, destDir, resolver)
 	}
-	// The archive tool picks the names it writes: report what changed at destDir's top level.
+	// The archive tool picks the names it writes: report what changed at destDir's top level
+	// (snapshotted before target is created, so a new subdirectory counts).
 	before := snapshotTopLevel(ctx, destDir)
 	defer reportTopLevelChanges(ctx, destDir, before)
+	if err := os.MkdirAll(target, 0o755); err != nil {
+		return err
+	}
 	res := cmdrun.Run(ctx, argv, filepath.Dir(item.Path), cmdrun.MaxStreamBytes)
 	if res.LaunchErr != nil {
 		return res.LaunchErr

@@ -5,8 +5,8 @@ focus=f0 fields=["~/projects/meadow/"@18/0 pending=false dropdown=false/0] messa
 == x ==
 focus=f0 fields=["~/projects/meadow/x"@19/0 pending=false dropdown=false/0] message="1 non-archive item(s) will be skipped."
 == Down ==
-focus=ok fields=["~/projects/meadow/x"@19/0 pending=false dropdown=false/0] message="1 non-archive item(s) will be skipped."
+focus=f0 fields=["~/projects/meadow/x"@19/0 pending=false dropdown=false/0] message="1 non-archive item(s) will be skipped."
 == Right ==
-focus=cancel fields=["~/projects/meadow/x"@19/0 pending=false dropdown=false/0] message="1 non-archive item(s) will be skipped."
+focus=f0 fields=["~/projects/meadow/x"@19/0 pending=false dropdown=false/0] message="1 non-archive item(s) will be skipped."
 == Enter ==
-CLOSED: jobs=0 messageDialog=false title="" text="" message=""
+focus=f0 fields=["~/projects/meadow/x"@19/0 pending=false dropdown=false/0] message="1 non-archive item(s) will be skipped."

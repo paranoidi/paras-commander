@@ -238,7 +238,7 @@ func TestExtractDialogEnqueuesJob(t *testing.T) {
 	if all[0].Status != jobs.StatusCompleted {
 		t.Fatalf("status = %q, want completed (%s)", all[0].Status, all[0].Error)
 	}
-	if _, err := os.Stat(filepath.Join(destDir, "hello.txt")); err != nil {
+	if _, err := os.Stat(filepath.Join(destDir, "pack", "hello.txt")); err != nil {
 		t.Fatalf("extracted file missing: %v", err)
 	}
 }

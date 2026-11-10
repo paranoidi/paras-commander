@@ -40,7 +40,10 @@ func (h *Handler) OpenExtractDialog(p *panel.State) {
 		Fields:         fields,
 		Message:        msg,
 		ExtractSources: append([]string(nil), paths...),
+
+		ExtractAsDirectory: true,
 	}
+	h.updateExtractTargetPanels()
 	h.SyncFocusedFileDialogPathFieldCompletion()
 	h.host.ClearTransientMessage()
 }
@@ -54,6 +57,7 @@ func (h *Handler) ExecuteExtract() {
 		return
 	}
 	dest := strings.TrimSpace(fd.Fields[0].Value)
+	asDir := fd.ExtractAsDirectory
 	sources := append([]string(nil), fd.ExtractSources...)
 	if len(sources) == 0 {
 		h.CloseFileDialog()
@@ -82,12 +86,13 @@ func (h *Handler) ExecuteExtract() {
 	// An indexed archive is read from the disk: the planner and the job work on disk paths.
 	sources = pathloc.Strings(pathloc.Locals(srcLocs))
 	if h.useRemoteFileOp(dest) {
-		h.startRemoteExtractProbe(sources, dest)
+		h.startRemoteExtractProbe(sources, dest, asDir)
 		return
 	}
 	h.CloseFileDialog()
 	tc := archive.ProbeToolchain()
 	plan, skipped, err := ops.PlanExtract(sources, dest, tc)
+	plan.AsDirectory = asDir
 	h.enqueueExtractFromPlan(sources, dest, plan, skipped, err)
 }
 
@@ -107,7 +112,7 @@ func (h *Handler) enqueueExtractFromPlan(sources []string, dest string, plan ops
 		h.host.SetTransientMessage("No archives to extract", ui.MessageUrgencyWarn)
 		return
 	}
-	h.finishExtractEnqueueSources(sources, dest, skipped)
+	h.finishExtractEnqueueSources(sources, dest, plan.AsDirectory, skipped)
 }
 
 func extractPlanDestFailed(err error) bool {
@@ -152,9 +157,19 @@ func extractQueuedMessage(n int, skipped []string) string {
 	return msg
 }
 
-func (h *Handler) finishExtractEnqueueSources(sources []string, dest string, skipped []string) {
+func (h *Handler) finishExtractEnqueueSources(sources []string, dest string, asDir bool, skipped []string) {
 	p := h.host.ActivePanel()
 	p.ClearSelection()
-	h.jobs.EnqueueExtractJob(sources, dest)
+	h.jobs.EnqueueExtractJob(sources, dest, asDir)
 	h.host.SetTransientMessage(extractQueuedMessage(len(sources), skipped), ui.MessageUrgencyInfo)
+}
+
+// updateExtractTargetPanels marks the panel(s) the extract destination field points at with the
+// Copy target styles (Extract only adds files, so no warning styles).
+func (h *Handler) updateExtractTargetPanels() {
+	d := h.model.FileDialog
+	if !d.Open || d.DialogType != dialog.FileDialogExtract || len(d.Fields) == 0 {
+		return
+	}
+	h.updateDestinationTargetPanels(h.host.ActivePanel().PathString(), d.Fields[0].Value, false)
 }

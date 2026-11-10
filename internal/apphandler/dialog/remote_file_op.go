@@ -233,7 +233,7 @@ func (h *Handler) applyRemoteTransferProbe(p RemoteFileOpPayload) {
 	h.finishTransferEnqueue(st, st.nSelf, st.destIsDir, true)
 }
 
-func (h *Handler) startRemoteExtractProbe(sources []string, dest string) {
+func (h *Handler) startRemoteExtractProbe(sources []string, dest string, asDir bool) {
 	gen := h.nextRemoteFileOpGen()
 	h.CloseFileDialog()
 	screen := h.screen
@@ -246,6 +246,7 @@ func (h *Handler) startRemoteExtractProbe(sources []string, dest string) {
 		}
 		tc := archive.ProbeToolchain()
 		plan, skipped, err := ops.PlanExtract(sources, dest, tc)
+		plan.AsDirectory = asDir
 		if screen == nil {
 			return
 		}

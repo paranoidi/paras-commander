@@ -21,15 +21,16 @@ import (
 )
 
 // CloseFileDialog closes the file dialog and clears its disk-usage scan reconcile cache.
-// Closing FileDialogDuplicate also clears its destination-target panel markers.
+// Closing FileDialogDuplicate or FileDialogExtract also clears its destination-target panel markers.
 // Closing FileDialogSFTPPassword also releases the SFTP password waiter.
 func (h *Handler) CloseFileDialog() {
 	wasSFTPPassword := h.model.FileDialog.Open && h.model.FileDialog.DialogType == dialog.FileDialogSFTPPassword
-	wasDuplicate := h.model.FileDialog.Open && h.model.FileDialog.DialogType == dialog.FileDialogDuplicate
+	wasTargetMarking := h.model.FileDialog.Open &&
+		(h.model.FileDialog.DialogType == dialog.FileDialogDuplicate || h.model.FileDialog.DialogType == dialog.FileDialogExtract)
 	massRenameApplied := h.model.FileDialog.Open && h.model.FileDialog.DialogType == dialog.FileDialogMassRename && h.model.FileDialog.MassRenameApplied
 	h.ClearDeleteDialogReconcileCache()
 	h.model.FileDialog = dialog.FileDialogState{}
-	if wasDuplicate {
+	if wasTargetMarking {
 		h.model.DestinationTargetPrimary = false
 		h.model.DestinationTargetSecondary = false
 	}

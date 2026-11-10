@@ -1591,7 +1591,7 @@ func (h *Handler) enqueueDeleteJob(sources []string, removeEmptyDirs, promptDang
 	h.commitJob(job)
 }
 
-func (h *Handler) EnqueueExtractJob(sources []string, dest string) {
+func (h *Handler) EnqueueExtractJob(sources []string, dest string, asDirectory bool) {
 	srcLocs, err := pathloc.ParseAll(sources)
 	if err != nil {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue extract: %v", err), ui.MessageUrgencyError)
@@ -1610,6 +1610,8 @@ func (h *Handler) EnqueueExtractJob(sources []string, dest string) {
 		Destination: destLoc,
 		DestIsDir:   ops.DestinationIsDirAtEnqueue(destLoc),
 		TotalFiles:  len(sources),
+
+		ExtractAsDirectory: asDirectory,
 	}
 	h.commitJob(job)
 }

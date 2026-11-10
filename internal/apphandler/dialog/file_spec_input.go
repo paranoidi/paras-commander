@@ -131,7 +131,7 @@ func (h *Handler) handleFileDialogSpecKey(event *tcell.EventKey) bool {
 		return false
 	}
 	f := h.FocusedField()
-	if f != nil && f.PathPicker && h.tryPathFieldCompletionKey(event, f, h.TransferDestinationTextWidth(), nil) {
+	if f != nil && f.PathPicker && h.tryPathFieldCompletionKey(event, f, h.TransferDestinationTextWidth(), h.fileDialogExtra()) {
 		return false
 	}
 	if apply() {

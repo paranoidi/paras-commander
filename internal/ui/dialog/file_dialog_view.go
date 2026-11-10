@@ -15,6 +15,7 @@ import (
 const (
 	FileRenameFocusAfter    = dlg.ID("focus-after")
 	FileRenameOpenOther     = dlg.ID("open-in-other")
+	FileExtractAsDir        = dlg.ID("extract-as-dir")
 	FileSanitizeDots        = dlg.ID("sanitize-dots")
 	FileSanitizeUnderscores = dlg.ID("sanitize-underscores")
 	FileSlugifyDot          = dlg.ID("slugify-dot")
@@ -200,6 +201,8 @@ func fieldViewGroups(st FileDialogState) []dlg.Group {
 		if renameHasOpenOtherCheckbox(st) {
 			options = append(options, dlg.Item{ID: FileRenameOpenOther, Kind: dlg.KindCheckbox, Label: renameOpenOtherLabel, Mnemonic: 'p', On: st.RenameOpenInOther})
 		}
+	case st.DialogType == FileDialogExtract:
+		options = append(options, dlg.Item{ID: FileExtractAsDir, Kind: dlg.KindCheckbox, Label: "Extract as directory", Mnemonic: 'E', On: st.ExtractAsDirectory})
 	case mkdirHasActions(st):
 		for _, r := range MkdirActionRadioSpecs() {
 			options = append(options, dlg.Item{ID: MkdirActionID(r.Action), Kind: dlg.KindRadio, Label: r.Label, Mnemonic: r.Shortcut, On: st.MkdirAction == r.Action})
@@ -314,6 +317,8 @@ func (st *FileDialogState) Apply(ev dlg.Event) {
 		st.RenameFocusAfter = !st.RenameFocusAfter
 	case FileRenameOpenOther:
 		st.RenameOpenInOther = !st.RenameOpenInOther
+	case FileExtractAsDir:
+		st.ExtractAsDirectory = !st.ExtractAsDirectory
 	case FileSanitizeDots:
 		st.RenameSanitizeDots = !st.RenameSanitizeDots
 	case FileSanitizeUnderscores:

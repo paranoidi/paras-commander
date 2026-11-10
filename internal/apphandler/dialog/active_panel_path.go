@@ -139,5 +139,6 @@ func (h *Handler) applyExtractDestination(path string) {
 	*f = TransferPrefilledDestination(path)
 	f.Label = "Destination"
 	f.PathPicker = true
+	h.updateExtractTargetPanels()
 	h.SyncFocusedFileDialogPathFieldCompletion()
 }

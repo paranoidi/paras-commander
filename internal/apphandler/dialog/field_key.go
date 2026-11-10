@@ -15,6 +15,8 @@ func (h *Handler) fileDialogExtra() func() {
 		return h.RecomputeMassRenamePreview
 	case dialog.FileDialogRunForEach:
 		return h.commands.RecomputeRunForEachValidation
+	case dialog.FileDialogExtract:
+		return h.updateExtractTargetPanels
 	default:
 		return nil
 	}

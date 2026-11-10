@@ -362,3 +362,32 @@ func skipMentions(skipped []string, needle string) bool {
 	}
 	return false
 }
+
+func TestExecuteExtractAsDirectory(t *testing.T) {
+	if _, err := exec.LookPath("tar"); err != nil {
+		t.Skip("tar not in PATH")
+	}
+	srcDir := t.TempDir()
+	destDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(srcDir, "lantern.txt"), []byte("hi"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	archivePath := filepath.Join(srcDir, "orchard.tar.gz")
+	if err := exec.Command("tar", "-czf", archivePath, "-C", srcDir, "lantern.txt").Run(); err != nil {
+		t.Fatal(err)
+	}
+	plan, _, err := PlanExtract([]string{archivePath}, destDir, archive.ProbeToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan.AsDirectory = true
+	if _, err := ExecuteExtract(context.Background(), plan, nil); err != nil {
+		t.Fatalf("ExecuteExtract: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(destDir, "orchard", "lantern.txt")); err != nil {
+		t.Fatalf("extracted into stripped-name subdirectory: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(destDir, "lantern.txt")); err == nil {
+		t.Fatal("member also extracted at destination top level")
+	}
+}

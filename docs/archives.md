@@ -18,8 +18,9 @@ Listing uses `tar`, `unzip`, `unrar` and `7z` (`7za` / `7zz`). If the needed too
 | Menu | File -> Extract (`x`) |
 | Leader | Esc, `x` |
 
-Extract works on the highlighted archive or on all selected archives. The dialog asks for a destination, which defaults to the other panel's directory; the shared path shortcuts for the active and inactive panel and the [path picker](navigation.md#bookmarks-and-the-path-picker) work in the field. Confirming queues a job in the [job queue](jobs.md).
+Extract works on the highlighted archive or on all selected archives. The dialog asks for a destination, which defaults to the other panel's directory; the shared path shortcuts for the active and inactive panel and the [path picker](navigation.md#bookmarks-and-the-path-picker) work in the field. While the destination is the directory one of the panels shows, that panel's frame is highlighted like a copy target. Confirming queues a job in the [job queue](jobs.md).
 
+- **Extract as directory** (checked each time the dialog opens, `M-e`): each archive such as `foo.tar.gz` or `bar.zip` is extracted into its own subdirectory `<destination>/foo` or `<destination>/bar`, created if missing. Uncheck it to extract straight into the destination. Single-file stream formats (`.gz`, `.bz2`, `.xz`, `.Z`) are not affected.
 - Existing files are kept: the tools run with their "do not overwrite" options (`unzip -n`, `7z -aos`, `unrar -o-`, `tar -k`). Stream files (`.gz`, `.bz2`, `.xz`, `.Z`) decompress to `<destination>/<name without suffix>` and, if that file exists, go through the normal job conflict prompt ([Jobs](jobs.md)).
 - Items the installed tools cannot handle are skipped with a toast naming the reason.
 - The destination may be a remote `sftp://` path ([SFTP](sftp.md)).

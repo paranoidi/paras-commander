@@ -760,6 +760,7 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 			plan.Toolchain = toolchain
 			extractPlanErr = nil
 		}
+		plan.AsDirectory = job.ExtractAsDirectory
 		plan.Conflict = tc.resolver
 		plan.OnItem = job.RecordOperation
 		plan.OnSourceStart = job.StartSource

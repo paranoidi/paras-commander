@@ -152,6 +152,9 @@ type FileDialogState struct {
 	RunForEachHistoryPicker RunForEachHistoryPickerState
 	// ExtractSources apply when DialogType == FileDialogExtract (archive paths resolved at dialog open).
 	ExtractSources []string
+	// ExtractAsDirectory extracts each container archive into its own subdirectory of the
+	// destination (the "Extract as directory" checkbox).
+	ExtractAsDirectory bool
 	// MkdirShowActions enables the extra "Create / Create and copy selected / Create and move selected" radio
 	// rows below the directory-name input. Set by openMkdirDialog when the active panel has selections.
 	MkdirShowActions bool
