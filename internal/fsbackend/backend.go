@@ -73,6 +73,21 @@ type Backend interface {
 	Symlink(ctx context.Context, loc pathloc.Path, target string) error
 }
 
+// StatFollower is implemented by a backend whose Stat has Lstat semantics and that can also stat
+// through a symlink to what it points at. StatFollow falls back to Stat for any other backend.
+type StatFollower interface {
+	StatFollow(ctx context.Context, loc pathloc.Path) (Entry, error)
+}
+
+// StatFollow stats loc like b.Stat but follows a symlink to its target where b can (a dangling
+// link is an error).
+func StatFollow(ctx context.Context, b Backend, loc pathloc.Path) (Entry, error) {
+	if sf, ok := b.(StatFollower); ok {
+		return sf.StatFollow(ctx, loc)
+	}
+	return b.Stat(ctx, loc)
+}
+
 // DirRemover is implemented by a backend that can remove an empty directory with a call that never
 // deletes anything else: it fails on a directory holding entries and on a non-directory. Empty
 // directory cleanup prefers it to Remove, which also deletes files.

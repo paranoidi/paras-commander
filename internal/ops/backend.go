@@ -53,8 +53,17 @@ func statEntry(ctx context.Context, loc pathloc.Path) (fsbackend.Entry, error) {
 	return be.Stat(ctx, loc)
 }
 
+// statEntryFollow is statEntry through a symlink where the backend can follow it.
+func statEntryFollow(ctx context.Context, loc pathloc.Path) (fsbackend.Entry, error) {
+	be, err := backendFor(loc)
+	if err != nil {
+		return fsbackend.Entry{}, err
+	}
+	return fsbackend.StatFollow(ctx, be, loc)
+}
+
 func destinationIsDir(ctx context.Context, dest pathloc.Path) (bool, error) {
-	ent, err := statEntry(ctx, dest)
+	ent, err := statEntryFollow(ctx, dest) // a symlink to a directory is a directory destination
 	if err != nil {
 		if isNotExist(err) {
 			return false, nil
@@ -340,7 +349,7 @@ func copyFileTransfer(ctx context.Context, src, dst pathloc.Path, opts Options, 
 	if err != nil {
 		return copySkipped, err
 	}
-	srcEnt, err := statEntry(ctx, src)
+	srcEnt, err := statEntryFollow(ctx, src) // a file read through a link has the target's size and mode
 	if err != nil {
 		return copySkipped, localfs.SourceError(err)
 	}

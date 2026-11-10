@@ -202,6 +202,20 @@ func (b *Backend) Stat(ctx context.Context, loc pathloc.Path) (fsbackend.Entry, 
 	return entry, err
 }
 
+// StatFollow implements fsbackend.StatFollower: Stat through a symlink (SFTP stat instead of lstat).
+func (b *Backend) StatFollow(ctx context.Context, loc pathloc.Path) (fsbackend.Entry, error) {
+	var entry fsbackend.Entry
+	err := b.withClient(ctx, loc, true, func(client *pkgsftp.Client, remote string) error {
+		info, err := client.Stat(remote)
+		if err != nil {
+			return fmt.Errorf("sftp stat %s: %w", remote, err)
+		}
+		entry = entryFromInfo(loc, info)
+		return nil
+	})
+	return entry, err
+}
+
 // OpenRead implements fsbackend.Backend.
 func (b *Backend) OpenRead(ctx context.Context, loc pathloc.Path) (io.ReadSeekCloser, error) {
 	var last error

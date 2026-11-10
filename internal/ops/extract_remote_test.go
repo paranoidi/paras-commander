@@ -25,10 +25,11 @@ type memRemote struct {
 	mu    sync.Mutex
 	files map[string][]byte
 	dirs  map[string]bool
+	links map[string]string // link location -> target location
 }
 
 func newMemRemote(dirs ...string) *memRemote {
-	m := &memRemote{files: map[string][]byte{}, dirs: map[string]bool{memRemoteHost: true}}
+	m := &memRemote{files: map[string][]byte{}, dirs: map[string]bool{memRemoteHost: true}, links: map[string]string{}}
 	for _, d := range dirs {
 		m.dirs[memRemoteHost+d] = true
 	}
@@ -39,6 +40,9 @@ func (m *memRemote) Scheme() pathloc.Scheme { return pathloc.SchemeSFTP }
 
 func (m *memRemote) entry(loc pathloc.Path) (fsbackend.Entry, bool) {
 	k := loc.String()
+	if _, ok := m.links[k]; ok {
+		return fsbackend.Entry{Name: loc.Base(), Loc: loc, Type: fsbackend.EntrySymlink, Size: int64(len(m.links[k])), Mode: fs.ModeSymlink | 0o777}, true
+	}
 	if m.dirs[k] {
 		return fsbackend.Entry{Name: loc.Base(), Loc: loc, Type: fsbackend.EntryDirectory, Mode: 0o755}, true
 	}
@@ -55,6 +59,17 @@ func (m *memRemote) Stat(_ context.Context, loc pathloc.Path) (fsbackend.Entry, 
 		return e, nil
 	}
 	return fsbackend.Entry{}, os.ErrNotExist
+}
+
+// StatFollow is Stat through a symlink; a dangling link is not found.
+func (m *memRemote) StatFollow(ctx context.Context, loc pathloc.Path) (fsbackend.Entry, error) {
+	m.mu.Lock()
+	target, ok := m.links[loc.String()]
+	m.mu.Unlock()
+	if !ok {
+		return m.Stat(ctx, loc)
+	}
+	return m.Stat(ctx, pathloc.MustParse(target))
 }
 
 func (m *memRemote) List(_ context.Context, dir pathloc.Path) ([]fsbackend.Entry, error) {
@@ -89,6 +104,9 @@ func (m *memRemote) OpenRead(_ context.Context, loc pathloc.Path) (io.ReadSeekCl
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	b, ok := m.files[loc.String()]
+	if t, link := m.links[loc.String()]; link {
+		b, ok = m.files[t]
+	}
 	if !ok {
 		return nil, os.ErrNotExist
 	}
@@ -315,4 +333,44 @@ func TestPlanExtractForJobKeepsExistingRemoteStreamOutput(t *testing.T) {
 	if err != nil || len(plan.Items) != 1 || plan.Destination != memRemoteHost+"/thicket" {
 		t.Fatalf("PlanExtractForJob: %+v %v", plan, err)
 	}
+}
+
+func TestExtractRemoteSymlinkToArchive(t *testing.T) {
+	tc := archive.ProbeToolchain()
+	mem := newMemRemote("/quarry", "/thicket")
+	mem.files[memRemoteHost+"/quarry/orchard.tar.gz"] = tarGzBytes(t, "heron.txt", "marsh")
+	mem.links[memRemoteHost+"/quarry/alias.tar.gz"] = memRemoteHost + "/quarry/orchard.tar.gz"
+	mem.links[memRemoteHost+"/quarry/dangling.tar.gz"] = memRemoteHost + "/quarry/missing.tar.gz"
+	mem.links[memRemoteHost+"/thicketlink"] = memRemoteHost + "/thicket"
+	installOpsBackend(t, mem)
+	tmp, dest := scratchTmp(t), t.TempDir()
+
+	if e, _ := mem.Stat(context.Background(), pathloc.MustParse(memRemoteHost+"/quarry/alias.tar.gz")); e.Type != fsbackend.EntrySymlink {
+		t.Fatalf("Stat must keep lstat semantics, got type %v", e.Type)
+	}
+	if _, skipped, err := PlanExtract([]string{memRemoteHost + "/quarry/dangling.tar.gz"}, dest, tc); err == nil || len(skipped) != 1 {
+		t.Fatalf("dangling link should be skipped: skipped=%v err=%v", skipped, err)
+	}
+	// The destination may be a symlink to a directory as well.
+	plan, _, err := PlanExtract([]string{memRemoteHost + "/quarry/alias.tar.gz"}, memRemoteHost+"/thicketlink", tc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if done, err := ExecuteExtract(context.Background(), plan, nil); err != nil || done != 1 {
+		t.Fatalf("remote destination: done=%d err=%v", done, err)
+	}
+	if got, ok := mem.file("/thicketlink/heron.txt"); !ok || got != "marsh" { // written through the link
+		t.Fatalf("uploaded file = %q, %v", got, ok)
+	}
+	plan, _, err = PlanExtract([]string{memRemoteHost + "/quarry/alias.tar.gz"}, dest, tc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if done, err := ExecuteExtract(context.Background(), plan, nil); err != nil || done != 1 {
+		t.Fatalf("done=%d err=%v", done, err)
+	}
+	if b, err := os.ReadFile(filepath.Join(dest, "heron.txt")); err != nil || string(b) != "marsh" {
+		t.Fatalf("extracted file = %q, %v", b, err)
+	}
+	assertEmptyDir(t, tmp)
 }

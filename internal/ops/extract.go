@@ -407,7 +407,7 @@ func extractStat(ctx context.Context, loc pathloc.Path) (extractStatResult, erro
 		}
 		return extractStatResult{dir: fi.IsDir(), regular: fi.Mode().IsRegular()}, nil
 	}
-	e, err := statEntry(ctx, loc)
+	e, err := statEntryFollow(ctx, loc)
 	if err != nil {
 		return extractStatResult{}, err
 	}
