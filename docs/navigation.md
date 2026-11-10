@@ -38,7 +38,7 @@ The same list serves as a **path picker** in path fields (copy and move destinat
 
 ## Jump to directory
 
-`M-m` (Left/Right menu "Jump to directory", leader `t`) changes the panel's directory by typing part of its name. It is the [Find](find-files.md) dialog reduced to one job: fuzzy-type, press Enter, the panel changes to that directory.
+`M-c` (Left/Right menu "Jump to directory", leader `t`) changes the panel's directory by typing part of its name. It is the [Find](find-files.md) dialog reduced to one job: fuzzy-type, press Enter, the panel changes to that directory.
 
 Only directories are indexed, breadth-first: every directory directly under the panel's path first, then the next level down, and so on, so shallow targets show up immediately even in very large trees.
 

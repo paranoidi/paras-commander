@@ -136,7 +136,7 @@ Rules are tried top-to-bottom against the executed file; the first rule whose `w
 decides the mode, and later rules are not tried. No match keeps the default: foreground, switching
 to the Commands view immediately and waiting for the process to finish. `background = true` runs
 the file without switching views — the file list stays visible, the run is tracked as a Commands
-view row you can open later (default `M-c`) to inspect its output or
+view row you can open later (default `M-a`) to inspect its output or
 terminate it (F8/S-F8) while it's still running, and a toast only appears if it fails to
 launch, exits non-zero, or writes to stderr. The built-in default rule backgrounds AppImage
 launchers; add more rules for other GUI programs you run directly from a panel.

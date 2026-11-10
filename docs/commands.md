@@ -54,7 +54,7 @@ The dialog does not open, and nothing runs, on a panel that is not local (SFTP, 
 
 ## Commands view
 
-Open with `M-c`, **Display -> Commands** or Esc menu `E`. The left list holds one row per run, newest at the top, with its phase and exit marker; opening the view selects the newest run; the command is shown as written, followed by one line per macro it used. Stdout and Stderr appear in two panes, wrapped to the pane width.
+Open with `M-a`, **Display -> Commands** or Esc menu `E`. The left list holds one row per run, newest at the top, with its phase and exit marker; opening the view selects the newest run; the command is shown as written, followed by one line per macro it used. Stdout and Stderr appear in two panes, wrapped to the pane width.
 
 | Key | Action |
 |---|---|

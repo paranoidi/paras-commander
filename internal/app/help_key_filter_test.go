@@ -80,7 +80,7 @@ func TestHelpKeyPromptDrawsAndCapturesQuit(t *testing.T) {
 func TestHelpKeyFilterReportsEveryContext(t *testing.T) {
 	a := helpFilteredBy(t, ui.ViewBrowser, keyAltC)
 	got := helpFilterSections(a)
-	if first := a.model.HelpView.Entries[a.model.HelpView.Ranked[0]].ActionID; first != keymap.ActionCommandsOpen {
+	if first := a.model.HelpView.Entries[a.model.HelpView.Ranked[0]].ActionID; first != keymap.ActionPanelJumpDialog {
 		t.Fatalf("first entry %q, want the action the key runs here", first)
 	}
 	if got[keymap.ActionDialogCancel] != helpOtherContextsSection {

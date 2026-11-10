@@ -196,7 +196,7 @@ In an index view:
 
 Find (`C-f`) on an index view opens **Find in index**, which searches
 the index under the panel directory instead of walking the disk (files that
-have gone from disk are found too). Jump to directory (`M-m`) opens the same dialog
+have gone from disk are found too). Jump to directory (`M-c`) opens the same dialog
 for directories only. `M-F` opens it from an ordinary local panel
 too, so you can search the index without leaving the real directory: Enter
 then shows the result in the real location (falling back to the index view when
