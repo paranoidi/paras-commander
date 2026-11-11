@@ -74,18 +74,6 @@ type ExtractPlan struct {
 // canceled ctx must return ok=false.
 type ArchivePasswordFunc func(ctx context.Context, archivePath string, retry bool) (pw string, ok bool)
 
-// ArchivePasswordFromPermission adapts the permission prompt (the same worker-to-UI wait as the
-// sudo retry) to an ArchivePasswordFunc. A nil wait gives nil.
-func ArchivePasswordFromPermission(wait PermissionWaitFunc) ArchivePasswordFunc {
-	if wait == nil {
-		return nil
-	}
-	return func(ctx context.Context, archivePath string, retry bool) (string, bool) {
-		ans := wait(ctx, PermissionRequest{Op: "extract", Path: archivePath, ArchivePassword: true, BadPassword: retry})
-		return ans.Password, ans.Decision == PermissionElevate
-	}
-}
-
 func (p ExtractPlan) report(item ExtractItem, res ItemResult, reason string) {
 	if p.OnItem == nil {
 		return

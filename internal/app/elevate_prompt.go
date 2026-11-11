@@ -85,8 +85,6 @@ func (a *App) applyElevateOpen(p elevateOpenPayload) {
 		Path:        p.req.Path,
 		NoPassword:  p.req.NoPassword,
 		BadPassword: p.req.BadPassword,
-
-		ArchivePassword: p.req.ArchivePassword,
 	}
 }
 
@@ -101,7 +99,7 @@ func (a *App) finishElevate(d ops.PermissionDecision) {
 // elevateDecision maps an activated widget to its decision: Enter in the password field elevates.
 func elevateDecision(id dlg.ID) ops.PermissionDecision {
 	switch id {
-	case dialog.ElevatePassword, dialog.ElevateRetry, dlg.OK:
+	case dialog.ElevatePassword, dialog.ElevateRetry:
 		return ops.PermissionElevate
 	case dialog.ElevateSkip:
 		return ops.PermissionSkip
@@ -130,22 +128,5 @@ func (a *App) handleElevateDialogKey(ev *tcell.EventKey) {
 	if !d.FocusOnInput() {
 		return
 	}
-	switch ev.Key() {
-	case tcell.KeyLeft:
-		d.Password.MoveCursor(-1)
-	case tcell.KeyRight:
-		d.Password.MoveCursor(1)
-	case tcell.KeyHome:
-		d.Password.MoveCursorStart()
-	case tcell.KeyEnd:
-		d.Password.MoveCursorEnd()
-	case tcell.KeyBackspace, tcell.KeyBackspace2:
-		d.Password.Backspace()
-	case tcell.KeyDelete:
-		d.Password.Delete()
-	case tcell.KeyRune:
-		if ev.Modifiers()&(tcell.ModAlt|tcell.ModCtrl) == 0 {
-			d.Password.InsertRune(ev.Rune())
-		}
-	}
+	dialog.HandleFileDialogFieldKey(ev, &d.Password, a.keys.DialogInput, nil)
 }

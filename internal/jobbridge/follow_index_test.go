@@ -43,7 +43,7 @@ func (c *changeLog) paths() []string {
 func runJob(t *testing.T, job *jobs.Job, fsSink, indexSink fschange.Sink) {
 	t.Helper()
 	cfg := config.Default()
-	transfer := TransferFunc(cfg.Operations, cfg.Jobs, cfg.Compare, nil, nil, fsSink, indexSink)
+	transfer := TransferFunc(cfg.Operations, cfg.Jobs, cfg.Compare, nil, nil, nil, fsSink, indexSink)
 	if err := transfer(context.Background(), job, func(jobs.Event) {}, nil); err != nil {
 		t.Fatalf("transfer: %v", err)
 	}

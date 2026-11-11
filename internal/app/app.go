@@ -358,6 +358,7 @@ type App struct {
 
 	sftp           sftpState
 	elevate        elevateState
+	archivePw      archivePasswordState
 	image          imageOverlay
 	placeholderImg placeholderImage
 	ueberzug       ueberzugDaemon
@@ -625,6 +626,9 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	jobState.SetTransferFunc(jobbridge.TransferFunc(cfg.Operations, cfg.Jobs, cfg.Compare, jobState.Wait,
 		func(ctx context.Context, req ops.PermissionRequest) ops.PermissionAnswer {
 			return app.promptElevate(ctx, req)
+		},
+		func(ctx context.Context, archivePath string, retry bool) (string, bool) {
+			return app.promptArchivePassword(ctx, archivePath, retry)
 		},
 		fsSink, fileIndex))
 	jobState.SetThroughputChart(
@@ -1453,6 +1457,10 @@ func (a *App) handlePreviewInterruptPayload(data any) (eventOutcome, bool) {
 		}
 	case elevateOpenPayload:
 		a.applyElevateOpen(d)
+		a.render()
+		out.didRender = true
+	case archivePasswordOpenPayload:
+		a.applyArchivePasswordOpen(d)
 		a.render()
 		out.didRender = true
 	default:

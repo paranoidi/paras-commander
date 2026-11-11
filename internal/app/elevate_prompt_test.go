@@ -57,20 +57,3 @@ func TestPromptElevateCanceledContextAborts(t *testing.T) {
 		t.Fatalf("decision = %v, want abort", ans.Decision)
 	}
 }
-
-func TestArchivePasswordDialogOKAnswersWaiter(t *testing.T) {
-	app := testAppMinimal(t)
-	app.applyElevateOpen(elevateOpenPayload{req: ops.PermissionRequest{Op: "extract", Path: "/srv/otter.7z", ArchivePassword: true}})
-	reply := make(chan ops.PermissionAnswer, 1)
-	app.elevate.wait = &elevateWait{id: 1, reply: reply}
-	for _, r := range "heron" {
-		app.handleElevateDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
-	}
-	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt))
-	if ans := <-reply; ans.Decision != ops.PermissionElevate || ans.Password != "heron" {
-		t.Fatalf("answer = %+v", ans)
-	}
-	if app.model.ElevateDialog.Open || app.model.ElevateDialog.Password.Value != "" {
-		t.Fatal("dialog should close and drop the password")
-	}
-}

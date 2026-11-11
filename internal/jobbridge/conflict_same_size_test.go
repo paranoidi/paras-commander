@@ -48,7 +48,7 @@ func runConflictEvents(t *testing.T, typ jobs.Type, c conflictCase, answers ...j
 		}
 	}
 	cfg := config.Default()
-	transfer := TransferFunc(cfg.Operations, cfg.Jobs, config.CompareConfig{ChunkBytes: 4}, nil, nil, nil, nil) // tiny chunks exercise the chunk loop
+	transfer := TransferFunc(cfg.Operations, cfg.Jobs, config.CompareConfig{ChunkBytes: 4}, nil, nil, nil, nil, nil) // tiny chunks exercise the chunk loop
 	job := &jobs.Job{
 		ID:          jobs.NewJobID(),
 		Type:        typ,

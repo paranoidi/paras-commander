@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // elevateGoldenState builds an elevate prompt. variant: "empty", "typed", "long" (a password
@@ -20,17 +21,13 @@ func elevateGoldenState(variant, focus string) ElevateDialogState {
 	case "long":
 		v := strings.Repeat("lantern", 12)
 		st.Password = FileDialogField{Value: v, Cursor: len(v)}
-	case "archive", "archivebad":
-		st.ArchivePassword, st.BadPassword = true, variant == "archivebad"
-		st.Op, st.Path = "extract", "/srv/harbor/orchard.7z"
-		st.Password = FileDialogField{Value: "willow42", Cursor: 8}
 	case "nopw":
 		st.NoPassword = true
 	case "longpath":
 		st.Op = "delete"
 		st.Path = "/srv/" + strings.Repeat("harbor-orchard-meadow/", 5) + "lantern.txt"
 	}
-	st.BadPassword = variant == "badpw" || variant == "archivebad"
+	st.BadPassword = variant == "badpw"
 	if variant == "noop" {
 		st.Op = ""
 	}
@@ -56,8 +53,6 @@ func TestElevateGoldenRender(t *testing.T) {
 	add(80, 24, "badpw", "skip")
 	add(80, 24, "noop", "input")
 	add(80, 24, "longpath", "input")
-	add(80, 24, "archive", "input")
-	add(80, 24, "archivebad", "ok")
 	for _, focus := range []string{"elevate"} {
 		add(80, 24, "nopw", focus)
 	}
@@ -66,4 +61,29 @@ func TestElevateGoldenRender(t *testing.T) {
 	add(46, 24, "badpw", "elevate")    // below the 44 floor
 	add(40, 24, "nopw", "cancel")      // narrower than the floor: W-2 at most
 	runSimpleGoldens(t, "elevate", cases)
+}
+
+// archivePasswordGoldenState builds an archive password prompt. variant: "typed" or "bad"
+// (typed, previous password rejected). focus: input, ok, cancel.
+func archivePasswordGoldenState(variant, focus string) ArchivePasswordDialogState {
+	st := ArchivePasswordDialogState{
+		Open: true, Path: "/srv/harbor/orchard.7z", BadPassword: variant == "bad",
+		Password: FileDialogField{Value: "willow42", Cursor: 8},
+	}
+	st.Focus = map[string]dlg.ID{"input": ArchivePasswordInput, "ok": dlg.OK, "cancel": dlg.Cancel}[focus]
+	return st
+}
+
+func TestArchivePasswordGoldenRender(t *testing.T) {
+	var cases []simpleGolden
+	add := func(w, h int, variant, focus string) {
+		st := archivePasswordGoldenState(variant, focus)
+		cases = append(cases, simpleGolden{name: fmt.Sprintf("%dx%d_%s_focus-%s", w, h, variant, focus), w: w, h: h,
+			draw: func(s tcell.Screen, l Layout) { DrawArchivePasswordDialog(s, l, st, asciiDialogStyles()) }})
+	}
+	add(80, 24, "typed", "input")
+	add(80, 24, "bad", "ok")
+	add(80, 24, "bad", "cancel")
+	add(46, 24, "typed", "input") // below the 44 floor
+	runSimpleGoldens(t, "archive_password", cases)
 }

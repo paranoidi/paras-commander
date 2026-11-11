@@ -251,11 +251,12 @@ baseLabel:
 }
 
 // TransferFunc builds the job worker transfer function from config. permWait asks the user
-// whether to retry a permission-denied local step as root (nil disables elevation). fsSink (nil
+// whether to retry a permission-denied local step as root (nil disables elevation). archivePassword
+// asks the user for an encrypted archive's password during an extract (nil fails such archives). fsSink (nil
 // disables it) receives the filesystem changes the job's operations report (ADR 0023);
 // indexSink (nil disables it) receives them too (ADR 0028). Pass a nil interface, not a typed nil
 // pointer, to disable a sink.
-func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, compareCfg config.CompareConfig, rateWait ops.RateLimiter, permWait ops.PermissionWaitFunc, fsSink, indexSink fschange.Sink) func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer) error {
+func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, compareCfg config.CompareConfig, rateWait ops.RateLimiter, permWait ops.PermissionWaitFunc, archivePassword ops.ArchivePasswordFunc, fsSink, indexSink fschange.Sink) func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer) error {
 	return func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer) error {
 		// One Elevator per job: a sudo password the user types is remembered for this job only.
 		ctx = ops.WithElevator(ctx, ops.NewElevator(opsCfg.Elevate, permWait))
@@ -338,16 +339,16 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, com
 		// at all); see docs/agents/jobs.md.
 		if job.PlanCh != nil || job.Type != jobs.TypeCopy {
 			return runTransfer(transferExecCtx{
-				ctx:           ctx,
-				job:           job,
-				opts:          opts,
-				throttle:      throttle,
-				progress:      progress,
-				resolver:      resolver,
-				diskWait:      diskWait,
-				emit:          emit,
-				permWait:      permWait,
-				countInterval: time.Duration(jobsCfg.ScanProgressMinIntervalMS) * time.Millisecond,
+				ctx:             ctx,
+				job:             job,
+				opts:            opts,
+				throttle:        throttle,
+				progress:        progress,
+				resolver:        resolver,
+				diskWait:        diskWait,
+				emit:            emit,
+				archivePassword: archivePassword,
+				countInterval:   time.Duration(jobsCfg.ScanProgressMinIntervalMS) * time.Millisecond,
 			})
 		}
 
@@ -388,17 +389,17 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, com
 			}
 		}
 		return runTransfer(transferExecCtx{
-			ctx:      ctx,
-			job:      job,
-			opsPlan:  opsPlan,
-			planErr:  planErr,
-			opts:     opts,
-			throttle: throttle,
-			progress: progress,
-			resolver: resolver,
-			diskWait: diskWait,
-			emit:     emit,
-			permWait: permWait,
+			ctx:             ctx,
+			job:             job,
+			opsPlan:         opsPlan,
+			planErr:         planErr,
+			opts:            opts,
+			throttle:        throttle,
+			progress:        progress,
+			resolver:        resolver,
+			diskWait:        diskWait,
+			emit:            emit,
+			archivePassword: archivePassword,
 		})
 	}
 }
@@ -664,8 +665,8 @@ type transferExecCtx struct {
 	resolver ops.ConflictResolver
 	diskWait ops.DiskWaitFunc
 	emit     func(jobs.Event)
-	// permWait is the permission prompt; an extract also asks it for archive passwords.
-	permWait ops.PermissionWaitFunc
+	// archivePassword asks for an encrypted archive's password during an extract.
+	archivePassword ops.ArchivePasswordFunc
 	// countInterval paces a move's background count totals (jobs.scan_progress_min_interval_ms).
 	countInterval time.Duration
 }
@@ -759,7 +760,7 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 		plan, _, extractPlanErr := ops.PlanExtractForJob(tc.ctx, pathloc.Strings(job.Sources), dest, toolchain)
 		plan.Throttle = tc.throttle
 		plan.AsDirectory = job.ExtractAsDirectory
-		plan.Password = ops.ArchivePasswordFromPermission(tc.permWait)
+		plan.Password = tc.archivePassword
 		plan.Conflict = tc.resolver
 		plan.OnItem = job.RecordOperation
 		plan.OnSourceStart = job.StartSource

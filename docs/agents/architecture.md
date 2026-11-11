@@ -47,6 +47,7 @@ Each has a reason it cannot move to `apphandler/dialog`:
 
 - Settings, config-edit, message-theme and debounce-calibrate (`dialog_config_edit.go`, `dialog_message_theme.go`, ...): they mutate `App.config`/`App.styles` in place, which only `internal/app` may do.
 - SFTP connect and password (`sftp*.go`): they own connection state and credentials.
+- Worker-blocking prompts (`elevate_prompt.go`, `archive_password_prompt.go`): the sudo retry and the encrypted-archive password prompt park the job worker on a reply channel, post an interrupt payload that opens the dialog on the UI goroutine, and serialize with the SFTP prompt lock.
 - Per-panel navigation history (`history.go`).
 - Quit/stash confirmations: they sit on the shutdown path.
 - Compare selection guard (`compare_selection.go`): it gates opening Compare from both the browser and the dedup view, and runs a parked open of either.

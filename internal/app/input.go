@@ -52,6 +52,7 @@ const (
 	InputModeIconLegendDialog
 	InputModeHostKeyDialog
 	InputModeElevateDialog
+	InputModeArchivePasswordDialog
 	InputModeSFTPConnectDialog
 	InputModeCommandOutputDialog
 	InputModeStatusCommandsDialog
@@ -67,6 +68,8 @@ func (a *App) inputMode() InputMode {
 	switch {
 	case a.model.ElevateDialog.Open:
 		return InputModeElevateDialog
+	case a.model.ArchivePasswordDialog.Open:
+		return InputModeArchivePasswordDialog
 	case a.model.GroupSelectOverOutput():
 		return InputModeGroupSelect
 	case a.model.CommandOutputDialog.Open:
@@ -814,6 +817,10 @@ var inputModeKeyHandlers = map[InputMode]func(*App, *tcell.EventKey) bool{
 	},
 	InputModeElevateDialog: func(a *App, ev *tcell.EventKey) bool {
 		a.handleElevateDialogKey(ev)
+		return false
+	},
+	InputModeArchivePasswordDialog: func(a *App, ev *tcell.EventKey) bool {
+		a.handleArchivePasswordDialogKey(ev)
 		return false
 	},
 	InputModeHostKeyDialog: func(a *App, ev *tcell.EventKey) bool {

@@ -37,10 +37,6 @@ type PermissionRequest struct {
 	NoPassword bool
 	// BadPassword is true when the previous password was rejected.
 	BadPassword bool
-	// ArchivePassword turns the prompt into an extract's archive password prompt (Path is the
-	// archive, BadPassword means the previous password was wrong); PermissionElevate answers with
-	// the typed Password, anything else skips the archive.
-	ArchivePassword bool
 }
 
 // PermissionAnswer is the reply to a PermissionRequest. Password is only meaningful for PermissionElevate.

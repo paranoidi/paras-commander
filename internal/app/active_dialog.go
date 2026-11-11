@@ -65,6 +65,11 @@ func (a *App) activeDialog(event *tcell.EventKey) (activeDialog, bool) {
 			OK:     func() { a.finishElevate(ops.PermissionElevate) },
 			Cancel: func() { a.finishElevate(ops.PermissionAbort) },
 		})
+	case InputModeArchivePasswordDialog:
+		return found(fits(func() dlg.Spec { return dialog.ArchivePasswordView(m.ArchivePasswordDialog) }), &m.ArchivePasswordDialog.Focus, noQuit(a.applyArchivePasswordEvent), dialogButtons{
+			OK:     func() { a.finishArchivePassword(true) },
+			Cancel: func() { a.finishArchivePassword(false) },
+		})
 	case InputModeGroupSelect:
 		return found(fits(a.groupSelectView), &m.GroupSelect.Focus, noQuit(func(ev dlg.Event) {
 			dialogctrl.ApplyPatternDialogEvent(a.groupSelectPatternKeys(), ev)

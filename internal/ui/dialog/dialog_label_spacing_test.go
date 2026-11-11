@@ -152,6 +152,16 @@ func TestDialogLabelsAreFollowedByContentRow(t *testing.T) {
 			labels: []string{"Password:"},
 		},
 		{
+			name: "archive password",
+			draw: func(screen tcell.Screen) {
+				DrawArchivePasswordDialog(screen, layout, ArchivePasswordDialogState{
+					Open: true, Path: "/srv/otter/walrus.7z", BadPassword: true,
+					Password: FileDialogField{Value: "heron", Cursor: 5},
+				}, styles)
+			},
+			labels: []string{"Password:"},
+		},
+		{
 			name: "transfer copy destination",
 			draw: func(screen tcell.Screen) {
 				DrawTransferDialog(screen, layout, TransferDialogState{
