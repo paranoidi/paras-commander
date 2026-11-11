@@ -105,7 +105,7 @@ func CommandOutputDialogView(layout Layout, state CommandOutputDialogState, ctx 
 		title = "Output"
 	}
 	if state.Running {
-		status := styles.IconMetaRunning() + " Running…"
+		status := styles.IconJobsList("running") + " Running…"
 		if state.Queued {
 			status = styles.IconJobsList("queued") + " Queued…"
 		}

@@ -95,7 +95,7 @@ func TestThemeDialogPanelPageRender(t *testing.T) {
 	screen.SetSize(w, h)
 
 	state := dialog.ThemeDialogState{
-		Open: true, Page: 2, CurrentName: "default", Ranked: []int{0},
+		Open: true, Page: 0, CurrentName: "default", Ranked: []int{0},
 		Choices: []dialog.ThemeChoice{{Name: "default", Label: "Default"}},
 	}
 	dialog.DrawThemeDialog(screen, Layout{Width: w, Height: h}, state, theme.Default(), themeAppSamples(Model{UseNerdfontIcons: true}))

@@ -18,9 +18,13 @@ const panelIconListLeadingGutter = 1
 
 // PanelIconStripContext carries panel state for painting one icon-strip cell.
 type PanelIconStripContext struct {
+	// CursorStyleKey is the row's own icon key (the cursor row's, "" otherwise).
 	CursorStyleKey string
-	ChromeBlocked  bool
-	Folder         panellist.FolderIconContext
+	// BarIconKey is Theme.DiskUsageBarIconKey when the disk-usage bar is behind this cell, else "".
+	// The icon takes its group's bar color; a group the bar style does not list keeps CursorStyleKey's.
+	BarIconKey    string
+	ChromeBlocked bool
+	Folder        panellist.FolderIconContext
 	// PreviewLoading replaces the file icon with the prefetch-loading icon (colored
 	// status.scanning). Ignored for directories.
 	PreviewLoading bool
@@ -35,11 +39,12 @@ type PanelIconStripContext struct {
 // folder-icon context can't drift between them. Tree callers set Folder.TreeExpanded /
 // Folder.TreeLoading on the result rather than threading them through every call site.
 func panelIconStripContextFor(display PanelDisplayConfig, ctx PanelContext, state panel.State,
-	entry localfs.Entry, cursorStyleKey string, diskPending, diskExcluded bool) PanelIconStripContext {
+	entry localfs.Entry, cursorStyleKey, barIconKey string, diskPending, diskExcluded bool) PanelIconStripContext {
 	_, previewLoading := display.PreviewPrefetchLoading[entry.Path]
 	_, previewWarm := display.PreviewPrefetchWarm[entry.Path]
 	return PanelIconStripContext{
 		CursorStyleKey: cursorStyleKey,
+		BarIconKey:     barIconKey,
 		ChromeBlocked:  ctx.ChromeBlocked,
 		PreviewLoading: previewLoading,
 		PreviewWarm:    previewWarm,
@@ -91,8 +96,10 @@ func paintPanelIconStrip(
 ) {
 	var icon string
 	var fg tcell.Color
+	group := theme.BarIconFile
 	if entry.Type == localfs.EntryDirectory {
 		kind, ok := panellist.ResolveFolderIconKind(entry, ctx.Folder)
+		group = theme.BarIconGroupForFolder(kind)
 		if !ok {
 			icon = " "
 			fg, _, _ = rowStyle.Decompose()
@@ -105,6 +112,7 @@ func paintPanelIconStrip(
 			}
 		}
 	} else if ctx.PreviewLoading {
+		group = theme.BarIconPreviewLoading
 		icon = string(th.IconFilelistPreviewLoading())
 		if icon == "" {
 			icon = " "
@@ -132,8 +140,14 @@ func paintPanelIconStrip(
 			fg = fileDeviconForeground(rowStyle, st.Color, th, ctx.CursorStyleKey, ctx.ChromeBlocked)
 		}
 	}
+	_, themed := th.PanelFileIconFG[ctx.CursorStyleKey]
+	if !ctx.ChromeBlocked {
+		if c, ok := th.DiskUsageBarIconColor(ctx.BarIconKey, group); ok {
+			fg, themed = c, true
+		}
+	}
 	iconStyle := rowStyle.Foreground(fg)
-	if _, ok := th.PanelFileIconFG[ctx.CursorStyleKey]; ok {
+	if themed {
 		// A themed icon color must not inherit the row's bold: terminals that render bold as
 		// bright turn an icon = "black" into bright black, the disk-usage bar's own grey.
 		iconStyle = iconStyle.Bold(false)

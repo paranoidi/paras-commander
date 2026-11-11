@@ -46,21 +46,24 @@ func gitStatusDimOnUsageBar(st gitstatus.Status) bool {
 }
 
 // gitStatusCellStyle styles one git status cell. barIconKey (Theme.DiskUsageBarIconKey, "" off the
-// bar) overrides the color on a disk-usage bar cell, on the cursor row too.
+// bar) selects the bar style whose git group, when listed, overrides the color on a disk-usage bar
+// cell, on the cursor row too. Without a git group, unmodified and ignored cells take the bar
+// style's foreground.
 func gitStatusCellStyle(st gitstatus.Status, rowStyle tcell.Style, styles theme.Theme, cursorRow, diskUsageOverlay bool, usageAccent tcell.Style, barIconKey string) tcell.Style {
 	rowFG, rowBG, rowAttrs := rowStyle.Decompose()
 	var fg tcell.Color
 	var attrs tcell.AttrMask
+	barFG, onBar := styles.DiskUsageBarIconColor(barIconKey, theme.BarIconGit)
 	switch {
 	case cursorRow:
 		fg, attrs = rowFG, rowAttrs
-	case diskUsageOverlay && gitStatusDimOnUsageBar(st):
+	case diskUsageOverlay && !onBar && gitStatusDimOnUsageBar(st):
 		fg, _, attrs = usageAccent.Decompose()
 	default:
 		fg, _, attrs = styles.PanelGitStyle(st.ThemeKey()).Decompose()
 	}
-	if barIconKey != "" {
-		fg = styles.PanelFileIconFG[barIconKey]
+	if onBar {
+		fg = barFG
 		attrs &^= tcell.AttrBold // bold-as-bright would turn the icon color into the bar's grey
 	}
 	return tcell.StyleDefault.Foreground(fg).Background(rowBG).Attributes(attrs)
@@ -107,8 +110,8 @@ func paintIndexColumn(screen tcell.Screen, x, y int, state string, rowStyle tcel
 			fg, _, _ = rowStyle.Decompose()
 			attrs = rowAttrs
 		}
-		if barIconKey != "" {
-			fg = styles.PanelFileIconFG[barIconKey]
+		if c, ok := styles.DiskUsageBarIconColor(barIconKey, theme.BarIconFileIndex); ok {
+			fg = c
 			attrs &^= tcell.AttrBold // bold-as-bright would turn the icon color into the bar's grey
 		}
 		s = tcell.StyleDefault.Foreground(fg).Background(rowBG).Attributes(attrs)

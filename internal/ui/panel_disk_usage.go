@@ -72,21 +72,17 @@ func panelDiskUsageDenom(show bool, painter DiskUsagePainter, state panel.State)
 	return max
 }
 
-func diskUsageFillColumns(usageBytes, maxBytes int64, rowWidth int) int {
+// diskUsageFillColumns returns the tinted cell count; sliver is true when usage is non-zero but
+// its share is under one cell (no cell is tinted then).
+func diskUsageFillColumns(usageBytes, maxBytes int64, rowWidth int) (cols int, sliver bool) {
 	if rowWidth <= 0 || maxBytes <= 0 || usageBytes <= 0 {
-		return 0
+		return 0, false
 	}
 	if usageBytes >= maxBytes {
-		return rowWidth
+		return rowWidth, false
 	}
 	fill := int(uint64(usageBytes) * uint64(rowWidth) / uint64(maxBytes))
-	if fill < 1 {
-		return 1
-	}
-	if fill > rowWidth {
-		return rowWidth
-	}
-	return fill
+	return min(fill, rowWidth), fill < 1
 }
 
 func mergeDiskUsageBackground(rowStyle tcell.Style, usageAccent tcell.Style) tcell.Style {

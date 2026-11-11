@@ -124,24 +124,6 @@ func TestParseResolvesPaletteHexAndAttributes(t *testing.T) {
 	}
 }
 
-func TestParseRejectsMissingRequiredStyle(t *testing.T) {
-	data := testTheme(t, "custom", map[string]bool{"footer.label": true}, nil)
-
-	_, err := parse(data)
-	if err == nil || !strings.Contains(err.Error(), `missing required style "footer.label"`) {
-		t.Fatalf("parse() error = %v, want missing footer.label", err)
-	}
-}
-
-func TestParseRejectsMissingFooterLabelShift(t *testing.T) {
-	data := testTheme(t, "custom", map[string]bool{"footer.label.shift": true}, nil)
-
-	_, err := parse(data)
-	if err == nil || !strings.Contains(err.Error(), `missing required style "footer.label.shift"`) {
-		t.Fatalf("parse() error = %v, want missing footer.label.shift", err)
-	}
-}
-
 func TestParseAllowsDialogTitleBoldOnly(t *testing.T) {
 	data := testTheme(t, "boldtitle", nil, map[string]string{
 		"dialog.title": `{ bold = true }`,
@@ -168,10 +150,10 @@ func TestParseLoadsPanelCursorIconFG(t *testing.T) {
 		"panel.blocked.row.cursor.selected",
 	} {
 		o := map[string]string{}
-		for _, k := range requiredStyleKeys {
+		for _, k := range styleKeys {
 			if k == key {
 				o[k] = `{ fg = "fg", bg = "bg", icon = "warning" }`
-			} else if _, isOption := dialogSurfaceForegroundStyleKeys[k]; isOption {
+			} else if dialogSurfaceForegroundKeys[k] {
 				o[k] = `{ fg = "fg" }`
 			} else {
 				o[k] = `{ fg = "fg", bg = "bg" }`
@@ -214,8 +196,8 @@ func TestDiskUsageBarIconKey(t *testing.T) {
 	}
 	for _, tc := range cases {
 		o := map[string]string{}
-		for _, k := range requiredStyleKeys {
-			if _, isOption := dialogSurfaceForegroundStyleKeys[k]; isOption {
+		for _, k := range styleKeys {
+			if dialogSurfaceForegroundKeys[k] {
 				o[k] = `{ fg = "fg" }`
 			} else {
 				o[k] = `{ fg = "fg", bg = "bg" }`
@@ -228,7 +210,7 @@ func TestDiskUsageBarIconKey(t *testing.T) {
 		if got := plain.DiskUsageBarIconKey(tc.active, tc.cursor, tc.selected); got != "" {
 			t.Fatalf("%s without icon: key = %q, want empty", tc.key, got)
 		}
-		o[tc.key] = `{ fg = "fg", bg = "bg", icon = "warning" }`
+		o[tc.key] = `{ fg = "fg", bg = "bg", icon.git = "warning", icon.folder = "danger" }`
 		th, err := parse(testTheme(t, "baricon", nil, o))
 		if err != nil {
 			t.Fatalf("parse for %s: %v", tc.key, err)
@@ -236,20 +218,108 @@ func TestDiskUsageBarIconKey(t *testing.T) {
 		if got := th.DiskUsageBarIconKey(tc.active, tc.cursor, tc.selected); got != tc.key {
 			t.Fatalf("key = %q, want %q", got, tc.key)
 		}
-		if got := th.PanelFileIconFG[tc.key]; got != tcell.NewRGBColor(255, 255, 0) {
-			t.Fatalf("%s: PanelFileIconFG = %v, want yellow", tc.key, got)
+		if got, ok := th.DiskUsageBarIconColor(tc.key, BarIconGit); !ok || got != tcell.NewRGBColor(255, 255, 0) {
+			t.Fatalf("%s: git group = %v ok=%v, want yellow", tc.key, got, ok)
 		}
+		if _, ok := th.DiskUsageBarIconColor(tc.key, BarIconFile); ok {
+			t.Fatalf("%s: unlisted file group must have no color", tc.key)
+		}
+		if _, ok := th.PanelFileIconFG[tc.key]; ok {
+			t.Fatalf("%s: bar groups must not land in PanelFileIconFG", tc.key)
+		}
+	}
+}
+
+func TestParseBarIconGroups(t *testing.T) {
+	all := ""
+	for g := range barIconGroups {
+		all += fmt.Sprintf(", icon.%s = \"warning\"", g)
+	}
+	th, err := parse(testTheme(t, "bargroups", nil, map[string]string{
+		"panel.usage.normal":   `{ fg = "fg", bg = "bg"` + all + ` }`,
+		"panel.usage.selected": `{ fg = "fg", bg = "bg", icon = { git = "danger" } }`,
+	}))
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	for g := range barIconGroups {
+		if got, ok := th.DiskUsageBarIconColor("panel.usage.normal", g); !ok || got != tcell.NewRGBColor(255, 255, 0) {
+			t.Errorf("group %s = %v ok=%v, want yellow", g, got, ok)
+		}
+	}
+	if _, ok := th.DiskUsageBarIconColor("panel.usage.selected", BarIconFile); ok {
+		t.Error("selected bar lists only git")
+	}
+	if _, ok := th.DiskUsageBarIconColor("panel.usage.selected", BarIconGit); !ok {
+		t.Error("selected bar git group missing")
+	}
+	if _, ok := th.DiskUsageBarIconColor("", BarIconGit); ok {
+		t.Error("empty bar key must have no color")
+	}
+}
+
+func TestParseRejectsBadBarIcon(t *testing.T) {
+	for name, tc := range map[string]struct{ key, spec, want string }{
+		"unknown group":       {"panel.usage.normal", `{ fg = "fg", bg = "bg", icon.pebble = "warning" }`, `unknown icon group "pebble"`},
+		"string on bar":       {"panel.usage.normal", `{ fg = "fg", bg = "bg", icon = "warning" }`, `must be a table of icon groups`},
+		"table on cursor row": {"panel.active.row.cursor", `{ fg = "fg", bg = "bg", icon.git = "warning" }`, `icon groups are only for disk-usage bar styles`},
+		"table on other":      {"menu.bar.active", `{ fg = "fg", bg = "bg", icon.git = "warning" }`, `only allowed on panel cursor row and disk-usage bar styles`},
+		"bad color":           {"panel.usage.normal", `{ fg = "fg", bg = "bg", icon.git = "nosuchrole" }`, `nosuchrole`},
+		"non-string group":    {"panel.usage.normal", `{ fg = "fg", bg = "bg", icon.git = 3 }`, `icon.git must be a string`},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := parse(testTheme(t, "badbaricon", nil, map[string]string{tc.key: tc.spec}))
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("parse() error = %v, want %q", err, tc.want)
+			}
+		})
+	}
+}
+
+// A theme overriding a bar style replaces the inherited icon groups whole, like every other field.
+func TestBarIconGroupsInheritWholeStyle(t *testing.T) {
+	th, err := parse([]byte("name = \"barinherit\"\n"))
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if _, ok := th.DiskUsageBarIconColor("panel.usage.normal", BarIconGit); !ok {
+		t.Fatal("a theme that leaves the bar style alone must inherit the default's groups")
+	}
+	th, err = parse([]byte("name = \"baroverride\"\n[panel.usage]\nnormal = { fg = \"fg\", bg = \"surface\", icon.file = \"warning\" }\n"))
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if _, ok := th.DiskUsageBarIconColor("panel.usage.normal", BarIconFile); !ok {
+		t.Error("overridden file group missing")
+	}
+	if _, ok := th.DiskUsageBarIconColor("panel.usage.normal", BarIconGit); ok {
+		t.Error("overriding a bar style must not inherit its default groups")
+	}
+	if _, ok := th.DiskUsageBarIconColor("panel.usage.selected", BarIconGit); !ok {
+		t.Error("the untouched selected bar keeps the default groups")
 	}
 }
 
 func TestDefaultThemeBarIconOnlyOnNonCursorBar(t *testing.T) {
 	th := Default()
 	black := th.PanelFileIconFG["panel.active.row.cursor"]
+	listed := []BarIconGroup{BarIconFile, BarIconFolderOpen, BarIconFolderMount, BarIconFolderExcluded, BarIconFileIndex, BarIconGit, BarIconSuffix}
+	unlisted := []BarIconGroup{BarIconFolder, BarIconFolderExpanded, BarIconFolderScanning, BarIconPreviewLoading}
 	for _, selected := range []bool{false, true} {
-		if key := th.DiskUsageBarIconKey(true, false, selected); key == "" {
-			t.Errorf("selected=%v: non-cursor bar must set icon", selected)
-		} else if got := th.PanelFileIconFG[key]; got != black {
-			t.Errorf("%s icon = %v, want %v", key, got, black)
+		key := th.DiskUsageBarIconKey(true, false, selected)
+		if key == "" {
+			t.Errorf("selected=%v: non-cursor bar must list icon groups", selected)
+			continue
+		}
+		for _, g := range listed {
+			if got, ok := th.DiskUsageBarIconColor(key, g); !ok || got != black {
+				t.Errorf("%s %s = %v ok=%v, want %v", key, g, got, ok, black)
+			}
+		}
+		for _, g := range unlisted {
+			if _, ok := th.DiskUsageBarIconColor(key, g); ok {
+				t.Errorf("%s lists %s, want it to keep its own color on the bar", key, g)
+			}
 		}
 		for _, active := range []bool{false, true} {
 			if key := th.DiskUsageBarIconKey(active, true, selected); key != "" {
@@ -470,6 +540,7 @@ func TestParseRoleDefaultTerminalColor(t *testing.T) {
 func TestParseResolvesPartialDefaultColorKeyword(t *testing.T) {
 	data := testTheme(t, "custom", nil, map[string]string{
 		"roles.fg":        `"default"`,
+		"roles.bg":        `"black"`,
 		"menu.bar.active": `{ fg = "fg", bg = "bg" }`,
 	})
 
@@ -636,28 +707,24 @@ func testTheme(t *testing.T, name string, skip map[string]bool, overrides map[st
 	return TestThemeBytesNamed(t, name, skip, overrides)
 }
 
-func TestDialogTextSelectStyleFallsBackToSurface(t *testing.T) {
-	data := testTheme(t, "textselectfallback", nil, map[string]string{
-		"dialog.surface": `{ fg = "fg", bg = "warning" }`,
-	})
-	th, err := parse(data)
-	if err != nil {
-		t.Fatalf("parse: %v", err)
-	}
+func TestDialogTextSelectStyleUsesSurfaceWhenUnset(t *testing.T) {
+	th := Theme{DialogSurface: tcell.StyleDefault.Background(tcell.ColorYellow)}
 	_, surfaceBG, _ := th.DialogSurface.Decompose()
 	fg, bg, attrs := th.DialogTextSelectStyle(tcell.StyleDefault.Foreground(tcell.ColorRed).Bold(true)).Decompose()
 	if bg != surfaceBG || fg != tcell.ColorRed || attrs&tcell.AttrBold == 0 {
 		t.Fatalf("fallback style fg=%v bg=%v attrs=%v", fg, bg, attrs)
 	}
 
-	data = testTheme(t, "textselectset", nil, map[string]string{
+	data := testTheme(t, "textselectset", nil, map[string]string{
+		"roles.bg":           `"black"`,
 		"dialog.surface":     `{ fg = "fg", bg = "warning" }`,
 		"dialog.text_select": `{ bg = "bg" }`,
 	})
-	th, err = parse(data)
+	th, err := parse(data)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
+	_, surfaceBG, _ = th.DialogSurface.Decompose()
 	_, want, _ := th.DialogTextSelect.Decompose()
 	if _, bg, _ = th.DialogTextSelectStyle(tcell.StyleDefault.Foreground(tcell.ColorRed)).Decompose(); bg != want || bg == surfaceBG {
 		t.Fatalf("bg = %v, want %v", bg, want)
@@ -666,9 +733,6 @@ func TestDialogTextSelectStyleFallsBackToSurface(t *testing.T) {
 
 func TestEmptyTextAndStyle(t *testing.T) {
 	var bare Theme
-	if got := bare.EmptyText(); got != "[empty]" {
-		t.Fatalf("fallback EmptyText = %q", got)
-	}
 	if fg, _, _ := bare.PanelEmptyStyle().Decompose(); fg != tcell.PaletteColor(8) {
 		t.Fatalf("fallback fg = %v", fg)
 	}
@@ -711,66 +775,8 @@ func TestPreviewSearchIconStyle(t *testing.T) {
 	if fg != tcell.ColorTeal || bg != tcell.ColorBlue {
 		t.Errorf("PreviewSearchIconStyle = (%v, %v), want teal on the row's blue (key bg ignored)", fg, bg)
 	}
-	styles, err := parse(testTheme(t, "custom", nil, nil))
-	if err != nil {
-		t.Fatalf("parse() error = %v", err)
-	}
-	if styles.PreviewSearchIcon != (tcell.Style{}) {
-		t.Errorf("PreviewSearchIcon = %v, want zero for a theme without the key", styles.PreviewSearchIcon)
-	}
 	if Default().PreviewSearchIcon == (tcell.Style{}) {
 		t.Error("default theme should define preview.search_icon")
-	}
-}
-
-func TestTooltipStylesFallBackWhenThemeOmitsThem(t *testing.T) {
-	styles, err := parse(testTheme(t, "custom", nil, nil))
-	if err != nil {
-		t.Fatalf("parse() error = %v", err)
-	}
-	if styles.TooltipText != styles.DialogCompletionItem {
-		t.Errorf("TooltipText = %v, want the dialog.completion.item fallback", styles.TooltipText)
-	}
-	wantFG, _, _ := styles.DialogAccent.Decompose()
-	_, wantBG, _ := styles.DialogCompletionItem.Decompose()
-	if fg, bg, _ := styles.TooltipInfoStyle().Decompose(); fg != wantFG || bg != wantBG {
-		t.Errorf("TooltipInfoStyle = (%v, %v), want the accent foreground on the tooltip box", fg, bg)
-	}
-}
-
-func TestPanelMetaAlertStylesFallBack(t *testing.T) {
-	data := testTheme(t, "metaalertfallback", map[string]bool{"panel.meta.warn": true, "panel.meta.critical": true}, nil)
-	th, err := parse(data)
-	if err != nil {
-		t.Fatalf("parse: %v", err)
-	}
-	if fg, _, _ := th.PanelMetaWarn.Decompose(); fg != tcell.NewRGBColor(0xff, 0xff, 0) {
-		t.Fatalf("warn fg = %v, want the warning role (test palette yellow)", fg)
-	}
-	if fg, _, attrs := th.PanelMetaCritical.Decompose(); fg != tcell.PaletteColor(1) || attrs&tcell.AttrBold == 0 {
-		t.Fatalf("critical fg = %v attrs = %v, want bold danger role (ANSI red)", fg, attrs)
-	}
-}
-
-func TestBrokenLinkIconFallsBackToDangerRole(t *testing.T) {
-	data, err := themes.Files.ReadFile("default.toml")
-	if err != nil {
-		t.Fatalf("ReadFile(default.toml): %v", err)
-	}
-	withKey, err := parse(data)
-	if err != nil {
-		t.Fatalf("parse(default): %v", err)
-	}
-	const line = "broken_link = { fg = \"danger\" }"
-	if !strings.Contains(string(data), line) {
-		t.Fatalf("default.toml has no %q", line)
-	}
-	without, err := parse([]byte(strings.Replace(string(data), line, "", 1)))
-	if err != nil {
-		t.Fatalf("parse(without key): %v", err)
-	}
-	if without.PanelIconBrokenLink != withKey.PanelIconBrokenLink {
-		t.Fatalf("fallback = %v, want the default theme's %v", without.PanelIconBrokenLink, withKey.PanelIconBrokenLink)
 	}
 }
 
@@ -841,26 +847,6 @@ func TestRolesFallBackToDefaultPaletteNames(t *testing.T) {
 	}
 	if len(th.roles) != len(roleDefs) {
 		t.Errorf("%d roles, want %d", len(th.roles), len(roleDefs))
-	}
-}
-
-// Optional-style fallbacks resolve through roles, so recoloring a role recolors them.
-func TestOptionalStyleFallbackFollowsRoles(t *testing.T) {
-	th, err := parse(testTheme(t, "custom", nil, map[string]string{
-		"roles.danger": `"#102030"`,
-		"roles.muted":  `"#405060"`,
-	}))
-	if err != nil {
-		t.Fatalf("parse() error = %v", err)
-	}
-	if fg, _, _ := th.PanelMetaCritical.Decompose(); fg != tcell.NewRGBColor(0x10, 0x20, 0x30) {
-		t.Errorf("PanelMetaCritical fg = %v, want the danger role", fg)
-	}
-	if fg, _, _ := th.PanelIconBrokenLink.Decompose(); fg != tcell.NewRGBColor(0x10, 0x20, 0x30) {
-		t.Errorf("PanelIconBrokenLink fg = %v, want the danger role", fg)
-	}
-	if fg, _, _ := th.MenuStatusSeparator.Decompose(); fg != tcell.NewRGBColor(0x40, 0x50, 0x60) {
-		t.Errorf("MenuStatusSeparator fg = %v, want the muted role", fg)
 	}
 }
 

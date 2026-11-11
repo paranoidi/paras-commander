@@ -47,9 +47,12 @@ func TestSuffixMarksTakeBarIconColorOnBarCellsOnly(t *testing.T) {
 	th := theme.Default()
 	barKey := th.DiskUsageBarIconKey(true, false, false)
 	if barKey == "" {
-		t.Fatal("default theme must set an icon color on the normal disk-usage bar")
+		t.Fatal("default theme must list icon colors on the normal disk-usage bar")
 	}
-	barIcon := th.PanelFileIconFG[barKey]
+	barIcon, ok := th.DiskUsageBarIconColor(barKey, theme.BarIconSuffix)
+	if !ok {
+		t.Fatal("default theme must list a suffix icon color on the normal disk-usage bar")
+	}
 	bg := func(int) tcell.Style { return tcell.StyleDefault }
 	cases := []struct {
 		name   string

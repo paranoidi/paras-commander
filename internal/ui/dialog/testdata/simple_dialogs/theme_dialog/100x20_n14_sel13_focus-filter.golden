@@ -1,20 +1,20 @@
 -- text --
                                                                                                     
      ┌──────────────────────┬───────────────── Theme ────────────────────────────────────────┐      
-     │ /                    │                                                                │      
-     │ ( ) Birch Theme      │ Inactive input with text:                                      │      
-     │ ( ) Cinder Theme     │ /home/user/demo.txt                                            │      
-     │ ( ) Dune Theme       │                                                                │      
-     │ ( ) Ember Theme      │ Inactive input with default value:                             │      
-     │ ( ) Fable Theme      │ /home/user/demo.txt                                            │      
-     │ ( ) Glacier Theme    │                                                                │      
-     │ ( ) Harbor Theme     │ Active input with text:                                        │      
-     │ ( ) Ivory Theme      │ /home/user/demo.txt                                            │      
-     │ ( ) Jasper Theme     │  [i] Tooltips explain the focused widget.                      │      
-     │ ( ) Kestrel Theme    │ Active input with default value:                               │      
-     │ ( ) Lantern Theme    │ /home/user/demo.txt                                            │      
-     │ ( ) Meadow Theme     │                                                                │      
-     │ (*) Nectar Theme     │ [x] Selected                                                   │      
+     │ /                    │panel 1                                                         │      
+     │ ( ) Birch Theme      │panel 2                                                         │      
+     │ ( ) Cinder Theme     │panel 3                                                         │      
+     │ ( ) Dune Theme       │panel 4                                                         │      
+     │ ( ) Ember Theme      │panel 5                                                         │      
+     │ ( ) Fable Theme      │panel 6                                                         │      
+     │ ( ) Glacier Theme    │panel 7                                                         │      
+     │ ( ) Harbor Theme     │panel 8                                                         │      
+     │ ( ) Ivory Theme      │panel 9                                                         │      
+     │ ( ) Jasper Theme     │panel 10                                                        │      
+     │ ( ) Kestrel Theme    │panel 11                                                        │      
+     │ ( ) Lantern Theme    │panel 12                                                        │      
+     │ ( ) Meadow Theme     │panel 13                                                        │      
+     │ (*) Nectar Theme     │panel 14                                                        │      
      ├──────────────────────┴────────────────────────────────────────────────────────────────┤      
      │                                 [ OK ]    [ Cancel ]                                  │      
      └───────────────────────────────────────────────────────────────────────────────────────┘      
@@ -26,32 +26,28 @@ c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 d fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 f fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
-g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
-h fg=0x100000008 bg=0x100000000 attrs=0 ul=0 ulc=0x0
-i fg=0x100000000 bg=0x100000007 attrs=0 ul=0 ulc=0x0
-j fg=0x100000004 bg=0x100000007 attrs=0 ul=0 ulc=0x0
-k fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
-l fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-m fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-n fg=0x100000005 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+h fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+j fg=0x100000005 bg=0x0 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
-aaaaabbddeffffffffffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
+aaaaabbddeffffffffffffffffbbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbaaaaaa
+aaaaabhhhhhiiiiiiiiiiiiiiibbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbbaaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbbhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhbbaaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbbffffffffffffffffffefffffffffffffffffffffffffffffffffffffffffffbbaaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbbijjjjiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiibbbbbbbbbbbbbbbbbbbbbbaaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbbkkkkkkkkkkkkkkkkkkekkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkbbaaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
-aaaaablllllmmmmmmmmmmmmmmmbbblllllcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbgggnggggbbgggnggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbgggjggggbbgggjggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

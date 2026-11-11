@@ -29,12 +29,14 @@ bright_white = 15
 
 [roles]
 # Backgrounds
-bg = "black"                  # dark well: panel, input and list backgrounds, progress tracks
+bg = "default"                # base background of every cell without its own; also input and list backgrounds, progress tracks
 surface = "bright_black"      # dialog fill, chips, bar tracks, carousel header, speed pill
-header_bg = "blue"            # panel headers and the menu dropdown fill and frame
-cursor_bg = "cyan"            # the current item: active cursor row, selected menu/button/completion entry, footer hover
-cursor_dim = "black"          # cursor row of an inactive, carousel-inactive or blocked panel
-highlight_bg = "bright_blue"  # selected dropdown entry, disk usage cursor on a selected row, mount mark
+header_bg = "blue"            # panel headers
+menu_bg = "blue"              # menu dropdown fill and frame
+focus_bg = "cyan"             # the focused item: open menu-bar title, selected pulldown entry, active dialog button, selected completion entry, hovered footer entry
+file_cursor_bg = "cyan"       # cursor row of an active file list (panels, duplicate finder)
+file_cursor_dim = "black"     # cursor row of an inactive, carousel-inactive or blocked panel
+highlight_bg = "bright_blue"  # clickable part of the hovered footer entry, disk usage cursor on a selected row, mount mark
 range_bg = "bright_black"     # rows covered by a pending range select
 range_unselect_bg = "red"     # rows covered by a mouse-drag unselect
 inverse_bg = "white"          # light boxes: tooltips, info toast, toast sweep edge
@@ -44,7 +46,8 @@ fg_strong = "bright_white"    # emphasised text: headers, hints, active input, p
 muted = "bright_black"        # dimmed text: info columns, inactive frames, placeholders
 faint = "black"               # barely visible text on bg/surface: disabled options, remaining progress
 ink = "black"                 # dark text on a coloured fill
-cursor_fg = "black"           # text on cursor_bg
+focus_fg = "black"            # text on focus_bg
+file_cursor_fg = "black"      # text and icon on file_cursor_bg
 # Structure
 accent = "magenta"            # shortcut letters, key hints, match highlights
 primary = "blue"              # active panel frame, info icon, git modified, tagged
@@ -77,17 +80,17 @@ detail = { fg = "fg" }
 status = { fg = "info" }     # status-command text at top-left of menu bar (status.toml)
 status.separator = { fg = "muted" }  # glyph between and after status-command segments
 # dropdown is both a leaf style and a parent of .accent/.frame/.selected — keep dotted here
-dropdown = { fg = "ink", bg = "header_bg" }
+dropdown = { fg = "ink", bg = "menu_bg" }
 dropdown.accent = { fg = "fg"}
-dropdown.frame = { fg = "highlight_bg", bg = "header_bg" }
-dropdown.selected = { fg = "ink", bg = "highlight_bg", bold = true }
+dropdown.frame = { fg = "highlight_bg", bg = "menu_bg" }
+dropdown.selected = { fg = "focus_fg", bg = "focus_bg", bold = true }
 
 [menu.bar]                   # top menu bar
 active = { fg = "fg" }
 inactive = { fg = "muted" }
 accent = { fg = "accent", bold = true }
 alert = { fg = "error", bold = true }
-selected = { fg = "cursor_fg", bg = "cursor_bg", bold = true }
+selected = { fg = "focus_fg", bg = "focus_bg", bold = true }
 
 [menu.progress]              # menu-bar aggregate progress
 done = { fg = "success" }
@@ -116,8 +119,8 @@ sweep = { fg = "ink", bg = "inverse_bg" } # leading edge of a toast sweeping in
 key = { fg = "accent", bold = true }
 label = { fg = "fg" }
 label.shift = { fg = "muted" }
-hover = { fg = "cursor_fg", bg = "cursor_bg" }  # entry under the mouse pointer
-hover.active = { fg = "fg_strong", bg = "cursor_bg" }  # its part a click presses (key + hint, or the shift word)
+hover = { fg = "focus_fg", bg = "focus_bg" }  # entry under the mouse pointer
+hover.active = { fg = "ink", bg = "highlight_bg" }  # its part a click presses (key + hint, or the shift word); its own bg keeps it distinct from the rest of the entry
 
 [panel]                      # panel-wide text
 text = { fg = "fg" }
@@ -200,7 +203,7 @@ differs = { fg = "warning", bold = true }
 unchecked = { fg = "info" }
 tagged = { fg = "primary" }
 
-[panel.meta]                  # meta cells matching a warn/critical rule; black under the active cursor
+[panel.meta]                  # meta cells matching a warn/critical rule; on the cursor row: the cursor text colour, bold
 warn = { fg = "warning" }
 critical = { fg = "danger" }
 
@@ -209,18 +212,22 @@ track = { fg = "muted" }
 thumb = { fg = "fg" }
 match = { fg = "accent" }
 
-[panel.usage]                 # disk usage bar colors; icon colors icons on bar cells only
-normal = { fg = "fg", bg = "surface", icon = "faint" }
-selected = { fg = "selected", bg = "surface", icon = "faint" }
+[panel.usage]                 # disk usage bar colors; icon.<group> recolors that icon group where the bar is behind it
+# Groups: folder folder_expanded folder_scanning folder_open folder_mount folder_excluded (folder icons),
+# file, preview_loading (icon strip), fileindex, git (status cells), suffix (name column marks).
+# An unlisted group keeps the icon's own color on the bar. Cursor row bars take the same table on
+# panel.active.usage.cursor, .cursor.selected and panel.inactive.usage.cursor, .cursor.selected.
+normal = { fg = "fg", bg = "surface", icon.file = "faint", icon.folder_open = "faint", icon.folder_mount = "faint", icon.folder_excluded = "faint", icon.fileindex = "faint", icon.git = "faint", icon.suffix = "faint" }
+selected = { fg = "selected", bg = "surface", icon.file = "faint", icon.folder_open = "faint", icon.folder_mount = "faint", icon.folder_excluded = "faint", icon.fileindex = "faint", icon.git = "faint", icon.suffix = "faint" }
 
 [terminal]
 text = { fg = "fg" }
 
 [panel.dedup]
 row.all_marked = { fg = "danger", bold = true }
-row.cursor.all_marked = { fg = "danger", bg = "cursor_bg", bold = true }
+row.cursor.all_marked = { fg = "danger", bg = "file_cursor_bg", bold = true }
 row.keep = { fg = "success_strong", bold = true }
-row.cursor.keep = { fg = "success_strong", bg = "cursor_bg", bold = true }
+row.cursor.keep = { fg = "success_strong", bg = "file_cursor_bg", bold = true }
 row.mark.keep_subtree = { fg = "success_strong" }
 full_dir = { fg = "special" }
 full_dir_content = { fg = "warning" }
@@ -232,8 +239,8 @@ disk_usage_overview = { fg = "primary"}
 frame = { fg = "primary" }
 header = { fg = "fg_strong", bg = "header_bg", bold = true }
 header.carousel = { fg = "fg", bg = "surface" }
-row.cursor = { fg = "cursor_fg", bg = "cursor_bg", icon = "cursor_fg" }
-row.cursor.selected = { fg = "selected", bg = "cursor_bg", bold = true, icon = "cursor_fg" }
+row.cursor = { fg = "file_cursor_fg", bg = "file_cursor_bg", icon = "file_cursor_fg" }
+row.cursor.selected = { fg = "selected", bg = "file_cursor_bg", bold = true, icon = "file_cursor_fg" }
 row.cursor.unique = { fg = "ink", bg = "success", icon = "ink" }
 surface = { fg = "fg" }
 title = { fg = "fg", bold = true }
@@ -252,19 +259,19 @@ title = { fg = "warning", bold = true }
 frame = { fg = "warning" }
 
 [panel.carousel.inactive]
-row.cursor = { bg = "cursor_dim" }
-row.cursor.selected = { fg = "selected", bg = "cursor_dim", bold = true }
+row.cursor = { bg = "file_cursor_dim" }
+row.cursor.selected = { fg = "selected", bg = "file_cursor_dim", bold = true }
 
 [panel.inactive]
 disk_usage_overview = { fg = "muted"}
 frame = { fg = "muted" }
 header = { fg = "fg_strong", bg = "header_bg", bold = true }
 header.carousel = { fg = "faint", bg = "surface" }
-row.cursor = { bg = "cursor_dim" }
-row.cursor.selected = { fg = "selected", bg = "cursor_dim", bold = true }
+row.cursor = { bg = "file_cursor_dim" }
+row.cursor.selected = { fg = "selected", bg = "file_cursor_dim", bold = true }
 surface = { fg = "fg" }
 title = { fg = "fg" }
-usage.cursor = { fg = "fg", bg = "cursor_dim" }
+usage.cursor = { fg = "fg", bg = "file_cursor_dim" }
 usage.cursor.selected = { fg = "selected", bg = "highlight_bg", bold = true }
 
 [panel.blocked]
@@ -272,7 +279,7 @@ disk_usage_overview = { fg = "muted" }
 frame = { fg = "muted" }
 header = { fg = "muted", bold = true }
 header.carousel = { fg = "muted", bg = "bg", bold = true }
-row.cursor = { fg = "fg", bg = "cursor_dim" }
+row.cursor = { fg = "fg", bg = "file_cursor_dim" }
 row.cursor.selected = { fg = "fg" }
 row.directory = { fg = "muted", bold = true }
 row.file = { fg = "muted" }
@@ -305,7 +312,7 @@ accent_alt = { fg = "accent", bold = true }
 search_icon = { fg = "faint", bg = "surface" }
 
 [dialog.button]
-active = { fg = "cursor_fg", bg = "cursor_bg" }
+active = { fg = "focus_fg", bg = "focus_bg" }
 active_destructive = { fg = "fg", bg = "danger" }
 inactive = { fg = "fg", bg = "bg" }
 
@@ -348,9 +355,9 @@ key     = { fg = "accent", bold = true }
 
 [dialog.completion]        # path completion dropdown (see docs/path-completion.md)
 item          = { fg = "fg", bg = "bg" }
-item.selected = { fg = "cursor_fg", bg = "cursor_bg", bold = true }
+item.selected = { fg = "focus_fg", bg = "focus_bg", bold = true }
 match         = { fg = "selected", bg = "bg", bold = true }
-match.selected = { fg = "cursor_fg", bg = "cursor_bg", bold = true, underline = true }
+match.selected = { fg = "focus_fg", bg = "focus_bg", bold = true, underline = true }
 
 [tooltip]                  # explanation box of the focused dialog widget (dlg Item.Tooltip)
 text = { fg = "ink", bg = "inverse_bg" }
@@ -494,13 +501,15 @@ thumb = "┃"
 match = "◇"                  # rail rows holding a preview search match
 
 [icons.tree]
+expand = "▶"
+collapse = "▼"
 continue = "│"
 branch = "├─"
 end = "└─"
 leaf = "·"
 
 [icons.meta]
-running = "\uf141"
+running = "…"
 
 [icons.menu.progress]
 done = "■"

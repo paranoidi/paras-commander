@@ -27,45 +27,24 @@ const (
 // IconJobsListSources returns the expander icon of a multi-source job row.
 func (t Theme) IconJobsListSources(expanded bool) string {
 	if expanded {
-		return t.iconOr(IconKeyJobsListSourcesExpanded, "\uf147")
+		return t.icon(IconKeyJobsListSourcesExpanded)
 	}
-	return t.iconOr(IconKeyJobsListSourcesCollapsed, "\uf196")
+	return t.icon(IconKeyJobsListSourcesCollapsed)
 }
 
-// IconJobsList returns the Nerd Font icon for a job status in the jobs list column.
+// IconJobsList returns the Nerd Font icon for a job status in the jobs list column (a space for
+// an unknown status).
 func (t Theme) IconJobsList(status string) string {
-	key := "jobs.list." + status
-	if s := t.iconOr(key, ""); s != "" {
+	if s := t.icon("jobs.list." + status); s != "" {
 		return s
 	}
-	switch status {
-	case "scanning":
-		return "\uf110"
-	case "queued":
-		return "\u231B"
-	case "running":
-		return "\uf144"
-	case "decision":
-		return "\U000f02d7"
-	case "paused":
-		return "\uf28b"
-	case "canceling":
-		return "\uf52f"
-	case "canceled":
-		return "\uf52f"
-	case "failed":
-		return "\uf06a"
-	case "completed":
-		return "\uf05d"
-	default:
-		return " "
-	}
+	return " "
 }
 
 // IconFilelistQueued returns the file-list row-suffix icon shown while a matched job is still
 // queued (the same glyph as the jobs list's queued status icon, jobs.list.queued).
 func (t Theme) IconFilelistQueued() rune {
-	return t.iconRuneOr(IconKeyJobsListQueued, '\uf017')
+	return t.iconRune(IconKeyJobsListQueued)
 }
 
 // Operations pane result keys ([icons.jobs.operations] and [jobs.operations] keys).
@@ -79,21 +58,9 @@ const (
 )
 
 // IconJobsOperation returns the result icon of an Operations pane row for a result key
-// (JobsOperationSuccess, ...), from [icons.jobs.operations], falling back to the jobs list's
-// completed / failed icon or a built-in skipped / source deleted glyph.
+// (JobsOperationSuccess, ...), from [icons.jobs.operations].
 func (t Theme) IconJobsOperation(result string) string {
-	if s := t.iconOr("jobs.operations."+result, ""); s != "" {
-		return s
-	}
-	switch result {
-	case JobsOperationFailed:
-		return t.IconJobsList("failed")
-	case JobsOperationSkipped:
-		return "\uf056"
-	case JobsOperationSourceDeleted:
-		return "\uf05c"
-	}
-	return t.IconJobsList("completed")
+	return t.icon("jobs.operations." + result)
 }
 
 // JobsOperationStyle returns the style of a result key (Operations icons, Details counts).

@@ -19,9 +19,9 @@ func TestLoadUserStartupConfigBrokenTheme(t *testing.T) {
 	if err := os.MkdirAll(themesDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	broken := theme.TestThemeBytesNamed(t, "default", map[string]bool{
-		"panel.row.file": true,
-	}, nil)
+	broken := theme.TestThemeBytesNamed(t, "default", nil, map[string]string{
+		"panel.row.file": `{ fg = "nonesuch" }`,
+	})
 	if err := os.WriteFile(filepath.Join(themesDir, "amber-glow.toml"), broken, 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -36,8 +36,8 @@ func TestLoadUserStartupConfigBrokenTheme(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for broken theme directory")
 	}
-	if !strings.Contains(err.Error(), "missing required style") {
-		t.Fatalf("expected missing required style error, got %v", err)
+	if !strings.Contains(err.Error(), "is not a role") {
+		t.Fatalf("expected invalid style error, got %v", err)
 	}
 }
 
@@ -113,9 +113,9 @@ func TestResolveStartupConfigDeclinesFallback(t *testing.T) {
 	if err := os.MkdirAll(themesDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	broken := theme.TestThemeBytesNamed(t, "default", map[string]bool{
-		"panel.row.file": true,
-	}, nil)
+	broken := theme.TestThemeBytesNamed(t, "default", nil, map[string]string{
+		"panel.row.file": `{ fg = "nonesuch" }`,
+	})
 	if err := os.WriteFile(filepath.Join(themesDir, "copper-lake.toml"), broken, 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -147,9 +147,9 @@ func TestResolveStartupConfigAcceptsFallback(t *testing.T) {
 	if err := os.MkdirAll(themesDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	broken := theme.TestThemeBytesNamed(t, "default", map[string]bool{
-		"panel.row.file": true,
-	}, nil)
+	broken := theme.TestThemeBytesNamed(t, "default", nil, map[string]string{
+		"panel.row.file": `{ fg = "nonesuch" }`,
+	})
 	if err := os.WriteFile(filepath.Join(themesDir, "silver-pond.toml"), broken, 0o644); err != nil {
 		t.Fatal(err)
 	}

@@ -1,6 +1,8 @@
 package theme
 
-const IconKeySearchIcon = "search.icon"
+// IconKeySearchIcon is the flattened key of `[icons.search] icon` (a table whose only entry is `icon`
+// is a leaf stored at the table's own key).
+const IconKeySearchIcon = "search"
 
 // IconSearchIcon returns the leading icon painted inside scrollquery-based filter/search
 // input rows (find, history, path picker, help, mass-rename pattern picker, run-for-each
@@ -12,5 +14,5 @@ func (t Theme) IconSearchIcon() string {
 	if !t.UseNerdfontIcons {
 		return "/"
 	}
-	return t.iconOr(IconKeySearchIcon, "\uF002")
+	return t.icon(IconKeySearchIcon)
 }

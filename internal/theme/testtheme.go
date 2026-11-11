@@ -7,25 +7,14 @@ import (
 	"testing"
 )
 
-var dialogSurfaceForegroundStyleKeys = map[string]struct{}{
-	"dialog.option.inactive":         {},
-	"dialog.option.active":           {},
-	"dialog.option.active.selected":  {},
-	"dialog.option.selected":         {},
-	"dialog.option.invalid":          {},
-	"dialog.option.disabled":         {},
-	"dialog.status.selection_size":   {},
-	"dialog.progress.label.on_fill":  {},
-	"dialog.progress.label.on_track": {},
-}
-
-// TestThemeBytes builds a minimal valid theme TOML from requiredStyleKeys plus optional overrides.
+// TestThemeBytes builds a theme TOML that sets every style key to a plain fg/bg pair (plus overrides).
 func TestThemeBytes(t *testing.T, overrides map[string]string) []byte {
 	t.Helper()
 	return buildTestThemeBytes("test-theme", nil, overrides)
 }
 
-// TestThemeBytesNamed is like TestThemeBytes but allows a custom theme name and skipped keys.
+// TestThemeBytesNamed is like TestThemeBytes but allows a custom theme name and skipped keys (left
+// out of the file, so they are inherited from the default theme).
 func TestThemeBytesNamed(t *testing.T, name string, skip map[string]bool, overrides map[string]string) []byte {
 	t.Helper()
 	return buildTestThemeBytes(name, skip, overrides)
@@ -33,13 +22,13 @@ func TestThemeBytesNamed(t *testing.T, name string, skip map[string]bool, overri
 
 func buildTestThemeBytes(name string, skip map[string]bool, overrides map[string]string) []byte {
 	bySection := map[string]map[string]string{}
-	for _, key := range requiredStyleKeys {
+	for _, key := range styleKeys {
 		if skip != nil && skip[key] {
 			continue
 		}
 		section, relative := styleSectionRelative(key)
 		spec := `{ fg = "fg", bg = "bg" }`
-		if _, ok := dialogSurfaceForegroundStyleKeys[key]; ok {
+		if dialogSurfaceForegroundKeys[key] {
 			spec = `{ fg = "fg" }`
 		}
 		if override, ok := overrides[key]; ok {
@@ -50,7 +39,7 @@ func buildTestThemeBytes(name string, skip map[string]bool, overrides map[string
 		}
 		bySection[section][relative] = spec
 	}
-	requiredSet := makeStyleKeySet(requiredStyleKeys)
+	requiredSet := styleKeySet
 	for key, spec := range overrides {
 		if skip != nil && skip[key] || requiredSet[key] || isColorOverride(key) {
 			continue

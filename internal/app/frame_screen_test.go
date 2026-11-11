@@ -223,3 +223,29 @@ func TestFrameScreenIdenticalFrameEmitsNothing(t *testing.T) {
 		t.Fatalf("identical second frame re-emitted the word: %q", out)
 	}
 }
+
+// A base background fills cells that have none and leaves explicit backgrounds alone, through
+// SetContent (flush) and Fill.
+func TestFrameScreenBaseBackground(t *testing.T) {
+	f, _, sim := newRecordingFrame(t, 6, 2)
+	base := tcell.NewRGBColor(0x30, 0x34, 0x46)
+	f.SetStyle(tcell.StyleDefault.Background(base))
+	f.Fill(' ', tcell.StyleDefault.Foreground(tcell.ColorRed))
+	f.SetContent(1, 0, 'a', nil, tcell.StyleDefault.Foreground(tcell.ColorGreen))
+	f.SetContent(2, 0, 'b', nil, tcell.StyleDefault.Background(tcell.ColorBlue))
+	f.Show()
+	bgAt := func(x, y int) tcell.Color {
+		_, st, _ := sim.Get(x, y)
+		_, bg, _ := st.Decompose()
+		return bg
+	}
+	if got := bgAt(1, 0); got != base {
+		t.Errorf("default-bg cell bg = %v, want base %v", got, base)
+	}
+	if got := bgAt(2, 0); got != tcell.ColorBlue {
+		t.Errorf("explicit-bg cell bg = %v, want blue", got)
+	}
+	if got := bgAt(5, 1); got != base {
+		t.Errorf("filled cell bg = %v, want base %v", got, base)
+	}
+}

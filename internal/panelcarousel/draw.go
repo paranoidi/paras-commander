@@ -21,8 +21,9 @@ type NewFileMarkFunc func(entry localfs.Entry) panellist.NewFileMarkTier
 // RenameMarkFunc reports whether an entry was recently renamed.
 type RenameMarkFunc func(entry localfs.Entry) bool
 
-// IconPaintFunc paints the devicon strip for one listing row.
-type IconPaintFunc func(screen tcell.Screen, x, y int, entry localfs.Entry, rowStyle tcell.Style, cursorThemeKey string, diskPending, diskExcluded bool)
+// IconPaintFunc paints the devicon strip for one listing row. cursorThemeKey is the row's own icon
+// key; barThemeKey is Theme.DiskUsageBarIconKey when the bar is behind the icon, else "".
+type IconPaintFunc func(screen tcell.Screen, x, y int, entry localfs.Entry, rowStyle tcell.Style, cursorThemeKey, barThemeKey string, diskPending, diskExcluded bool)
 
 // BodyParams holds carousel list rendering inputs (title row is painted by the caller).
 type BodyParams struct {
@@ -222,9 +223,9 @@ func drawCarouselColumn(cp carouselColumnParams) {
 		listStart, listW := columnListContentOrigin(col.X, col.Width, p.ShowIcons, reserve)
 		nameColOffset := listStart - col.X
 		nameWidth := nameWidthForColumn(col.Width, p.ShowIcons, reserve, showSize, metaW)
-		fillCols := 0
+		fillCols, sliver := 0, false
 		if !p.ChromeBlocked && diskDenom > 0 && (isCursor || !cp.RangeSpan.Contains(entryIndex)) {
-			fillCols = diskUsageFillColumns(panellist.EntryUsageBytes(entry, p.DiskUsage.Source), diskDenom, nameColOffset+nameWidth)
+			fillCols, sliver = diskUsageFillColumns(panellist.EntryUsageBytes(entry, p.DiskUsage.Source), diskDenom, nameColOffset+nameWidth)
 		}
 		blendCell := func(absCol int) tcell.Style {
 			if fillCols > 0 && absCol >= 0 && absCol < fillCols {
@@ -290,6 +291,7 @@ func drawCarouselColumn(cp carouselColumnParams) {
 		})...)
 		drawCarouselRowIconAndText(screen, cp, carouselRowPaintState{
 			Y: y, Entry: entry, CursorKey: cursorKey, BarIconKey: barIconKey, FillCols: fillCols, BlendCell: blendCell,
+			Sliver: sliver, SliverStyle: p.Styles.DiskUsageBarStyle(p.FileListActive && c.Active && !inactive, isCursor, selected),
 			ListStart: listStart, ListW: listW, NameColOffset: nameColOffset, NameWidth: nameWidth,
 			Text: text, Spans: spans, MetaAlerts: metaAlerts, Styles: p.Styles,
 		})
@@ -377,6 +379,8 @@ type carouselRowPaintState struct {
 	CursorKey     string
 	BarIconKey    string // Theme.DiskUsageBarIconKey of the row; applies to cells before FillCols
 	FillCols      int
+	Sliver        bool        // disk-usage share under one cell: draw the sliver glyph in the left gutter
+	SliverStyle   tcell.Style // DiskUsageBarStyle of the row; only its background is used
 	BlendCell     func(int) tcell.Style
 	ListStart     int
 	ListW         int
@@ -397,10 +401,13 @@ func drawCarouselRowIconAndText(screen tcell.Screen, cp carouselColumnParams, rp
 		for i := 0; i < leftGutter; i++ {
 			screen.SetContent(col.X+i, rp.Y, ' ', nil, rp.BlendCell(i))
 		}
+		if rp.Sliver && leftGutter > 0 {
+			screen.SetContent(col.X, rp.Y, panellist.DiskUsageSliver, nil, panellist.DiskUsageSliverStyle(rp.BlendCell(0), rp.SliverStyle))
+		}
 		if p.PaintIcon != nil {
-			key := rp.CursorKey
-			if rp.BarIconKey != "" && leftGutter < rp.FillCols {
-				key = rp.BarIconKey
+			barKey := ""
+			if leftGutter < rp.FillCols {
+				barKey = rp.BarIconKey
 			}
 			diskPending := false
 			diskExcluded := false
@@ -408,13 +415,13 @@ func drawCarouselRowIconAndText(screen tcell.Screen, cp carouselColumnParams, rp
 				diskPending = p.DiskUsage.Source.PendingForPanel(rp.Entry.Path, p.DiskUsage.PanelID)
 				diskExcluded = p.DiskUsage.Source.IsKnownExcluded(rp.Entry.Path)
 			}
-			p.PaintIcon(screen, col.X+leftGutter, rp.Y, rp.Entry, rp.BlendCell(leftGutter), key, diskPending, diskExcluded)
+			p.PaintIcon(screen, col.X+leftGutter, rp.Y, rp.Entry, rp.BlendCell(leftGutter), rp.CursorKey, barKey, diskPending, diskExcluded)
 		}
 	}
 	primitive.StyledTextCellwise(screen, rp.ListStart, rp.Y, rp.ListW, rp.Text, func(ci int) tcell.Style {
 		st := rp.BlendCell(rp.NameColOffset + ci)
 		if ci >= rp.NameWidth {
-			return panellist.MetaCellStyle(rp.Styles.PanelListingInfoStyle(st), ci-panellist.MetaStart(rp.NameWidth), rp.MetaAlerts, rp.CursorKey, rp.Styles)
+			return panellist.MetaCellStyle(rp.Styles.PanelListingInfoStyle(st, rp.CursorKey), ci-panellist.MetaStart(rp.NameWidth), rp.MetaAlerts, rp.CursorKey, rp.Styles)
 		}
 		return st
 	}, rp.Spans)

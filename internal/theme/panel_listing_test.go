@@ -32,9 +32,17 @@ func TestPanelListingInfoStyleKeepsRowBackground(t *testing.T) {
 		PanelRowFile: tcell.StyleDefault.Foreground(tcell.ColorWhite),
 	}
 	row := tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorTeal)
-	got := th.PanelListingInfoStyle(row)
+	got := th.PanelListingInfoStyle(row, "")
 	fg, bg, _ := got.Decompose()
 	if fg != tcell.ColorGray || bg != tcell.ColorTeal {
 		t.Fatalf("info style = fg %v bg %v, want gray on teal", fg, bg)
+	}
+}
+
+func TestPanelListingInfoStyleOnCursorRowMatchesName(t *testing.T) {
+	th := Theme{PanelRowInfo: tcell.StyleDefault.Foreground(tcell.ColorGray)}
+	row := tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorTeal).Bold(true)
+	if got := th.PanelListingInfoStyle(row, "panel.active.row.cursor"); got != row {
+		t.Fatalf("cursor-row info style = %v, want the row's own style %v", got, row)
 	}
 }

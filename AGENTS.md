@@ -32,7 +32,7 @@ Leave compiled binary after running tests. Build with `CGO_ENABLED=0 go build -l
 
 When user request shortcut to be added it needs to be configurable in `keybindings.toml`. Check if requested shortcut works in terminal. Many shortcut combinations do not. If user requests a shortcut that is already taken in that context, choose a reasonable next best option and notify the user.
 
-When new colors are being added be sure to update any existing themes to use these new colors (including `dialog.input.active.placeholder` / `dialog.input.inactive.placeholder` for dimmed suggested input text when applicable).
+New theme keys go into `themes/default.toml` using a role (every other theme inherits them, including `dialog.input.active.placeholder` / `dialog.input.inactive.placeholder` for dimmed suggested input text when applicable); only add the key to another theme if that theme needs a different value.
 
 Always aim to have ONE source for the truth. This applies to keybindings, theme usage, padding and margin values. Similarly operations should ideally have only one entry point.
 

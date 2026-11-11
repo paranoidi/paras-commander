@@ -9,14 +9,10 @@ const IconKeyCommandsCommand = "commands.command"
 // IconCommandsCommand returns the leading glyph of a Commands-view row's command line
 // ("$" when UseNerdfontIcons is false).
 func (t Theme) IconCommandsCommand() string {
-	return t.commandsIcon(IconKeyCommandsCommand, "\U000F1183", "$")
-}
-
-func (t Theme) commandsIcon(key, fallback, ascii string) string {
 	if !t.UseNerdfontIcons {
-		return ascii
+		return "$"
 	}
-	return t.iconOr(key, fallback)
+	return t.icon(IconKeyCommandsCommand)
 }
 
 const IconKeyEmpty = "empty"
@@ -27,7 +23,7 @@ var panelEmptyFallback = tcell.StyleDefault.Foreground(tcell.PaletteColor(8))
 // EmptyText returns the plain text shown in empty lists; it is not a glyph, so it is
 // returned whether or not Nerd Font icons are enabled.
 func (t Theme) EmptyText() string {
-	return t.iconOr(IconKeyEmpty, "[empty]")
+	return t.icon(IconKeyEmpty)
 }
 
 // PanelEmptyStyle returns the empty-list text style (foreground only), falling back to

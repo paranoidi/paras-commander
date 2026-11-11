@@ -352,8 +352,8 @@ func TestThemeDialogAutoReloadToggleReloadsPreviewFromDisk(t *testing.T) {
 	writeDiskDefault := func(hex string) {
 		content := strings.Replace(string(base),
 			`inactive = { fg = "muted" }`,
-			`inactive = { fg = "fg", bg = "cursor_dim" }`, 1)
-		content = strings.Replace(content, `cursor_dim = "black"`, fmt.Sprintf(`cursor_dim = %q`, hex), 1)
+			`inactive = { fg = "fg", bg = "file_cursor_dim" }`, 1)
+		content = strings.Replace(content, `file_cursor_dim = "black"`, fmt.Sprintf(`file_cursor_dim = %q`, hex), 1)
 		if err := os.WriteFile(filepath.Join(themesDir, "override.toml"), []byte(content), 0o644); err != nil {
 			t.Fatalf("WriteFile: %v", err)
 		}

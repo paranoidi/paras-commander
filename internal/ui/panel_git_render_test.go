@@ -38,14 +38,16 @@ func TestPanelGitCellDefaultsToNotModified(t *testing.T) {
 	}
 }
 
-// A bar icon color wins on a git cell; without one, unmodified cells take the bar's foreground
-// because panel.git.not_modified matches the bar background.
+// A bar git group color wins on a git cell; without one (other groups may still be listed),
+// unmodified cells take the bar's foreground because panel.git.not_modified matches the bar
+// background.
 func TestGitNotModifiedForegroundUnderDiskMeter(t *testing.T) {
 	t.Parallel()
 	withIcon := theme.Default()
 	noIcon := theme.Default()
-	noIcon.PanelFileIconFG = maps.Clone(noIcon.PanelFileIconFG)
-	delete(noIcon.PanelFileIconFG, "panel.usage.normal")
+	noIcon.DiskUsageBarIconFG = maps.Clone(noIcon.DiskUsageBarIconFG)
+	noIcon.DiskUsageBarIconFG["panel.usage.normal"] = maps.Clone(noIcon.DiskUsageBarIconFG["panel.usage.normal"])
+	delete(noIcon.DiskUsageBarIconFG["panel.usage.normal"], theme.BarIconGit)
 	usageFG, _, _ := withIcon.PanelUsageNormal.Decompose()
 
 	cases := []struct {
@@ -53,7 +55,7 @@ func TestGitNotModifiedForegroundUnderDiskMeter(t *testing.T) {
 		styles theme.Theme
 		wantFG tcell.Color
 	}{
-		{"bar icon color", withIcon, withIcon.PanelFileIconFG["panel.usage.normal"]},
+		{"bar icon color", withIcon, withIcon.DiskUsageBarIconFG["panel.usage.normal"][theme.BarIconGit]},
 		{"no bar icon color", noIcon, usageFG},
 	}
 	for _, tc := range cases {

@@ -486,7 +486,10 @@ func TestDiskUsageBarIconKeyOnCarouselRows(t *testing.T) {
 	const width, height = 120, 12
 	screen.SetSize(width, height)
 	styles := theme.Default()
-	barIcon := styles.PanelFileIconFG["panel.usage.normal"]
+	barIcon, ok := styles.DiskUsageBarIconColor("panel.usage.normal", theme.BarIconSuffix)
+	if !ok {
+		t.Fatal("default theme lists no suffix icon color on the normal bar")
+	}
 	newFG, _, _ := styles.PanelRowMarkNew.Decompose()
 	if barIcon == newFG {
 		t.Fatal("test needs distinct bar icon and new-file mark colors")
@@ -500,7 +503,7 @@ func TestDiskUsageBarIconKeyOnCarouselRows(t *testing.T) {
 		Path:    pathloc.MustParse("/vol"),
 		Entries: []localfs.Entry{file(cursorName, 0), file(longName, 1000), file(shortName, 1)},
 	}
-	iconKeys := map[string]string{}
+	rowKeys, barKeys := map[string]string{}, map[string]string{}
 	DrawBody(screen, BodyParams{
 		Frame:               geom.Rect{X: 0, Y: 0, Width: width, Height: height},
 		Center:              center,
@@ -511,8 +514,8 @@ func TestDiskUsageBarIconKeyOnCarouselRows(t *testing.T) {
 		HeaderCarouselStyle: styles.PanelActiveHeaderCarousel,
 		SurfaceStyle:        styles.PanelActiveSurface,
 		Layout:              DefaultLayout(),
-		PaintIcon: func(_ tcell.Screen, _, _ int, entry localfs.Entry, _ tcell.Style, key string, _, _ bool) {
-			iconKeys[entry.Name] = key
+		PaintIcon: func(_ tcell.Screen, _, _ int, entry localfs.Entry, _ tcell.Style, rowKey, barKey string, _, _ bool) {
+			rowKeys[entry.Name], barKeys[entry.Name] = rowKey, barKey
 		},
 		NewFileMark: func(localfs.Entry) panellist.NewFileMarkTier { return panellist.NewFileMarkLatest },
 		DiskUsage: DiskUsage{
@@ -521,14 +524,17 @@ func TestDiskUsageBarIconKeyOnCarouselRows(t *testing.T) {
 		},
 	})
 
-	if got := iconKeys[longName]; got != "panel.usage.normal" {
+	if got := barKeys[longName]; got != "panel.usage.normal" {
 		t.Errorf("long bar icon key = %q, want the bar's", got)
 	}
-	if got := iconKeys[shortName]; got != "" {
+	if got := barKeys[shortName]; got != "" {
 		t.Errorf("short bar icon key = %q, want none: the bar stops before the icon", got)
 	}
-	if got := iconKeys[cursorName]; got != "panel.active.row.cursor" {
+	if got := rowKeys[cursorName]; got != "panel.active.row.cursor" {
 		t.Errorf("cursor row icon key = %q, want the cursor row's", got)
+	}
+	if got := rowKeys[longName]; got != "" {
+		t.Errorf("long row icon key = %q, want the row's own (none)", got)
 	}
 
 	markFG := func(name string) tcell.Color {

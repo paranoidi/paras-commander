@@ -86,20 +86,20 @@ func TestPanelDiskUsageDenomIsMaxOfVisibleEntries(t *testing.T) {
 }
 
 func TestDiskUsageFillColumns(t *testing.T) {
-	if got := diskUsageFillColumns(500, 1000, 10); got != 5 {
-		t.Fatalf("half ratio: got %d want 5", got)
+	if got, sl := diskUsageFillColumns(500, 1000, 10); got != 5 || sl {
+		t.Fatalf("half ratio: got %d,%v want 5,false", got, sl)
 	}
-	if got := diskUsageFillColumns(1000, 1000, 10); got != 10 {
-		t.Fatalf("full ratio: got %d want 10", got)
+	if got, sl := diskUsageFillColumns(1000, 1000, 10); got != 10 || sl {
+		t.Fatalf("full ratio: got %d,%v want 10,false", got, sl)
 	}
-	if diskUsageFillColumns(0, 1000, 10) != 0 {
+	if got, sl := diskUsageFillColumns(0, 1000, 10); got != 0 || sl {
 		t.Fatal("zero usage")
 	}
-	if diskUsageFillColumns(100, 0, 10) != 0 {
+	if got, sl := diskUsageFillColumns(100, 0, 10); got != 0 || sl {
 		t.Fatal("zero max")
 	}
-	if got := diskUsageFillColumns(1, 10000, 100); got != 1 {
-		t.Fatalf("tiny ratio clamps to single cell: got %d want 1", got)
+	if got, sl := diskUsageFillColumns(1, 10000, 100); got != 0 || !sl {
+		t.Fatalf("sub-cell ratio: got %d,%v want 0,true", got, sl)
 	}
 }
 

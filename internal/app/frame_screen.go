@@ -22,6 +22,13 @@ type frameCell struct {
 // each cell to the inner screen at flush time (Show, Sync and every read or direct write), so
 // tcell's diff sees real changes only and paint code may freely Fill then repaint.
 //
+// frameScreen is also where the theme's base background is applied: SetStyle (which App.setStyles
+// calls with the theme's `bg` role) records its background, and every cell written with the default
+// background (tcell.ColorDefault) gets that colour instead, so cells whose style names no
+// background show the theme's bg rather than the terminal's own. A base of ColorDefault changes
+// nothing. A base change repaints without a Sync: every frame rewrites every cell, and a cell whose
+// style changed is dirty to tcell's diff.
+//
 // No ColorNone handling is needed: tcell's Put merges ColorNone styles with the cell's previous
 // style, and this repo never uses tcell.ColorNone.
 //
@@ -37,6 +44,7 @@ type frameScreen struct {
 	pending []frameCell
 	index   []int32 // w*h entries; 0 = no pending write, else position in pending + 1
 	w, h    int
+	base    tcell.Color // background substituted for tcell.ColorDefault (see above)
 }
 
 func newFrameScreen(inner tcell.Screen) *frameScreen {
@@ -58,7 +66,7 @@ func (f *frameScreen) SetContent(x, y int, mainc rune, combc []rune, style tcell
 	} else {
 		combc = nil
 	}
-	c := frameCell{x: x, y: y, mainc: mainc, combc: combc, style: style}
+	c := frameCell{x: x, y: y, mainc: mainc, combc: combc, style: f.withBase(style)}
 	i := y*f.w + x
 	if p := f.index[i]; p != 0 {
 		f.pending[p-1] = c
@@ -66,6 +74,20 @@ func (f *frameScreen) SetContent(x, y int, mainc rune, combc []rune, style tcell
 	}
 	f.pending = append(f.pending, c)
 	f.index[i] = int32(len(f.pending))
+}
+
+// SetStyle sets the inner screen's default style and takes its background as the base background.
+func (f *frameScreen) SetStyle(style tcell.Style) {
+	_, f.base, _ = style.Decompose()
+	f.Screen.SetStyle(style)
+}
+
+// withBase gives a style with the default background the base background.
+func (f *frameScreen) withBase(style tcell.Style) tcell.Style {
+	if _, bg, _ := style.Decompose(); bg == tcell.ColorDefault && f.base != tcell.ColorDefault {
+		return style.Background(f.base)
+	}
+	return style
 }
 
 // flush writes the pending cells to the inner screen, then refreshes the cached size.
@@ -104,27 +126,27 @@ func (f *frameScreen) GetContent(x, y int) (rune, []rune, tcell.Style, int) {
 
 func (f *frameScreen) Put(x, y int, str string, style tcell.Style) (string, int) {
 	f.writePending()
-	return f.Screen.Put(x, y, str, style)
+	return f.Screen.Put(x, y, str, f.withBase(style))
 }
 
 func (f *frameScreen) PutStr(x, y int, str string) {
 	f.writePending()
-	f.Screen.PutStr(x, y, str)
+	f.Screen.PutStrStyled(x, y, str, f.withBase(tcell.StyleDefault))
 }
 
 func (f *frameScreen) PutStrStyled(x, y int, str string, style tcell.Style) {
 	f.writePending()
-	f.Screen.PutStrStyled(x, y, str, style)
+	f.Screen.PutStrStyled(x, y, str, f.withBase(style))
 }
 
 func (f *frameScreen) SetCell(x, y int, style tcell.Style, ch ...rune) {
 	f.writePending()
-	f.Screen.SetCell(x, y, style, ch...)
+	f.Screen.SetCell(x, y, f.withBase(style), ch...)
 }
 
 func (f *frameScreen) Fill(r rune, style tcell.Style) {
 	f.writePending()
-	f.Screen.Fill(r, style)
+	f.Screen.Fill(r, f.withBase(style))
 }
 
 func (f *frameScreen) Clear() {

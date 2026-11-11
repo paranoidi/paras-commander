@@ -5,28 +5,25 @@ import "github.com/gdamore/tcell/v2"
 // fileIndexStates are the fileindex row states of "browse with fileindex" (localfs.IndexStatus*
 // values): each has an icon ([icons.fileindex_state]) and a style ([panel.fileindex]), except
 // the loading states (fileIndexStateLoading), styled by [status] scanning (Theme.StatusScanning).
-// The fallback glyph is the Nerd Font icon, ascii the one shown without Nerd Font icons.
-var fileIndexStates = []struct {
-	key, icon, ascii string
-	role             string // fallback foreground role; "" for the loading states
-}{
-	{"indexed", "\U000F0AA9", "=", "muted"},   // nf-md-database_check
-	{"changed", "\U000F0B86", "~", "warning"}, // nf-md-database_edit
-	{"new", "\U000F01BB", "+", "danger"},      // nf-md-database_minus
-	{"missing", "\U000F01BA", "-", "error"},   // nf-md-database_plus
-	{"excluded", "\U000F1640", "x", "muted"},  // nf-md-database_off
-	{"scanning", "\U000F0CFF", "*", ""},       // nf-md-database_sync
-	{"checking", "\U000F0866", ".", ""},       // nf-md-database_search
-	{"differs", "\U000F163A", "!", "warning"}, // nf-md-database_alert
-	{"unchecked", "\U000F1640", "?", "info"},  // nf-md-database_off
-	{"unhashed", "\U000F163F", "h", "info"},   // nf-md-database_clock
-	{"tagged", "\U000F12F6", "#", "primary"},  // nf-md-database_marker
+// ascii is the glyph shown without Nerd Font icons; the Nerd Font glyph is [icons.fileindex_state].
+var fileIndexStates = []struct{ key, ascii string }{
+	{"indexed", "="},
+	{"changed", "~"},
+	{"new", "+"},
+	{"missing", "-"},
+	{"excluded", "x"},
+	{"scanning", "*"},
+	{"checking", "."},
+	{"differs", "!"},
+	{"unchecked", "?"},
+	{"unhashed", "h"},
+	{"tagged", "#"},
 }
 
 // fileIndexStateLoading reports a state styled by StatusScanning instead of [panel.fileindex].
 func fileIndexStateLoading(state string) bool { return state == "scanning" || state == "checking" }
 
-// fileIndexStateStyleKeys are the optional [panel.fileindex] style keys.
+// fileIndexStateStyleKeys are the [panel.fileindex] style keys.
 func fileIndexStateStyleKeys() []string {
 	keys := make([]string, 0, len(fileIndexStates))
 	for _, s := range fileIndexStates {
@@ -48,7 +45,7 @@ func (t Theme) IconFileIndexState(state string) rune {
 			if !t.UseNerdfontIcons {
 				return rune(s.ascii[0])
 			}
-			return t.iconRuneOr(IconFileIndexStateKey(state), []rune(s.icon)[0])
+			return t.iconRune(IconFileIndexStateKey(state))
 		}
 	}
 	return 0
@@ -66,19 +63,13 @@ func (t Theme) PanelFileIndexStyle(state string) tcell.Style {
 	return tcell.StyleDefault
 }
 
-// fileIndexStateStyles resolves the optional [panel.fileindex] styles, falling back to a plain
-// foreground per state.
-func fileIndexStateStyles(specs map[string]styleSpec, roles map[string]tcell.Color) (map[string]tcell.Style, error) {
+// fileIndexStateStyles collects the [panel.fileindex] styles out of the resolved style table.
+func fileIndexStateStyles(styles map[string]tcell.Style) map[string]tcell.Style {
 	out := make(map[string]tcell.Style, len(fileIndexStates))
 	for _, s := range fileIndexStates {
-		if fileIndexStateLoading(s.key) {
-			continue
+		if !fileIndexStateLoading(s.key) {
+			out[s.key] = styles["panel.fileindex."+s.key]
 		}
-		st, err := optionalStyle(specs, roles, "panel.fileindex."+s.key, roleStyle(roles, s.role, ""))
-		if err != nil {
-			return nil, err
-		}
-		out[s.key] = st
 	}
-	return out, nil
+	return out
 }

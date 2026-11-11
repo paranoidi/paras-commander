@@ -15,8 +15,7 @@ func TestRenderArchiveTreeConnectors(t *testing.T) {
 		"garden/fern/moss.txt",
 		"readme.txt",
 	}
-	var th theme.Theme
-	cells := renderArchiveTree(paths, th, tcell.StyleDefault)
+	cells := renderArchiveTree(paths, theme.Default(), tcell.StyleDefault)
 	var b strings.Builder
 	for _, c := range cells {
 		b.WriteRune(c.R)
@@ -47,7 +46,8 @@ func TestRenderArchiveTreeIcons(t *testing.T) {
 	var plainTheme theme.Theme
 	plain := renderArchiveTree(paths, plainTheme, tcell.StyleDefault)
 
-	iconTheme := theme.Theme{UseNerdfontIcons: true}
+	iconTheme := theme.Default()
+	iconTheme.UseNerdfontIcons = true
 	withIcons := renderArchiveTree(paths, iconTheme, tcell.StyleDefault)
 
 	if len(withIcons) <= len(plain) {

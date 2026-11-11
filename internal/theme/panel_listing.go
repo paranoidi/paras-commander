@@ -121,7 +121,12 @@ func (t Theme) panelListingCursorThemeStyle(opts PanelListingCursorOpts) tcell.S
 }
 
 // PanelListingInfoStyle applies panel.row.info foreground/attributes onto a listing cell's background.
-func (t Theme) PanelListingInfoStyle(rowCell tcell.Style) tcell.Style {
+// On the cursor row (cursorKey is the row's cursor style key, "" off the cursor) the info columns keep
+// the row's own style, so they read like the file name on the cursor bar.
+func (t Theme) PanelListingInfoStyle(rowCell tcell.Style, cursorKey string) tcell.Style {
+	if cursorKey != "" {
+		return rowCell
+	}
 	info := t.PanelRowInfo
 	if info == (tcell.Style{}) {
 		info = t.PanelRowFile

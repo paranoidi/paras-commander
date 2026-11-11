@@ -291,7 +291,8 @@ type SuffixSpanParams struct {
 	CursorStyleKey string
 	NameBGAt       func(displayIndex int) tcell.Style
 	// BarEnd is the display index where the disk-usage bar stops. BarIconKey (Theme.DiskUsageBarIconKey)
-	// replaces CursorStyleKey on the cells before it; "" leaves every cell on CursorStyleKey.
+	// gives the cells before it the bar style's suffix group color when listed; "" leaves every cell
+	// on CursorStyleKey.
 	BarEnd     int
 	BarIconKey string
 }
@@ -314,16 +315,17 @@ func ListingSuffixSpans(p SuffixSpanParams) []primitive.Span {
 	var spans []primitive.Span
 	for i := decStart; i < len(display); i++ {
 		r := display[i].Rune
-		iconKey := p.CursorStyleKey
-		if p.BarIconKey != "" && i < p.BarEnd {
-			iconKey = p.BarIconKey
-		}
-		spanStyle, ok := SuffixSpanStyle(r, suffix, entry, p.JobStatus, iconKey, th, p.ChromeBlocked)
+		spanStyle, ok := SuffixSpanStyle(r, suffix, entry, p.JobStatus, p.CursorStyleKey, th, p.ChromeBlocked)
 		if !ok {
 			continue
 		}
 		_, rowBG, _ := p.NameBGAt(i).Decompose()
 		spanFG, _, _ := spanStyle.Decompose()
+		if i < p.BarEnd {
+			if c, onBar := th.DiskUsageBarIconColor(p.BarIconKey, theme.BarIconSuffix); onBar {
+				spanFG = c
+			}
+		}
 		spans = append(spans, primitive.Span{
 			Start: i,
 			End:   i + 1,

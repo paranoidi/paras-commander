@@ -44,7 +44,7 @@ func TestDefaultThemeUsesOnly16ANSIColors(t *testing.T) {
 			continue
 		}
 		if section == "[roles]" {
-			if name := strings.Trim(m[2], `"`); !paletteNames[name] {
+			if name := strings.Trim(m[2], `"`); !paletteNames[name] && name != "default" {
 				t.Errorf("line %d: roles.%s = %s is not a [palette] name", i+1, m[1], m[2])
 			}
 			continue

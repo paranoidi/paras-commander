@@ -10,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
@@ -129,6 +130,16 @@ func barIconIndexStyle(t *testing.T, screen tcell.Screen, name string) (fg, bg t
 	return barIconGlyphLeftOf(t, screen, name, 2)
 }
 
+// barGroupColor is the color the default theme's bar style barKey gives group.
+func barGroupColor(t *testing.T, th theme.Theme, barKey string, group theme.BarIconGroup) tcell.Color {
+	t.Helper()
+	c, ok := th.DiskUsageBarIconColor(barKey, group)
+	if !ok {
+		t.Fatalf("%s lists no %s icon color", barKey, group)
+	}
+	return c
+}
+
 func fgOf(st tcell.Style) tcell.Color {
 	fg, _, _ := st.Decompose()
 	return fg
@@ -137,7 +148,7 @@ func fgOf(st tcell.Style) tcell.Color {
 func TestDiskUsageBarIconColorStopsAtBarEnd(t *testing.T) {
 	t.Parallel()
 	th := theme.Default()
-	barIcon := th.PanelFileIconFG["panel.usage.normal"]
+	barIcon := barGroupColor(t, th, "panel.usage.normal", theme.BarIconFile)
 	_, barBG, _ := th.PanelUsageNormal.Decompose()
 	indexedFG := fgOf(th.PanelFileIndexStyle(localfs.IndexStatusIndexed))
 	if barIcon == indexedFG {
@@ -170,7 +181,7 @@ func TestDiskUsageBarIconColorAppliesToSelectedRows(t *testing.T) {
 	screen := drawBarIconPanel(t, state, sizes, PanelContext{PanelID: PrimaryPanel, FileListActive: true, CursorRowActive: true}, nil)
 
 	_, barBG, _ := th.PanelUsageSelected.Decompose()
-	want := th.PanelFileIconFG["panel.usage.selected"]
+	want := barGroupColor(t, th, "panel.usage.selected", theme.BarIconFile)
 	if fg, bg := barIconFileIconStyle(t, screen, barIconLongName); fg != want || bg != barBG {
 		t.Errorf("selected row file icon fg=%v bg=%v, want %v on bar %v", fg, bg, want, barBG)
 	}
@@ -182,7 +193,7 @@ func TestDiskUsageBarIconColorAppliesToSelectedRows(t *testing.T) {
 func TestDiskUsageBarIconColorFollowsSuffixMarkCell(t *testing.T) {
 	t.Parallel()
 	th := theme.Default()
-	barIcon := th.PanelFileIconFG["panel.usage.normal"]
+	barIcon := barGroupColor(t, th, "panel.usage.normal", theme.BarIconSuffix)
 	pinnedFG := fgOf(th.PanelRowMarkPinned)
 	if barIcon == pinnedFG {
 		t.Fatal("test needs distinct bar icon and pin mark colors")
@@ -239,7 +250,7 @@ func TestDiskUsageBarCursorRowKeepsItsIconColors(t *testing.T) {
 		state.Cursor = cursorEntry
 		screen := drawBarIconPanel(t, state, sizes, PanelContext{PanelID: PrimaryPanel}, nil)
 		// panel.inactive.usage.cursor has a black background and sets no icon color.
-		if fg, _ := barIconFileIconStyle(t, screen, barIconLongName); fg == th.PanelFileIconFG["panel.usage.normal"] {
+		if fg, _ := barIconFileIconStyle(t, screen, barIconLongName); fg == barGroupColor(t, th, "panel.usage.normal", theme.BarIconFile) {
 			t.Errorf("file icon fg=%v must not take the normal bar's icon color", fg)
 		}
 	})
@@ -277,7 +288,7 @@ func TestDiskUsageBarIconColorOnTreeRows(t *testing.T) {
 	}
 	state.SetListLayout(panel.ListLayoutTree, 10)
 	th := theme.Default()
-	barIcon := th.PanelFileIconFG["panel.usage.normal"]
+	barIcon := barGroupColor(t, th, "panel.usage.normal", theme.BarIconFile)
 	_, barBG, _ := th.PanelUsageNormal.Decompose()
 
 	screen := drawBarIconPanel(t, state, sizes, PanelContext{PanelID: PrimaryPanel, FileListActive: true, CursorRowActive: true}, nil)
@@ -292,7 +303,7 @@ func TestDiskUsageBarIconColorOnTreeRows(t *testing.T) {
 func TestDiskUsageBarIconColorOnGitColumn(t *testing.T) {
 	t.Parallel()
 	th := theme.Default()
-	barIcon := th.PanelFileIconFG["panel.usage.normal"]
+	barIcon := barGroupColor(t, th, "panel.usage.normal", theme.BarIconGit)
 	_, barBG, _ := th.PanelUsageNormal.Decompose()
 	modifiedFG := fgOf(th.PanelGitStyle(gitstatus.Modified.ThemeKey()))
 	newFG := fgOf(th.PanelGitStyle(gitstatus.New.ThemeKey()))
@@ -329,9 +340,9 @@ func TestDiskUsageBarIconColorOnGitColumn(t *testing.T) {
 	}
 }
 
-// A folder row is bold; its icon on the bar must not be, or bold-as-bright terminals paint the
-// black bar icon in the bar's own grey.
-func TestDiskUsageBarFolderIconNotBold(t *testing.T) {
+// The default theme lists no folder group on the bar, so a plain folder icon keeps the folder
+// row's own style.
+func TestDiskUsageBarFolderIconKeepsRowColor(t *testing.T) {
 	t.Parallel()
 	root := "/scan/root"
 	dir := func(name string) localfs.Entry {
@@ -348,10 +359,100 @@ func TestDiskUsageBarFolderIconNotBold(t *testing.T) {
 			continue
 		}
 		fg, _, attrs := st.Decompose()
-		if fg != tcell.ColorBlack || attrs&tcell.AttrBold != 0 {
-			t.Fatalf("folder icon fg=%v bold=%v, want black not bold", fg, attrs&tcell.AttrBold != 0)
+		nameFG, _, nameAttrs := mustCellStyle(screen, nameX, y).Decompose()
+		if fg != nameFG || attrs&tcell.AttrBold != nameAttrs&tcell.AttrBold {
+			t.Fatalf("folder icon fg=%v attrs=%v, want the name's fg=%v attrs=%v", fg, attrs, nameFG, nameAttrs)
 		}
 		return
 	}
 	t.Fatal("folder icon not found")
+}
+
+func mustCellStyle(screen tcell.Screen, x, y int) tcell.Style {
+	_, st, _ := screen.Get(x, y)
+	return st
+}
+
+// The default theme lists no folder_scanning group, so a scanning folder icon keeps its
+// status.scanning color on the bar.
+func TestDiskUsageBarScanningFolderIconKeepsColor(t *testing.T) {
+	t.Parallel()
+	th := theme.Default()
+	barKey := th.DiskUsageBarIconKey(true, false, false)
+	if barKey == "" {
+		t.Fatal("default theme has no bar icon color")
+	}
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(4, 1)
+	entry := localfs.Entry{Name: "meadow", Path: "/scan/root/meadow", Type: localfs.EntryDirectory}
+	paintPanelIconStrip(screen, 0, 0, entry, tcell.StyleDefault, th, PanelIconStripContext{
+		BarIconKey: barKey,
+		Folder:     panellist.FolderIconContext{DiskPending: true},
+	})
+	_, st, _ := screen.Get(0, 0)
+	if got, want := fgOf(st), fgOf(th.StatusScanning); got != want {
+		t.Fatalf("scanning folder icon fg=%v, want %v", got, want)
+	}
+}
+
+// The default theme lists no preview_loading group, so the preview-loading icon keeps its
+// status.scanning color on the bar.
+func TestDiskUsageBarPreviewLoadingIconKeepsColor(t *testing.T) {
+	t.Parallel()
+	th := theme.Default()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(4, 1)
+	entry := localfs.Entry{Name: "meadow.png", Path: "/scan/root/meadow.png", Type: localfs.EntryFile}
+	paintPanelIconStrip(screen, 0, 0, entry, tcell.StyleDefault, th, PanelIconStripContext{
+		BarIconKey:     th.DiskUsageBarIconKey(true, false, false),
+		PreviewLoading: true,
+	})
+	_, st, _ := screen.Get(0, 0)
+	if got, want := fgOf(st), fgOf(th.StatusScanning); got != want {
+		t.Fatalf("preview-loading icon fg=%v, want %v", got, want)
+	}
+}
+
+// A theme that lists the folder group recolors the plain folder icon on the bar; groups it does
+// not list (folder_scanning) keep their own color.
+func TestDiskUsageBarFolderGroupRecolorsFolderIcon(t *testing.T) {
+	t.Parallel()
+	th := theme.Default()
+	want := tcell.NewRGBColor(1, 2, 3)
+	th.DiskUsageBarIconFG = map[string]map[theme.BarIconGroup]tcell.Color{
+		"panel.usage.normal": {theme.BarIconFolder: want},
+	}
+	barKey := th.DiskUsageBarIconKey(true, false, false)
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(4, 1)
+	entry := localfs.Entry{Name: "meadow", Path: "/scan/root/meadow", Type: localfs.EntryDirectory}
+	rowStyle := tcell.StyleDefault.Bold(true)
+	paintPanelIconStrip(screen, 0, 0, entry, rowStyle, th, PanelIconStripContext{BarIconKey: barKey})
+	_, st, _ := screen.Get(0, 0)
+	if got := fgOf(st); got != want {
+		t.Fatalf("folder icon fg=%v, want %v", got, want)
+	}
+	if _, _, attrs := st.Decompose(); attrs&tcell.AttrBold != 0 {
+		t.Fatal("bar group color must not inherit the row's bold")
+	}
+	paintPanelIconStrip(screen, 2, 0, entry, tcell.StyleDefault, th, PanelIconStripContext{
+		BarIconKey: barKey,
+		Folder:     panellist.FolderIconContext{DiskPending: true},
+	})
+	_, st, _ = screen.Get(2, 0)
+	if got, scan := fgOf(st), fgOf(th.StatusScanning); got != scan {
+		t.Fatalf("scanning folder icon fg=%v, want %v", got, scan)
+	}
 }

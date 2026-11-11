@@ -577,9 +577,6 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	styles.UseNerdfontIcons = cfg.UI.UseNerdfontIcons
-	styles.HideTooltips = !cfg.UI.Tooltips
-	syncPathDisplayPrefixes(styles)
 	path, err := cwd()
 	if err != nil {
 		return nil, fmt.Errorf("get working directory: %w", err)
@@ -673,7 +670,6 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		sftp:              sftpState{touchConn: sftpTouchConn},
 		screen:            screen,
 		config:            cfg,
-		styles:            styles,
 		themes:            availableThemes,
 		paths:             resolvedPaths,
 		keys:              keys,
@@ -714,6 +710,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		gitignoreCache: giCache,
 		gitStatusCache: gitstatus.NewCache(),
 	}
+	app.setStyles(styles) // the one path that applies a theme: startup and every switch
 	applyConfigToModel(&app.model, cfg)
 	app.syncCarouselQuickViewOrdering()
 	// Live config: the settings dialog replaces app.config in place, so read it on every call.
@@ -1488,12 +1485,16 @@ func (a *App) handlePreviewInterruptPayload(data any) (eventOutcome, bool) {
 	return out, true
 }
 
-// setStyles sets the app styles and stamps the theme with the current UseNerdfontIcons and
-// Tooltips config.
+// setStyles is the single path that applies a theme (startup, picker preview and apply, config
+// reload): it stamps the UseNerdfontIcons and Tooltips config onto it, sets the screen's base
+// background (frameScreen) and the path display prefixes.
 func (a *App) setStyles(t theme.Theme) {
 	t.UseNerdfontIcons = a.config.UI.UseNerdfontIcons
 	t.HideTooltips = !a.config.UI.Tooltips
 	a.styles = t
+	// The theme's bg role is the base background of every cell without its own (frameScreen).
+	bg, _ := t.ResolveColor("bg") // a zero Theme has no roles: ColorDefault, the terminal's own
+	a.screen.SetStyle(tcell.StyleDefault.Background(bg))
 	syncPathDisplayPrefixes(t)
 }
 

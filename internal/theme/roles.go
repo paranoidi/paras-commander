@@ -20,14 +20,16 @@ var ansiNames = [16]string{
 // lists every role explicitly and a test keeps it equal to this table.
 type roleDef struct{ name, palette string }
 
-// roleDefs are the 29 roles in presentation order (backgrounds, text, structure, states).
+// roleDefs are the 32 roles in presentation order (backgrounds, text, structure, states).
 var roleDefs = []roleDef{
 	// Backgrounds.
-	{"bg", "black"},
+	{"bg", "default"},
 	{"surface", "bright_black"},
 	{"header_bg", "blue"},
-	{"cursor_bg", "cyan"},
-	{"cursor_dim", "black"},
+	{"menu_bg", "blue"},
+	{"focus_bg", "cyan"},
+	{"file_cursor_bg", "cyan"},
+	{"file_cursor_dim", "black"},
 	{"highlight_bg", "bright_blue"},
 	{"range_bg", "bright_black"},
 	{"range_unselect_bg", "red"},
@@ -38,7 +40,8 @@ var roleDefs = []roleDef{
 	{"muted", "bright_black"},
 	{"faint", "black"},
 	{"ink", "black"},
-	{"cursor_fg", "black"},
+	{"focus_fg", "black"},
+	{"file_cursor_fg", "black"},
 	// Structure.
 	{"accent", "magenta"},
 	{"primary", "blue"},
@@ -73,19 +76,12 @@ func roleNameList() string {
 	return strings.Join(names, ", ")
 }
 
-// paletteField reads [palette]: only the 16 ANSI names are allowed; missing names keep their ANSI index.
-func paletteField(raw map[string]any) (map[string]tcell.Color, error) {
+// paletteField reads the merged [palette] table: only the 16 ANSI names are allowed; missing names
+// keep their ANSI index.
+func paletteField(table map[string]any) (map[string]tcell.Color, error) {
 	palette := make(map[string]tcell.Color, len(ansiNames))
 	for i, name := range ansiNames {
 		palette[name] = tcell.PaletteColor(i)
-	}
-	value, ok := raw["palette"]
-	if !ok {
-		return palette, nil
-	}
-	table, ok := value.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("palette must be a table")
 	}
 	for name, rawValue := range table {
 		if _, known := palette[name]; !known {
@@ -100,20 +96,12 @@ func paletteField(raw map[string]any) (map[string]tcell.Color, error) {
 	return palette, nil
 }
 
-// rolesField reads [roles] into a complete role table: each value is a [palette] name, "#RRGGBB" or
-// "default"; missing roles take their roleDefs palette name.
-func rolesField(raw map[string]any, palette map[string]tcell.Color) (map[string]tcell.Color, error) {
+// rolesField reads the merged [roles] table into a complete role table: each value is a [palette]
+// name, "#RRGGBB" or "default"; missing roles take their roleDefs palette name.
+func rolesField(table map[string]any, palette map[string]tcell.Color) (map[string]tcell.Color, error) {
 	roles := make(map[string]tcell.Color, len(roleDefs))
 	for _, r := range roleDefs {
-		roles[r.name] = palette[r.palette]
-	}
-	value, ok := raw["roles"]
-	if !ok {
-		return roles, nil
-	}
-	table, ok := value.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("roles must be a table")
+		roles[r.name] = palette[r.palette] // "default" is no palette name: the zero colour is tcell.ColorDefault
 	}
 	for name, rawValue := range table {
 		if _, known := roles[name]; !known {
@@ -144,22 +132,23 @@ func rolesField(raw map[string]any, palette map[string]tcell.Color) (map[string]
 	return roles, nil
 }
 
+// tableField is the top-level table raw[key] (nil when the file has none).
+func tableField(raw map[string]any, key string) (map[string]any, error) {
+	value, ok := raw[key]
+	if !ok {
+		return nil, nil
+	}
+	table, ok := value.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("%s must be a table", key)
+	}
+	return table, nil
+}
+
 // resolveRole resolves the style field (fg, bg or icon) value, which must name a role.
 func resolveRole(field, value string, roles map[string]tcell.Color) (tcell.Color, error) {
 	if color, ok := roles[value]; ok {
 		return color, nil
 	}
 	return tcell.ColorDefault, fmt.Errorf("%s %q is not a role; use one of %s", field, value, roleNameList())
-}
-
-// roleStyle builds a fallback style from role names ("" leaves that side unset).
-func roleStyle(roles map[string]tcell.Color, fg, bg string) tcell.Style {
-	st := tcell.StyleDefault
-	if fg != "" {
-		st = st.Foreground(roles[fg])
-	}
-	if bg != "" {
-		st = st.Background(roles[bg])
-	}
-	return st
 }

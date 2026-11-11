@@ -12,6 +12,16 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
+// DiskUsageSliver is the thin left-edge glyph drawn in the blank left gutter cell for rows whose
+// disk-usage share is under one cell; the proportional tint needs at least one full cell.
+const DiskUsageSliver = '\u258e'
+
+// DiskUsageSliverStyle paints the sliver: the bar accent's background as foreground over the row style.
+func DiskUsageSliverStyle(rowStyle, usageAccent tcell.Style) tcell.Style {
+	_, accentBG, _ := usageAccent.Decompose()
+	return rowStyle.Foreground(accentBG)
+}
+
 // SizeCells is the fixed display width (terminal cells) of the right-aligned size column shared
 // by the plain panel list and the carousel.
 const SizeCells = 5
@@ -126,13 +136,19 @@ type MetaAlert struct {
 // MetaCellStyle styles a row's cell at metaCell, relative to the start of the meta segment: an
 // alerting cell takes the alert's foreground and attributes on the row background, like a row
 // indicator (Theme.PanelRowIconForeground, so the cursor's icon color wins and it stays legible
-// on the cursor bar). Any other cell keeps info.
+// on the cursor bar; then it is bold, since the row's other cells share that colour). Any other cell
+// keeps info.
 func MetaCellStyle(info tcell.Style, metaCell int, alerts []MetaAlert, cursorStyleKey string, th theme.Theme) tcell.Style {
 	for _, a := range alerts {
 		if metaCell >= a.Start && metaCell < a.End {
 			_, bg, _ := info.Decompose()
-			_, _, attrs := a.Style.Decompose()
-			return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, a.Style)).Background(bg).Attributes(attrs)
+			own, _, attrs := a.Style.Decompose()
+			fg := th.PanelRowIconForeground(cursorStyleKey, a.Style)
+			st := tcell.StyleDefault.Foreground(fg).Background(bg).Attributes(attrs)
+			if fg != own {
+				st = st.Bold(true) // the cursor took its colour (its neighbours have it too): bold keeps it apart
+			}
+			return st
 		}
 	}
 	return info

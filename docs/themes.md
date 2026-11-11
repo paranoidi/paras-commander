@@ -6,7 +6,7 @@ Colors, text styles and status glyphs come from a TOML theme file. One theme shi
 
 - Options -> Theme opens the theme picker. Typing fuzzy-filters the list. Moving the cursor previews the highlighted theme live once you stop (holding an arrow key does not load every theme on the way), `Enter` applies it and saves `theme` in `config.toml`, `Esc` restores the previous theme, and the footer shows two entries:
   - **Reload** (`F5`, on when the picker opens): while it is on, the highlighted theme's file in the themes directory is checked twice a second and the preview reloads by itself when the file changes, so you can edit a theme and watch it. Switching it on reloads the highlighted theme at once. Built-in themes with no file on disk are not watched. A file that fails to load is reported once per saved change.
-  - **Preview** (`F6` next page, `Shift+F6` previous page, wrapping; the footer shows the current page, such as "Preview 1/3"): the preview pane has several pages and the picker opens on page 1. Page 1 shows sample inputs (with a tooltip under the active one), checkboxes and sample buttons (selected, unselected and a red destructive one, as in the delete confirmation). Pages 2 and 3 fill the whole right side of the dialog with the background the Jobs view uses, so they look as they do in the app. Page 2 shows app samples: a menu bar with an open pulldown, one job row per job status (with sample ETA and speed), and progress bars (active, inactive and completed). Page 3 shows a file panel with sample entries: a parent row, folders (one with a disk usage bar, one being scanned, one skipped), symlinks (one broken), files of several types, selected rows and the cursor, pinned, new, renamed and job marks, a no-permission file, and git statuses. The dialog keeps its size on every page, and on a short terminal the pane shows what fits.
+  - **Preview** (`F6` next page, `Shift+F6` previous page, wrapping; the footer shows the current page, such as "Preview 1/3"): the preview pane has several pages and the picker opens on page 1. Page 3 shows sample inputs (with a tooltip under the active one), checkboxes and sample buttons (selected, unselected and a red destructive one, as in the delete confirmation). Pages 1 and 2 fill the whole right side of the dialog with the background the Jobs view uses, so they look as they do in the app. Page 2 shows app samples: a menu bar with an open pulldown, one job row per job status (with sample ETA and speed), and progress bars (active, inactive and completed). Page 1 shows a file panel with sample entries: a parent row, folders (one with a disk usage bar, one being scanned, one skipped), symlinks (one broken), files of several types, selected rows and the cursor, pinned, new, renamed and job marks, a no-permission file, and git statuses. The dialog keeps its size on every page, and on a short terminal the pane shows what fits.
   The page keys can be rebound in `[dialog.theme]` in `keybindings.toml`.
 - Or set it directly:
 
@@ -22,7 +22,14 @@ Put `*.toml` files in `themes/` inside the config directory (`~/.config/pc/theme
 
 ## Structure
 
-The best starting point is a copy of the built-in `themes/default.toml` from the repository; every key in it is documented by position and comment. Some newer optional keys (for example the progress light-bar gradients) fall back to built-in values when absent, but start from a full copy rather than a partial file.
+A theme file only needs what it changes: every palette color, role, style and icon it leaves out is inherited from the built-in default theme. A theme with just a `name` and a `[palette]` recolors the whole interface; add `[roles]` entries to retarget individual intents, and style or icon entries only where a style should look different. The built-in `themes/default.toml` in the repository lists every key, documented by position and comment, and is the reference for what can be set.
+
+Inheritance works key by key:
+
+- `[palette]`, `[roles]` and `[icons.*]` entries replace the same entry of the default theme.
+- A style entry replaces the default's style whole: `{ fg = "fg" }` does not keep the default's bold or background.
+- The progress light-bar gradients (`menu.progress.done.gfx.0` to `gfx.9`, and the `delete` and `remove` ones) are replaced as a set: if you define any step of a gradient, the default's steps for that gradient are dropped, so a shorter gradient stays short.
+- Unknown keys, and colors that are not roles in a style, are still errors in your file.
 
 ```toml
 name = "mine"
@@ -33,14 +40,14 @@ red = 1
 # ... through bright_white = 15
 
 [roles]              # intents: a [palette] name, "#RRGGBB" or "default"
-bg = "black"         # dark well (input and list background)
+bg = "#303446"       # background of the whole UI; "default" keeps the terminal's own
 surface = "bright_black"   # dialog / chip fill
 muted = "bright_black"     # dimmed text
-# ... 29 roles in all, listed in themes/default.toml
+# ... 32 roles in all, listed in themes/default.toml
 
 [menu.bar]
 active   = { fg = "fg" }
-selected = { fg = "cursor_fg", bg = "cursor_bg", bold = true }
+selected = { fg = "focus_fg", bg = "focus_bg", bold = true }
 
 [panel.row]
 directory = { fg = "directory", bold = true }
@@ -50,12 +57,14 @@ Colors come in two layers. `[palette]` holds only raw colors: the 16 ANSI slot n
 
 | Role | Default | Used for |
 |---|---|---|
-| `bg` | `black` | dark well: panel, input and list backgrounds, progress tracks |
+| `bg` | `default` | background of every cell that has none of its own (so the whole file list and every plain area), input and list backgrounds, progress tracks; `default` keeps the terminal's own background |
 | `surface` | `bright_black` | dialog fill, chips, bar tracks, speed pill |
-| `header_bg` | `blue` | panel headers, menu dropdown fill |
-| `cursor_bg` / `cursor_fg` | `cyan` / `black` | the current item: cursor row, selected menu entry, active button, hovered footer entry |
-| `cursor_dim` | `black` | cursor row of an inactive or blocked panel |
-| `highlight_bg` | `bright_blue` | selected dropdown entry, disk usage cursor on a selected row, mount mark |
+| `header_bg` | `blue` | panel headers |
+| `menu_bg` | `blue` | menu dropdown fill and frame |
+| `focus_bg` / `focus_fg` | `cyan` / `black` | the focused item: open menu-bar title, selected pulldown entry, active dialog button, selected completion entry, hovered footer entry |
+| `file_cursor_bg` / `file_cursor_fg` | `cyan` / `black` | cursor row of an active file list (panels, duplicate finder) |
+| `file_cursor_dim` | `black` | cursor row of an inactive or blocked panel |
+| `highlight_bg` | `bright_blue` | clickable part of the hovered footer entry, disk usage cursor on a selected row, mount mark |
 | `range_bg` / `range_unselect_bg` | `bright_black` / `red` | tints of rows covered by a pending range select / unselect |
 | `inverse_bg` | `white` | light boxes: tooltips, info toast |
 | `fg` / `fg_strong` | `white` / `bright_white` | body text / emphasised text |
@@ -72,12 +81,37 @@ Main sections:
 |---|---|
 | `[palette]`, `[roles]` | The two color layers described above |
 | `[status]` | One color per job state (scanning, queued, running, paused, decision, failed, canceling, canceled, completed), used by the menu bar, Jobs and Commands views and file-list marks; `scanning` also colors disk usage scans, fileindex scans and spinners |
-| `[panel.*]` | Active, inactive and blocked (dimmed under dialogs) panel chrome; rows, marks, folder icons, git status, fileindex states (`[panel.fileindex]`, glyphs in `[icons.fileindex_state]`), [meta column alerts](meta-columns.md#alert-colors) (`[panel.meta]`), scrollbar, disk usage (`[panel.usage]`; an optional `icon` color replaces the color of icons where the bar is behind them) |
+| `[panel.*]` | Active, inactive and blocked (dimmed under dialogs) panel chrome; rows, marks, folder icons, git status, fileindex states (`[panel.fileindex]`, glyphs in `[icons.fileindex_state]`), [meta column alerts](meta-columns.md#alert-colors) (`[panel.meta]`), scrollbar, disk usage (`[panel.usage]`; an optional `icon` table recolors chosen icon groups where the bar is behind them, see [Icons on the disk usage bar](#icons-on-the-disk-usage-bar)) |
 | `[menu.*]` | Menu bar, pulldowns, status commands (`menu.status`, `menu.status.separator`), job strip, progress bar, speed pill |
 | `[dialog.*]` | Dialog frame, buttons, inputs, options, progress |
-| `[preview]` | F3 fullscreen preview: `search_icon` (optional, foreground only), the search bar's leading icon |
+| `[preview]` | F3 fullscreen preview: `search_icon` (foreground only), the search bar's leading icon |
 | `[jobs.*]`, `[compare]`, `terminal.text` | Jobs view, compare view, embedded terminal |
 | `[icons.*]` | Glyphs |
+
+## Icons on the disk usage bar
+
+The disk usage bar styles (`[panel.usage]` `normal` and `selected`, and `usage.cursor` / `usage.cursor.selected` under `[panel.active]` and `[panel.inactive]`) take an optional `icon` table that recolors icon groups on the cells where the bar is behind them. Write it as dotted keys:
+
+```toml
+[panel.usage]
+normal = { fg = "fg", bg = "surface", icon.file = "faint", icon.git = "faint" }
+```
+
+Each value is a role. The groups are:
+
+| Group | Icons |
+|---|---|
+| `folder`, `folder_expanded`, `folder_scanning` | The plain, expanded (tree) and scanning folder icons |
+| `folder_open`, `folder_mount`, `folder_excluded` | Folders open in the other panel, mount points and excluded folders |
+| `file` | Every file icon in the icon strip (file types, broken links, image and video preview tints) |
+| `preview_loading` | The icon shown while a file preview is loading |
+| `fileindex` | The fileindex state icon |
+| `git` | Git status cells |
+| `suffix` | Marks after the file name (new, renamed, pinned, job and so on) |
+
+A group you do not list keeps the color it has off the bar: the cursor row's icon color on the cursor row, otherwise the icon's own color. Past the end of the bar, icons always keep their own colors. An unknown group name is an error, and so is a plain color string on a bar style (a cursor row style, such as `row.cursor`, takes a plain `icon = "<role>"` string instead). Like any style, a bar style you redefine replaces the default's whole, groups included: list every group you want.
+
+The default theme recolors `file`, `folder_open`, `folder_mount`, `folder_excluded`, `fileindex`, `git` and `suffix` on `normal` and `selected` and leaves the plain, expanded and scanning folder icons and the loading icon alone so they stay readable on the bar.
 
 ## Status glyphs
 

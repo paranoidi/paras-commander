@@ -54,27 +54,6 @@ func TestJobsProgressStylesCompleted(t *testing.T) {
 	}
 }
 
-func TestJobsProgressCompletedFallsBackToActive(t *testing.T) {
-	t.Parallel()
-	data := testTheme(t, "completedfallback", nil, map[string]string{
-		"jobs.progress.fill":          `{ fg = "bg", bg = "warning" }`,
-		"jobs.progress.label.on_fill": `{ fg = "fg", bold = true }`,
-	})
-	th, err := parse(data)
-	if err != nil {
-		t.Fatalf("parse: %v", err)
-	}
-	fg, bg, attrs := th.JobsProgressCompletedFill.Decompose()
-	labelFG, _, labelAttrs := th.JobsProgressLabelOnFill.Decompose()
-	_, fillBG, _ := th.JobsProgressFill.Decompose()
-	if fg != labelFG || attrs != labelAttrs {
-		t.Fatal("completed fill should fall back to the active label foreground and attrs")
-	}
-	if bg != fillBG {
-		t.Fatal("completed fill should fall back to the active fill background")
-	}
-}
-
 func stylesEqual(a, b tcell.Style) bool {
 	aFG, aBG, aAttrs := a.Decompose()
 	bFG, bBG, bAttrs := b.Decompose()

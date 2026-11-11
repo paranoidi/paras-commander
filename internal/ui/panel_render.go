@@ -437,6 +437,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 	var cur localfs.Entry
 	selected := false
 	fillCols := 0
+	sliver := false
 
 	var subtreeMark bool
 	var newFileTier panellist.NewFileMarkTier
@@ -505,7 +506,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		listContentStart += treeGutterWidth
 		if display.ShowDiskUsage && display.Painter != nil && diskDenom > 0 && !rowInRangeSpan(entryIndex, state, ctx) {
 			barMaxWidth := leftGutter + gitStrip + iconStrip + treeGutterWidth + nameWidth
-			fillCols = diskUsageFillColumns(entryDiskUsageBytes(entry, true, display.Painter), diskDenom, barMaxWidth)
+			fillCols, sliver = diskUsageFillColumns(entryDiskUsageBytes(entry, true, display.Painter), diskDenom, barMaxWidth)
 		}
 	}
 
@@ -526,12 +527,12 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 	if !ctx.ChromeBlocked && fillCols > 0 {
 		barIconKey = panelStyle.Styles.DiskUsageBarIconKey(ctx.FileListActive, entryIndex == state.Cursor, selected)
 	}
-	// iconKeyAt is the icon style key of a row column: the bar's on bar cells, else the cursor row's.
-	iconKeyAt := func(absCol int) string {
-		if barIconKey != "" && absCol < fillCols {
+	// barKeyAt is the disk-usage bar's icon key for a row column: "" past the bar's end.
+	barKeyAt := func(absCol int) string {
+		if absCol < fillCols {
 			return barIconKey
 		}
-		return cursorIconKey
+		return ""
 	}
 	if hasEntry {
 		spans = matchSpans(cur, listTextWidth, state.MatchRanges(entryIndex), entryIndex == state.Cursor, panelStyle.Styles, rowOpts, func(di int) tcell.Style {
@@ -557,6 +558,10 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		for i := 0; i < leftGutter; i++ {
 			screen.SetContent(rect.X+1+i, y, ' ', nil, blendCell(i))
 		}
+		if sliver && !ctx.ChromeBlocked {
+			accent := panelStyle.Styles.DiskUsageBarStyle(ctx.FileListActive, entryIndex == state.Cursor, selected)
+			screen.SetContent(rect.X+1, y, panellist.DiskUsageSliver, nil, panellist.DiskUsageSliverStyle(blendCell(0), accent))
+		}
 	}
 	var diskPending bool
 	var diskExcluded bool
@@ -578,7 +583,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 	if display.ShowIcons && state.ListLayout != panel.ListLayoutTree {
 		drawPanelRowIconStrip(screen, p, panelRowPaintState{
 			Y: y, HasEntry: hasEntry, Entry: cur, Style: style, BlendCell: blendCell,
-			IconKey: iconKeyAt(leftGutter + gitStrip), DiskPending: diskPending, DiskExcluded: diskExcluded,
+			IconKey: cursorIconKey, BarKey: barKeyAt(leftGutter + gitStrip), DiskPending: diskPending, DiskExcluded: diskExcluded,
 		})
 	}
 	if treeGutterWidth > 0 {
@@ -591,7 +596,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 			iconX := gutterX + connW
 			iconCol := leftGutter + gitStrip + iconStrip + connW
 			iconStripStyle := blendCell(iconCol)
-			iconCtx := panelIconStripContextFor(display, ctx, state, cur, iconKeyAt(iconCol), diskPending, diskExcluded)
+			iconCtx := panelIconStripContextFor(display, ctx, state, cur, cursorIconKey, barKeyAt(iconCol), diskPending, diskExcluded)
 			iconCtx.Folder.TreeExpanded = treeExpanded
 			iconCtx.Folder.TreeLoading = treeLoading
 			paintPanelIconStrip(screen, iconX, y, cur, iconStripStyle, panelStyle.Styles, iconCtx)
@@ -600,7 +605,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 	primitive.StyledTextCellwise(screen, listContentStart, y, listTextWidth, text, func(ci int) tcell.Style {
 		st := blendCell(leftGutter + gitStrip + iconStrip + treeGutterWidth + ci)
 		if ci >= nameWidth {
-			return panellist.MetaCellStyle(panelStyle.Styles.PanelListingInfoStyle(st), ci-panellist.MetaStart(nameWidth), metaAlerts, cursorIconKey, panelStyle.Styles)
+			return panellist.MetaCellStyle(panelStyle.Styles.PanelListingInfoStyle(st, cursorIconKey), ci-panellist.MetaStart(nameWidth), metaAlerts, cursorIconKey, panelStyle.Styles)
 		}
 		return st
 	}, spans)
@@ -654,7 +659,8 @@ type panelRowPaintState struct {
 	FillCols     int
 	BlendCell    func(int) tcell.Style
 	BarIconKey   string // Theme.DiskUsageBarIconKey of the row; applies to cells before FillCols
-	IconKey      string
+	IconKey      string // the row's icon key (cursor row's or "")
+	BarKey       string // Theme.DiskUsageBarIconKey when the bar is behind the icon strip, else ""
 	DiskPending  bool
 	DiskExcluded bool
 }
@@ -689,8 +695,8 @@ func drawPanelRowIconStrip(screen tcell.Screen, p panelRowParams, rp panelRowPai
 		return
 	}
 	iconStripStyle := rp.BlendCell(p.LeftGutter + p.GitStrip)
-	paintPanelIconStrip(screen, p.IconStart, rp.Y, rp.Entry, iconStripStyle, p.PanelStyle.Styles,
-		panelIconStripContextFor(p.Display, p.Ctx, p.State, rp.Entry, rp.IconKey, rp.DiskPending, rp.DiskExcluded))
+	iconCtx := panelIconStripContextFor(p.Display, p.Ctx, p.State, rp.Entry, rp.IconKey, rp.BarKey, rp.DiskPending, rp.DiskExcluded)
+	paintPanelIconStrip(screen, p.IconStart, rp.Y, rp.Entry, iconStripStyle, p.PanelStyle.Styles, iconCtx)
 }
 
 // panelNameColumnWidth is the file-name column width in cells: the row text left after the
@@ -890,9 +896,9 @@ func drawPanelCarousel(screen tcell.Screen, p panelCarouselParams) bool {
 		JobMark: func(path string) (panellist.JobSuffix, string) {
 			return jobRowSuffix(path, display.JobMarks, panelStyle.Styles, false) // carousel has no index column
 		},
-		PaintIcon: func(sc tcell.Screen, x, y int, entry localfs.Entry, rowStyle tcell.Style, cursorKey string, diskPending, diskExcluded bool) {
-			paintPanelIconStrip(sc, x, y, entry, rowStyle, panelStyle.Styles,
-				panelIconStripContextFor(display, ctx, state, entry, cursorKey, diskPending, diskExcluded))
+		PaintIcon: func(sc tcell.Screen, x, y int, entry localfs.Entry, rowStyle tcell.Style, cursorKey, barKey string, diskPending, diskExcluded bool) {
+			iconCtx := panelIconStripContextFor(display, ctx, state, entry, cursorKey, barKey, diskPending, diskExcluded)
+			paintPanelIconStrip(sc, x, y, entry, rowStyle, panelStyle.Styles, iconCtx)
 		},
 		NewFileMark: func(entry localfs.Entry) panellist.NewFileMarkTier {
 			return state.NewFileMarkTier(entry)

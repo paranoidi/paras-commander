@@ -56,9 +56,9 @@ type themePreviewPage struct {
 // themePreviewPages are the preview pages in cycling order; add a page by appending an entry. The pane
 // is as tall as the tallest page, so cycling never resizes the dialog.
 var themePreviewPages = []themePreviewPage{
-	{rows: themeInputPageRows, paint: paintThemeInputPage},
-	{rows: ThemeAppMenuRows + ThemeAppJobRows + ThemeAppProgressRows + themeAppSectionGaps, appBG: true, paint: paintThemeAppPage},
 	{rows: ThemePanelRows, appBG: true, paint: paintThemePanelPage},
+	{rows: ThemeAppMenuRows + ThemeAppJobRows + ThemeAppProgressRows + themeAppSectionGaps, appBG: true, paint: paintThemeAppPage},
+	{rows: themeInputPageRows, paint: paintThemeInputPage},
 }
 
 // ThemePreviewPageCount is how many preview pages the picker cycles through.

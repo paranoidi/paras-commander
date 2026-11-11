@@ -2,6 +2,7 @@ package theme
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"sort"
@@ -122,7 +123,7 @@ type Theme struct {
 	PanelRowMarkJobMove   tcell.Style
 	PanelRowMarkJobDelete tcell.Style
 	// PanelRowMarkJobRemoving styles icons.filelist.move_removing, the operation icon of a move
-	// source being deleted after its copy (falls back to PanelRowMarkJobDelete).
+	// source being deleted after its copy.
 	PanelRowMarkJobRemoving tcell.Style
 	// PanelRowTreeConnector styles tree branch/continuation icons in tree-style lists.
 	PanelRowTreeConnector tcell.Style
@@ -134,7 +135,7 @@ type Theme struct {
 	PanelText tcell.Style
 	// PanelHint highlights rows related to the cursor row (e.g. duplicate siblings in the dedupe treeview).
 	PanelHint tcell.Style
-	// PanelEmpty styles the empty-list text ([panel] empty); optional, falls back to bright black.
+	// PanelEmpty styles the empty-list text ([panel] empty).
 	PanelEmpty        tcell.Style
 	PanelCursorActive tcell.Style
 	// PanelCursorRange / PanelCursorRangeSelected style the cursor row while a range select
@@ -172,13 +173,13 @@ type Theme struct {
 	PanelStatusImageSixelTmux tcell.Style
 	PanelScrollbarTrack       tcell.Style
 	PanelScrollbarThumb       tcell.Style
-	// PanelScrollbarMatch marks search-match rows on the scrollbar rail; optional, falls back to the
-	// fuzzy.highlight.cursor foreground.
+	// PanelScrollbarMatch marks search-match rows on the scrollbar rail.
 	PanelScrollbarMatch tcell.Style
-	// PanelFileIconFG maps cursor-row and disk-usage bar style keys (e.g. panel.active.row.cursor,
-	// panel.usage.normal) to file-devicon FG when panel file icons are enabled. Absent keys use
-	// devicons' suggested hex.
+	// PanelFileIconFG maps cursor-row style keys (e.g. panel.active.row.cursor) to file-devicon FG
+	// when panel file icons are enabled. Absent keys use devicons' suggested hex.
 	PanelFileIconFG map[string]tcell.Color
+	// DiskUsageBarIconFG maps a disk-usage bar style key to the colors it gives each BarIconGroup.
+	DiskUsageBarIconFG map[string]map[BarIconGroup]tcell.Color
 
 	// PanelBlocked* is used for both file panels when a modal or pulldown menu
 	// has focus so the file browser reads visually behind the overlay.
@@ -217,31 +218,28 @@ type Theme struct {
 	PanelIconPreviewWarm tcell.Style
 	// PanelIconPreviewCold styles image/video file icons whose prefetch cache is not yet warm.
 	PanelIconPreviewCold tcell.Style
-	// PanelIconBrokenLink styles the file icon of a symlink whose target does not resolve;
-	// optional, falls back to the palette's red.
+	// PanelIconBrokenLink styles the file icon of a symlink whose target does not resolve.
 	PanelIconBrokenLink tcell.Style
 	// MenuProgress* styles segmented progress in the menu-bar jobs strip.
 	MenuProgressDone      tcell.Style
 	MenuProgressRemaining tcell.Style
-	// MenuProgressDoneGfx is the optional moving light-bar gradient over the done span
-	// (menu.progress.done.gfx.0..gfx.9, gfx.0 = head). Empty when the theme defines none,
-	// in which case the done span renders as a static MenuProgressDone fill.
+	// MenuProgressDoneGfx is the moving light-bar gradient over the done span
+	// (menu.progress.done.gfx.0..gfx.9, gfx.0 = head). Empty only for a hand-built Theme,
+	// whose done span then renders as a static MenuProgressDone fill.
 	MenuProgressDoneGfx []tcell.Style
-	// MenuProgressDeleteGfx is the optional light-bar gradient used while the bar represents
-	// deletion (menu.progress.delete.gfx.0..gfx.9). Empty when the theme defines none —
-	// the renderer falls back to MenuProgressDoneGfx.
+	// MenuProgressDeleteGfx is the light-bar gradient used while the bar represents
+	// deletion (menu.progress.delete.gfx.0..gfx.9). When empty the renderer uses MenuProgressDoneGfx.
 	MenuProgressDeleteGfx []tcell.Style
-	// MenuProgressRemoveGfx is the optional light-bar gradient used while a move removes the
-	// sources it copied (menu.progress.remove.gfx.0..gfx.9). Empty when the theme defines none —
-	// the renderer falls back to MenuProgressDeleteGfx, then MenuProgressDoneGfx.
+	// MenuProgressRemoveGfx is the light-bar gradient used while a move removes the
+	// sources it copied (menu.progress.remove.gfx.0..gfx.9). When empty the renderer uses
+	// MenuProgressDeleteGfx, then MenuProgressDoneGfx.
 	MenuProgressRemoveGfx []tcell.Style
 	// MenuSpeedCap and MenuSpeedText style the transfer-speed pill left of the menu-bar progress
-	// bar (menu.speed.cap, menu.speed.text). Both are optional; the fallbacks match the default
-	// theme's values.
+	// bar (menu.speed.cap, menu.speed.text).
 	MenuSpeedCap  tcell.Style
 	MenuSpeedText tcell.Style
 	// MenuStatusSeparator styles the glyph between (and after) status-command segments at the
-	// top-left of the menu bar (menu.status.separator, optional; falls back to dark grey).
+	// top-left of the menu bar (menu.status.separator).
 	MenuStatusSeparator              tcell.Style
 	PanelUsageNormal                 tcell.Style
 	PanelUsageSelected               tcell.Style
@@ -275,11 +273,10 @@ type Theme struct {
 	DialogTitle   tcell.Style
 	DialogText    tcell.Style
 	DialogSurface tcell.Style
-	// DialogTextSelect is the optional background-only highlight for selectable text spans (dialog.text_select).
+	// DialogTextSelect is the background-only highlight for selectable text spans (dialog.text_select).
 	DialogTextSelect tcell.Style
 	DialogAccent     tcell.Style
-	// DialogAccentAlt is the shortcut letter that needs Alt right now (optional dialog.accent_alt;
-	// fallback dialog.accent).
+	// DialogAccentAlt is the shortcut letter that needs Alt right now (dialog.accent_alt).
 	DialogAccentAlt                tcell.Style
 	DialogSearchIcon               tcell.Style
 	DialogInputActive              tcell.Style
@@ -314,13 +311,11 @@ type Theme struct {
 	DialogCompletionItemSelected   tcell.Style
 	DialogCompletionMatch          tcell.Style
 	DialogCompletionMatchSelected  tcell.Style
-	// TooltipText is a dialog tooltip's box and text (optional tooltip.text; fallback
-	// dialog.completion.item); TooltipInfo the foreground of its info icon on that box (optional
-	// tooltip.info, foreground only; fallback dialog.accent).
+	// TooltipText is a dialog tooltip's box and text (tooltip.text); TooltipInfo the
+	// foreground of its info icon on that box (tooltip.info, foreground only).
 	TooltipText tcell.Style
 	TooltipInfo tcell.Style
-	// PreviewSearchIcon is the F3 preview search bar's leading icon (optional preview.search_icon,
-	// foreground only); zero when the theme omits it.
+	// PreviewSearchIcon is the F3 preview search bar's leading icon (preview.search_icon, foreground only).
 	PreviewSearchIcon tcell.Style
 
 	LeaderMenuSurface  tcell.Style
@@ -333,15 +328,15 @@ type Theme struct {
 	MessageInfo  tcell.Style
 	MessageWarn  tcell.Style
 	MessageError tcell.Style
-	// MessageSweep styles the leading edge cell of a toast sweeping in (optional message.sweep).
+	// MessageSweep styles the leading edge cell of a toast sweeping in (message.sweep).
 	MessageSweep tcell.Style
-	// MessageSuccess styles success toasts (optional message.success, black on green).
+	// MessageSuccess styles success toasts (message.success).
 	MessageSuccess tcell.Style
 
 	JobsRow tcell.Style
 	// JobsRowHover is the Jobs, Commands or Messages list row under the mouse pointer (not the
 	// cursor row; JobsRow is their row base): its background (and plain text foreground) under
-	// the row's own status colors (optional jobs.row.hover; fallback white on grey).
+	// the row's own status colors (jobs.row.hover).
 	JobsRowHover tcell.Style
 	// Jobs list progress column (horizontal bar with centered percentage).
 	JobsProgressTrack        tcell.Style
@@ -358,13 +353,12 @@ type Theme struct {
 	JobsProgressInactiveLabelOnFill  tcell.Style
 	JobsProgressInactiveLabelOnTrack tcell.Style
 	// JobsProgressCompletedFill styles a completed job's bar and its percentage text; the bar is
-	// always full, so it has no track or label keys (optional jobs.progress.completed.fill;
-	// defaults to the active fill background with the active label on it).
+	// always full, so it has no track or label keys (jobs.progress.completed.fill).
 	JobsProgressCompletedFill tcell.Style
 
 	// JobsOperationSuccess / JobsOperationFailed / JobsOperationSkipped style an Operations pane
 	// row's result icon and the Details result counts (jobs.operations.success / .failed /
-	// .skipped; optional, default to status.completed / .failed / .paused).
+	// .skipped).
 	JobsOperationSuccess tcell.Style
 	JobsOperationFailed  tcell.Style
 	JobsOperationSkipped tcell.Style
@@ -397,16 +391,14 @@ type Theme struct {
 	FooterLabel      tcell.Style
 	FooterLabelShift tcell.Style
 	// FooterHover paints the whole footer entry (key and hint) under the mouse pointer
-	// (optional footer.hover; fallback black on cyan).
+	// (footer.hover).
 	FooterHover tcell.Style
 	// FooterHoverActive paints the part of the hovered footer entry a click would press (its
-	// Shift-alternative word, or its key label and main hint) (optional footer.hover.active;
-	// fallback bright white on cyan).
+	// Shift-alternative word, or its key label and main hint) (footer.hover.active).
 	FooterHoverActive tcell.Style
 
-	// TerminalText styles the embedded terminal panel strip ([terminal] in TOML). Optional
-	// (zero value falls back — see TerminalTextStyle) so imported/user themes without a
-	// [terminal] table keep rendering correctly.
+	// TerminalText styles the embedded terminal panel strip ([terminal] in TOML). A hand-built zero
+	// Theme falls back — see TerminalTextStyle.
 	TerminalText tcell.Style
 }
 
@@ -431,8 +423,9 @@ func (t Theme) DialogSearchIconStyle(base tcell.Style) tcell.Style {
 }
 
 // PanelRowIconForeground returns the foreground for row adornment icons: file-list suffix icons,
-// folder icon strip, and file devicons when the matching panel cursor row or disk-usage bar style
-// defines icon; otherwise the base indicator style foreground is used.
+// folder icon strip, and file devicons when the matching panel cursor row style
+// defines icon; otherwise the base indicator style foreground is used. (Disk-usage bar styles take
+// per-group colors through DiskUsageBarIconColor instead.)
 func (t Theme) PanelRowIconForeground(cursorStyleKey string, base tcell.Style) tcell.Color {
 	if cursorStyleKey != "" && t.PanelFileIconFG != nil {
 		if c, ok := t.PanelFileIconFG[cursorStyleKey]; ok {
@@ -707,7 +700,7 @@ func (t Theme) PanelBottomIndicator(id string, fileListActive, chromeBlocked boo
 	}
 }
 
-// Icon keys in the [icons] table (optional entries — see accessors for defaults).
+// Icon keys in the [icons] table (every key is defined by themes/default.toml).
 const (
 	IconKeyFile                     = "file"
 	IconKeyFolder                   = "folder"
@@ -749,7 +742,7 @@ const (
 	IconKeyDedupPotential           = "dedup.potential"
 )
 
-// Menu-bar jobs strip icon keys ([icons] table); optional — see IconMenuJob / IconMenuProgress*.
+// Menu-bar jobs strip icon keys ([icons] table); see IconMenuJob / IconMenuProgress*.
 const (
 	IconKeyLeaderMenuArrow       = "leader_menu.arrow"
 	IconKeyMenuProgressDone      = "menu.progress.done"
@@ -768,110 +761,110 @@ const (
 
 // IconWorking returns the in-progress icon appended to selection-size indicators.
 func (t Theme) IconWorking() string {
-	return t.iconOr(IconKeyWorking, "\uf017")
+	return t.icon(IconKeyWorking)
 }
 
 // IconFile returns the generic file icon (e.g. group-select result preview counts) from
 // [icons] file.
 func (t Theme) IconFile() string {
-	return t.iconOr(IconKeyFile, "")
+	return t.icon(IconKeyFile)
 }
 
 // IconFolder returns the generic folder icon (e.g. group-select result preview counts) from
 // [icons] folder.
 func (t Theme) IconFolder() string {
-	return t.iconOr(IconKeyFolder, "")
+	return t.icon(IconKeyFolder)
 }
 
 // IconHiddenDotfiles returns the dotfiles-hidden bottom-indicator icon from [icons] hidden_dotfiles.
 func (t Theme) IconHiddenDotfiles() string {
-	return t.iconOr(IconKeyHiddenDotfiles, "\U000F06D1") // nf-md-eye_off_outline (Material Design / Nerd Fonts PUA)
+	return t.icon(IconKeyHiddenDotfiles) // nf-md-eye_off_outline (Material Design / Nerd Fonts PUA)
 }
 
-// IconMetaRunning returns the icon shown in the meta column while a command is executing.
+// IconMetaRunning returns the marker shown in size and meta columns while their value is pending.
 func (t Theme) IconMetaRunning() string {
-	return t.iconOr(IconKeyMetaRunning, "\uf141")
+	return t.icon(IconKeyMetaRunning)
 }
 
 // IconStash returns the selection-stash bottom-indicator icon from [icons] stash.
 func (t Theme) IconStash() string {
-	return t.iconOr(IconKeyStash, "\ue73d")
+	return t.icon(IconKeyStash)
 }
 
 // IconPin returns the menu-bar pin-count badge icon from [icons] pin.
 func (t Theme) IconPin() string {
-	return t.iconOr(IconKeyPin, "\U000F0403")
+	return t.icon(IconKeyPin)
 }
 
 // IconPinRune returns IconPin() as a single rune (zero-alloc), for row-suffix icon
 // slots that are always one rune wide.
 func (t Theme) IconPinRune() rune {
-	return t.iconRuneOr(IconKeyPin, '\U000F0403')
+	return t.iconRune(IconKeyPin)
 }
 
 // IconGit returns the panel Git column header icon from [icons] git.
 func (t Theme) IconGit() string {
-	return t.iconOr(IconKeyGit, "\uf1d3") // Font Awesome git (Nerd Fonts)
+	return t.icon(IconKeyGit) // Font Awesome git (Nerd Fonts)
 }
 
 // IconSelectedMultiLocation returns the icon prepended to the selected strip title
 // when the panel's selections span multiple parent directories.
 func (t Theme) IconSelectedMultiLocation() string {
-	return t.iconOr(IconKeySelectedMultiLocation, "\uef81")
+	return t.icon(IconKeySelectedMultiLocation)
 }
 
 // IconFilelistSelectionSubtree returns the directory nested-selection suffix icon.
 func (t Theme) IconFilelistSelectionSubtree() rune {
-	return t.iconRuneOr(IconKeyFilelistSelectionSubtree, '\u25cb') // ○
+	return t.iconRune(IconKeyFilelistSelectionSubtree) // ○
 }
 
 // IconDedupRelated returns the dedup view suffix icon for rows that are copies of the
 // cursor row's file (same duplicate group), visible even when kept/marked colors win.
 func (t Theme) IconDedupRelated() rune {
-	return t.iconRuneOr(IconKeyDedupRelated, '\uf067')
+	return t.iconRune(IconKeyDedupRelated)
 }
 
 // IconDedupRelatedWithin returns the dedup view suffix icon for collapsed folders
 // that contain a related copy (rather than being one).
 func (t Theme) IconDedupRelatedWithin() rune {
-	return t.iconRuneOr(IconKeyDedupRelatedWithin, '\U000f17a9')
+	return t.iconRune(IconKeyDedupRelatedWithin)
 }
 
 // IconDedupFullDir returns the dedup view suffix icon for directories that exactly
 // duplicate another directory (the content-only tier reuses IconFilelistRenamed).
 func (t Theme) IconDedupFullDir() rune {
-	return t.iconRuneOr(IconKeyDedupFullDir, '\uee86')
+	return t.iconRune(IconKeyDedupFullDir)
 }
 
 // IconDedupHidden returns the dedup view suffix icon warning that a duplicate
 // directory holds entries the scan skipped (hidden, ignored, symlinks, empty dirs).
 func (t Theme) IconDedupHidden() rune {
-	return t.iconRuneOr(IconKeyDedupHidden, '\uf06e')
+	return t.iconRune(IconKeyDedupHidden)
 }
 
 // IconDedupPotential returns the dedup view suffix icon for a file in a potential duplicate set.
 func (t Theme) IconDedupPotential() rune {
-	return t.iconRuneOr(IconKeyDedupPotential, '\uf128')
+	return t.iconRune(IconKeyDedupPotential)
 }
 
 // IconFilelistNew returns the recently-transferred file suffix icon.
 func (t Theme) IconFilelistNew() rune {
-	return t.iconRuneOr(IconKeyFilelistNew, '\uea7f')
+	return t.iconRune(IconKeyFilelistNew)
 }
 
 // IconFilelistRenamed returns the recently-renamed file suffix icon.
 func (t Theme) IconFilelistRenamed() rune {
-	return t.iconRuneOr(IconKeyFilelistRenamed, '\U000f11e8')
+	return t.iconRune(IconKeyFilelistRenamed)
 }
 
 // IconFilelistRangeAnchor returns the suffix icon marking the pending range-select anchor row.
 func (t Theme) IconFilelistRangeAnchor() rune {
-	return t.iconRuneOr(IconKeyFilelistRangeAnchor, '\uf11d')
+	return t.iconRune(IconKeyFilelistRangeAnchor)
 }
 
 // IconFilelistOtherMatch returns the suffix icon for names also present in the other panel.
 func (t Theme) IconFilelistOtherMatch() rune {
-	return t.iconRuneOr(IconKeyFilelistOtherMatch, '\U000f01fc')
+	return t.iconRune(IconKeyFilelistOtherMatch)
 }
 
 // IconKeyFileIndex replaces "fileindex" in a displayed fileindex:// path (Theme.IconFileIndex).
@@ -883,151 +876,131 @@ func (t Theme) IconFileIndex() string {
 	if !t.UseNerdfontIcons {
 		return ""
 	}
-	return t.iconOr(IconKeyFileIndex, "\U000F01BC")
+	return t.icon(IconKeyFileIndex)
 }
 
 // IconFilelistJob returns the file-list job mark icon (role/status colored via
 // Theme.PanelJobMarkStyle; see internal/theme/jobs_style.go).
 func (t Theme) IconFilelistJob() rune {
-	return t.iconRuneOr(IconKeyFilelistJob, '\U000f02ca')
+	return t.iconRune(IconKeyFilelistJob)
 }
 
 // IconFilelistMove returns the file-list operation suffix icon for move/flatten jobs
 // (styled via Theme.PanelRowMarkJobMove).
 func (t Theme) IconFilelistMove() rune {
-	return t.iconRuneOr(IconKeyFilelistMove, '\U000f0ab9')
+	return t.iconRune(IconKeyFilelistMove)
 }
 
 // IconFilelistDelete returns the file-list operation suffix icon for delete jobs
 // (styled via Theme.PanelRowMarkJobDelete).
 func (t Theme) IconFilelistDelete() rune {
-	return t.iconRuneOr(IconKeyFilelistDelete, '\U000f09e7')
+	return t.iconRune(IconKeyFilelistDelete)
 }
 
 // IconFilelistMoveRemoving returns the file-list operation suffix icon for a move source being
 // deleted after its copy (styled via Theme.PanelRowMarkJobRemoving).
 func (t Theme) IconFilelistMoveRemoving() rune {
-	return t.iconRuneOr(IconKeyFilelistMoveRemoving, '\U000f10a5')
+	return t.iconRune(IconKeyFilelistMoveRemoving)
 }
 
 // IconFilelistWorking returns the row-suffix icon for a directory whose async navigation
 // load has been pending longer than the working-indicator delay (colored via
 // Theme.StatusScanning).
 func (t Theme) IconFilelistWorking() rune {
-	return t.iconRuneOr(IconKeyWorking, '')
+	return t.iconRune(IconKeyWorking)
 }
 
 // IconFilelistPreviewLoading returns the icon that replaces the leading file icon while a
 // still/video thumb is prefetching (colored via status.scanning).
 func (t Theme) IconFilelistPreviewLoading() rune {
-	return t.iconRuneOr(IconKeyFilelistPreviewLoading, '\uf03e')
+	return t.iconRune(IconKeyFilelistPreviewLoading)
 }
 
 // IconFilelistNoPermission returns the suffix icon for entries the current user cannot access.
 func (t Theme) IconFilelistNoPermission() rune {
-	return t.iconRuneOr(IconKeyFilelistNoPermission, '\uf023')
+	return t.iconRune(IconKeyFilelistNoPermission)
 }
 
 // IconLeaderMenuArrow returns the separator icon between shortcut key and label in the leader menu.
 func (t Theme) IconLeaderMenuArrow() rune {
-	return t.iconRuneOr(IconKeyLeaderMenuArrow, '\uea9c')
+	return t.iconRune(IconKeyLeaderMenuArrow)
 }
 
 // IconTreeExpand returns the collapsed-node expander icon for tree-style lists
 // (duplicates view; the file-list tree layout later).
 func (t Theme) IconTreeExpand() rune {
-	return t.iconRuneOr(IconKeyTreeExpand, '▶') // ▶
+	return t.iconRune(IconKeyTreeExpand) // ▶
 }
 
 // IconTreeCollapse returns the expanded-node expander icon for tree-style lists.
 func (t Theme) IconTreeCollapse() rune {
-	return t.iconRuneOr(IconKeyTreeCollapse, '▼') // ▼
+	return t.iconRune(IconKeyTreeCollapse) // ▼
 }
 
 // IconTreeLeaf returns the leaf-row gutter icon for tree-style lists.
 func (t Theme) IconTreeLeaf() rune {
-	return t.iconRuneOr(IconKeyTreeLeaf, '·') // ·
+	return t.iconRune(IconKeyTreeLeaf) // ·
 }
 
 // IconTreeContinue returns the ancestor continuation icon for tree-style lists.
 func (t Theme) IconTreeContinue() string {
-	return t.iconOr(IconKeyTreeContinue, "│")
+	return t.icon(IconKeyTreeContinue)
 }
 
 // IconTreeBranch returns the non-last-sibling branch icon for tree-style lists.
 func (t Theme) IconTreeBranch() string {
-	return t.iconOr(IconKeyTreeBranch, "├─")
+	return t.icon(IconKeyTreeBranch)
 }
 
 // IconTreeEnd returns the last-sibling branch icon for tree-style lists.
 func (t Theme) IconTreeEnd() string {
-	return t.iconOr(IconKeyTreeEnd, "└─")
+	return t.icon(IconKeyTreeEnd)
 }
 
 // IconScrollbarThumb returns the panel scrollbar thumb-style position icon.
 func (t Theme) IconScrollbarThumb() rune {
-	return t.iconRuneOr(IconKeyScrollbarThumb, '\u25cf') // ●
+	return t.iconRune(IconKeyScrollbarThumb) // ●
 }
 
 // IconScrollbarMatch returns the scrollbar rail glyph for rows marked as search matches.
 func (t Theme) IconScrollbarMatch() rune {
-	return t.iconRuneOr(IconKeyScrollbarMatch, '\u2588') // █
+	return t.iconRune(IconKeyScrollbarMatch) // █
 }
 
 // IconMenuProgressDone returns the filled segment icon for the menu-bar progress bar.
 func (t Theme) IconMenuProgressDone() rune {
-	return t.iconRuneOr(IconKeyMenuProgressDone, '\u25cf') // ●
+	return t.iconRune(IconKeyMenuProgressDone) // ●
 }
 
 // IconMenuProgressRemaining returns the empty segment icon for the menu-bar progress bar.
 func (t Theme) IconMenuProgressRemaining() rune {
-	return t.iconRuneOr(IconKeyMenuProgressRemaining, '\u25cb') // ○
+	return t.iconRune(IconKeyMenuProgressRemaining) // ○
 }
 
 // IconMenuSpeedLeft returns the left cap icon for the menu-bar transfer-speed pill.
 func (t Theme) IconMenuSpeedLeft() rune {
-	return t.iconRuneOr(IconKeyMenuSpeedLeft, '[')
+	return t.iconRune(IconKeyMenuSpeedLeft)
 }
 
 // IconMenuSpeedRight returns the right cap icon for the menu-bar transfer-speed pill.
 func (t Theme) IconMenuSpeedRight() rune {
-	return t.iconRuneOr(IconKeyMenuSpeedRight, ']')
+	return t.iconRune(IconKeyMenuSpeedRight)
 }
 
 // IconMenuStatusSeparator returns the glyph drawn between and after status-command segments
 // at the top-left of the menu bar.
 func (t Theme) IconMenuStatusSeparator() rune {
-	return t.iconRuneOr(IconKeyMenuStatusSeparator, '\u00b7') // ·
+	return t.iconRune(IconKeyMenuStatusSeparator) // ·
 }
 
-// IconMenuJob returns the queue icon for a job status string (e.g. "queued", "running").
-// Uses [icons] menu.job.<status> when set, otherwise compact Unicode (does not fall back to
-// the jobs-list Nerd Font keys like icons.running — those are too wide/noisy on the menu bar).
+// IconMenuJob returns the queue icon for a job status string (e.g. "queued", "running") from
+// [icons] menu.job.<status> (compact glyphs; the jobs-list keys like icons.running are too
+// wide/noisy on the menu bar), a middle dot for a status without one.
 func (t Theme) IconMenuJob(status string) rune {
-	key := "menu.job." + status
-	if g := t.iconRuneOr(key, 0); g != 0 {
+	if g := t.iconRune("menu.job." + status); g != 0 {
 		return g
 	}
-	switch status {
-	case "scanning":
-		return '\U000f02ca'
-	case "queued":
-		return '\uf022'
-	case "running":
-		return '\uf01d'
-	case "paused":
-		return '\uf28b'
-	case "failed":
-		return '\uf071'
-	case "decision":
-		return '\uf059'
-	case "canceling":
-		return '\uf52f'
-	case "completed":
-		return '\uf05d'
-	default:
-		return '\u00b7'
-	}
+	return '\u00b7'
 }
 
 // StatusStyle returns the [status] style of a job status string (JobsRow for an unknown one).
@@ -1062,15 +1035,20 @@ func (t Theme) StatusStyleOn(status string, surface tcell.Style) tcell.Style {
 }
 
 type styleSpec struct {
-	FG        string
-	BG        string
-	Icon      string // optional; only panel cursor row and disk-usage bar styles, see parse()
-	Bold      bool
-	Underline bool
-	Reverse   bool
+	FG   string
+	BG   string
+	Icon string // optional; panel cursor row styles only, see build()
+	// IconGroups is the `icon = { <group> = "<color>" }` table of a disk-usage bar style (BarIconGroup).
+	IconGroups map[string]string
+	Bold       bool
+	Underline  bool
+	Reverse    bool
 }
 
-var requiredStyleKeys = []string{
+// styleKeys is the style schema: every key a theme file may set. themes/default.toml defines all of
+// them and every other theme inherits what it leaves out (see source.over), so a loaded Theme always
+// has each one. The menu-bar progress gradients (gfxTrails) are the only keys outside this list.
+var styleKeys = append([]string{
 	"menu.bar.active",
 	"menu.bar.inactive",
 	"menu.bar.selected",
@@ -1261,30 +1239,32 @@ var requiredStyleKeys = []string{
 	"footer.label",
 	"footer.label.shift",
 	"terminal.text",
-}
+}, extraStyleKeys()...)
 
-var requiredStyleKeySet = makeStyleKeySet(requiredStyleKeys)
+var styleKeySet = makeStyleKeySet(styleKeys)
 
-// optionalStyleKeys are style keys a theme may omit; menu.progress.done.gfx.0..9,
-// menu.progress.delete.gfx.0..9 and menu.progress.remove.gfx.0..9 are the optional light-bar
-// gradients over the menu-bar progress bar's done span (gfx.0 = head).
-var optionalStyleKeys = func() []string {
-	keys := make([]string, 0, 30)
-	for _, gfx := range []string{"done", "delete", "remove"} {
-		for i := 0; i < 10; i++ {
-			keys = append(keys, fmt.Sprintf("menu.progress.%s.gfx.%d", gfx, i))
+// gfxTrails are the menu-bar progress light-bar gradients: keys <trail>.0 .. <trail>.9 (index 0 =
+// head). A theme defining any index of a trail replaces the inherited trail whole.
+var gfxTrails = []string{"menu.progress.done.gfx", "menu.progress.delete.gfx", "menu.progress.remove.gfx"}
+
+// gfxTrailOf returns the gfxTrails entry key is an index (0..9) of, or "".
+func gfxTrailOf(key string) string {
+	for _, trail := range gfxTrails {
+		if idx, ok := strings.CutPrefix(key, trail+"."); ok && len(idx) == 1 && idx[0] >= '0' && idx[0] <= '9' {
+			return trail
 		}
 	}
-	keys = append(keys, "menu.speed.cap", "menu.speed.text", "menu.status.separator", "message.sweep", "message.success", "footer.hover", "footer.hover.active", "jobs.row.hover", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
+	return ""
+}
+
+func extraStyleKeys() []string {
+	keys := []string{"menu.speed.cap", "menu.speed.text", "menu.status.separator", "message.sweep", "message.success", "footer.hover", "footer.hover.active", "jobs.row.hover", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
 		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "panel.row.range", "panel.row.range.unselect", "dialog.text_select", "dialog.accent_alt", "panel.empty", "panel.scrollbar.match",
 		"jobs.operations.success", "jobs.operations.failed", "jobs.operations.skipped", "jobs.progress.completed.fill", "panel.row.mark.job.removing",
-		"tooltip.text", "tooltip.info", "preview.search_icon")
+		"tooltip.text", "tooltip.info", "preview.search_icon"}
 	keys = append(keys, fileIndexStateStyleKeys()...)
-	keys = append(keys, "panel.meta.warn", "panel.meta.critical", "panel.icon.broken_link")
-	return keys
-}()
-
-var optionalStyleKeySet = makeStyleKeySet(optionalStyleKeys)
+	return append(keys, "panel.meta.warn", "panel.meta.critical", "panel.icon.broken_link")
+}
 
 // styleSectionRoots are top-level TOML tables for semantic styles (keys inside omit this prefix).
 var styleSectionRoots = []string{"menu", "panel", "dialog", "jobs", "message", "footer", "fuzzy", "terminal", "leader_menu", "compare", "status", "tooltip", "preview"}
@@ -1309,7 +1289,7 @@ func Default() Theme {
 	return value
 }
 
-// ponytail: cached Themes share their inner maps (Icons, PanelFileIconFG, palette); callers treat them read-only.
+// ponytail: cached Themes share their inner maps (Icons, PanelFileIconFG, DiskUsageBarIconFG, palette); callers treat them read-only.
 var (
 	builtInCacheMu sync.Mutex
 	builtInCache   = map[string]Theme{}
@@ -1527,13 +1507,82 @@ func defaultWithError(err error) (Theme, error) {
 	return value, err
 }
 
+// source is one decoded theme file, kept as the layers inheritance merges key by key.
+type source struct {
+	name    string
+	palette map[string]any
+	roles   map[string]any
+	icons   map[string]string
+	specs   map[string]styleSpec
+}
+
+var (
+	defaultSourceOnce sync.Once
+	defaultSourceVal  source
+	defaultSourceErr  error
+)
+
+// defaultSource is the decoded embedded themes/default.toml, the base every theme inherits from.
+// Callers must not modify its maps.
+func defaultSource() (source, error) {
+	defaultSourceOnce.Do(func() {
+		data, err := themes.Files.ReadFile(defaultName + ".toml")
+		if err != nil {
+			defaultSourceErr = err
+			return
+		}
+		defaultSourceVal, defaultSourceErr = decodeSource(data)
+	})
+	return defaultSourceVal, defaultSourceErr
+}
+
+// over returns s with o laid over it: [palette], [roles] and [icons] per key, styles per key with
+// the whole style entry of o replacing s's (no field-level merge), a gfx trail o defines any index of
+// replacing s's trail whole, and o's name.
+func (s source) over(o source) source {
+	out := source{
+		name:    o.name,
+		palette: maps.Clone(s.palette),
+		roles:   maps.Clone(s.roles),
+		icons:   maps.Clone(s.icons),
+		specs:   maps.Clone(s.specs),
+	}
+	maps.Copy(out.palette, o.palette)
+	maps.Copy(out.roles, o.roles)
+	maps.Copy(out.icons, o.icons)
+	for key := range o.specs {
+		if trail := gfxTrailOf(key); trail != "" {
+			for i := 0; i < 10; i++ {
+				delete(out.specs, fmt.Sprintf("%s.%d", trail, i))
+			}
+		}
+	}
+	maps.Copy(out.specs, o.specs)
+	return out
+}
+
+// parse loads one theme file on top of the embedded default theme (a theme file only needs the keys
+// it changes). The file itself is validated strictly: unknown keys and non-role colours are errors.
 func parse(data []byte) (Theme, error) {
-	var raw map[string]any
-	if _, err := toml.Decode(string(data), &raw); err != nil {
+	src, err := decodeSource(data)
+	if err != nil {
 		return Theme{}, err
 	}
+	base, err := defaultSource()
+	if err != nil {
+		return Theme{}, fmt.Errorf("built-in default theme: %w", err)
+	}
+	return build(base.over(src))
+}
+
+// decodeSource decodes and validates the structure of one theme file, without inheriting anything.
+func decodeSource(data []byte) (source, error) {
+	var raw map[string]any
+	if _, err := toml.Decode(string(data), &raw); err != nil {
+		return source{}, err
+	}
 	if _, ok := raw["styles"]; ok {
-		return Theme{}, fmt.Errorf("[styles] is not supported; use [status], [menu], [panel], [dialog], [jobs], [message], [footer], and [fuzzy] sections")
+		return source{}, fmt.Errorf("[styles] is not supported; use [status], [menu], [panel], [dialog], [jobs], [message], [footer], and [fuzzy] sections")
 	}
 	for key := range raw {
 		if key == "name" || key == "palette" || key == "roles" || key == "icons" {
@@ -1542,60 +1591,72 @@ func parse(data []byte) (Theme, error) {
 		if styleSectionRootSet[key] {
 			continue
 		}
-		return Theme{}, fmt.Errorf("unknown field %q", key)
+		return source{}, fmt.Errorf("unknown field %q", key)
 	}
 
 	name, err := stringField(raw, "name")
 	if err != nil {
-		return Theme{}, err
+		return source{}, err
 	}
 	if strings.TrimSpace(name) == "" {
-		return Theme{}, fmt.Errorf("name is required")
+		return source{}, fmt.Errorf("name is required")
 	}
-
-	palette, err := paletteField(raw)
+	palette, err := tableField(raw, "palette")
 	if err != nil {
-		return Theme{}, err
+		return source{}, err
 	}
-	roles, err := rolesField(raw, palette)
+	roles, err := tableField(raw, "roles")
 	if err != nil {
-		return Theme{}, err
+		return source{}, err
 	}
-
 	specs, err := collectStyleSpecs(raw)
 	if err != nil {
-		return Theme{}, err
-	}
-
-	dialogSurfaceForegroundKeys := map[string]struct{}{
-		"dialog.option.inactive":         {},
-		"dialog.option.active":           {},
-		"dialog.option.active.selected":  {},
-		"dialog.option.selected":         {},
-		"dialog.option.invalid":          {},
-		"dialog.option.disabled":         {},
-		"dialog.status.selection_size":   {},
-		"dialog.progress.label.on_fill":  {},
-		"dialog.progress.label.on_track": {},
+		return source{}, err
 	}
 	for key, spec := range specs {
-		if spec.BG != "" {
-			if _, ok := dialogSurfaceForegroundKeys[key]; ok {
-				return Theme{}, fmt.Errorf(`style %q: field "bg" is not allowed (background is merged at render time)`, key)
-			}
+		if spec.BG != "" && dialogSurfaceForegroundKeys[key] {
+			return source{}, fmt.Errorf(`style %q: field "bg" is not allowed (background is merged at render time)`, key)
 		}
 	}
-
 	icons, err := iconsField(raw)
+	if err != nil {
+		return source{}, err
+	}
+	return source{name: name, palette: palette, roles: roles, icons: icons, specs: specs}, nil
+}
+
+// dialogSurfaceForegroundKeys are the styles that may not set bg: the dialog surface is merged in at
+// render time.
+var dialogSurfaceForegroundKeys = map[string]bool{
+	"dialog.option.inactive":         true,
+	"dialog.option.active":           true,
+	"dialog.option.active.selected":  true,
+	"dialog.option.selected":         true,
+	"dialog.option.invalid":          true,
+	"dialog.option.disabled":         true,
+	"dialog.status.selection_size":   true,
+	"dialog.progress.label.on_fill":  true,
+	"dialog.progress.label.on_track": true,
+}
+
+// build resolves a merged source into a Theme. Every key of styleKeys must be present: themes
+// inherit them from the default theme, so a miss means themes/default.toml is incomplete.
+func build(src source) (Theme, error) {
+	name, specs, icons := src.name, src.specs, src.icons
+	palette, err := paletteField(src.palette)
+	if err != nil {
+		return Theme{}, err
+	}
+	roles, err := rolesField(src.roles, palette)
 	if err != nil {
 		return Theme{}, err
 	}
 
 	styles := map[string]tcell.Style{}
-	for _, key := range requiredStyleKeys {
+	for _, key := range styleKeys {
 		spec, ok := specs[key]
 		if !ok {
-			return Theme{}, fmt.Errorf("missing required style %q", key)
+			return Theme{}, fmt.Errorf("missing style %q", key)
 		}
 		style, err := buildStyle(spec, roles)
 		if err != nil {
@@ -1604,160 +1665,22 @@ func parse(data []byte) (Theme, error) {
 		styles[key] = style
 	}
 
-	menuProgressDoneGfx, err := optionalGfx(specs, roles, "menu.progress.done.gfx")
+	menuProgressDoneGfx, err := gfxTrail(specs, roles, "menu.progress.done.gfx")
 	if err != nil {
 		return Theme{}, err
 	}
-	menuProgressDeleteGfx, err := optionalGfx(specs, roles, "menu.progress.delete.gfx")
+	menuProgressDeleteGfx, err := gfxTrail(specs, roles, "menu.progress.delete.gfx")
 	if err != nil {
 		return Theme{}, err
 	}
-	menuProgressRemoveGfx, err := optionalGfx(specs, roles, "menu.progress.remove.gfx")
+	menuProgressRemoveGfx, err := gfxTrail(specs, roles, "menu.progress.remove.gfx")
 	if err != nil {
 		return Theme{}, err
 	}
-	jobsOperationSuccess, err := optionalStyle(specs, roles, "jobs.operations.success", styles["status.completed"])
-	if err != nil {
-		return Theme{}, err
-	}
-	jobsOperationFailed, err := optionalStyle(specs, roles, "jobs.operations.failed", styles["status.failed"])
-	if err != nil {
-		return Theme{}, err
-	}
-	jobsOperationSkipped, err := optionalStyle(specs, roles, "jobs.operations.skipped", styles["status.paused"])
-	if err != nil {
-		return Theme{}, err
-	}
-	_, jobsProgressFillBG, _ := styles["jobs.progress.fill"].Decompose()
-	jobsProgressCompletedFill, err := optionalStyle(specs, roles, "jobs.progress.completed.fill", styles["jobs.progress.label.on_fill"].Background(jobsProgressFillBG))
-	if err != nil {
-		return Theme{}, err
-	}
-	panelRowMarkJobRemoving, err := optionalStyle(specs, roles, "panel.row.mark.job.removing", styles["panel.row.mark.job.delete"])
-	if err != nil {
-		return Theme{}, err
-	}
-	menuSpeedCap, err := optionalStyle(specs, roles, "menu.speed.cap", roleStyle(roles, "surface", ""))
-	if err != nil {
-		return Theme{}, err
-	}
-	menuSpeedText, err := optionalStyle(specs, roles, "menu.speed.text", roleStyle(roles, "ink", "surface"))
-	if err != nil {
-		return Theme{}, err
-	}
-	menuStatusSeparator, err := optionalStyle(specs, roles, "menu.status.separator", roleStyle(roles, "muted", ""))
-	if err != nil {
-		return Theme{}, err
-	}
-
-	footerHover, err := optionalStyle(specs, roles, "footer.hover", roleStyle(roles, "cursor_fg", "cursor_bg"))
-	if err != nil {
-		return Theme{}, err
-	}
-
-	footerHoverActive, err := optionalStyle(specs, roles, "footer.hover.active", roleStyle(roles, "fg_strong", "cursor_bg"))
-	if err != nil {
-		return Theme{}, err
-	}
-
-	tooltipText, err := optionalStyle(specs, roles, "tooltip.text", styles["dialog.completion.item"])
-	if err != nil {
-		return Theme{}, err
-	}
-	tooltipInfo, err := optionalStyle(specs, roles, "tooltip.info", styles["dialog.accent"])
-	if err != nil {
-		return Theme{}, err
-	}
-
-	previewSearchIcon, err := optionalStyle(specs, roles, "preview.search_icon", tcell.Style{})
-	if err != nil {
-		return Theme{}, err
-	}
-
-	jobsRowHover, err := optionalStyle(specs, roles, "jobs.row.hover", roleStyle(roles, "fg_strong", "surface"))
-	if err != nil {
-		return Theme{}, err
-	}
-
-	messageSweep, err := optionalStyle(specs, roles, "message.sweep", roleStyle(roles, "ink", "inverse_bg"))
-	if err != nil {
-		return Theme{}, err
-	}
-
-	messageSuccess, err := optionalStyle(specs, roles, "message.success", roleStyle(roles, "ink", "success"))
-	if err != nil {
-		return Theme{}, err
-	}
-
-	dialogTextSelect, err := optionalStyle(specs, roles, "dialog.text_select", tcell.Style{})
-	if err != nil {
-		return Theme{}, err
-	}
-	dialogAccentAlt, err := optionalStyle(specs, roles, "dialog.accent_alt", styles["dialog.accent"])
-	if err != nil {
-		return Theme{}, err
-	}
-	panelRowMarkOtherMatch, err := optionalStyle(specs, roles, "panel.row.mark.other_match", roleStyle(roles, "muted", ""))
-	if err != nil {
-		return Theme{}, err
-	}
-	panelRowMarkOtherMatchCursor, err := optionalStyle(specs, roles, "panel.row.mark.other_match.cursor", roleStyle(roles, "info", ""))
-	if err != nil {
-		return Theme{}, err
-	}
-
-	panelFileIndex, err := fileIndexStateStyles(specs, roles)
-	if err != nil {
-		return Theme{}, err
-	}
-	panelMetaWarn, err := optionalStyle(specs, roles, "panel.meta.warn", roleStyle(roles, "warning", ""))
-	if err != nil {
-		return Theme{}, err
-	}
-	panelMetaCritical, err := optionalStyle(specs, roles, "panel.meta.critical", roleStyle(roles, "danger", "").Bold(true))
-	if err != nil {
-		return Theme{}, err
-	}
-	panelRowMarkRangeAnchor, err := optionalStyle(specs, roles, "panel.row.mark.range_anchor", roleStyle(roles, "selected", ""))
-	if err != nil {
-		return Theme{}, err
-	}
-	panelCursorRange, err := optionalStyle(specs, roles, "panel.row.cursor.range", roleStyle(roles, "ink", "selected"))
-	if err != nil {
-		return Theme{}, err
-	}
-	panelCursorRangeSelected, err := optionalStyle(specs, roles, "panel.row.cursor.range.selected", roleStyle(roles, "ink", "selected").Bold(true))
-	if err != nil {
-		return Theme{}, err
-	}
-
-	panelRowRange, err := optionalStyle(specs, roles, "panel.row.range", roleStyle(roles, "", "range_bg"))
-	if err != nil {
-		return Theme{}, err
-	}
-
-	panelRowRangeUnselect, err := optionalStyle(specs, roles, "panel.row.range.unselect", roleStyle(roles, "", "range_unselect_bg"))
-	if err != nil {
-		return Theme{}, err
-	}
-
-	panelEmpty, err := optionalStyle(specs, roles, "panel.empty", roleStyle(roles, "muted", ""))
-	if err != nil {
-		return Theme{}, err
-	}
-
-	panelIconBrokenLink, err := optionalStyle(specs, roles, "panel.icon.broken_link", roleStyle(roles, "danger", ""))
-	if err != nil {
-		return Theme{}, err
-	}
-
-	fuzzyCursorFG, _, _ := styles["fuzzy.highlight.cursor"].Decompose()
-	panelScrollbarMatch, err := optionalStyle(specs, roles, "panel.scrollbar.match", tcell.StyleDefault.Foreground(fuzzyCursorFG))
-	if err != nil {
-		return Theme{}, err
-	}
+	panelFileIndex := fileIndexStateStyles(styles)
 
 	panelFileIcons := map[string]tcell.Color{}
+	barIcons := map[string]map[BarIconGroup]tcell.Color{}
 	allowedPanelIconStyles := map[string]struct{}{
 		"panel.active.row.cursor":                     {},
 		"panel.active.row.cursor.selected":            {},
@@ -1770,19 +1693,35 @@ func parse(data []byte) (Theme, error) {
 		"panel.blocked.row.cursor.selected":           {},
 		"panel.row.cursor.range":                      {},
 		"panel.row.cursor.range.selected":             {},
-		"panel.usage.normal":                          {},
-		"panel.usage.selected":                        {},
-		"panel.active.usage.cursor":                   {},
-		"panel.active.usage.cursor.selected":          {},
-		"panel.inactive.usage.cursor":                 {},
-		"panel.inactive.usage.cursor.selected":        {},
 	}
 	for key, spec := range specs {
-		if spec.Icon == "" {
+		if spec.Icon == "" && len(spec.IconGroups) == 0 {
+			continue
+		}
+		if _, isBar := diskUsageBarKeys[key]; isBar {
+			if spec.Icon != "" {
+				return Theme{}, fmt.Errorf("style %q: field \"icon\" on a disk-usage bar style must be a table of icon groups", key)
+			}
+			groups := map[BarIconGroup]tcell.Color{}
+			for name, value := range spec.IconGroups {
+				group := BarIconGroup(name)
+				if _, ok := barIconGroups[group]; !ok {
+					return Theme{}, fmt.Errorf("style %q: unknown icon group %q", key, name)
+				}
+				c, err := resolveRole("icon."+name, value, roles)
+				if err != nil {
+					return Theme{}, fmt.Errorf("style %q: %w", key, err)
+				}
+				groups[group] = c
+			}
+			barIcons[key] = groups
 			continue
 		}
 		if _, ok := allowedPanelIconStyles[key]; !ok {
 			return Theme{}, fmt.Errorf("style %q: field \"icon\" is only allowed on panel cursor row and disk-usage bar styles", key)
+		}
+		if len(spec.IconGroups) > 0 {
+			return Theme{}, fmt.Errorf("style %q: field \"icon\" must be a color, icon groups are only for disk-usage bar styles", key)
 		}
 		iconColor, err := resolveRole("icon", spec.Icon, roles)
 		if err != nil {
@@ -1793,6 +1732,10 @@ func parse(data []byte) (Theme, error) {
 	var panelFileIconFG map[string]tcell.Color
 	if len(panelFileIcons) > 0 {
 		panelFileIconFG = panelFileIcons
+	}
+	var diskUsageBarIconFG map[string]map[BarIconGroup]tcell.Color
+	if len(barIcons) > 0 {
+		diskUsageBarIconFG = barIcons
 	}
 
 	return Theme{
@@ -1848,24 +1791,24 @@ func parse(data []byte) (Theme, error) {
 		PanelRowMarkRenamed:                 styles["panel.row.mark.renamed"],
 		PanelRowMarkNoPermission:            styles["panel.row.mark.no_permission"],
 		PanelRowMarkPinned:                  styles["panel.row.mark.pinned"],
-		PanelRowMarkOtherMatch:              panelRowMarkOtherMatch,
-		PanelRowMarkOtherMatchCursor:        panelRowMarkOtherMatchCursor,
+		PanelRowMarkOtherMatch:              styles["panel.row.mark.other_match"],
+		PanelRowMarkOtherMatchCursor:        styles["panel.row.mark.other_match.cursor"],
 		PanelRowMarkJob:                     styles["panel.row.mark.job"],
 		PanelRowMarkJobRead:                 styles["panel.row.mark.job.read"],
 		PanelRowMarkJobMove:                 styles["panel.row.mark.job.move"],
 		PanelRowMarkJobDelete:               styles["panel.row.mark.job.delete"],
-		PanelRowMarkJobRemoving:             panelRowMarkJobRemoving,
+		PanelRowMarkJobRemoving:             styles["panel.row.mark.job.removing"],
 		PanelRowTreeConnector:               styles["panel.row.tree.connector"],
 		PanelIconFolderOpen:                 styles["panel.icon.folder.open"],
 		PanelIconFolderMount:                styles["panel.icon.folder.mount"],
 		PanelText:                           styles["panel.text"],
 		PanelHint:                           styles["panel.hint"],
-		PanelEmpty:                          panelEmpty,
-		PanelRowMarkRangeAnchor:             panelRowMarkRangeAnchor,
-		PanelCursorRange:                    panelCursorRange,
-		PanelCursorRangeSelected:            panelCursorRangeSelected,
-		PanelRowRange:                       panelRowRange,
-		PanelRowRangeUnselect:               panelRowRangeUnselect,
+		PanelEmpty:                          styles["panel.empty"],
+		PanelRowMarkRangeAnchor:             styles["panel.row.mark.range_anchor"],
+		PanelCursorRange:                    styles["panel.row.cursor.range"],
+		PanelCursorRangeSelected:            styles["panel.row.cursor.range.selected"],
+		PanelRowRange:                       styles["panel.row.range"],
+		PanelRowRangeUnselect:               styles["panel.row.range.unselect"],
 		PanelCursorActive:                   styles["panel.active.row.cursor"],
 		PanelCursorActiveUnique:             styles["panel.active.row.cursor.unique"],
 		PanelCursorInactive:                 styles["panel.inactive.row.cursor"],
@@ -1887,8 +1830,9 @@ func parse(data []byte) (Theme, error) {
 		PanelStatusImageSixelTmux:           styles["panel.status.image_sixel_tmux"],
 		PanelScrollbarTrack:                 styles["panel.scrollbar.track"],
 		PanelScrollbarThumb:                 styles["panel.scrollbar.thumb"],
-		PanelScrollbarMatch:                 panelScrollbarMatch,
+		PanelScrollbarMatch:                 styles["panel.scrollbar.match"],
 		PanelFileIconFG:                     panelFileIconFG,
+		DiskUsageBarIconFG:                  diskUsageBarIconFG,
 
 		PanelBlockedFrame:             styles["panel.blocked.frame"],
 		PanelBlockedSurface:           styles["panel.blocked.surface"],
@@ -1916,15 +1860,15 @@ func parse(data []byte) (Theme, error) {
 		PanelIconFolderExcluded:          styles["panel.icon.folder.excluded"],
 		PanelIconPreviewWarm:             styles["panel.icon.preview.warm"],
 		PanelIconPreviewCold:             styles["panel.icon.preview.cold"],
-		PanelIconBrokenLink:              panelIconBrokenLink,
+		PanelIconBrokenLink:              styles["panel.icon.broken_link"],
 		MenuProgressDone:                 styles["menu.progress.done"],
 		MenuProgressRemaining:            styles["menu.progress.remaining"],
 		MenuProgressDoneGfx:              menuProgressDoneGfx,
 		MenuProgressDeleteGfx:            menuProgressDeleteGfx,
 		MenuProgressRemoveGfx:            menuProgressRemoveGfx,
-		MenuSpeedCap:                     menuSpeedCap,
-		MenuSpeedText:                    menuSpeedText,
-		MenuStatusSeparator:              menuStatusSeparator,
+		MenuSpeedCap:                     styles["menu.speed.cap"],
+		MenuSpeedText:                    styles["menu.speed.text"],
+		MenuStatusSeparator:              styles["menu.status.separator"],
 		PanelUsageNormal:                 styles["panel.usage.normal"],
 		PanelUsageSelected:               styles["panel.usage.selected"],
 		PanelUsageCursorActive:           styles["panel.active.usage.cursor"],
@@ -1941,8 +1885,8 @@ func parse(data []byte) (Theme, error) {
 		PanelGitIgnored:     styles["panel.git.ignored"],
 		PanelGitConflicted:  styles["panel.git.conflicted"],
 		PanelFileIndex:      panelFileIndex,
-		PanelMetaWarn:       panelMetaWarn,
-		PanelMetaCritical:   panelMetaCritical,
+		PanelMetaWarn:       styles["panel.meta.warn"],
+		PanelMetaCritical:   styles["panel.meta.critical"],
 
 		FuzzyInput:           styles["fuzzy.input"],
 		FuzzyInputNomatch:    styles["fuzzy.input.nomatch"],
@@ -1953,9 +1897,9 @@ func parse(data []byte) (Theme, error) {
 		DialogTitle:                    styles["dialog.title"],
 		DialogText:                     styles["dialog.text"],
 		DialogSurface:                  styles["dialog.surface"],
-		DialogTextSelect:               dialogTextSelect,
+		DialogTextSelect:               styles["dialog.text_select"],
 		DialogAccent:                   styles["dialog.accent"],
-		DialogAccentAlt:                dialogAccentAlt,
+		DialogAccentAlt:                styles["dialog.accent_alt"],
 		DialogSearchIcon:               styles["dialog.search_icon"],
 		DialogInputActive:              styles["dialog.input.active"],
 		DialogInputActivePlaceholder:   styles["dialog.input.active.placeholder"],
@@ -1989,9 +1933,9 @@ func parse(data []byte) (Theme, error) {
 		DialogCompletionItemSelected:   styles["dialog.completion.item.selected"],
 		DialogCompletionMatch:          styles["dialog.completion.match"],
 		DialogCompletionMatchSelected:  styles["dialog.completion.match.selected"],
-		TooltipText:                    tooltipText,
-		TooltipInfo:                    tooltipInfo,
-		PreviewSearchIcon:              previewSearchIcon,
+		TooltipText:                    styles["tooltip.text"],
+		TooltipInfo:                    styles["tooltip.info"],
+		PreviewSearchIcon:              styles["preview.search_icon"],
 
 		LeaderMenuSurface:  styles["leader_menu.surface"],
 		LeaderMenuGroup:    styles["leader_menu.group"],
@@ -2003,11 +1947,11 @@ func parse(data []byte) (Theme, error) {
 		MessageInfo:    styles["message.info"],
 		MessageWarn:    styles["message.warn"],
 		MessageError:   styles["message.error"],
-		MessageSweep:   messageSweep,
-		MessageSuccess: messageSuccess,
+		MessageSweep:   styles["message.sweep"],
+		MessageSuccess: styles["message.success"],
 
 		JobsRow:      styles["jobs.row"],
-		JobsRowHover: jobsRowHover,
+		JobsRowHover: styles["jobs.row.hover"],
 
 		JobsProgressTrack:        styles["jobs.progress.track"],
 		JobsProgressFill:         styles["jobs.progress.fill"],
@@ -2023,11 +1967,11 @@ func parse(data []byte) (Theme, error) {
 		JobsProgressInactiveLabelOnFill:  styles["jobs.progress.inactive.label.on_fill"],
 		JobsProgressInactiveLabelOnTrack: styles["jobs.progress.inactive.label.on_track"],
 
-		JobsProgressCompletedFill: jobsProgressCompletedFill,
+		JobsProgressCompletedFill: styles["jobs.progress.completed.fill"],
 
-		JobsOperationSuccess: jobsOperationSuccess,
-		JobsOperationFailed:  jobsOperationFailed,
-		JobsOperationSkipped: jobsOperationSkipped,
+		JobsOperationSuccess: styles["jobs.operations.success"],
+		JobsOperationFailed:  styles["jobs.operations.failed"],
+		JobsOperationSkipped: styles["jobs.operations.skipped"],
 
 		CompareHashing:     styles["compare.hashing"],
 		CompareEqual:       styles["compare.equal"],
@@ -2040,8 +1984,8 @@ func parse(data []byte) (Theme, error) {
 		FooterKey:         styles["footer.key"],
 		FooterLabel:       styles["footer.label"],
 		FooterLabelShift:  styles["footer.label.shift"],
-		FooterHover:       footerHover,
-		FooterHoverActive: footerHoverActive,
+		FooterHover:       styles["footer.hover"],
+		FooterHoverActive: styles["footer.hover.active"],
 
 		TerminalText: styles["terminal.text"],
 	}, nil
@@ -2134,7 +2078,6 @@ func parsePaletteEntry(rawValue any) (tcell.Color, error) {
 
 func collectStyleSpecs(raw map[string]any) (map[string]styleSpec, error) {
 	specs := map[string]styleSpec{}
-	found := false
 	for _, root := range styleSectionRoots {
 		value, ok := raw[root]
 		if !ok {
@@ -2147,13 +2090,9 @@ func collectStyleSpecs(raw map[string]any) (map[string]styleSpec, error) {
 		if err := flattenStyleSpecs(root, table, specs); err != nil {
 			return nil, err
 		}
-		found = true
-	}
-	if !found {
-		return nil, fmt.Errorf("theme must define at least one style section ([menu], [panel], [dialog], [jobs], [message], [footer], [fuzzy], [terminal], [leader_menu], or [compare])")
 	}
 	for key := range specs {
-		if !requiredStyleKeySet[key] && !optionalStyleKeySet[key] {
+		if !styleKeySet[key] && gfxTrailOf(key) == "" {
 			return nil, fmt.Errorf("unknown style %q", key)
 		}
 	}
@@ -2248,11 +2187,21 @@ func decodeStyleSpec(key string, table map[string]any) (styleSpec, error) {
 			}
 			spec.Underline = flag
 		case "icon":
-			text, ok := value.(string)
-			if !ok {
-				return styleSpec{}, fmt.Errorf("style %q icon must be a string", key)
+			switch v := value.(type) {
+			case string:
+				spec.Icon = v
+			case map[string]any:
+				spec.IconGroups = map[string]string{}
+				for group, c := range v {
+					text, ok := c.(string)
+					if !ok {
+						return styleSpec{}, fmt.Errorf("style %q icon.%s must be a string", key, group)
+					}
+					spec.IconGroups[group] = text
+				}
+			default:
+				return styleSpec{}, fmt.Errorf("style %q icon must be a string or a table", key)
 			}
-			spec.Icon = text
 		case "reverse":
 			flag, ok := value.(bool)
 			if !ok {
@@ -2266,9 +2215,9 @@ func decodeStyleSpec(key string, table map[string]any) (styleSpec, error) {
 	return spec, nil
 }
 
-// optionalGfx loads consecutive optional gradient keys prefix.0 .. prefix.9, stopping at the
+// gfxTrail loads consecutive gradient keys prefix.0 .. prefix.9, stopping at the
 // first missing index so a theme can define a short trail without sparse holes.
-func optionalGfx(specs map[string]styleSpec, roles map[string]tcell.Color, prefix string) ([]tcell.Style, error) {
+func gfxTrail(specs map[string]styleSpec, roles map[string]tcell.Color, prefix string) ([]tcell.Style, error) {
 	var out []tcell.Style
 	for i := 0; i < 10; i++ {
 		key := fmt.Sprintf("%s.%d", prefix, i)
@@ -2283,19 +2232,6 @@ func optionalGfx(specs map[string]styleSpec, roles map[string]tcell.Color, prefi
 		out = append(out, style)
 	}
 	return out, nil
-}
-
-// optionalStyle loads a single optional style key, returning fallback when the theme omits it.
-func optionalStyle(specs map[string]styleSpec, roles map[string]tcell.Color, key string, fallback tcell.Style) (tcell.Style, error) {
-	spec, ok := specs[key]
-	if !ok {
-		return fallback, nil
-	}
-	style, err := buildStyle(spec, roles)
-	if err != nil {
-		return tcell.Style{}, fmt.Errorf("style %q: %w", key, err)
-	}
-	return style, nil
 }
 
 func buildStyle(spec styleSpec, roles map[string]tcell.Color) (tcell.Style, error) {
@@ -2378,18 +2314,16 @@ func themeLabel(name string) string {
 	return strings.Join(words, " ")
 }
 
-// iconOr is the [icons] value of key (trimmed), or fallback when the theme leaves it unset.
-func (t Theme) iconOr(key, fallback string) string {
-	if s := strings.TrimSpace(t.Icons[key]); s != "" {
-		return s
-	}
-	return fallback
+// icon is the [icons] value of key (trimmed); "" when unset, which only a hand-built zero Theme
+// leaves: a loaded theme inherits every key from themes/default.toml.
+func (t Theme) icon(key string) string {
+	return strings.TrimSpace(t.Icons[key])
 }
 
-// iconRuneOr is the first rune of iconOr(key), or fallback when the theme leaves it unset.
-func (t Theme) iconRuneOr(key string, fallback rune) rune {
-	for _, r := range t.iconOr(key, "") {
+// iconRune is the first rune of icon(key), 0 when unset.
+func (t Theme) iconRune(key string) rune {
+	for _, r := range t.icon(key) {
 		return r
 	}
-	return fallback
+	return 0
 }
