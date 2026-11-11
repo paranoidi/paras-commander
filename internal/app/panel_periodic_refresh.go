@@ -139,6 +139,7 @@ func (a *App) scheduleListingRefresh(panelID int, opts listingRefreshOpts) (retr
 	epoch := p.ListingEpoch
 	baseline := panel.BackendEntriesFromPanel(p.Entries)
 	childBaseline := p.LoadedTreeChildren()
+	fetch := fetchListingForPanelRefresh // read the seam here, not in the goroutine (tests swap it)
 	go func(panelID int, snap panel.ListingRefreshSnapshot, path pathloc.Path, epoch uint64, baseline []fsbackend.Entry) {
 		start := time.Now()
 		defer func() {
@@ -151,7 +152,7 @@ func (a *App) scheduleListingRefresh(panelID int, opts listingRefreshOpts) (retr
 			a.panelRefreshNotBefore[panelID].Store(start.Add(time.Duration(config.DefaultPanelRefreshSlowBackoffFactor) * elapsed).UnixNano())
 			a.panelRefreshInFlight[panelID].Store(false)
 		}()
-		entries, listingLoc, gitignoreActive, dotfilesHiddenActive, err := fetchListingForPanelRefresh(context.Background(), snap)
+		entries, listingLoc, gitignoreActive, dotfilesHiddenActive, err := fetch(context.Background(), snap)
 		if err != nil {
 			return
 		}
