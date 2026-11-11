@@ -116,11 +116,7 @@ func planExtract(ctx context.Context, paths []string, destDir string, tc archive
 	if err != nil {
 		return ExtractPlan{}, nil, &Error{Op: "extract", Text: "destination is empty", Err: err}
 	}
-	if destLoc.IsLocal() {
-		destDir = filepath.Clean(destDir)
-	} else {
-		destDir = destLoc.String()
-	}
+	destDir = destLoc.String()
 	info, err := extractStat(ctx, destLoc)
 	if err != nil {
 		return ExtractPlan{}, nil, &Error{Op: "extract", Text: fmt.Sprintf("destination %q: %v", destDir, err), Err: err}
@@ -140,11 +136,7 @@ func planExtract(ctx context.Context, paths []string, destDir string, tc archive
 			skipped = append(skipped, fmt.Sprintf("%s: %v", p, err))
 			continue
 		}
-		if loc.IsLocal() {
-			p = filepath.Clean(p)
-		} else {
-			p = loc.String()
-		}
+		p = loc.String()
 		name := loc.Base()
 		fi, err := extractStat(ctx, loc)
 		if err != nil {
@@ -227,15 +219,15 @@ func ExecuteExtract(ctx context.Context, plan ExtractPlan, progress ExtractProgr
 			claimedStream[name] = item.Path
 		}
 		kept, err := extractStaged(ctx, item, plan, run)
-		if errors.Is(err, errExtractNoPassword) {
-			plan.report(item, ItemSkipped, ReasonNoPassword)
-			if progress != nil {
-				progress(item.Path, done)
-			}
-			continue
+		var skipReason string
+		switch {
+		case errors.Is(err, errExtractNoPassword):
+			skipReason = ReasonNoPassword
+		case errors.Is(err, errExtractSkipped):
+			skipReason = ReasonExists
 		}
-		if errors.Is(err, errExtractSkipped) {
-			plan.report(item, ItemSkipped, ReasonExists)
+		if skipReason != "" {
+			plan.report(item, ItemSkipped, skipReason)
 			if progress != nil {
 				progress(item.Path, done)
 			}
@@ -322,9 +314,9 @@ func extractStaged(ctx context.Context, item ExtractItem, plan ExtractPlan, run 
 	if err != nil {
 		return 0, err
 	}
-	ask := plan.Password
-	if ask != nil { // the prompt names the archive as the user knows it, not its temporary copy
-		ask = func(ctx context.Context, _ string, retry bool) (string, bool) {
+	var ask func(ctx context.Context, retry bool) (string, bool)
+	if plan.Password != nil { // the prompt names the archive as the user knows it, not its temporary copy
+		ask = func(ctx context.Context, retry bool) (string, bool) {
 			return plan.Password(ctx, item.Path, retry)
 		}
 	}
@@ -358,7 +350,7 @@ func extractStaged(ctx context.Context, item ExtractItem, plan ExtractPlan, run 
 		defer func() { _ = os.RemoveAll(stage) }()
 		destDir, extractCtx = stage, fschange.WithoutSink(ctx)
 	}
-	if err := extractOne(extractCtx, local, destDir, plan.AsDirectory, plan.Toolchain, plan.Conflict, ask, &run.pw); err != nil {
+	if err := extractOne(extractCtx, local, destDir, plan.AsDirectory, plan.Toolchain, plan.Conflict, ask, run); err != nil {
 		return 0, err
 	}
 	if destLoc.IsLocal() {
@@ -402,16 +394,16 @@ func extractStaged(ctx context.Context, item ExtractItem, plan ExtractPlan, run 
 	return kept, nil
 }
 
-func extractOne(ctx context.Context, item ExtractItem, destDir string, asDir bool, tc archive.Toolchain, resolver ConflictResolver, askPassword ArchivePasswordFunc, pw *string) error {
+func extractOne(ctx context.Context, item ExtractItem, destDir string, asDir bool, tc archive.Toolchain, resolver ConflictResolver, askPassword func(ctx context.Context, retry bool) (string, bool), run *extractRun) error {
 	target := destDir
 	if asDir && !item.Format.NeedsStdoutSink() {
 		target = filepath.Join(destDir, archive.OutputBasename(item.Path, item.Format))
 	}
-	argv, err := archive.BuildArgv(item.Format, item.Path, target, tc)
-	if err != nil {
-		return err
-	}
 	if item.Format.NeedsStdoutSink() {
+		argv, err := archive.BuildArgv(item.Format, item.Path, target, tc)
+		if err != nil {
+			return err
+		}
 		return extractViaStdout(ctx, argv, item, destDir, resolver)
 	}
 	// The archive tool picks the names it writes: report what changed at destDir's top level
@@ -421,21 +413,21 @@ func extractOne(ctx context.Context, item ExtractItem, destDir string, asDir boo
 	if err := os.MkdirAll(target, 0o755); err != nil {
 		return err
 	}
-	run := func(pw string) cmdrun.RunResult {
+	runTool := func(pw string) cmdrun.RunResult {
 		argv, stdin, err := archive.PasswordArgv(item.Format, item.Path, target, tc, pw)
 		if err != nil {
 			return cmdrun.RunResult{LaunchErr: err, ExitCode: -1}
 		}
 		return cmdrun.RunWithStdin(ctx, argv, filepath.Dir(item.Path), cmdrun.MaxStreamBytes, stdin)
 	}
-	res := run(*pw)
+	res := runTool(run.pw)
 	for retry := false; askPassword != nil && res.LaunchErr == nil && passwordFailed(item.Format, res); retry = true {
-		typed, ok := askPassword(ctx, item.Path, retry)
+		typed, ok := askPassword(ctx, retry)
 		if !ok {
 			return errExtractNoPassword
 		}
-		if res = run(typed); !passwordFailed(item.Format, res) {
-			*pw = typed
+		if res = runTool(typed); !passwordFailed(item.Format, res) {
+			run.pw = typed
 		}
 	}
 	if res.LaunchErr != nil {
@@ -488,11 +480,7 @@ func streamOutputConflict(ctx context.Context, archiveName string, f archive.For
 	}
 	destPath, err := destLoc.Join(name)
 	if err == nil {
-		if destPath.IsLocal() {
-			_, err = os.Lstat(destPath.String())
-		} else {
-			_, err = statEntry(ctx, destPath)
-		}
+		_, err = statEntry(ctx, destPath)
 		if err == nil {
 			return fmt.Sprintf("%s: output %q already exists", archiveName, name), true
 		}

@@ -768,29 +768,26 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 		} else {
 			var doneArchives int
 			var transferred int64
-			extractProgress := func(path string, df int) {
-				doneArchives = df
-				tc.emit(jobs.Event{
+			emit, jobID := tc.emit, job.ID
+			progress := func(path string) {
+				emit(jobs.Event{
 					Type:        jobs.EventProgress,
-					JobID:       job.ID,
+					JobID:       jobID,
 					Status:      jobs.StatusRunning,
-					DoneFiles:   df,
+					DoneFiles:   doneArchives,
 					DoneBytes:   transferred,
 					CurrentPath: path,
 				})
+			}
+			extractProgress := func(path string, df int) {
+				doneArchives = df
+				progress(path)
 			}
 			// Bytes of a remote archive's download or a remote destination's upload (shown as
 			// throughput; the extract job has no byte total).
 			plan.OnTransfer = func(path string, doneBytes int64) {
 				transferred = doneBytes
-				tc.emit(jobs.Event{
-					Type:        jobs.EventProgress,
-					JobID:       job.ID,
-					Status:      jobs.StatusRunning,
-					DoneFiles:   doneArchives,
-					DoneBytes:   doneBytes,
-					CurrentPath: path,
-				})
+				progress(path)
 			}
 			doneFiles, err = ops.ExecuteExtract(tc.ctx, plan, extractProgress)
 			doneBytes = transferred

@@ -190,23 +190,22 @@ func (b *Backend) List(ctx context.Context, dir pathloc.Path) ([]fsbackend.Entry
 
 // Stat implements fsbackend.Backend.
 func (b *Backend) Stat(ctx context.Context, loc pathloc.Path) (fsbackend.Entry, error) {
-	var entry fsbackend.Entry
-	err := b.withClient(ctx, loc, true, func(client *pkgsftp.Client, remote string) error {
-		info, err := client.Lstat(remote)
-		if err != nil {
-			return fmt.Errorf("sftp stat %s: %w", remote, err)
-		}
-		entry = entryFromInfo(loc, info)
-		return nil
-	})
-	return entry, err
+	return b.stat(ctx, loc, false)
 }
 
 // StatFollow implements fsbackend.StatFollower: Stat through a symlink (SFTP stat instead of lstat).
 func (b *Backend) StatFollow(ctx context.Context, loc pathloc.Path) (fsbackend.Entry, error) {
+	return b.stat(ctx, loc, true)
+}
+
+func (b *Backend) stat(ctx context.Context, loc pathloc.Path, follow bool) (fsbackend.Entry, error) {
 	var entry fsbackend.Entry
 	err := b.withClient(ctx, loc, true, func(client *pkgsftp.Client, remote string) error {
-		info, err := client.Stat(remote)
+		stat := client.Lstat
+		if follow {
+			stat = client.Stat
+		}
+		info, err := stat(remote)
 		if err != nil {
 			return fmt.Errorf("sftp stat %s: %w", remote, err)
 		}
