@@ -1,4 +1,4 @@
 == open ==
-focus=nerdfont nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=nerdfont nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<22|*|62] cursors=[3|1|2] msg=""
 == Alt+i ==
-focus=mode0 nerd=true zoom=true stacked=false mouse=true mode=minimal bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=mode0 nerd=true zoom=true stacked=false mouse=true mode=minimal bar=thumb split=[<22|*|62] cursors=[3|1|2] msg=""

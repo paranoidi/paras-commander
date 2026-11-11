@@ -1,16 +1,16 @@
 == open ==
-focus=nerdfont nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=nerdfont nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<22|*|62] cursors=[3|1|2] msg=""
 == Down ==
-focus=zoom nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=zoom nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<22|*|62] cursors=[3|1|2] msg=""
 == Down ==
-focus=hsplit nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=hsplit nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<22|*|62] cursors=[3|1|2] msg=""
 == Down ==
-focus=mode0 nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=mode0 nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<22|*|62] cursors=[3|1|2] msg=""
 == Down ==
-focus=mode1 nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=mode1 nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<22|*|62] cursors=[3|1|2] msg=""
 == Enter ==
-focus=mode1 nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=mode1 nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<22|*|62] cursors=[3|1|2] msg=""
 == Right ==
-focus=bar1 nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=bar1 nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<22|*|62] cursors=[3|1|2] msg=""
 == Enter ==
-focus=bar1 nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=bar1 nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<22|*|62] cursors=[3|1|2] msg=""

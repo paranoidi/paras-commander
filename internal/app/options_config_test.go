@@ -461,7 +461,7 @@ func TestConfigDialogApplyCarouselSplit(t *testing.T) {
 	if !app.model.ConfigDialog.Open || app.model.ConfigDialog.Focus != dialog.ConfigSplitID(2) {
 		t.Fatalf("invalid split: open=%v focus=%q, want open focus split-2", app.model.ConfigDialog.Open, app.model.ConfigDialog.Focus)
 	}
-	if got := app.config.Carousel.Split[2]; got != "*" {
+	if got := app.config.Carousel.Split[2]; got != config.DefaultCarouselSplit2 {
 		t.Fatalf("config split[2] = %q, want unchanged", got)
 	}
 

@@ -440,10 +440,10 @@ const (
 	CarouselFitSuffixSlots = 3
 
 	// DefaultCarouselSplit is the default carousel column width spec (parent | center | child).
-	// Parent uses "<<22%" (fit with outlier ignore); center uses plain "<44%" fit.
-	DefaultCarouselSplit0 = "<<22%"
-	DefaultCarouselSplit1 = "<44%"
-	DefaultCarouselSplit2 = "*"
+	// Parent fits to content up to 22 cells; center takes the flex remainder; child is 62 cells.
+	DefaultCarouselSplit0 = "<22"
+	DefaultCarouselSplit1 = "*"
+	DefaultCarouselSplit2 = "62"
 
 	// DefaultCarouselAutohideInactivePanel hides the inactive twin panel while the active
 	// panel is in carousel mode.

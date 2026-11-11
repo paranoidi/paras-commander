@@ -1,10 +1,10 @@
 == open ==
-focus=nerdfont nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=nerdfont nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<22|*|62] cursors=[3|1|2] msg=""
 == F8 ==
 reset-confirm focus=0
 == y ==
-focus=nerdfont nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg="Configuration reset to defaults"
+focus=nerdfont nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<22|*|62] cursors=[3|1|2] msg="Configuration reset to defaults"
 == n ==
-focus=bar0 nerd=true zoom=true stacked=false mouse=true mode=edge bar=none split=[<<22%|<44%|*] cursors=[5|4|1] msg="Configuration reset to defaults"
+focus=bar0 nerd=true zoom=true stacked=false mouse=true mode=edge bar=none split=[<22|*|62] cursors=[3|1|2] msg="Configuration reset to defaults"
 == o ==
-CLOSED: quit=false nerd=true zoom=true orientation=side_by_side mouse=true mode=edge bar=none split=[<<22% <44% *] editor-calls=0 file-exists=true message="Configuration saved"
+CLOSED: quit=false nerd=true zoom=true orientation=side_by_side mouse=true mode=edge bar=none split=[<22 * 62] editor-calls=0 file-exists=true message="Configuration saved"

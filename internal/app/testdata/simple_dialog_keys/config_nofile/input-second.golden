@@ -1,16 +1,16 @@
 == open ==
-focus=nerdfont nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=nerdfont nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<22|*|62] cursors=[3|1|2] msg=""
 == Tab ==
-focus=mode0 nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=mode0 nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<22|*|62] cursors=[3|1|2] msg=""
 == Tab ==
-focus=mouse nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=mouse nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<22|*|62] cursors=[3|1|2] msg=""
 == Tab ==
-focus=split0 nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=split0 nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<22|*|62] cursors=[3|1|2] msg=""
 == Tab ==
-focus=split1 nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=split1 nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<22|*|62] cursors=[3|1|2] msg=""
 == 5 ==
-focus=split1 nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<<22%|<44%5|*] cursors=[5|5|1] msg=""
+focus=split1 nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<22|*5|62] cursors=[3|2|2] msg=""
 == 0 ==
-focus=split1 nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<<22%|<44%50|*] cursors=[5|6|1] msg=""
+focus=split1 nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<22|*50|62] cursors=[3|3|2] msg=""
 == % ==
-focus=split1 nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<<22%|<44%50%|*] cursors=[5|7|1] msg=""
+focus=split1 nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<22|*50%|62] cursors=[3|4|2] msg=""
