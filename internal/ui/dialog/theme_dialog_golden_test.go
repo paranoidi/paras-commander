@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/primitive"
+	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
@@ -30,6 +32,26 @@ func themeGoldenChoices(n int) []ThemeChoice {
 	return out
 }
 
+// themeGoldenSamples fill each app sample's rows with a line naming it and the row, so a
+// golden shows where the samples sit and where the pane cuts them off.
+func themeGoldenSamples() ThemeAppSamples {
+	fill := func(name string, rows int) ThemeSamplePainter {
+		return func(s tcell.Screen, x, y, width, maxY int, styles theme.Theme) {
+			for i := range rows {
+				if y+i < maxY {
+					primitive.Text(s, x, y+i, width, fmt.Sprintf("%s %d", name, i+1), styles.DialogText)
+				}
+			}
+		}
+	}
+	return ThemeAppSamples{
+		MenuBar:  fill("menu", ThemeAppMenuRows),
+		Jobs:     fill("job", ThemeAppJobRows),
+		Progress: fill("progress", ThemeAppProgressRows),
+		Panel:    fill("panel", ThemePanelRows),
+	}
+}
+
 func themeGoldenState(n, selected int, focus string) ThemeDialogState {
 	st := ThemeDialogState{Open: true, Selected: selected, Choices: themeGoldenChoices(n), CurrentName: "meadow-theme"}
 	for i := range n {
@@ -49,11 +71,20 @@ func themeGoldenState(n, selected int, focus string) ThemeDialogState {
 func TestThemeDialogGoldenRender(t *testing.T) {
 	goldenBandRows["theme_dialog"] = 40
 	var cases []simpleGolden
+	addPage := func(page, w, h, n, sel int) {
+		st := themeGoldenState(n, sel, "filter")
+		st.Page = page - 1
+		name := fmt.Sprintf("%dx%d_n%d_sel%d_focus-filter_page%d", w, h, n, sel, page)
+		cases = append(cases, simpleGolden{name, w, h, func(s tcell.Screen, l Layout) {
+			EnsureThemeListScroll(&st, ThemeDialogListRows(st, l, asciiDialogStyles()))
+			DrawThemeDialog(s, l, st, asciiDialogStyles(), themeGoldenSamples())
+		}})
+	}
 	add := func(w, h, n, sel int, focus string) {
 		st := themeGoldenState(n, sel, focus)
 		cases = append(cases, simpleGolden{fmt.Sprintf("%dx%d_n%d_sel%d_focus-%s", w, h, n, sel, focus), w, h, func(s tcell.Screen, l Layout) {
 			EnsureThemeListScroll(&st, ThemeDialogListRows(st, l, asciiDialogStyles()))
-			DrawThemeDialog(s, l, st, asciiDialogStyles())
+			DrawThemeDialog(s, l, st, asciiDialogStyles(), themeGoldenSamples())
 		}})
 	}
 	for _, focus := range []string{"filter", "ok"} {
@@ -84,6 +115,17 @@ func TestThemeDialogGoldenRender(t *testing.T) {
 	// narrow
 	add(60, 24, 30, 12, "filter")
 	add(40, 24, 5, 3, "filter")
+	// page 2: the whole pane, cut off on a short screen, narrow
+	addPage(2, 120, 60, 17, 8)
+	addPage(2, 100, 40, 17, 8)
+	addPage(2, 100, 20, 30, 15)
+	addPage(2, 80, 24, 30, 12)
+	addPage(2, 60, 24, 30, 12)
+	addPage(2, 40, 24, 5, 3)
+	// page 3: the file panel sample, whole and cut off
+	addPage(3, 100, 40, 17, 8)
+	addPage(3, 100, 20, 30, 15)
+	addPage(3, 80, 24, 30, 12)
 	// too short to draw
 	add(100, 9, 5, 1, "filter")
 	// empty list draws nothing

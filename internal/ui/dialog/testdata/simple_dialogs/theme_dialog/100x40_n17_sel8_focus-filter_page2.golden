@@ -1,0 +1,94 @@
+-- text --
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+     ┌──────────────────────┬───────────────── Theme ────────────────────────────────────────┐      
+     │ /                    │ menu 1                                                         │      
+     │ ( ) Amber Theme      │ menu 2                                                         │      
+     │ ( ) Birch Theme      │ menu 3                                                         │      
+     │ ( ) Cinder Theme     │ menu 4                                                         │      
+     │ ( ) Dune Theme       │ menu 5                                                         │      
+     │ ( ) Ember Theme      │                                                                │      
+     │ ( ) Fable Theme      │ job 1                                                          │      
+     │ ( ) Glacier Theme    │ job 2                                                          │      
+     │ ( ) Harbor Theme     │ job 3                                                          │      
+     │ (*) Ivory Theme      │ job 4                                                          │      
+     │ ( ) Jasper Theme     │ job 5                                                          │      
+     │ ( ) Kestrel Theme    │ job 6                                                          │      
+     │ ( ) Lantern Theme    │ job 7                                                          │      
+     │ ( ) Meadow Theme     │ job 8                                                          │      
+     │ ( ) Nectar Theme     │ job 9                                                          │      
+     │ ( ) Orchard Theme    │                                                                │      
+     │ ( ) Pebble Theme     │ progress 1                                                     │      
+     │ ( ) Quartz Theme     │ progress 2                                                     │      
+     │                      │ progress 3                                                     │      
+     ├──────────────────────┴────────────────────────────────────────────────────────────────┤      
+     │                                 [ OK ]    [ Cancel ]                                  │      
+     └───────────────────────────────────────────────────────────────────────────────────────┘      
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+-- legend --
+a fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+h fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+k fg=0x100000005 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
+aaaaabbddeffffffffffffffffbbbaggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggabaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbaggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggabaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbaggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggabaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbaggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggabaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbaggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggabaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbaggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggabaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbaggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggabaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbaggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggabaaaaaa
+aaaaabhhhhhiiiiiiiiiiiiiiibbbaggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggabaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbaggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggabaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbaggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggabaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbaggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggabaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbaggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggabaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbaggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggabaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbaggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggabaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbaggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggabaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbaggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggabaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbjjjkjjjjbbjjjkjjjjjjjjbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

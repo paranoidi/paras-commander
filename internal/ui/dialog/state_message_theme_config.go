@@ -49,6 +49,10 @@ type ThemeDialogState struct {
 	MatchRanges [][]search.Range
 	Selected    int // index into Ranked
 	ListScroll  int
+	// Page is the 0-based preview page shown in the pane (see ThemePreviewPageCount); AutoReload
+	// reloads the highlighted theme when its file changes on disk (on when the dialog opens).
+	Page       int
+	AutoReload bool
 }
 
 // ConfigDialogState is the Options → Configuration modal (runtime UI toggles persisted to config.toml).

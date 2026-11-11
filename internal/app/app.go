@@ -205,6 +205,10 @@ type App struct {
 	themeAtDialogOpen theme.Theme
 	// themePreviewDebounce delays the theme dialog's live preview until list motion settles.
 	themePreviewDebounce sched.Debouncer
+	// themeWatch polls the highlighted theme's file while the theme dialog is open with auto
+	// reload on; themeWatchStat replaces the file stat in tests.
+	themeWatch     *themeWatch
+	themeWatchStat func(path string) (themeFileSig, bool)
 	// compareSelectionOpen opens Compare once the compare selection dialog is answered Drop or Stash.
 	compareSelectionOpen func()
 	// jobState manages background job queue and worker lifecycle.
@@ -983,6 +987,7 @@ func resolveKeymapBundle(opts Options) (*keymap.Bundle, error) {
 		{&rk.FindDialog, keymap.DefaultFindDialogOverlayKeys, "find dialog overlay"},
 		{&rk.HistoryDialog, keymap.DefaultHistoryDialogOverlayKeys, "history dialog overlay"},
 		{&rk.ColumnsDialog, keymap.DefaultColumnsDialogOverlayKeys, "columns dialog overlay"},
+		{&rk.ThemeDialog, keymap.DefaultThemeDialogOverlayKeys, "theme dialog overlay"},
 		{&rk.HelpDialog, keymap.DefaultHelpDialogOverlayKeys, "help dialog overlay"},
 		{&rk.UserMenu, keymap.DefaultUserMenuOverlayKeys, "user menu overlay"},
 		{&rk.FilePreview, keymap.DefaultFilePreviewOverlayKeys, "preview overlay"},
@@ -1452,6 +1457,11 @@ func (a *App) handlePreviewInterruptPayload(data any) (eventOutcome, bool) {
 		}
 	case previewctrl.QuickViewSlowPayload:
 		if a.previewCtrl.ApplyQuickViewSlow(d) {
+			a.render()
+			out.didRender = true
+		}
+	case themeFileChangedPayload:
+		if a.applyThemeFileChanged(d) {
 			a.render()
 			out.didRender = true
 		}

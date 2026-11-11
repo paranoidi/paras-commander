@@ -40,6 +40,7 @@ var overlayRegistry = []OverlaySpec{
 	{TableName: DialogColumnsShortcutsTable, Defaults: DefaultColumnsDialogOverlayKeys, Allowed: AllowedInColumnsDialogOverlay},
 	{TableName: FilePreviewSearchShortcutsTable, Defaults: DefaultFilePreviewSearchOverlayKeys, Allowed: AllowedInFilePreviewSearchOverlay},
 	{TableName: UniqueShortcutsTable, Defaults: DefaultUniqueOverlayKeys, Allowed: AllowedInUniqueOverlay},
+	{TableName: DialogThemeShortcutsTable, Defaults: DefaultThemeDialogOverlayKeys, Allowed: AllowedInThemeDialogOverlay},
 }
 
 // OverlayTableNames returns all overlay TOML table names in registry order.

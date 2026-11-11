@@ -1023,16 +1023,13 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 // drawBrowserView paints the twin file-list panels (or file-preview panes), selected strips,
 // terminal panel strip, and cursor-name-hint fallback for the default (browser) view mode.
 func drawBrowserView(screen tcell.Screen, layout geom.Layout, model Model, styles theme.Theme, chromeBlocked bool) {
-	// Theme picker: show the real left panel (normal chrome, always active) so preview matches in-browser use.
-	previewTheme := model.ThemeDialog.Open
-	primaryChromeBlocked := chromeBlocked && !previewTheme
-	primaryFileListFocus := previewTheme || (model.ActivePanel == PrimaryPanel && model.renderSubFocus() == SubFocusFileList)
+	primaryFileListFocus := model.ActivePanel == PrimaryPanel && model.renderSubFocus() == SubFocusFileList
 	secondaryFileListFocus := model.ActivePanel == SecondaryPanel && model.renderSubFocus() == SubFocusFileList
 
 	leftStripCount := model.Primary.SelectedStripCount()
 	rightStripCount := model.Secondary.SelectedStripCount()
-	leftStripN := SelectedStripLayoutItemCountFromCount(leftStripCount, PrimaryPanel, model.ActivePanel, previewTheme)
-	rightStripN := SelectedStripLayoutItemCountFromCount(rightStripCount, SecondaryPanel, model.ActivePanel, previewTheme)
+	leftStripN := SelectedStripLayoutItemCountFromCount(leftStripCount, PrimaryPanel, model.ActivePanel)
+	rightStripN := SelectedStripLayoutItemCountFromCount(rightStripCount, SecondaryPanel, model.ActivePanel)
 	leftSplit := browserSelectedStripSplit(model, PrimaryPanel, leftStripN)
 	rightSplit := browserSelectedStripSplit(model, SecondaryPanel, rightStripN)
 	primaryFile, leftStrip := SplitPanelForSelected(layout.Primary, leftSplit)
@@ -1062,7 +1059,7 @@ func drawBrowserView(screen tcell.Screen, layout geom.Layout, model Model, style
 	var cursorNameHintFallback CursorNameHintFallback
 	drawBrowserPanel(screen, model, styles, syncDriver, quickViewDriver, pinnedPaths, &cursorNameHintFallback, browserPanelSide{
 		PanelID: PrimaryPanel, ColumnWidth: layout.Primary.Width, FileRect: primaryFile, StripRect: leftStrip,
-		ShowPreview: showLeftPreview, FileListFocus: primaryFileListFocus, ChromeBlocked: primaryChromeBlocked,
+		ShowPreview: showLeftPreview, FileListFocus: primaryFileListFocus, ChromeBlocked: chromeBlocked,
 		OtherPanelPath: primaryOtherPanelPath, SelectedBottomHint: primarySelectedBottomHint,
 		SelectionSizeOnFileBottom: primarySelectionSizeOnFileBottom, SelectionSizeOnStripBottom: leftSelectionSizeOnStripBottom,
 		IsTransferTarget: model.DestinationTargetPrimary, CursorNameHintPinnedOut: model.CursorNameHintPinOutPrimary,
@@ -1092,7 +1089,7 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 	}
 	switch model.PrimaryModal() {
 	case dialog.PrimaryModalTheme:
-		dialog.DrawThemeDialog(screen, layout, model.ThemeDialog, styles)
+		dialog.DrawThemeDialog(screen, layout, model.ThemeDialog, styles, themeAppSamples(model))
 	case dialog.PrimaryModalTransfer:
 		dialog.DrawTransferDialog(screen, layout, model.TransferDialog, dialogRenderContext(model, styles), PaintDeleteDialogRowIcon)
 	case dialog.PrimaryModalFlatten:

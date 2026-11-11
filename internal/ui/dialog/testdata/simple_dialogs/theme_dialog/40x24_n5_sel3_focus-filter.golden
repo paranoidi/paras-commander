@@ -3,22 +3,22 @@
   ┌───────────── Theme ─┬────────────┐  
   │ /                   │            │  
   │ ( ) Amber Theme     │ Inactive input
-  │ ( ) Birch Theme     │ ◀ome/user/demo
+  │ ( ) Birch Theme     │ ◀me/user/demo.
   │ ( ) Cinder Theme    │            │  
   │ (*) Dune Theme      │ Inactive input
-  │ ( ) Ember Theme     │ ◀ome/user/demo
+  │ ( ) Ember Theme     │ ◀me/user/demo.
   │                     │            │  
   │                     │ Active input w
-  │                     │ /home/user/dem
-  │                     │            │  
-  │                     │ Active input w
-  │                     │ /home/user/dem
+  │                     │ ◀ome/user/demo
+  │         [i] Tooltips explain the │  
+  │             focused widget.      t w
+  │                     │ ◀ome/user/demo
   │                     │            │  
   │                     │ [x] Selected  
   │                     │ [ ] Unselected
   │                     │            │  
-  │                     ├────────────┤  
   │                     │ [ Selected ]  
+  │                     │            │  
   ├─────────────────────┴────────────┤  
   │       [ OK ]    [ Cancel ]       │  
   └──────────────────────────────────┘  
@@ -34,9 +34,12 @@ g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 h fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 j fg=0x100000008 bg=0x100000000 attrs=0 ul=0 ulc=0x0
-k fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
-l fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
-m fg=0x100000005 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+k fg=0x100000000 bg=0x100000007 attrs=0 ul=0 ulc=0x0
+l fg=0x100000004 bg=0x100000007 attrs=0 ul=0 ulc=0x0
+m fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+n fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+o fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+p fg=0x100000005 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aabbbbbbbbbbbbbbcccccccbbbbbbbbbbbbbbbaa
@@ -49,16 +52,16 @@ aabbbbbbbbbbbbbbbbbbbbbbbbgjjjjjjjjjjjjj
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 aabbbbbbbbbbbbbbbbbbbbbbbbffffffffffffff
-aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-aabbbbbbbbbbbbbbbbbbbbbbbbkkkkkkkkkkkkkk
+aabbbbbbbbbkllllkkkkkkkkkkkkkkkkkkkkkbaa
+aabbbbbbbbbkkkkkkkkkkkkkkkkkkkkkkkkkkbbb
+aabbbbbbbbbbbbbbbbbbbbbbbbfmmmmmmmmmmmmm
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbhhhhhcbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbb
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbnbbbbbbbbb
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbgggogggggggggga
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbbbbggglgggggggggga
-aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbgggmggggbbgggmggggggggbbbbbbbaa
+aabbbbbbbgggpggggbbgggpggggggggbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

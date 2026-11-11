@@ -114,6 +114,7 @@ func buildBundle(global map[string][]string, overlayLayers []map[string][]string
 		ColumnsDialog:       overlayMaps[21],
 		FilePreviewSearch:   overlayMaps[22],
 		Unique:              overlayMaps[23],
+		ThemeDialog:         overlayMaps[24],
 		LeaderKey:           menus[LeaderKeyShortcutsTable],
 		CopyMenuKey:         menus[CopyMenuShortcutsTable],
 		PreviewMenuKey:      menus[PreviewMenuShortcutsTable],
@@ -313,6 +314,7 @@ type dialogShortcuts struct {
 	UserMenu      map[string][]string `toml:"user_menu"`
 	CommandOutput map[string][]string `toml:"command_output"`
 	Columns       map[string][]string `toml:"columns"`
+	Theme         map[string][]string `toml:"theme"`
 }
 
 // EncodeDefaultStub writes the canonical keybindings TOML: a leading
@@ -392,6 +394,7 @@ func EncodeDefaultStub(w io.Writer) error {
 			UserMenu:      DefaultUserMenuOverlayKeys(),
 			CommandOutput: DefaultCommandOutputDialogOverlayKeys(),
 			Columns:       DefaultColumnsDialogOverlayKeys(),
+			Theme:         DefaultThemeDialogOverlayKeys(),
 		},
 	}
 	if err := toml.NewEncoder(w).Encode(payload); err != nil {

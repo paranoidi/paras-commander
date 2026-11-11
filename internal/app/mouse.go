@@ -144,7 +144,7 @@ func (a *App) panelFileFrame(layout ui.Layout, panelID int) (ui.Rect, bool) {
 	if panelID != a.model.ActivePanel && (a.model.QuickViewDisplayActive() || a.model.FilePreviewDraw.Open) {
 		return ui.Rect{}, false
 	}
-	return ui.FileListFrame(col, p, panelID, a.model.ActivePanel, a.model.ThemeDialog.Open, a.selectedStripSplitParams(panelID, 0)), true
+	return ui.FileListFrame(col, p, panelID, a.model.ActivePanel, a.selectedStripSplitParams(panelID, 0)), true
 }
 
 // mouseHit locates a cell in the browser: the panel under it and, when it lies on an entry row,

@@ -518,7 +518,7 @@ func TestRenderLeaderMenuOpenDimsActivePanelCursorRow(t *testing.T) {
 	}
 }
 
-func TestRenderThemeDialogPreviewShowsActiveUnblockedPrimaryPanel(t *testing.T) {
+func TestRenderThemeDialogBlocksPrimaryPanelChrome(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -546,12 +546,12 @@ func TestRenderThemeDialogPreviewShowsActiveUnblockedPrimaryPanel(t *testing.T) 
 	Render(screen, model, styles)
 
 	_, leftBorder, _ := screen.Get(0, 1)
-	if leftBorder != styles.PanelActiveFrame {
-		t.Fatalf("left panel border = %v, want active panel border for theme preview", leftBorder)
+	if leftBorder == styles.PanelActiveFrame {
+		t.Fatalf("left panel border = %v, want blocked chrome under the theme picker like any modal", leftBorder)
 	}
 	_, rowStyle, _ := screen.Get(1, 3)
-	if rowStyle != styles.PanelCursorActive {
-		t.Fatalf("left list cursor style = %v, want %v (active cursor for theme preview)", rowStyle, styles.PanelCursorActive)
+	if rowStyle == styles.PanelCursorActive {
+		t.Fatalf("left list cursor style = %v, want it not active under the theme picker", rowStyle)
 	}
 }
 
@@ -2000,7 +2000,7 @@ func TestRenderSelectionSizeOnSelectedStripBottom(t *testing.T) {
 	Render(screen, model, styles)
 
 	layout := CalculateLayout(width, height, true, PanelWidthSplit{})
-	stripN := SelectedStripLayoutItemCount(&model.Primary, PrimaryPanel, model.ActivePanel, false)
+	stripN := SelectedStripLayoutItemCount(&model.Primary, PrimaryPanel, model.ActivePanel)
 	if stripN == 0 {
 		t.Fatal("stripN = 0, want selected strip visible")
 	}

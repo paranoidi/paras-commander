@@ -13,6 +13,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func TestThemeDialogAppliesThemeImmediately(t *testing.T) {
@@ -283,7 +284,7 @@ func TestFilePreviewThemePickerEscReverts(t *testing.T) {
 	}
 }
 
-func TestActiveFooterKeysThemeDialogShowsF5Reload(t *testing.T) {
+func TestActiveFooterKeysThemeDialogShowsToggles(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))
 
@@ -310,22 +311,36 @@ func TestActiveFooterKeysThemeDialogShowsF5Reload(t *testing.T) {
 	if !app.model.ThemeDialog.Open {
 		t.Fatal("theme dialog open = false, want true")
 	}
+	previewHint := func(page int) string { return fmt.Sprintf("Preview %d/%d", page, dialog.ThemePreviewPageCount()) }
 	keys := app.activeFooterKeys()
-	if len(keys) != 3 {
-		t.Fatalf("theme dialog footer len = %d, want Esc + F5 + F10", len(keys))
+	if len(keys) != 4 {
+		t.Fatalf("theme dialog footer len = %d, want Esc + F5 + F6 + F10", len(keys))
 	}
 	if keys[0].Key != tcell.KeyEsc || keys[0].Hint != "Close" {
 		t.Fatalf("first footer key = %+v, want Esc Close", keys[0])
 	}
-	if keys[1].Key != tcell.KeyF5 || keys[1].Hint != "Reload" {
-		t.Fatalf("second footer key = %+v, want F5 Reload", keys[1])
+	if keys[1].KeyLabel != "F5" || keys[1].Hint != "Reload on" {
+		t.Fatalf("second footer key = %+v, want F5 Reload on", keys[1])
 	}
-	if keys[2].Key != tcell.KeyF10 {
-		t.Fatalf("third footer key = %+v, want F10", keys[2])
+	if keys[2].KeyLabel != "F6" || keys[2].Hint != previewHint(1) {
+		t.Fatalf("third footer key = %+v, want F6 %s", keys[2], previewHint(1))
+	}
+	if keys[3].Key != tcell.KeyF10 {
+		t.Fatalf("fourth footer key = %+v, want F10", keys[3])
+	}
+	// Each toggle shows its state, and a footer click replays the key.
+	app.handleKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone))
+	keys = app.activeFooterKeys()
+	if keys[1].Hint != "Reload off" || keys[2].Hint != previewHint(2) {
+		t.Fatalf("footer after both toggles = %q, %q, want Reload off, %s", keys[1].Hint, keys[2].Hint, previewHint(2))
+	}
+	if ev, ok := keys[2].Event(); !ok || ev.Key() != tcell.KeyF6 {
+		t.Fatalf("preview footer entry replays %v, want F6", ev)
 	}
 }
 
-func TestThemeDialogF5ReloadsCurrentPreviewFromDisk(t *testing.T) {
+func TestThemeDialogAutoReloadToggleReloadsPreviewFromDisk(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))
 	themesDir := t.TempDir()
@@ -336,7 +351,7 @@ func TestThemeDialogF5ReloadsCurrentPreviewFromDisk(t *testing.T) {
 	}
 	writeDiskDefault := func(hex string) {
 		content := strings.Replace(string(base),
-			`inactive = { fg = "bright_black" }`,
+			`inactive = { fg = "muted" }`,
 			fmt.Sprintf(`inactive = { fg = "white", bg = %q }`, hex), 1)
 		if err := os.WriteFile(filepath.Join(themesDir, "override.toml"), []byte(content), 0o644); err != nil {
 			t.Fatalf("WriteFile: %v", err)
@@ -377,6 +392,8 @@ func TestThemeDialogF5ReloadsCurrentPreviewFromDisk(t *testing.T) {
 		t.Fatalf("initial preview bg = %v, want %v", bg1, want)
 	}
 
+	// F5 switches auto reload off, then on again: that reloads at once.
+	app.handleKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
 	writeDiskDefault("#222222")
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
 	if quit {
@@ -388,7 +405,7 @@ func TestThemeDialogF5ReloadsCurrentPreviewFromDisk(t *testing.T) {
 	}
 }
 
-func TestThemeDialogF5ReloadsMenuDropdownAccentFromDisk(t *testing.T) {
+func TestThemeDialogAutoReloadToggleReloadsMenuDropdownAccentFromDisk(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))
 	themesDir := t.TempDir()
@@ -441,6 +458,7 @@ func TestThemeDialogF5ReloadsMenuDropdownAccentFromDisk(t *testing.T) {
 		t.Fatalf("initial preview menu.dropdown.accent fg = %v, want %v", fg1, wantFG1)
 	}
 
+	app.handleKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
 	writeAccentFG("bright_green")
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
 	if quit {
@@ -509,7 +527,8 @@ func TestThemePreviewReloadErrorSetsCriticalStatusMessage(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.Chmod(themesDir, 0700) })
 
-	app.handleKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone)) // auto reload off
+	app.handleKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone)) // on: reloads
 	if app.model.MessageDialog.Open {
 		t.Fatal("expected no message dialog after reload error (transient message instead)")
 	}

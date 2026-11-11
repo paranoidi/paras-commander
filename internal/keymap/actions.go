@@ -123,6 +123,9 @@ const (
 	ActionColumnsLoadProfile          = "panel.columns.load-profile"    // bound via [dialog.columns], not [main]
 	ActionColumnsDeleteProfile        = "panel.columns.delete-profile"  // bound via [dialog.columns], not [main]
 	ActionColumnsDefaultProfile       = "panel.columns.default-profile" // bound via [dialog.columns], not [main]
+	ActionThemePrevPreview            = "theme.prev-preview"            // bound via [dialog.theme], not [main]
+	ActionThemeNextPreview            = "theme.next-preview"            // bound via [dialog.theme], not [main]
+	ActionThemeToggleAutoReload       = "theme.toggle-auto-reload"      // bound via [dialog.theme], not [main]
 	ActionPanelComparePanels          = "panel.compare-panels"
 	ActionPanelFindDuplicates         = "panel.find-duplicates"
 	ActionPanelFilterDialog           = "panel.filter-dialog"
@@ -508,6 +511,9 @@ var KnownActions = map[string]struct{}{
 	ActionColumnsLoadProfile:          {},
 	ActionColumnsDeleteProfile:        {},
 	ActionColumnsDefaultProfile:       {},
+	ActionThemePrevPreview:            {},
+	ActionThemeNextPreview:            {},
+	ActionThemeToggleAutoReload:       {},
 	ActionPanelComparePanels:          {},
 	ActionPanelFindDuplicates:         {},
 	ActionPanelFilterDialog:           {},

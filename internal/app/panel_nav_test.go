@@ -581,7 +581,7 @@ func TestParentCentersWhenSelectedStripShrinksAfterChdir(t *testing.T) {
 	}
 	left.SelectedPaths[other] = true
 
-	if ui.SelectedStripLayoutItemCount(left, ui.PrimaryPanel, ui.PrimaryPanel, false) != 0 {
+	if ui.SelectedStripLayoutItemCount(left, ui.PrimaryPanel, ui.PrimaryPanel) != 0 {
 		t.Fatal("strip should be hidden while cross-dir selections are in the current directory")
 	}
 	selectPanelEntryByName(t, left, "sub")
@@ -589,7 +589,7 @@ func TestParentCentersWhenSelectedStripShrinksAfterChdir(t *testing.T) {
 		t.Fatal(err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, entering sub
-	if ui.SelectedStripLayoutItemCount(left, ui.PrimaryPanel, ui.PrimaryPanel, false) == 0 {
+	if ui.SelectedStripLayoutItemCount(left, ui.PrimaryPanel, ui.PrimaryPanel) == 0 {
 		t.Fatal("strip should be visible after entering sub with cross-dir selection")
 	}
 
@@ -613,7 +613,7 @@ func TestParentCentersWhenSelectedStripShrinksAfterChdir(t *testing.T) {
 	if staleVR >= vr {
 		t.Fatalf("staleVR = %d, want smaller than post-parent %d (strip must shrink file list)", staleVR, vr)
 	}
-	if ui.SelectedStripLayoutItemCount(left, ui.PrimaryPanel, ui.PrimaryPanel, false) != 0 {
+	if ui.SelectedStripLayoutItemCount(left, ui.PrimaryPanel, ui.PrimaryPanel) != 0 {
 		t.Fatal("strip should be hidden in parent after chdir")
 	}
 	if vr != ui.FileListViewportRows(
@@ -621,11 +621,10 @@ func TestParentCentersWhenSelectedStripShrinksAfterChdir(t *testing.T) {
 		left,
 		ui.PrimaryPanel,
 		ui.PrimaryPanel,
-		false,
 		app.selectedStripSplitParams(ui.PrimaryPanel, 0),
 	) {
 		t.Fatalf("viewportRows = %d, want post-parent file list rows %d", vr,
-			ui.FileListViewportRows(app.layoutForTerminalSize(80, 24).Primary, left, ui.PrimaryPanel, ui.PrimaryPanel, false, app.selectedStripSplitParams(ui.PrimaryPanel, 0)))
+			ui.FileListViewportRows(app.layoutForTerminalSize(80, 24).Primary, left, ui.PrimaryPanel, ui.PrimaryPanel, app.selectedStripSplitParams(ui.PrimaryPanel, 0)))
 	}
 	entry, ok := left.CurrentEntry()
 	if !ok || entry.Name != "sub" {

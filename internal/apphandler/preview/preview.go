@@ -134,7 +134,7 @@ func (h *Handler) inactivePanelPreviewLayoutMetrics(filePreviewOpenForLayout boo
 		col = lay.Secondary
 		p = &h.model.Secondary
 	}
-	stripN := ui.SelectedStripLayoutItemCount(p, inactiveID, h.model.ActivePanel, h.model.ThemeDialog.Open)
+	stripN := ui.SelectedStripLayoutItemCount(p, inactiveID, h.model.ActivePanel)
 	fileCol, _ := ui.SplitPanelForSelected(col, ui.SelectedStripSplitParams{
 		StripItemCount:     stripN,
 		MaxRows:            h.model.SelectedPanelMaxRows,
@@ -801,7 +801,7 @@ func (h *Handler) dispatchQuickViewDirPreview(dirPath string) {
 	h.patchFilePreviewPending(previewTargetInactive, dirPath, true)
 	ctx, gen := h.beginPreviewRun(previewTargetInactive)
 	// WorkDir is dirPath itself, so a rule command like "eza --tree ." works without needing %f.
-	req := h.previewRequest(dirPath, tw, contentH, dirPath, h.inactivePreviewChromeBlocked(), nil, previewTargetInactive, true)
+	req := h.previewRequest(dirPath, tw, contentH, dirPath, h.model.PanelsChromeBlocked(), nil, previewTargetInactive, true)
 	h.armQuickViewSlowIndicator(dirPath)
 	go h.runDirPreviewRules(ctx, req, previewTargetInactive, gen)
 }
@@ -893,7 +893,7 @@ func (h *Handler) applyQuickViewPreviewNow() {
 		// finishes (stale-while-revalidate); patchFilePreviewPending doesn't touch it.
 		h.patchFilePreviewPending(previewTargetInactive, path, false)
 		ctx, gen := h.beginPreviewRun(previewTargetInactive)
-		req := h.previewRequest(path, tw, contentH, workDir, h.inactivePreviewChromeBlocked(), h.gitStatusForPath(path), previewTargetInactive, false)
+		req := h.previewRequest(path, tw, contentH, workDir, h.model.PanelsChromeBlocked(), h.gitStatusForPath(path), previewTargetInactive, false)
 		h.armQuickViewSlowIndicator(path)
 		go h.dispatchQuickViewFilePreview(ctx, path, req, gen)
 	}
@@ -955,7 +955,7 @@ func (h *Handler) refreshInactiveFilePreview() {
 		return
 	}
 	workDir := h.host.ActivePanel().PathString()
-	req := h.previewRequest(st.Path, tw, contentH, workDir, h.inactivePreviewChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetInactive, false)
+	req := h.previewRequest(st.Path, tw, contentH, workDir, h.model.PanelsChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetInactive, false)
 	ctx, gen := h.beginPreviewRun(previewTargetInactive)
 	h.postRenderWake()
 	go h.runPreview(ctx, req, previewTargetInactive, gen)

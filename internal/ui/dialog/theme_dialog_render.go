@@ -10,12 +10,73 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
 
-// themePreviewRows is how many rows the preview pane paints (a blank row, four input demos of
-// three rows, two checkboxes, a blank row, a rule, the buttons, a rule, a blank row and a tooltip);
-// on a short screen it is cut off.
-const themePreviewRows = 21
+// Rows of the app preview page's samples (ThemeAppSamples): the menu bar and its pulldown, one row
+// per job status and the progress bars.
+const (
+	ThemeAppMenuRows     = 5
+	ThemeAppJobRows      = 9
+	ThemeAppProgressRows = 3
+	// ThemePanelRows is the height of the file panel sample (frame, header and entry rows).
+	ThemePanelRows = 18
+)
 
-// themePreviewTooltip is the sample tooltip text painted at the bottom of the preview pane.
+// ThemeSamplePainter paints one app sample at x, y, width wide, leaving every row from maxY on
+// alone. The samples draw with the app's own chrome helpers, which package dialog cannot reach, so
+// the caller of DrawThemeDialog supplies them.
+type ThemeSamplePainter func(screen tcell.Screen, x, y, width, maxY int, styles theme.Theme)
+
+// ThemeAppSamples are the samples of the app preview pages; a nil painter leaves its rows blank.
+type ThemeAppSamples struct {
+	MenuBar  ThemeSamplePainter // ThemeAppMenuRows rows: the bar, then its open pulldown
+	Jobs     ThemeSamplePainter // ThemeAppJobRows rows: one per job status
+	Progress ThemeSamplePainter // ThemeAppProgressRows rows: active, inactive and completed bars
+	Panel    ThemeSamplePainter // ThemePanelRows rows: a file panel with its frame, header and entries
+}
+
+// themePreviewCtx is what a preview page paints with: the pane's geometry (y is the page's first row,
+// maxY the outer separator the page is cut off at) and the caller's app samples. A page that wants the
+// sample tooltip sets activeInput.
+type themePreviewCtx struct {
+	screen               tcell.Screen
+	left, y, width       int
+	rightBorderCol, maxY int
+	app                  ThemeAppSamples
+	styles               theme.Theme
+	activeInput          draw.Rect
+}
+
+// themePreviewPage is one page of the theme picker's preview pane: the rows it needs, whether the
+// whole pane is filled with the app's content background first (appBG) and its painter.
+type themePreviewPage struct {
+	rows  int
+	appBG bool
+	paint func(c *themePreviewCtx)
+}
+
+// themePreviewPages are the preview pages in cycling order; add a page by appending an entry. The pane
+// is as tall as the tallest page, so cycling never resizes the dialog.
+var themePreviewPages = []themePreviewPage{
+	{rows: themeInputPageRows, paint: paintThemeInputPage},
+	{rows: ThemeAppMenuRows + ThemeAppJobRows + ThemeAppProgressRows + themeAppSectionGaps, appBG: true, paint: paintThemeAppPage},
+	{rows: ThemePanelRows, appBG: true, paint: paintThemePanelPage},
+}
+
+// ThemePreviewPageCount is how many preview pages the picker cycles through.
+func ThemePreviewPageCount() int { return len(themePreviewPages) }
+
+// themePreviewPageRows is the rows of the tallest page.
+func themePreviewPageRows() int {
+	rows := 0
+	for _, page := range themePreviewPages {
+		rows = max(rows, page.rows)
+	}
+	return rows
+}
+
+// themePreviewRows is the pane height the dialog asks for; on a short screen the page is cut off.
+func themePreviewRows() int { return themePreviewPageRows() }
+
+// themePreviewTooltip is the sample tooltip text drawn under the active sample input, as a dialog draws the tooltip of its focused widget.
 const themePreviewTooltip = "Tooltips explain the focused widget."
 
 // themeMinListRows is the fewest theme rows the dialog shows; below that it is not drawn.
@@ -78,7 +139,8 @@ func ThemeDialogView(state ThemeDialogState, layout Layout, styles theme.Theme) 
 
 // themeFrame is the theme dialog spec with an empty list as tall as the choices.
 func themeFrame(state ThemeDialogState, layout Layout, styles theme.Theme) dlg.Spec {
-	const previewWidthMin = 40 // minimum width for the right column
+	const previewWidthMin = 60 // width the right column asks for
+	previewRows := themePreviewRows()
 	listWidth := themeDialogListWidth(state)
 	filter := dlg.Item{
 		ID: ThemeFilter, Kind: dlg.KindInput, Drives: ThemeList, LeadingIcon: styles.IconSearchIcon(),
@@ -90,14 +152,15 @@ func themeFrame(state ThemeDialogState, layout Layout, styles theme.Theme) dlg.S
 			ColWidths: []int{listWidth + 2},
 			Columns: [][]dlg.Item{
 				{filter, {ID: ThemeList, Kind: dlg.KindList, Height: len(state.Choices), MinHeight: themeMinListRows}},
-				{{ID: themePreviewPane, Kind: dlg.KindSpacer, Height: themePreviewRows}},
+				{{ID: themePreviewPane, Kind: dlg.KindSpacer, Height: previewRows}},
 			},
 		}},
 		Buttons: dlg.OKCancelButtons(),
 	}
 }
 
-func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState, styles theme.Theme) {
+// DrawThemeDialog paints the theme dialog; app supplies the samples of the app preview page.
+func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState, styles theme.Theme, app ThemeAppSamples) {
 	if len(state.Choices) == 0 {
 		return
 	}
@@ -110,19 +173,18 @@ func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState,
 		return
 	}
 	pane, _ := p.Item(themePreviewPane)
-	drawThemePreview(screen, p, pane.Rect, styles)
+	drawThemePreview(screen, p, pane.Rect, state.Page, app, styles)
 }
 
 // drawThemePreview paints the widget preview in the pane right of the list: the vertical rule
-// (with its tees on the frame), sample inputs, checkboxes, buttons and a tooltip in the theme being
-// previewed.
-func drawThemePreview(screen tcell.Screen, p dlg.Placement, pane draw.Rect, styles theme.Theme) {
+// (with its tees on the frame) and the samples of preview page index page in the theme being previewed.
+func drawThemePreview(screen tcell.Screen, p dlg.Placement, pane draw.Rect, page int, app ThemeAppSamples, styles theme.Theme) {
 	rect := p.Rect
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	borderStyle := styles.DialogFrame.Background(dbg)
 	sepCol := pane.X + 1 // the rule sits one cell into the pane
 	previewLeft := sepCol + 1
-	previewWidth := rect.X + rect.Width - 2 - previewLeft
+	previewWidth := rect.X + rect.Width - 1 - previewLeft // up to the right border
 	if previewWidth < 20 {
 		previewWidth = 20
 	}
@@ -133,20 +195,54 @@ func drawThemePreview(screen tcell.Screen, p dlg.Placement, pane draw.Rect, styl
 		screen.SetContent(sepCol, y, '│', nil, borderStyle)
 	}
 
-	previewY := rect.Y + 1
-	// --- Input field examples (dialog input vs placeholder, focus cursor) ---
-	previewY++ // blank line after dialog top
+	// The page gets the whole right column inside the frame: from the first content row to the outer
+	// separator (a short terminal cuts it off there), between the vertical rule and the right border.
+	rightBorderCol := rect.X + rect.Width - 1 // dialog right border column
+	ctx := &themePreviewCtx{
+		screen: screen, left: previewLeft, y: rect.Y + 1, width: previewWidth,
+		rightBorderCol: rightBorderCol, maxY: outerSepY, app: app, styles: styles,
+	}
+	if page >= 0 && page < len(themePreviewPages) {
+		if themePreviewPages[page].appBG {
+			_, appBG, _ := styles.PanelActiveSurface.Decompose() // ui.auxPanelContentBG
+			fillStyle := tcell.StyleDefault.Background(appBG)
+			for y := ctx.y; y < outerSepY; y++ {
+				for x := previewLeft; x < rightBorderCol; x++ {
+					screen.SetContent(x, y, ' ', nil, fillStyle)
+				}
+			}
+		}
+		themePreviewPages[page].paint(ctx)
+	}
+
+	// Last, so it overlays the samples below the input like a dialog's own tooltip.
+	if ctx.activeInput.Width > 0 {
+		dlg.PaintTooltipFor(screen, p, ctx.activeInput, themePreviewTooltip, styles)
+	}
+
+	// Override box-drawing connector characters at the vertical separator column
+	// where it meets the frame. Must be after all draw calls.
+	screen.SetContent(sepCol, rect.Y, '┬', nil, borderStyle)    // top border: tee down
+	screen.SetContent(sepCol, outerSepY, '┴', nil, borderStyle) // outer separator: tee up (no vertical below)
+}
+
+// themeInputPageRows is the rows of the input page: a blank row, four input demos of three rows,
+// two checkboxes, a blank row and the buttons.
+const themeInputPageRows = 17
+
+// paintThemeInputPage paints sample inputs (a tooltip under the active one), checkboxes and buttons.
+func paintThemeInputPage(c *themePreviewCtx) {
+	screen, styles, previewLeft, previewWidth := c.screen, c.styles, c.left, c.width
+	_, dbg, _ := styles.DialogSurface.Decompose()
 	labelStyle := styles.DialogText.Background(dbg)
 	demoPath := "/home/user/demo.txt"
 	cursorEnd := utf8.RuneCountInString(demoPath)
 	// drawInputField paints end-of-line cursor as a reversed space (looks like a stray block in the preview).
 	cursorOnLastRune := max(0, cursorEnd-1)
-	inputWidth := previewWidth - 1
+	inputWidth := previewWidth - 2 // a column of margin either side
+	fits := func(y int) bool { return y < c.maxY }
 
-	// The pane is only as tall as the list: on a short screen the preview is cut off at the outer
-	// separator instead of spilling over the frame.
-	fits := func(y int) bool { return y < outerSepY }
-
+	previewY := c.y + 1 // blank line after dialog top
 	drawThemePreviewInputPair := func(label string, field FileDialogField, focused bool) {
 		if fits(previewY) {
 			primitive.Text(screen, previewLeft, previewY, previewWidth, " "+label, labelStyle)
@@ -154,6 +250,9 @@ func drawThemePreview(screen tcell.Screen, p dlg.Placement, pane draw.Rect, styl
 		previewY++
 		if inputWidth > 0 && fits(previewY) {
 			drawInputField(screen, previewLeft+1, previewY, inputWidth, field, focused, styles)
+			if focused && c.activeInput.Width == 0 {
+				c.activeInput = draw.Rect{X: previewLeft + 1, Y: previewY, Width: inputWidth, Height: 1}
+			}
 		}
 		previewY++ // empty row after input area
 		previewY++
@@ -172,66 +271,63 @@ func drawThemePreview(screen tcell.Screen, p dlg.Placement, pane draw.Rect, styl
 		Value: demoPath, Prefill: demoPath, PrefillPending: true, Cursor: cursorOnLastRune,
 	}, true)
 
-	// --- Checkboxes ---
 	if fits(previewY) {
 		draw.DrawDialogCheckbox(screen, previewLeft, previewY, "Selected", 'S', true, false, false, styles)
 	}
 	previewY++
 	if fits(previewY) {
-		draw.DrawDialogCheckbox(screen, previewLeft, previewY, "Unselected", 'U', false, false, false, styles)
+		// Shows dialog.accent_alt: the mnemonic as drawn when it needs Alt (focus in an input).
+		altStyles := styles
+		altStyles.DialogAccent = styles.DialogAccentAlt
+		draw.DrawDialogCheckbox(screen, previewLeft, previewY, "Unselected", 'U', false, false, false, altStyles)
 	}
-	previewY++
+	previewY += 2 // blank row before the buttons
 
-	// --- Separator ---
-	previewY++ // blank
-
-	// A horizontal rule across the preview width, joined to the dialog right border with ┤ (the
-	// tee on the vertical rule is painted last).
-	rightBorderCol := rect.X + rect.Width - 1 // dialog right border column
-	var hSepRows []int
-	drawHSep := func() {
-		if fits(previewY) {
-			for x := previewLeft; x <= rightBorderCol; x++ {
-				ch := '─'
-				if x == rightBorderCol {
-					ch = '┤'
-				}
-				screen.SetContent(x, previewY, ch, nil, borderStyle)
-			}
-			hSepRows = append(hSepRows, previewY)
-		}
-		previewY++
-	}
-	drawHSep()
-
-	// --- Buttons ---
 	const btnGap = 2
 	btnWidth := draw.DialogButtonWidth("Selected") + btnGap + draw.DialogButtonWidth("Unselected")
-	btnStartX := previewLeft + (previewWidth-btnWidth)/2
-	if btnStartX < previewLeft {
-		btnStartX = previewLeft
+	// The destructive button is as the delete dialog draws its focused one; it is left out when
+	// the pane is too narrow for all three.
+	withDelete := btnWidth+btnGap+draw.DialogButtonWidth("Delete") <= previewWidth
+	if withDelete {
+		btnWidth += btnGap + draw.DialogButtonWidth("Delete")
 	}
+	btnStartX := max(previewLeft, previewLeft+(previewWidth-btnWidth)/2)
 	if fits(previewY) {
 		draw.DrawDialogButton(screen, btnStartX, previewY, "Selected", 'S', false, false, false, styles)
 		btnStartX += draw.DialogButtonWidth("Selected") + btnGap
 		draw.DrawDialogButton(screen, btnStartX, previewY, "Unselected", 'U', true, false, false, styles)
-	}
-	previewY++
-
-	// --- Tooltip ---
-	drawHSep()
-	previewY++ // blank
-	if lines, width := draw.TooltipLines(themePreviewTooltip, previewWidth-1, styles); lines != nil {
-		if n := min(len(lines), outerSepY-previewY); n > 0 {
-			draw.PaintTooltip(screen, previewLeft+1, previewY, width, lines[:n], styles)
+		if withDelete {
+			btnStartX += draw.DialogButtonWidth("Unselected") + btnGap
+			draw.DrawDialogButton(screen, btnStartX, previewY, "Delete", 'D', true, true, false, styles)
 		}
 	}
+}
 
-	// Override box-drawing connector characters at the vertical separator column
-	// where it intersects horizontal lines. Must be after all draw calls.
-	screen.SetContent(sepCol, rect.Y, '┬', nil, borderStyle) // top border: tee down
-	for _, y := range hSepRows {
-		screen.SetContent(sepCol, y, '├', nil, borderStyle) // preview separator: tee right
+// paintThemeAppPage paints the app samples as one little embedded app screen (the pane is already
+// filled with the Jobs view's content background), stacked without rules and cut off at maxY.
+// themeAppSectionGaps is the blank rows between the app page's menu, jobs and progress sections.
+const themeAppSectionGaps = 2
+
+func paintThemeAppPage(c *themePreviewCtx) {
+	y := c.y
+	for i, sample := range []struct {
+		paint ThemeSamplePainter
+		rows  int
+	}{{c.app.MenuBar, ThemeAppMenuRows}, {c.app.Jobs, ThemeAppJobRows}, {c.app.Progress, ThemeAppProgressRows}} {
+		if i > 0 {
+			y++ // blank row between sections
+		}
+		if sample.paint != nil && y < c.maxY {
+			sample.paint(c.screen, c.left+1, y, c.width-2, c.maxY, c.styles)
+		}
+		y += sample.rows
 	}
-	screen.SetContent(sepCol, outerSepY, '┴', nil, borderStyle) // outer separator: tee up (no vertical below)
+}
+
+// paintThemePanelPage paints the file panel sample across the pane (already filled with the app
+// background); the painter clips it to maxY.
+func paintThemePanelPage(c *themePreviewCtx) {
+	if c.app.Panel != nil && c.y < c.maxY {
+		c.app.Panel(c.screen, c.left, c.y, c.width, c.maxY, c.styles)
+	}
 }

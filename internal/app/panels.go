@@ -219,7 +219,7 @@ func (a *App) panelViewportRows(panelID int) int {
 		col = layout.Secondary
 		p = &a.model.Secondary
 	}
-	return ui.FileListViewportRows(col, p, panelID, a.model.ActivePanel, a.model.ThemeDialog.Open, a.selectedStripSplitParams(panelID, 0))
+	return ui.FileListViewportRows(col, p, panelID, a.model.ActivePanel, a.selectedStripSplitParams(panelID, 0))
 }
 
 func (a *App) wireFileListViewportRows() {
@@ -270,7 +270,7 @@ func (a *App) selectedStripViewportRows(panelID int) int {
 		col = layout.Secondary
 		p = &a.model.Secondary
 	}
-	stripN := ui.SelectedStripLayoutItemCount(p, panelID, a.model.ActivePanel, a.model.ThemeDialog.Open)
+	stripN := ui.SelectedStripLayoutItemCount(p, panelID, a.model.ActivePanel)
 	params := a.selectedStripSplitParams(panelID, stripN)
 	_, stripCol := ui.SplitPanelForSelected(col, params)
 	return ui.SelectedStripListRows(stripCol)

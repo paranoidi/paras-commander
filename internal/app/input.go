@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -170,10 +171,9 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		})
 	}
 	if a.model.ThemeDialog.Open {
-		return footerWithEscClose([]menu.FunctionKey{
-			{Key: tcell.KeyF5, KeyLabel: "F5", Hint: "Reload"},
-			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
-		})
+		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
+		rest = append(themeDialogOverlayFooterKeys(a.keys.ThemeDialog, a.model.ThemeDialog), rest...)
+		return footerWithEscClose(rest)
 	}
 	if a.model.LeaderMenu.Open {
 		if a.model.LeaderMenu.Kind == ui.LeaderMenuUser {
@@ -588,6 +588,26 @@ func appendShiftTwinFooterKey(out []menu.FunctionKey, keys *keymap.Map, mainID, 
 		return append(out, twinEntry)
 	}
 	return out
+}
+
+// themeDialogOverlayFooterKeys is the theme picker's footer: its auto reload toggle and the
+// preview page cycler, each with its state.
+func themeDialogOverlayFooterKeys(keys *keymap.Map, st dialog.ThemeDialogState) []menu.FunctionKey {
+	if keys == nil {
+		return nil
+	}
+	onOff := func(on bool) string {
+		if on {
+			return " on"
+		}
+		return " off"
+	}
+	var out []menu.FunctionKey
+	if lbl := keys.MenuBindingLabel(keymap.ActionThemeToggleAutoReload); lbl != "" {
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Reload" + onOff(st.AutoReload)})
+	}
+	hint := fmt.Sprintf("Preview %d/%d", st.Page+1, dialog.ThemePreviewPageCount())
+	return appendShiftTwinFooterKey(out, keys, keymap.ActionThemeNextPreview, keymap.ActionThemePrevPreview, hint, "Back", "Prev "+hint)
 }
 
 func pinDialogOverlayFooterKeys(keys *keymap.Map) []menu.FunctionKey {

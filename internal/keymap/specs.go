@@ -1339,6 +1339,31 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"column", "profile", "default", "startup"},
 		},
 
+		{
+			ID:           ActionThemeToggleAutoReload,
+			Title:        "Theme picker: toggle auto reload of the highlighted theme",
+			Section:      "View",
+			DefaultKeys:  nil, // overlay: DefaultThemeDialogOverlayKeys
+			PreferredKey: "F5",
+			Keywords:     []string{"theme", "reload", "watch", "disk", "auto"},
+		},
+		{
+			ID:           ActionThemePrevPreview,
+			Title:        "Theme picker: previous preview page",
+			Section:      "View",
+			DefaultKeys:  nil, // overlay: DefaultThemeDialogOverlayKeys
+			PreferredKey: "S-F6",
+			Keywords:     []string{"theme", "preview", "page", "previous", "back", "menu", "jobs", "progress"},
+		},
+		{
+			ID:           ActionThemeNextPreview,
+			Title:        "Theme picker: next preview page",
+			Section:      "View",
+			DefaultKeys:  nil, // overlay: DefaultThemeDialogOverlayKeys
+			PreferredKey: "F6",
+			Keywords:     []string{"theme", "preview", "page", "next", "menu", "jobs", "progress"},
+		},
+
 		// ── Bookmarks ──
 		{
 			ID:           ActionBookmarkOpen,

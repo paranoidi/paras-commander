@@ -40,16 +40,14 @@ func paintBrowserPanelsInScope(
 		return false
 	}
 
-	previewTheme := model.ThemeDialog.Open
-	primaryChromeBlocked := model.PanelsChromeBlocked() && !previewTheme
 	chromeBlocked := model.PanelsChromeBlocked()
-	primaryFileListFocus := previewTheme || (model.ActivePanel == PrimaryPanel && model.renderSubFocus() == SubFocusFileList)
+	primaryFileListFocus := model.ActivePanel == PrimaryPanel && model.renderSubFocus() == SubFocusFileList
 	secondaryFileListFocus := model.ActivePanel == SecondaryPanel && model.renderSubFocus() == SubFocusFileList
 
 	leftStripCount := model.Primary.SelectedStripCount()
 	rightStripCount := model.Secondary.SelectedStripCount()
-	leftStripN := SelectedStripLayoutItemCountFromCount(leftStripCount, PrimaryPanel, model.ActivePanel, previewTheme)
-	rightStripN := SelectedStripLayoutItemCountFromCount(rightStripCount, SecondaryPanel, model.ActivePanel, previewTheme)
+	leftStripN := SelectedStripLayoutItemCountFromCount(leftStripCount, PrimaryPanel, model.ActivePanel)
+	rightStripN := SelectedStripLayoutItemCountFromCount(rightStripCount, SecondaryPanel, model.ActivePanel)
 	leftSplit := browserSelectedStripSplit(model, PrimaryPanel, leftStripN)
 	rightSplit := browserSelectedStripSplit(model, SecondaryPanel, rightStripN)
 	primaryFile, leftStrip := SplitPanelForSelected(layout.Primary, leftSplit)
@@ -81,7 +79,7 @@ func paintBrowserPanelsInScope(
 		primaryCtx := PanelContext{
 			FolderColor: model.folderColorFor(model.Primary),
 			PanelID:     PrimaryPanel, FileListActive: primaryFileListFocus, FindParked: model.FindParkedOn(PrimaryPanel),
-			CursorRowActive: primaryFileListFocus && !model.LeaderMenu.Open, ChromeBlocked: primaryChromeBlocked,
+			CursorRowActive: primaryFileListFocus && !model.LeaderMenu.Open, ChromeBlocked: chromeBlocked,
 			ActivePanel: model.ActivePanel, OtherPanelPath: primaryOtherPanelPath,
 			HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
 			SplitOrientation: model.SplitOrientation, SelectedBottomHint: primarySelectedBottomHint,
@@ -116,7 +114,7 @@ func paintBrowserPanelsInScope(
 		painted = true
 		if leftStrip.Height > 0 {
 			leftStripFocused := model.ActivePanel == PrimaryPanel && model.ActiveSubFocus == SubFocusSelectedStrip
-			drawSelectedStrip(screen, leftStrip, model.Primary, leftStripFocused, primaryChromeBlocked, SelectedStripOpts{
+			drawSelectedStrip(screen, leftStrip, model.Primary, leftStripFocused, chromeBlocked, SelectedStripOpts{
 				Styles: styles, UserHomeDir: model.UserHomeDir, Painter: model.DiskUsage,
 				DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints, DiskUsageGoduIgnore: model.DiskUsageGoduIgnore,
 				ShowSelectionSizeOnBottom: leftSelectionSizeOnStripBottom, ScrollbarStyle: model.PanelScrollbar,

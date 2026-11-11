@@ -7,22 +7,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-func (h *Handler) inactivePreviewChromeBlocked() bool {
-	chromeBlocked := h.model.PanelsChromeBlocked()
-	if h.host.InactivePanelID() == ui.PrimaryPanel && h.model.ThemeDialog.Open {
-		return false
-	}
-	return chromeBlocked
-}
-
-func (h *Handler) activePanelChromeBlocked() bool {
-	chromeBlocked := h.model.PanelsChromeBlocked()
-	if h.model.ActivePanel == ui.PrimaryPanel && h.model.ThemeDialog.Open {
-		return false
-	}
-	return chromeBlocked
-}
-
 func (h *Handler) fullscreenFilePreviewLayoutMetrics() (textW, contentH int, ok bool) {
 	tw, ok := h.fullscreenPreviewTextWidth()
 	if !ok {
@@ -80,7 +64,7 @@ func (h *Handler) SnapshotPreviewDrawStates() {
 		if ok && filePreviewWarmCandidate(inactive) {
 			warmInactive = true
 			inactiveW = tw
-			inactiveBase = ui.FilePreviewBodyStyle(h.host.Styles(), h.inactivePreviewChromeBlocked())
+			inactiveBase = ui.FilePreviewBodyStyle(h.host.Styles(), h.model.PanelsChromeBlocked())
 		}
 	}
 	if h.model.ViewMode == ui.ViewFilePreview && fullscreen.Open {
@@ -96,7 +80,7 @@ func (h *Handler) SnapshotPreviewDrawStates() {
 		if ok && filePreviewWarmCandidate(carousel) {
 			warmCarousel = true
 			carouselW = tw
-			carouselBase = ui.FilePreviewBodyStyle(h.host.Styles(), h.activePanelChromeBlocked())
+			carouselBase = ui.FilePreviewBodyStyle(h.host.Styles(), h.model.PanelsChromeBlocked())
 		}
 	}
 
@@ -127,7 +111,7 @@ func (h *Handler) SnapshotPreviewDrawStates() {
 }
 
 func (h *Handler) filePreviewLineCount(textW int) int {
-	base := ui.FilePreviewBodyStyle(h.host.Styles(), h.inactivePreviewChromeBlocked())
+	base := ui.FilePreviewBodyStyle(h.host.Styles(), h.model.PanelsChromeBlocked())
 
 	h.mu.RLock()
 	st := h.model.FilePreview
@@ -149,7 +133,7 @@ func (h *Handler) filePreviewLineCount(textW int) int {
 }
 
 func (h *Handler) carouselFilePreviewLineCount(textW int) int {
-	base := ui.FilePreviewBodyStyle(h.host.Styles(), h.activePanelChromeBlocked())
+	base := ui.FilePreviewBodyStyle(h.host.Styles(), h.model.PanelsChromeBlocked())
 
 	h.mu.RLock()
 	st := h.model.CarouselFilePreview

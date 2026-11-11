@@ -7,6 +7,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/filterlist"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/textutil"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -42,11 +43,23 @@ func (a *App) applyMessageDialogEvent(ev dlg.Event) {
 }
 
 func (a *App) handleThemeDialogKey(event *tcell.EventKey) {
-	if event.Key() == tcell.KeyF5 {
-		a.previewThemeAtSelection()
-		return
-	}
 	td := &a.model.ThemeDialog
+	if a.keys.ThemeDialog != nil {
+		if id, ok := a.keys.ThemeDialog.Lookup(event); ok {
+			switch id {
+			case keymap.ActionThemeToggleAutoReload:
+				a.toggleThemeAutoReload()
+				return
+			case keymap.ActionThemeNextPreview:
+				td.Page = (td.Page + 1) % dialog.ThemePreviewPageCount()
+				return
+			case keymap.ActionThemePrevPreview:
+				n := dialog.ThemePreviewPageCount()
+				td.Page = (td.Page + n - 1) % n
+				return
+			}
+		}
+	}
 	if ev, ok := dlg.HandleKey(a.themeDialogView(), &td.Focus, event); ok {
 		a.applyThemeDialogEvent(ev)
 		return
@@ -81,6 +94,19 @@ func (a *App) applyThemeDialogEvent(ev dlg.Event) {
 	}
 }
 
+// toggleThemeAutoReload switches the polling of the highlighted theme's file; turning it on
+// reloads that theme at once.
+func (a *App) toggleThemeAutoReload() {
+	td := &a.model.ThemeDialog
+	td.AutoReload = !td.AutoReload
+	if !td.AutoReload {
+		a.stopThemeWatch()
+		return
+	}
+	a.startThemeWatch()
+	a.previewThemeAtSelection()
+}
+
 func (a *App) themeDialogView() dlg.Spec {
 	w, h := a.screen.Size()
 	return dialog.ThemeDialogView(a.model.ThemeDialog, a.layoutForTerminalSize(w, h), a.styles)
@@ -112,13 +138,16 @@ func (a *App) openThemeDialog() {
 	td.Selected = a.currentThemeChoiceIndex() // an empty query ranks every choice in order
 	td.Focus = dialog.ThemeFilter
 	td.Open = true
+	td.Page, td.AutoReload = 0, true
 	a.syncThemeDialogRanks()
 	a.clearTransientMessage()
 	a.previewThemeAtSelection()
+	a.startThemeWatch()
 }
 
 func (a *App) closeThemeDialog() {
 	a.themePreviewDebounce.Invalidate()
+	a.stopThemeWatch()
 	a.model.ThemeDialog.Open = false
 }
 
@@ -162,7 +191,9 @@ func (a *App) previewThemeAtSelection() {
 	if !a.model.ThemeDialog.Open {
 		return
 	}
-	a.previewThemeByName(a.themeDialogSelectedName())
+	name := a.themeDialogSelectedName()
+	a.setThemeWatchName(name)
+	a.previewThemeByName(name)
 }
 
 func (a *App) previewThemeByName(name string) {

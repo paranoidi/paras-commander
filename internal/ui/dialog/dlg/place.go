@@ -596,33 +596,38 @@ func drawButtonStrip(screen tcell.Screen, spec Spec, p Placement, focus ID, bord
 	}
 }
 
-// drawTooltip paints the focused widget's Tooltip box inside the dialog's frame, above the
-// content bottom, its left edge on the widget's (shifted left only as far as it needs to fit): on
-// the row below the widget, else (no room down to the content bottom) ending on the row above it. It returns the box's rect; a box that fits nowhere is not
-// drawn (empty rect).
+// drawTooltip paints the focused widget's Tooltip box (see PaintTooltipFor). It returns the box's
+// rect; a box that fits nowhere is not drawn (empty rect).
 func drawTooltip(screen tcell.Screen, p Placement, it Item, styles theme.Theme) Rect {
 	pi, ok := p.Item(it.ID)
 	if !ok {
 		return Rect{}
 	}
+	return PaintTooltipFor(screen, p, pi.Rect, it.Tooltip, styles)
+}
+
+// PaintTooltipFor paints a tooltip box for the widget at widget inside p's frame, above the content
+// bottom, its left edge on the widget's (shifted left only as far as it needs to fit): on the row
+// below the widget, else (no room down to the content bottom) ending on the row above it. It returns
+// the box's rect; a box that fits nowhere is not drawn (empty rect).
+func PaintTooltipFor(screen tcell.Screen, p Placement, widget Rect, text string, styles theme.Theme) Rect {
 	left, right := p.Rect.X+1, p.Rect.X+p.Rect.Width-1 // inside the borders
 	top, bottom := p.Rect.Y+1, p.ContentBottom
-	lines, w := draw.TooltipLines(it.Tooltip, right-left, styles)
+	lines, w := draw.TooltipLines(text, right-left, styles)
 	if len(lines) == 0 {
 		return Rect{}
 	}
 	h := len(lines)
 	at := func(y int) Rect {
-		box := Rect{X: max(min(pi.Rect.X, right-w), left), Y: y, Width: w, Height: h}
+		box := Rect{X: max(min(widget.X, right-w), left), Y: y, Width: w, Height: h}
 		draw.PaintTooltip(screen, box.X, box.Y, box.Width, lines, styles)
 		return box
 	}
-	r := pi.Rect
 	switch {
-	case r.Y+1+h <= bottom:
-		return at(r.Y + 1)
-	case r.Y-h >= top:
-		return at(r.Y - h)
+	case widget.Y+1+h <= bottom:
+		return at(widget.Y + 1)
+	case widget.Y-h >= top:
+		return at(widget.Y - h)
 	}
 	return Rect{}
 }

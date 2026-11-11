@@ -136,7 +136,6 @@ func (h *Handler) activePanelFileColumnRect() (geom.Rect, bool) {
 		h.host.ActivePanel(),
 		h.model.ActivePanel,
 		h.model.ActivePanel,
-		h.model.ThemeDialog.Open,
 	)
 	fileCol, _ := ui.SplitPanelForSelected(ui.Rect(col), ui.SelectedStripSplitParams{
 		StripItemCount:     stripN,
@@ -296,11 +295,11 @@ func (h *Handler) applyCarouselFilePreviewNow() {
 	h.patchFilePreviewPending(previewTargetCarousel, path, isDir)
 	ctx, gen := h.beginPreviewRun(previewTargetCarousel)
 	if isDir {
-		req := h.previewRequest(path, tw, contentH, workDir, h.activePanelChromeBlocked(), nil, previewTargetCarousel, true)
+		req := h.previewRequest(path, tw, contentH, workDir, h.model.PanelsChromeBlocked(), nil, previewTargetCarousel, true)
 		go h.runDirPreviewRules(ctx, req, previewTargetCarousel, gen)
 		return
 	}
-	req := h.previewRequest(path, tw, contentH, workDir, h.activePanelChromeBlocked(), h.gitStatusForPath(path), previewTargetCarousel, false)
+	req := h.previewRequest(path, tw, contentH, workDir, h.model.PanelsChromeBlocked(), h.gitStatusForPath(path), previewTargetCarousel, false)
 	go h.dispatchCarouselFilePreview(ctx, path, req, gen)
 }
 
@@ -329,7 +328,7 @@ func (h *Handler) refreshCarouselFilePreview() {
 		return
 	}
 	workDir := h.host.ActivePanel().PathString()
-	req := h.previewRequest(st.Path, tw, contentH, workDir, h.activePanelChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetCarousel, false)
+	req := h.previewRequest(st.Path, tw, contentH, workDir, h.model.PanelsChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetCarousel, false)
 	ctx, gen := h.beginPreviewRun(previewTargetCarousel)
 	h.postRenderWake()
 	go h.runPreview(ctx, req, previewTargetCarousel, gen)

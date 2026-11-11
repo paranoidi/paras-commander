@@ -1020,7 +1020,7 @@ func (t Theme) IconMenuJob(status string) rune {
 	case "decision":
 		return '\uf059'
 	case "canceling":
-		return '\uf254'
+		return '\uf52f'
 	case "completed":
 		return '\uf05d'
 	default:
@@ -1442,15 +1442,31 @@ func ThemeChoices(userDir string) ([]NamedTheme, error) {
 // name matches wantName. Invalid or unreadable .toml siblings are skipped so one broken file does
 // not block resolving another theme from the same directory.
 func lookupUserTheme(dir, wantName string) (Theme, bool, error) {
+	value, _, ok, err := findUserTheme(dir, wantName)
+	return value, ok, err
+}
+
+// UserThemePath is the path of the file in dir that Resolve loads the theme wantName from, or ""
+// when that theme is embedded (or dir is unreadable).
+func UserThemePath(dir, wantName string) string {
+	_, path, ok, _ := findUserTheme(dir, wantName)
+	if !ok {
+		return ""
+	}
+	return path
+}
+
+// findUserTheme is lookupUserTheme that also returns the matching file's path.
+func findUserTheme(dir, wantName string) (Theme, string, bool, error) {
 	if strings.TrimSpace(dir) == "" {
-		return Theme{}, false, nil
+		return Theme{}, "", false, nil
 	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return Theme{}, false, nil
+			return Theme{}, "", false, nil
 		}
-		return Theme{}, false, err
+		return Theme{}, "", false, err
 	}
 	names := make([]string, 0, len(entries))
 	for _, e := range entries {
@@ -1466,10 +1482,10 @@ func lookupUserTheme(dir, wantName string) (Theme, bool, error) {
 			continue
 		}
 		if value.Name == wantName {
-			return value, true, nil
+			return value, path, true, nil
 		}
 	}
-	return Theme{}, false, nil
+	return Theme{}, "", false, nil
 }
 
 // Resolve returns a named theme. When userDir is non-empty, the first successfully parsed
@@ -1709,7 +1725,7 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, err
 	}
 
-	panelRowRange, err := optionalStyle(specs, palette, "panel.row.range", tcell.StyleDefault.Background(tcell.ColorOlive))
+	panelRowRange, err := optionalStyle(specs, palette, "panel.row.range", tcell.StyleDefault.Background(tcell.ColorGray))
 	if err != nil {
 		return Theme{}, err
 	}

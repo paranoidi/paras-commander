@@ -50,9 +50,9 @@ func (t Theme) IconJobsList(status string) string {
 	case "paused":
 		return "\uf28b"
 	case "canceling":
-		return "\uf254"
+		return "\uf52f"
 	case "canceled":
-		return "\uf28d"
+		return "\uf52f"
 	case "failed":
 		return "\uf06a"
 	case "completed":

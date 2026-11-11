@@ -47,7 +47,7 @@ Bindings are grouped by context. While a view or dialog has focus, its table is 
 | `[preview_search]` | Fullscreen preview, consulted only while typing a search query (match-jump chords) |
 | `[terminal]` | Embedded terminal panel |
 | `[dialog.input]` | Text inputs and the OK/Cancel chords of every dialog |
-| `[dialog.rename]`, `[dialog.mass_rename]`, `[dialog.mkdir]`, `[dialog.bookmark]`, `[dialog.find]`, `[dialog.history]`, `[dialog.columns]`, `[dialog.pin]`, `[dialog.flatten]`, `[dialog.transfer]`, `[dialog.run_for_each]`, `[dialog.command_output]`, `[dialog.help]`, `[dialog.user_menu]` | The matching dialog |
+| `[dialog.rename]`, `[dialog.mass_rename]`, `[dialog.mkdir]`, `[dialog.bookmark]`, `[dialog.find]`, `[dialog.history]`, `[dialog.columns]`, `[dialog.theme]`, `[dialog.pin]`, `[dialog.flatten]`, `[dialog.transfer]`, `[dialog.run_for_each]`, `[dialog.command_output]`, `[dialog.help]`, `[dialog.user_menu]` | The matching dialog |
 | `[leader_key]`, `[copy_menu]`, `[preview_menu]`, `[fileindex_menu]` | Single-letter keys inside the `:`, `"`, preview and `<` (fileindex) menus ([Menus](menus.md)) |
 
 `[jobs]` and `[dialog.input]` here are unrelated to the same-named tables in `config.toml`. Shortcut tables in `config.toml` are rejected.

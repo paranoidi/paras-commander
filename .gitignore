@@ -18,7 +18,9 @@ scripts/
 stub/
 test-cases/
 test-data/
-themes/imports/
+themes/import/
+/themes/*.toml
+!/themes/default.toml
 /site/
 !/docs/tapes/*.sh
 /dist/

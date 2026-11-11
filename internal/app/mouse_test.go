@@ -63,7 +63,7 @@ func cellOf(t *testing.T, a *App, id, idx int) (int, int) {
 	if id == ui.SecondaryPanel {
 		col, p = lay.Secondary, &a.model.Secondary
 	}
-	file := ui.FileListFrame(col, p, id, a.model.ActivePanel, false, a.selectedStripSplitParams(id, 0))
+	file := ui.FileListFrame(col, p, id, a.model.ActivePanel, a.selectedStripSplitParams(id, 0))
 	return file.X + 3, ui.PanelListTop(file) + idx - p.ScrollOffset
 }
 
