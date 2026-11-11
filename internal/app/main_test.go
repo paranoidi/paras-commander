@@ -14,6 +14,8 @@ func TestMain(m *testing.M) {
 	userMenuInteractiveRunner = func(context.Context, []string, string) error { return nil }
 	userMenuDetachRunner = func([]string, string) error { return nil }
 	runDetachedXDGOpen = func(string) error { return nil }
+	defaultAppForPath = func(string) (string, error) { return "stub.desktop", nil }
+	runDetachedLaunch = func(string, []string) error { return nil }
 	// Keep dedup's persistent hash cache, the user's zoxide database and their fileindex database
 	// (found through $HOME when a test's config names none) out of tests.
 	dir, err := os.MkdirTemp("", "pc-app-test-cache")
