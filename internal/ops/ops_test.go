@@ -1284,6 +1284,10 @@ func TestDestinationIsDirAtEnqueue(t *testing.T) {
 	if DestinationIsDirAtEnqueue(MustPath(missing)) {
 		t.Fatal("missing path should report false")
 	}
+	// A remote destination is unknown: no backend is registered or contacted.
+	if DestinationIsDirAtEnqueue(MustPath("sftp://alice@example.com/harbor/meadow")) {
+		t.Fatal("remote path should report false without a Stat")
+	}
 }
 
 func TestConflictResolverOverwrite(t *testing.T) {

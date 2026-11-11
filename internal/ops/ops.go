@@ -370,8 +370,22 @@ func resolveDestinationNamedCtx(ctx context.Context, dest pathloc.Path, name str
 // DestinationIsDirAtEnqueue reports whether dest names an existing directory,
 // using the same Stat semantics as ResolveDestination. Call once when
 // queueing a job so UI listing markers avoid per-row Stat on the destination.
+//
+// It runs on the UI goroutine, so it never touches a remote backend: a
+// non-local destination does no I/O and reports false ("unknown"). A caller
+// that already knows a remote destination's directory-ness (a worker probe)
+// carries that value itself instead.
 func DestinationIsDirAtEnqueue(dest pathloc.Path) bool {
-	isDir, err := destinationIsDir(context.Background(), dest)
+	if !dest.IsLocal() {
+		return false
+	}
+	return DestinationIsDir(context.Background(), dest)
+}
+
+// DestinationIsDir is DestinationIsDirAtEnqueue's Stat for any scheme. It may block on a
+// remote round trip, so call it only off the UI goroutine (a worker probe).
+func DestinationIsDir(ctx context.Context, dest pathloc.Path) bool {
+	isDir, err := destinationIsDir(ctx, dest)
 	return err == nil && isDir
 }
 

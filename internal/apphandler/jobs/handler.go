@@ -1083,7 +1083,6 @@ func (h *Handler) SelectedJobActions() menu.JobActions {
 	return a
 }
 
-
 func (h *Handler) clearFinishedJobs() {
 	h.jobQueue().ClearFinished()
 	h.state.ClearFinishedArchive()
@@ -1461,13 +1460,18 @@ func (h *Handler) AddTransferJob(req TransferJobRequest) bool {
 		h.host.SetTransientMessage(msg, ui.MessageUrgencyWarn)
 		return false
 	}
+	// A remote destination's directory-ness is only known from a caller's worker probe.
+	destIsDir := ops.DestinationIsDirAtEnqueue(destLoc)
+	if req.DestIsDir != nil {
+		destIsDir = *req.DestIsDir
+	}
 	job := &jobs.Job{
 		ID:                  jobs.NewJobID(),
 		Type:                req.Type,
 		Status:              jobs.StatusScanning,
 		Sources:             srcLocs,
 		Destination:         destLoc,
-		DestIsDir:           ops.DestinationIsDirAtEnqueue(destLoc),
+		DestIsDir:           destIsDir,
 		PausedAfterScan:     req.StartPaused,
 		PreservePermissions: req.Preserve.PreservePermissions,
 		PreserveTimestamps:  req.Preserve.PreserveTimestamps,
@@ -1608,8 +1612,8 @@ func (h *Handler) EnqueueExtractJob(sources []string, dest string, asDirectory b
 		Status:      jobs.StatusQueued,
 		Sources:     srcLocs,
 		Destination: destLoc,
-		// A remote destination was checked by the planner; no Stat on the UI goroutine.
-		DestIsDir:  !destLoc.IsLocal() || ops.DestinationIsDirAtEnqueue(destLoc),
+		// The planner already verified the destination is a directory (local or remote).
+		DestIsDir:  true,
 		TotalFiles: len(sources),
 
 		ExtractAsDirectory: asDirectory,

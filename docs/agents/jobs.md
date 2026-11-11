@@ -60,6 +60,7 @@ Background jobs live in `internal/jobs`; the transfer glue is `internal/jobbridg
 ## Disk space
 
 - Enqueue never walks or checks space (`file.copy` and the other transfer dialogs queue immediately; a pre-enqueue walk would block the UI thread). `ops.EnsureDiskSpace` runs at run time.
+- **`Job.DestIsDir` at enqueue**: `ops.DestinationIsDirAtEnqueue` runs on the UI goroutine and never touches a remote backend: a non-local destination does no I/O and reports false ("unknown"); `ops.DestinationIsDir(ctx, dest)` is the any-scheme Stat for worker goroutines only. A caller that learned a remote destination's directory-ness off the UI goroutine passes it on `TransferJobRequest.DestIsDir` (non-nil overrides the enqueue decision): the transfer dialog's remote probe (`remoteSelfTargetAndDestDir`) and the mkdir-then-copy/move path hand it over through `Handler.enqueueDestIsDir`/`destIsDirForEnqueue` in `apphandler/dialog`. Extract enqueue sets it true (the planner checked); `RetryClone` carries the previous value over (`j.DestIsDir ||` the local Stat); flatten, compare-merge and duplicate jobs with a remote destination get false.
 - The whole-payload upfront check runs only on the synchronous-rebuild fallback (`PlanCh == nil`). Streamed jobs skip it: `TransferFunc` cannot race-free read a still-streaming job's `TotalBytes`/`PlanComplete` (the producer writes them under `State`'s lock). The per-file check is the safety net (mc has no upfront check at all).
 - Per-file check applies at or above `[operations].disk_space_check_min_file_bytes` (`0` = every file).
 

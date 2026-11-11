@@ -146,7 +146,7 @@ func firstVisibleCandidate(p *panel.State, candidates []string) string {
 
 // transferTopLevelDestNames returns the basenames (or first path segments for structured
 // transfers) that will appear as rows in the destination directory listing. isDir is the
-// caller's already-known DestinationIsDirAtEnqueue result, since that call does a Stat.
+// caller's already-known destination-is-directory fact (see `destIsDirForEnqueue`), so it does no Stat.
 func transferTopLevelDestNames(sources []string, dest string, isDir, flatten bool) []string {
 	srcLocs, err := pathloc.ParseAll(sources)
 	if err != nil || len(srcLocs) == 0 {

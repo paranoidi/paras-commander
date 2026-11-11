@@ -340,7 +340,7 @@ func remoteSelfTargetAndDestDir(backend fsbackend.Backend, sources []pathloc.Pat
 		return selfTargetCountWithDestDir(sources, dest, flat, destIsDir), destIsDir
 	}
 	nSelf = ops.SelfTargetCount(sources, dest, flat)
-	destIsDir = ops.DestinationIsDirAtEnqueue(dest)
+	destIsDir = ops.DestinationIsDir(context.Background(), dest) // worker goroutine: remote Stat is fine
 	return nSelf, destIsDir
 }
 
@@ -375,17 +375,20 @@ func remoteIsNotExist(err error) bool {
 	return strings.Contains(msg, "no such file") || strings.Contains(msg, "not found")
 }
 
-func (h *Handler) destIsDirForEnqueue(dest string) bool {
+// destIsDirForEnqueue reports whether dest is a directory and whether that is known: from a
+// worker probe (consumed here) or, for a local destination, a Stat. A remote destination
+// without a probe result is unknown (false, false).
+func (h *Handler) destIsDirForEnqueue(dest string) (isDir, known bool) {
 	if h.enqueueDestIsDir != nil {
 		v := *h.enqueueDestIsDir
 		h.enqueueDestIsDir = nil
-		return v
+		return v, true
 	}
 	loc, err := pathloc.Parse(dest)
-	if err != nil || !loc.IsLocal() {
-		return false
+	if err != nil {
+		return false, false
 	}
-	return ops.DestinationIsDirAtEnqueue(loc)
+	return ops.DestinationIsDirAtEnqueue(loc), loc.IsLocal()
 }
 
 func (h *Handler) setEnqueueDestIsDir(isDir bool) {

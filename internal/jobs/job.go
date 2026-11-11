@@ -406,6 +406,11 @@ func (j *Job) RetryClone() *Job {
 	if j.Type == TypeDelete || j.Type == TypeExtract {
 		totalFiles = len(j.Sources)
 	}
+	// A remote destination is never Stat-ed on the UI goroutine; its enqueue-time value carries over.
+	destIsDir := j.DestIsDir
+	if j.Destination.IsLocal() {
+		destIsDir = ops.DestinationIsDirAtEnqueue(j.Destination)
+	}
 	var plan []ops.PlanItem
 	planBytes := j.EstimatedBytes
 	estimated := j.EstimatedBytes
@@ -426,7 +431,7 @@ func (j *Job) RetryClone() *Job {
 		Status:          StatusScanning,
 		Sources:         j.Sources,
 		Destination:     j.Destination,
-		DestIsDir:       ops.DestinationIsDirAtEnqueue(j.Destination),
+		DestIsDir:       destIsDir,
 		TotalFiles:      totalFiles,
 		TotalDirs:       totalDirs,
 		// A retry plan skips the pre-scan: SummarizePlan's totals are already final.

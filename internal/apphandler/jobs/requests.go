@@ -9,6 +9,10 @@ type TransferJobRequest struct {
 	Dest        string
 	StartPaused bool
 	Preserve    jobs.TransferPreserve
+	// DestIsDir, when non-nil, is the destination's directory-ness already known to the caller
+	// (a worker probe of a remote destination, or a directory the caller just created). Nil
+	// means the enqueue decides it, which is false for a remote destination.
+	DestIsDir *bool
 }
 
 // FlattenJobRequest enqueues a flatten (move children + optional empty-dir cleanup) job.

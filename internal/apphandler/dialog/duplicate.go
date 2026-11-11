@@ -13,10 +13,14 @@ import (
 // AddTransferJob enqueues a copy/move job through Deps.Jobs, then optionally arms
 // focus-other-panel-after-transfer when the destination is the inactive panel's cwd.
 func (h *Handler) AddTransferJob(jobType jobs.Type, sources []string, dest string, startPaused bool, preserve jobs.TransferPreserve) bool {
-	destIsDir := h.destIsDirForEnqueue(dest)
-	if !h.jobs.AddTransferJob(jobsctrl.TransferJobRequest{
+	destIsDir, known := h.destIsDirForEnqueue(dest)
+	req := jobsctrl.TransferJobRequest{
 		Type: jobType, Sources: sources, Dest: dest, StartPaused: startPaused, Preserve: preserve,
-	}) {
+	}
+	if known {
+		req.DestIsDir = &destIsDir
+	}
+	if !h.jobs.AddTransferJob(req) {
 		return false
 	}
 	h.maybeScheduleTransferOtherPanelFocus(jobType, sources, dest, preserve, destIsDir)
