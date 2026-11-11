@@ -30,8 +30,9 @@ const StatusStubTOML = `# status.toml — menu-bar status commands
 #   command      string  required; run via sh -c, no %f-style macros
 #   interval_ms  int     default 3000, values below 500 use the default
 #   max_width    int     default 15, clamped to [1, 200]; longer output is cut to fit (… included)
-#   color        string  text color: a theme [palette] name (e.g. "yellow"), "#RRGGBB"
-#                        or "default"; empty uses the theme's menu.status style
+#   color        string  text color: a theme role (e.g. "warning"), else a theme [palette]
+#                        name (e.g. "yellow"), "#RRGGBB" or "default"; empty uses the
+#                        theme's menu.status style
 #
 # [[command]]
 # name = "clock"

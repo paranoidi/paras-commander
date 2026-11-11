@@ -473,6 +473,9 @@ type UIConfig struct {
 	// OtherPanelMatchMarks: when true, each panel marks rows whose name also exists in the other
 	// panel's directory (cyan for the active cursor's name).
 	OtherPanelMatchMarks bool `toml:"other_panel_match_marks"`
+	// VolumeInfo selects the panel title's free-space label (VolumeInfoFull / Medium / Small /
+	// None); unknown values reset to DefaultVolumeInfo in Validate.
+	VolumeInfo string `toml:"volume_info"`
 	// Tooltips shows the explanation box of the focused dialog widget (dlg Item.Tooltip).
 	// Default DefaultTooltips.
 	Tooltips bool `toml:"tooltips"`
@@ -745,6 +748,7 @@ func Default() Config {
 			LeaderMenuShowDirectKeys:    DefaultLeaderMenuShowDirectKeys,
 			NarrowPanelsNameOnly:        DefaultNarrowPanelsNameOnly,
 			OtherPanelMatchMarks:        DefaultOtherPanelMatchMarks,
+			VolumeInfo:                  DefaultVolumeInfo,
 			Tooltips:                    DefaultTooltips,
 			ScreenRenderHashCache:       DefaultScreenRenderHashCache,
 			KeyRepeatDebounceMS:         DefaultKeyRepeatDebounceMS,
@@ -1314,6 +1318,11 @@ func (c *Config) validateUIZoom(builtin *Config) {
 	}
 	if !c.scrollModeValid(c.UI.Scroll.Mode) {
 		c.UI.Scroll.Mode = DefaultScrollMode
+	}
+	switch c.UI.VolumeInfo {
+	case VolumeInfoFull, VolumeInfoMedium, VolumeInfoSmall, VolumeInfoNone:
+	default:
+		c.UI.VolumeInfo = DefaultVolumeInfo
 	}
 	if !c.panelScrollbarValid(c.UI.Scroll.Scrollbar) {
 		c.UI.Scroll.Scrollbar = DefaultPanelScrollbar

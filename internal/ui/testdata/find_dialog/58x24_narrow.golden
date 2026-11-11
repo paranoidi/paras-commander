@@ -34,14 +34,13 @@ g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 h fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 i fg=0x300eca517 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 j fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-k fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-l fg=0x300abb2bf bg=0x100000008 attrs=0 ul=0 ulc=0x0
-m fg=0x300519aba bg=0x100000008 attrs=0 ul=0 ulc=0x0
-n fg=0x100000005 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-o fg=0x100000004 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-p fg=0x30089e051 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-q fg=0x3009c4221 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-r fg=0x100000005 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+k fg=0x300abb2bf bg=0x100000008 attrs=0 ul=0 ulc=0x0
+l fg=0x300519aba bg=0x100000008 attrs=0 ul=0 ulc=0x0
+m fg=0x100000005 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+n fg=0x100000004 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+o fg=0x30089e051 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+p fg=0x3009c4221 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+q fg=0x100000005 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -51,18 +50,18 @@ aabbddeefeeeeeeeeeeeeeeeeeeeeebddddddgggbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbhbbbbbbbbbbbbbbbbbbbbbbbhbbbbbbbbbbbbhbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbibjjjjjjjjjjjjjjkkjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjbbaa
+aabbibjjjjjjjjjjjjjjhhjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjbbaa
+aabbkbbbbbbbbbbbbbbbbhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabblbbbbbbbbbbbbbbbbhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbmbbbbbbbbbbbbbbbbhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbnbbbbbbbbhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbnbbbbbbbbbbhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbnbbbbbbbbbbhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabboobhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbmbbbbbbbbhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbmbbbbbbbbbbhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbmbbbbbbbbbbhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbnnbhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbobbhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbpbbhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbqbbhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbnbbhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbmbbhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbgggrggggbbgggrggggggggbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbgggqggggbbgggqggggggggbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

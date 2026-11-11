@@ -380,9 +380,11 @@ type Theme struct {
 	// from the [icons] section of the theme file.
 	Icons map[string]string
 
-	// palette is the theme's [palette] table, kept so colors named outside the theme file
-	// (status.toml command colors) resolve the same way (see ResolveColor).
+	// palette is the theme's [palette] table (the 16 ANSI names); with roles it is kept so colors
+	// named outside the theme file (status.toml command colors, folder colors) resolve (see ResolveColor).
 	palette map[string]tcell.Color
+	// roles is the theme's resolved [roles] table (every role present), the only color names a style may use.
+	roles map[string]tcell.Color
 
 	// UseNerdfontIcons is set at runtime from config.UI.UseNerdfontIcons; when false,
 	// dialogs use plain ASCII markers (forcing legacy mode regardless of theme icons).
@@ -1534,7 +1536,7 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, fmt.Errorf("[styles] is not supported; use [status], [menu], [panel], [dialog], [jobs], [message], [footer], and [fuzzy] sections")
 	}
 	for key := range raw {
-		if key == "name" || key == "palette" || key == "icons" {
+		if key == "name" || key == "palette" || key == "roles" || key == "icons" {
 			continue
 		}
 		if styleSectionRootSet[key] {
@@ -1552,6 +1554,10 @@ func parse(data []byte) (Theme, error) {
 	}
 
 	palette, err := paletteField(raw)
+	if err != nil {
+		return Theme{}, err
+	}
+	roles, err := rolesField(raw, palette)
 	if err != nil {
 		return Theme{}, err
 	}
@@ -1591,162 +1597,162 @@ func parse(data []byte) (Theme, error) {
 		if !ok {
 			return Theme{}, fmt.Errorf("missing required style %q", key)
 		}
-		style, err := buildStyle(spec, palette)
+		style, err := buildStyle(spec, roles)
 		if err != nil {
 			return Theme{}, fmt.Errorf("style %q: %w", key, err)
 		}
 		styles[key] = style
 	}
 
-	menuProgressDoneGfx, err := optionalGfx(specs, palette, "menu.progress.done.gfx")
+	menuProgressDoneGfx, err := optionalGfx(specs, roles, "menu.progress.done.gfx")
 	if err != nil {
 		return Theme{}, err
 	}
-	menuProgressDeleteGfx, err := optionalGfx(specs, palette, "menu.progress.delete.gfx")
+	menuProgressDeleteGfx, err := optionalGfx(specs, roles, "menu.progress.delete.gfx")
 	if err != nil {
 		return Theme{}, err
 	}
-	menuProgressRemoveGfx, err := optionalGfx(specs, palette, "menu.progress.remove.gfx")
+	menuProgressRemoveGfx, err := optionalGfx(specs, roles, "menu.progress.remove.gfx")
 	if err != nil {
 		return Theme{}, err
 	}
-	jobsOperationSuccess, err := optionalStyle(specs, palette, "jobs.operations.success", styles["status.completed"])
+	jobsOperationSuccess, err := optionalStyle(specs, roles, "jobs.operations.success", styles["status.completed"])
 	if err != nil {
 		return Theme{}, err
 	}
-	jobsOperationFailed, err := optionalStyle(specs, palette, "jobs.operations.failed", styles["status.failed"])
+	jobsOperationFailed, err := optionalStyle(specs, roles, "jobs.operations.failed", styles["status.failed"])
 	if err != nil {
 		return Theme{}, err
 	}
-	jobsOperationSkipped, err := optionalStyle(specs, palette, "jobs.operations.skipped", styles["status.paused"])
+	jobsOperationSkipped, err := optionalStyle(specs, roles, "jobs.operations.skipped", styles["status.paused"])
 	if err != nil {
 		return Theme{}, err
 	}
 	_, jobsProgressFillBG, _ := styles["jobs.progress.fill"].Decompose()
-	jobsProgressCompletedFill, err := optionalStyle(specs, palette, "jobs.progress.completed.fill", styles["jobs.progress.label.on_fill"].Background(jobsProgressFillBG))
+	jobsProgressCompletedFill, err := optionalStyle(specs, roles, "jobs.progress.completed.fill", styles["jobs.progress.label.on_fill"].Background(jobsProgressFillBG))
 	if err != nil {
 		return Theme{}, err
 	}
-	panelRowMarkJobRemoving, err := optionalStyle(specs, palette, "panel.row.mark.job.removing", styles["panel.row.mark.job.delete"])
+	panelRowMarkJobRemoving, err := optionalStyle(specs, roles, "panel.row.mark.job.removing", styles["panel.row.mark.job.delete"])
 	if err != nil {
 		return Theme{}, err
 	}
-	menuSpeedCap, err := optionalStyle(specs, palette, "menu.speed.cap", tcell.StyleDefault.Foreground(tcell.ColorGray))
+	menuSpeedCap, err := optionalStyle(specs, roles, "menu.speed.cap", roleStyle(roles, "surface", ""))
 	if err != nil {
 		return Theme{}, err
 	}
-	menuSpeedText, err := optionalStyle(specs, palette, "menu.speed.text", tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorGray))
+	menuSpeedText, err := optionalStyle(specs, roles, "menu.speed.text", roleStyle(roles, "ink", "surface"))
 	if err != nil {
 		return Theme{}, err
 	}
-	menuStatusSeparator, err := optionalStyle(specs, palette, "menu.status.separator", tcell.StyleDefault.Foreground(tcell.ColorGray))
-	if err != nil {
-		return Theme{}, err
-	}
-
-	footerHover, err := optionalStyle(specs, palette, "footer.hover", tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorTeal))
+	menuStatusSeparator, err := optionalStyle(specs, roles, "menu.status.separator", roleStyle(roles, "muted", ""))
 	if err != nil {
 		return Theme{}, err
 	}
 
-	footerHoverActive, err := optionalStyle(specs, palette, "footer.hover.active", tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorTeal))
+	footerHover, err := optionalStyle(specs, roles, "footer.hover", roleStyle(roles, "cursor_fg", "cursor_bg"))
 	if err != nil {
 		return Theme{}, err
 	}
 
-	tooltipText, err := optionalStyle(specs, palette, "tooltip.text", styles["dialog.completion.item"])
-	if err != nil {
-		return Theme{}, err
-	}
-	tooltipInfo, err := optionalStyle(specs, palette, "tooltip.info", styles["dialog.accent"])
+	footerHoverActive, err := optionalStyle(specs, roles, "footer.hover.active", roleStyle(roles, "fg_strong", "cursor_bg"))
 	if err != nil {
 		return Theme{}, err
 	}
 
-	previewSearchIcon, err := optionalStyle(specs, palette, "preview.search_icon", tcell.Style{})
+	tooltipText, err := optionalStyle(specs, roles, "tooltip.text", styles["dialog.completion.item"])
+	if err != nil {
+		return Theme{}, err
+	}
+	tooltipInfo, err := optionalStyle(specs, roles, "tooltip.info", styles["dialog.accent"])
 	if err != nil {
 		return Theme{}, err
 	}
 
-	jobsRowHover, err := optionalStyle(specs, palette, "jobs.row.hover", tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorGray))
+	previewSearchIcon, err := optionalStyle(specs, roles, "preview.search_icon", tcell.Style{})
 	if err != nil {
 		return Theme{}, err
 	}
 
-	messageSweep, err := optionalStyle(specs, palette, "message.sweep", tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorWhite))
+	jobsRowHover, err := optionalStyle(specs, roles, "jobs.row.hover", roleStyle(roles, "fg_strong", "surface"))
 	if err != nil {
 		return Theme{}, err
 	}
 
-	messageSuccess, err := optionalStyle(specs, palette, "message.success", tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorGreen))
+	messageSweep, err := optionalStyle(specs, roles, "message.sweep", roleStyle(roles, "ink", "inverse_bg"))
 	if err != nil {
 		return Theme{}, err
 	}
 
-	dialogTextSelect, err := optionalStyle(specs, palette, "dialog.text_select", tcell.Style{})
-	if err != nil {
-		return Theme{}, err
-	}
-	dialogAccentAlt, err := optionalStyle(specs, palette, "dialog.accent_alt", styles["dialog.accent"])
-	if err != nil {
-		return Theme{}, err
-	}
-	panelRowMarkOtherMatch, err := optionalStyle(specs, palette, "panel.row.mark.other_match", tcell.StyleDefault.Foreground(tcell.ColorGray))
-	if err != nil {
-		return Theme{}, err
-	}
-	panelRowMarkOtherMatchCursor, err := optionalStyle(specs, palette, "panel.row.mark.other_match.cursor", tcell.StyleDefault.Foreground(tcell.ColorTeal))
+	messageSuccess, err := optionalStyle(specs, roles, "message.success", roleStyle(roles, "ink", "success"))
 	if err != nil {
 		return Theme{}, err
 	}
 
-	panelFileIndex, err := fileIndexStateStyles(specs, palette)
+	dialogTextSelect, err := optionalStyle(specs, roles, "dialog.text_select", tcell.Style{})
 	if err != nil {
 		return Theme{}, err
 	}
-	panelMetaWarn, err := optionalStyle(specs, palette, "panel.meta.warn", tcell.StyleDefault.Foreground(tcell.ColorYellow))
+	dialogAccentAlt, err := optionalStyle(specs, roles, "dialog.accent_alt", styles["dialog.accent"])
 	if err != nil {
 		return Theme{}, err
 	}
-	panelMetaCritical, err := optionalStyle(specs, palette, "panel.meta.critical", tcell.StyleDefault.Foreground(tcell.ColorRed).Bold(true))
+	panelRowMarkOtherMatch, err := optionalStyle(specs, roles, "panel.row.mark.other_match", roleStyle(roles, "muted", ""))
 	if err != nil {
 		return Theme{}, err
 	}
-	panelRowMarkRangeAnchor, err := optionalStyle(specs, palette, "panel.row.mark.range_anchor", tcell.StyleDefault.Foreground(tcell.ColorYellow))
-	if err != nil {
-		return Theme{}, err
-	}
-	panelCursorRange, err := optionalStyle(specs, palette, "panel.row.cursor.range", tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorYellow))
-	if err != nil {
-		return Theme{}, err
-	}
-	panelCursorRangeSelected, err := optionalStyle(specs, palette, "panel.row.cursor.range.selected", tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorYellow).Bold(true))
+	panelRowMarkOtherMatchCursor, err := optionalStyle(specs, roles, "panel.row.mark.other_match.cursor", roleStyle(roles, "info", ""))
 	if err != nil {
 		return Theme{}, err
 	}
 
-	panelRowRange, err := optionalStyle(specs, palette, "panel.row.range", tcell.StyleDefault.Background(tcell.ColorGray))
+	panelFileIndex, err := fileIndexStateStyles(specs, roles)
+	if err != nil {
+		return Theme{}, err
+	}
+	panelMetaWarn, err := optionalStyle(specs, roles, "panel.meta.warn", roleStyle(roles, "warning", ""))
+	if err != nil {
+		return Theme{}, err
+	}
+	panelMetaCritical, err := optionalStyle(specs, roles, "panel.meta.critical", roleStyle(roles, "danger", "").Bold(true))
+	if err != nil {
+		return Theme{}, err
+	}
+	panelRowMarkRangeAnchor, err := optionalStyle(specs, roles, "panel.row.mark.range_anchor", roleStyle(roles, "selected", ""))
+	if err != nil {
+		return Theme{}, err
+	}
+	panelCursorRange, err := optionalStyle(specs, roles, "panel.row.cursor.range", roleStyle(roles, "ink", "selected"))
+	if err != nil {
+		return Theme{}, err
+	}
+	panelCursorRangeSelected, err := optionalStyle(specs, roles, "panel.row.cursor.range.selected", roleStyle(roles, "ink", "selected").Bold(true))
 	if err != nil {
 		return Theme{}, err
 	}
 
-	panelRowRangeUnselect, err := optionalStyle(specs, palette, "panel.row.range.unselect", tcell.StyleDefault.Background(tcell.ColorMaroon))
+	panelRowRange, err := optionalStyle(specs, roles, "panel.row.range", roleStyle(roles, "", "range_bg"))
 	if err != nil {
 		return Theme{}, err
 	}
 
-	panelEmpty, err := optionalStyle(specs, palette, "panel.empty", panelEmptyFallback)
+	panelRowRangeUnselect, err := optionalStyle(specs, roles, "panel.row.range.unselect", roleStyle(roles, "", "range_unselect_bg"))
 	if err != nil {
 		return Theme{}, err
 	}
 
-	panelIconBrokenLink, err := optionalStyle(specs, palette, "panel.icon.broken_link", tcell.StyleDefault.Foreground(palette["red"]))
+	panelEmpty, err := optionalStyle(specs, roles, "panel.empty", roleStyle(roles, "muted", ""))
+	if err != nil {
+		return Theme{}, err
+	}
+
+	panelIconBrokenLink, err := optionalStyle(specs, roles, "panel.icon.broken_link", roleStyle(roles, "danger", ""))
 	if err != nil {
 		return Theme{}, err
 	}
 
 	fuzzyCursorFG, _, _ := styles["fuzzy.highlight.cursor"].Decompose()
-	panelScrollbarMatch, err := optionalStyle(specs, palette, "panel.scrollbar.match", tcell.StyleDefault.Foreground(fuzzyCursorFG))
+	panelScrollbarMatch, err := optionalStyle(specs, roles, "panel.scrollbar.match", tcell.StyleDefault.Foreground(fuzzyCursorFG))
 	if err != nil {
 		return Theme{}, err
 	}
@@ -1778,9 +1784,9 @@ func parse(data []byte) (Theme, error) {
 		if _, ok := allowedPanelIconStyles[key]; !ok {
 			return Theme{}, fmt.Errorf("style %q: field \"icon\" is only allowed on panel cursor row and disk-usage bar styles", key)
 		}
-		iconColor, err := resolveColor(spec.Icon, palette)
+		iconColor, err := resolveRole("icon", spec.Icon, roles)
 		if err != nil {
-			return Theme{}, fmt.Errorf("style %q icon: %w", key, err)
+			return Theme{}, fmt.Errorf("style %q: %w", key, err)
 		}
 		panelFileIcons[key] = iconColor
 	}
@@ -2029,6 +2035,7 @@ func parse(data []byte) (Theme, error) {
 
 		Icons:   icons,
 		palette: palette,
+		roles:   roles,
 
 		FooterKey:         styles["footer.key"],
 		FooterLabel:       styles["footer.label"],
@@ -2101,26 +2108,6 @@ func collectIconEntry(fullKey string, rawValue any, icons map[string]string) err
 	default:
 		return fmt.Errorf("icons.%s: must be a string, nested table of strings, or inline { icon = \"...\" }", fullKey)
 	}
-}
-
-func paletteField(raw map[string]any) (map[string]tcell.Color, error) {
-	value, ok := raw["palette"]
-	if !ok {
-		return nil, fmt.Errorf("palette is required")
-	}
-	table, ok := value.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("palette must be a table")
-	}
-	palette := map[string]tcell.Color{}
-	for name, rawValue := range table {
-		color, err := parsePaletteEntry(rawValue)
-		if err != nil {
-			return nil, fmt.Errorf("palette.%s: %w", name, err)
-		}
-		palette[name] = color
-	}
-	return palette, nil
 }
 
 func parsePaletteEntry(rawValue any) (tcell.Color, error) {
@@ -2281,7 +2268,7 @@ func decodeStyleSpec(key string, table map[string]any) (styleSpec, error) {
 
 // optionalGfx loads consecutive optional gradient keys prefix.0 .. prefix.9, stopping at the
 // first missing index so a theme can define a short trail without sparse holes.
-func optionalGfx(specs map[string]styleSpec, palette map[string]tcell.Color, prefix string) ([]tcell.Style, error) {
+func optionalGfx(specs map[string]styleSpec, roles map[string]tcell.Color, prefix string) ([]tcell.Style, error) {
 	var out []tcell.Style
 	for i := 0; i < 10; i++ {
 		key := fmt.Sprintf("%s.%d", prefix, i)
@@ -2289,7 +2276,7 @@ func optionalGfx(specs map[string]styleSpec, palette map[string]tcell.Color, pre
 		if !ok {
 			break
 		}
-		style, err := buildStyle(spec, palette)
+		style, err := buildStyle(spec, roles)
 		if err != nil {
 			return nil, fmt.Errorf("style %q: %w", key, err)
 		}
@@ -2299,31 +2286,31 @@ func optionalGfx(specs map[string]styleSpec, palette map[string]tcell.Color, pre
 }
 
 // optionalStyle loads a single optional style key, returning fallback when the theme omits it.
-func optionalStyle(specs map[string]styleSpec, palette map[string]tcell.Color, key string, fallback tcell.Style) (tcell.Style, error) {
+func optionalStyle(specs map[string]styleSpec, roles map[string]tcell.Color, key string, fallback tcell.Style) (tcell.Style, error) {
 	spec, ok := specs[key]
 	if !ok {
 		return fallback, nil
 	}
-	style, err := buildStyle(spec, palette)
+	style, err := buildStyle(spec, roles)
 	if err != nil {
 		return tcell.Style{}, fmt.Errorf("style %q: %w", key, err)
 	}
 	return style, nil
 }
 
-func buildStyle(spec styleSpec, palette map[string]tcell.Color) (tcell.Style, error) {
+func buildStyle(spec styleSpec, roles map[string]tcell.Color) (tcell.Style, error) {
 	style := tcell.StyleDefault
 	if spec.FG != "" {
-		color, err := resolveColor(spec.FG, palette)
+		color, err := resolveRole("fg", spec.FG, roles)
 		if err != nil {
-			return tcell.Style{}, fmt.Errorf("fg: %w", err)
+			return tcell.Style{}, err
 		}
 		style = style.Foreground(color)
 	}
 	if spec.BG != "" {
-		color, err := resolveColor(spec.BG, palette)
+		color, err := resolveRole("bg", spec.BG, roles)
 		if err != nil {
-			return tcell.Style{}, fmt.Errorf("bg: %w", err)
+			return tcell.Style{}, err
 		}
 		style = style.Background(color)
 	}
@@ -2339,24 +2326,23 @@ func buildStyle(spec styleSpec, palette map[string]tcell.Color) (tcell.Style, er
 	return style, nil
 }
 
-// ResolveColor resolves a color value the way theme style fields do: a [palette] name,
-// "#RRGGBB", or "default".
+// ResolveColor resolves a color named outside the theme file (status commands, folder colors):
+// a role name first, then a [palette] name, then "#RRGGBB" or "default".
 func (t Theme) ResolveColor(value string) (tcell.Color, error) {
-	return resolveColor(strings.TrimSpace(value), t.palette)
-}
-
-func resolveColor(value string, palette map[string]tcell.Color) (tcell.Color, error) {
+	value = strings.TrimSpace(value)
+	if c, ok := t.roles[value]; ok {
+		return c, nil
+	}
+	if c, ok := t.palette[value]; ok {
+		return c, nil
+	}
 	if strings.HasPrefix(value, "#") {
 		return ParseHexColor(value)
 	}
-	if strings.EqualFold(strings.TrimSpace(value), "default") {
+	if strings.EqualFold(value, "default") {
 		return tcell.ColorDefault, nil
 	}
-	color, ok := palette[value]
-	if !ok {
-		return tcell.ColorDefault, fmt.Errorf("unknown color %q", value)
-	}
-	return color, nil
+	return tcell.ColorDefault, fmt.Errorf("unknown color %q", value)
 }
 
 func ParseHexColor(value string) (tcell.Color, error) {

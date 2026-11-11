@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"github.com/mattn/go-runewidth"
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"strconv"
 	"strings"
@@ -57,6 +58,7 @@ func TestFormatByteSizeListedExamples(t *testing.T) {
 
 func TestPanelVolumeFreeSpaceTitle(t *testing.T) {
 	tests := []struct {
+		mode      string
 		ok        bool
 		avail     uint64
 		total     uint64
@@ -70,11 +72,15 @@ func TestPanelVolumeFreeSpaceTitle(t *testing.T) {
 			avail: 28 * 1024 * 1024 * 1024,
 			total: 1817 * 1024 * 1024 * 1024,
 			want:  "──── 28G / 1817G (1%) ─",
+			mode:  config.VolumeInfoFull,
 		},
-		{ok: true, avail: 500, total: 1000, want: "──── 500 / 1000 (50%) ─"},
+		{mode: config.VolumeInfoFull, ok: true, avail: 500, total: 1000, want: "──── 500 / 1000 (50%) ─"},
+		{mode: config.VolumeInfoMedium, ok: true, avail: 500, total: 1000, want: "──── 500 (50%) ─"},
+		{mode: config.VolumeInfoSmall, ok: true, avail: 500, total: 1000, want: "──── 500 ─"},
+		{mode: config.VolumeInfoNone, ok: true, avail: 500, total: 1000, wantEmpty: true},
 	}
 	for _, tt := range tests {
-		got := panelVolumeFreeSpaceTitle(tt.ok, tt.avail, tt.total)
+		got := panelVolumeFreeSpaceTitle(tt.mode, tt.ok, tt.avail, tt.total)
 		if tt.wantEmpty {
 			if got != "" {
 				t.Fatalf("panelVolumeFreeSpaceTitle(...) = %q, want empty", got)
@@ -163,7 +169,7 @@ func TestPaintPanelTopTitleRowEndLabelCases(t *testing.T) {
 			for col := 0; col < contentCols; col++ {
 				screen.SetContent(titleX+col, y, '─', nil, chrome.Frame)
 			}
-			row := newPanelTitleRow(Rect{Width: tt.width, Height: 4}, panel.State{}, theme.Default(), tt.endLabel)
+			row := newPanelTitleRow(Rect{Width: tt.width, Height: 4}, panel.State{}, theme.Default(), tt.endLabel, "")
 			paintPanelTopTitleRow(screen, row, y, path, home,
 				panelTitleStyles{Path: chrome.Title, End: chrome.Title, Border: chrome.Frame}, -1)
 			got := tcelltest.TextAt(screen, titleX, y, contentCols)

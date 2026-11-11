@@ -103,6 +103,7 @@ func applyConfigToModel(m *ui.Model, cfg config.Config) {
 	m.CarouselLayout = carouselLayoutFromConfig(cfg.Carousel)
 	m.NarrowPanelsNameOnly = cfg.UI.NarrowPanelsNameOnly
 	m.OtherPanelMatchMarks = cfg.UI.OtherPanelMatchMarks
+	m.PanelVolumeInfo = cfg.UI.VolumeInfo
 	m.JobsFilterCaseInsensitive = cfg.Filter.CaseInsensitive
 	m.TerminalPanel.Rows = cfg.Shell.TerminalPanelHeight
 }

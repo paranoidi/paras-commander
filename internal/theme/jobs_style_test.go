@@ -57,8 +57,8 @@ func TestJobsProgressStylesCompleted(t *testing.T) {
 func TestJobsProgressCompletedFallsBackToActive(t *testing.T) {
 	t.Parallel()
 	data := testTheme(t, "completedfallback", nil, map[string]string{
-		"jobs.progress.fill":          `{ fg = "black", bg = "yellow" }`,
-		"jobs.progress.label.on_fill": `{ fg = "white", bold = true }`,
+		"jobs.progress.fill":          `{ fg = "bg", bg = "warning" }`,
+		"jobs.progress.label.on_fill": `{ fg = "fg", bold = true }`,
 	})
 	th, err := parse(data)
 	if err != nil {

@@ -26,8 +26,8 @@ type Def struct {
 	IntervalMS int
 	// MaxWidth caps the displayed text's column width (longer output is ellipsized).
 	MaxWidth int
-	// Color is the text's foreground as a theme color value (palette name, "#RRGGBB" or
-	// "default"), resolved against the active theme; empty uses the menu.status style.
+	// Color is the text's foreground as a theme color value (role name, palette name,
+	// "#RRGGBB" or "default"), resolved against the active theme; empty uses the menu.status style.
 	Color string
 }
 

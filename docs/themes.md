@@ -27,28 +27,50 @@ The best starting point is a copy of the built-in `themes/default.toml` from the
 ```toml
 name = "mine"
 
-[palette]            # 0-255 ANSI/xterm index, "#RRGGBB", or "default"
+[palette]            # raw colors: exactly the 16 ANSI names; 0-255 ANSI/xterm index, "#RRGGBB", or "default"
 black = 0
 red = 1
 # ... through bright_white = 15
-fg = 7               # semantic names: body text,
-bg = 0               # dark well (input and list background),
-surface = 8          # dialog / chip fill,
-muted = 8            # dimmed text
+
+[roles]              # intents: a [palette] name, "#RRGGBB" or "default"
+bg = "black"         # dark well (input and list background)
+surface = "bright_black"   # dialog / chip fill
+muted = "bright_black"     # dimmed text
+# ... 29 roles in all, listed in themes/default.toml
 
 [menu.bar]
-active   = { fg = "default" }
-selected = { fg = "black", bg = "cyan", bold = true }
+active   = { fg = "fg" }
+selected = { fg = "cursor_fg", bg = "cursor_bg", bold = true }
 
 [panel.row]
-directory = { fg = "bright_blue", bold = true }
+directory = { fg = "directory", bold = true }
 ```
 
-A style is a table with `fg`, `bg` and flags such as `bold`; colors are palette names or hex values. Main sections:
+Colors come in two layers. `[palette]` holds only raw colors: the 16 ANSI slot names and nothing else (an unknown name is an error; a slot you leave out keeps its ANSI index). `[roles]` holds intents (body text, dialog fill, dimmed text, the current item, a success state, ...), each pointing at a palette name, a hex value or `"default"`. A style's `fg`, `bg` and `icon` may name **only a role**: a hue such as `"yellow"`, a hex value or `"default"` in a style is an error that lists the roles. To recolor the UI you edit `[palette]` and `[roles]` and leave the styles alone. A role you leave out takes its built-in default (the palette name shown below); `themes/default.toml` lists all of them.
+
+| Role | Default | Used for |
+|---|---|---|
+| `bg` | `black` | dark well: panel, input and list backgrounds, progress tracks |
+| `surface` | `bright_black` | dialog fill, chips, bar tracks, speed pill |
+| `header_bg` | `blue` | panel headers, menu dropdown fill |
+| `cursor_bg` / `cursor_fg` | `cyan` / `black` | the current item: cursor row, selected menu entry, active button, hovered footer entry |
+| `cursor_dim` | `black` | cursor row of an inactive or blocked panel |
+| `highlight_bg` | `bright_blue` | selected dropdown entry, disk usage cursor on a selected row, mount mark |
+| `range_bg` / `range_unselect_bg` | `bright_black` / `red` | tints of rows covered by a pending range select / unselect |
+| `inverse_bg` | `white` | light boxes: tooltips, info toast |
+| `fg` / `fg_strong` | `white` / `bright_white` | body text / emphasised text |
+| `muted` / `faint` | `bright_black` / `black` | dimmed text / barely visible text (disabled options) |
+| `ink` | `black` | dark text on a colored fill |
+| `accent` | `magenta` | shortcut letters, key hints, match highlights |
+| `primary` / `directory` / `symlink` / `selected` | `blue` / `blue` / `bright_cyan` / `yellow` | active panel frame, directories, symlinks, selected files |
+| `info` / `success` / `success_strong` | `cyan` / `green` / `bright_green` | informational, completed, running |
+| `warning` / `attention` / `danger` / `error` / `special` | `yellow` / `bright_yellow` / `red` / `bright_red` / `magenta` | paused, canceling, deleted, failed, queued |
+
+Main sections:
 
 | Section | Styles |
 |---|---|
-| `[palette]` | The 16 named colors the rest of the file refers to, plus the semantic names `fg`, `bg`, `surface` and `muted` (and `range_bg` / `range_unselect_bg`, the tints of rows covered by a pending range select / unselect, and `cursor_dim`, the cursor row of an inactive panel) that styles use for body text, background wells, dialog fill and dimmed text, plus the roles `cursor_bg` / `cursor_fg` (the current item: the cursor row, the selected menu entry, the active button), `header_bg` (panel headers and the menu dropdown) and `accent` (shortcut letters and key hints); you can add any other name |
+| `[palette]`, `[roles]` | The two color layers described above |
 | `[status]` | One color per job state (scanning, queued, running, paused, decision, failed, canceling, canceled, completed), used by the menu bar, Jobs and Commands views and file-list marks; `scanning` also colors disk usage scans, fileindex scans and spinners |
 | `[panel.*]` | Active, inactive and blocked (dimmed under dialogs) panel chrome; rows, marks, folder icons, git status, fileindex states (`[panel.fileindex]`, glyphs in `[icons.fileindex_state]`), [meta column alerts](meta-columns.md#alert-colors) (`[panel.meta]`), scrollbar, disk usage (`[panel.usage]`; an optional `icon` color replaces the color of icons where the bar is behind them) |
 | `[menu.*]` | Menu bar, pulldowns, status commands (`menu.status`, `menu.status.separator`), job strip, progress bar, speed pill |

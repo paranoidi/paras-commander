@@ -76,7 +76,7 @@ func PanelTitleSegmentAt(file Rect, model *Model, panelID int, styles theme.Them
 	if _, _, overlay := model.quickViewDirOverlayTitleChrome(panelID, state.PathString()); overlay {
 		return PanelTitleSegment{}, false
 	}
-	row := newPanelTitleRow(file, state, styles, "")
+	row := newPanelTitleRow(file, state, styles, "", model.PanelVolumeInfo)
 	for _, seg := range row.segments(state.PathString(), model.UserHomeDir) {
 		if seg.Contains(x) {
 			return seg, true

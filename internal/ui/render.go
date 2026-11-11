@@ -217,6 +217,8 @@ type Model struct {
 	PanelZoomInactivePercent int
 	// NarrowPanelsNameOnly mirrors ui.narrow_panels_name_only (narrow panels may hide trailing listing columns).
 	NarrowPanelsNameOnly bool
+	// PanelVolumeInfo mirrors ui.volume_info (panel title free-space label mode).
+	PanelVolumeInfo string
 	// OtherPanelMatchMarks mirrors ui.other_panel_match_marks (inactive panel marks names present in the active panel).
 	OtherPanelMatchMarks bool
 	// PanelScrollbar mirrors [ui.scroll].scrollbar (none, thumb, bar).
@@ -1000,7 +1002,7 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 			PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
 			panelCtx,
 			PanelDisplayConfig{
-				ShowIcons: model.UseNerdfontIcons, UserHomeDir: model.UserHomeDir,
+				ShowIcons: model.UseNerdfontIcons, UserHomeDir: model.UserHomeDir, VolumeInfo: model.PanelVolumeInfo,
 				Painter: model.DiskUsage, DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints,
 				DiskUsageGoduIgnore: model.DiskUsageGoduIgnore, ShowDiskUsage: model.showPanelDiskUsage(side.PanelID),
 				JobMarks: model.JobPathMarks, PreviewPrefetchLoading: model.PreviewPrefetchLoading, PreviewPrefetchWarm: model.PreviewPrefetchWarm, PinnedPaths: pinnedPaths, OtherMatchNames: otherNames, OtherMatchCursorName: otherCursor, OtherMatchDir: otherDir, MetaColumns: model.MetaResults[side.PanelID],

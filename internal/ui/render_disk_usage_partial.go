@@ -104,7 +104,7 @@ func paintBrowserPanelsInScope(
 			PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
 			primaryCtx,
 			PanelDisplayConfig{
-				ShowIcons: model.UseNerdfontIcons, UserHomeDir: model.UserHomeDir,
+				ShowIcons: model.UseNerdfontIcons, UserHomeDir: model.UserHomeDir, VolumeInfo: model.PanelVolumeInfo,
 				Painter: model.DiskUsage, DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints,
 				DiskUsageGoduIgnore: model.DiskUsageGoduIgnore, ShowDiskUsage: model.showPanelDiskUsage(PrimaryPanel),
 				JobMarks: model.JobPathMarks, PreviewPrefetchLoading: model.PreviewPrefetchLoading, PreviewPrefetchWarm: model.PreviewPrefetchWarm, PinnedPaths: pinnedPaths, OtherMatchNames: otherNames, OtherMatchCursorName: otherCursor, OtherMatchDir: otherDir, MetaColumns: model.MetaResults[PrimaryPanel],
@@ -152,7 +152,7 @@ func paintBrowserPanelsInScope(
 			PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
 			secondaryCtx,
 			PanelDisplayConfig{
-				ShowIcons: model.UseNerdfontIcons, UserHomeDir: model.UserHomeDir,
+				ShowIcons: model.UseNerdfontIcons, UserHomeDir: model.UserHomeDir, VolumeInfo: model.PanelVolumeInfo,
 				Painter: model.DiskUsage, DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints,
 				DiskUsageGoduIgnore: model.DiskUsageGoduIgnore, ShowDiskUsage: model.showPanelDiskUsage(SecondaryPanel),
 				JobMarks: model.JobPathMarks, PreviewPrefetchLoading: model.PreviewPrefetchLoading, PreviewPrefetchWarm: model.PreviewPrefetchWarm, PinnedPaths: pinnedPaths, OtherMatchNames: otherNames, OtherMatchCursorName: otherCursor, OtherMatchDir: otherDir, MetaColumns: model.MetaResults[SecondaryPanel],

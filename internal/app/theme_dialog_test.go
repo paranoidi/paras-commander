@@ -352,7 +352,8 @@ func TestThemeDialogAutoReloadToggleReloadsPreviewFromDisk(t *testing.T) {
 	writeDiskDefault := func(hex string) {
 		content := strings.Replace(string(base),
 			`inactive = { fg = "muted" }`,
-			fmt.Sprintf(`inactive = { fg = "white", bg = %q }`, hex), 1)
+			`inactive = { fg = "fg", bg = "cursor_dim" }`, 1)
+		content = strings.Replace(content, `cursor_dim = "black"`, fmt.Sprintf(`cursor_dim = %q`, hex), 1)
 		if err := os.WriteFile(filepath.Join(themesDir, "override.toml"), []byte(content), 0o644); err != nil {
 			t.Fatalf("WriteFile: %v", err)
 		}
@@ -414,15 +415,15 @@ func TestThemeDialogAutoReloadToggleReloadsMenuDropdownAccentFromDisk(t *testing
 	if err != nil {
 		t.Fatalf("read default theme fixture: %v", err)
 	}
-	writeAccentFG := func(paletteName string) {
+	writeAccentFG := func(roleName string) {
 		content := strings.Replace(string(base),
-			`dropdown.accent = { fg = "white"}`,
-			fmt.Sprintf(`dropdown.accent = { fg = %q, bold = true }`, paletteName), 1)
+			`dropdown.accent = { fg = "fg"}`,
+			fmt.Sprintf(`dropdown.accent = { fg = %q, bold = true }`, roleName), 1)
 		if err := os.WriteFile(filepath.Join(themesDir, "override.toml"), []byte(content), 0o644); err != nil {
 			t.Fatalf("WriteFile: %v", err)
 		}
 	}
-	writeAccentFG("bright_red")
+	writeAccentFG("error")
 
 	paths := config.Paths{ThemesDir: themesDir}.WithResolvedLocations()
 	styles, err := theme.Resolve("default", paths.ThemesDir)
@@ -459,7 +460,7 @@ func TestThemeDialogAutoReloadToggleReloadsMenuDropdownAccentFromDisk(t *testing
 	}
 
 	app.handleKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
-	writeAccentFG("bright_green")
+	writeAccentFG("success_strong")
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
 	if quit {
 		t.Fatal("handleKey(F5) quit = true, want false")
@@ -489,7 +490,7 @@ func TestThemePreviewReloadErrorSetsCriticalStatusMessage(t *testing.T) {
 	}
 	content := strings.Replace(string(base),
 		`bar = { fg = "default" }`,
-		`bar = { fg = "white", bg = "#111111" }`, 1)
+		`bar = { fg = "fg", bg = "bg" }`, 1)
 	if err := os.WriteFile(filepath.Join(themesDir, "override.toml"), []byte(content), 0o644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}

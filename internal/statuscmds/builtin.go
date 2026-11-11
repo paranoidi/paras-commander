@@ -1,7 +1,7 @@
 package statuscmds
 
 // builtinColor is the text color of every built-in status command (the theme palette's
-// dark grey).
+// dark grey slot).
 const builtinColor = "bright_black"
 
 // Builtins returns the built-in status commands, available without any status.toml entry.

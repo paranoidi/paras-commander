@@ -1,11 +1,14 @@
 package theme
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/BurntSushi/toml"
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/themes"
 )
@@ -80,12 +83,12 @@ func assertStyleEqual(t *testing.T, label string, got, want tcell.Style) {
 
 func TestParsePaletteANSIIndex(t *testing.T) {
 	data := testTheme(t, "custom", nil, map[string]string{
-		"menu.bar.active": `{ fg = "marker", bg = "black" }`,
+		"palette.red":     "88",
+		"roles.accent":    `"red"`,
+		"menu.bar.active": `{ fg = "accent", bg = "bg" }`,
 	})
-	dataStr := string(data)
-	dataStr = strings.Replace(dataStr, "yellow = \"#ffff00\"\n", "yellow = \"#ffff00\"\nmarker = 88\n", 1)
 
-	styles, err := parse([]byte(dataStr))
+	styles, err := parse(data)
 	if err != nil {
 		t.Fatalf("parse() error = %v", err)
 	}
@@ -97,7 +100,8 @@ func TestParsePaletteANSIIndex(t *testing.T) {
 
 func TestParseResolvesPaletteHexAndAttributes(t *testing.T) {
 	data := testTheme(t, "custom", nil, map[string]string{
-		"menu.bar.active": `{ fg = "white", bg = "#0a0b0c", underline = true, reverse = true }`,
+		"roles.surface":   `"#0a0b0c"`,
+		"menu.bar.active": `{ fg = "fg", bg = "surface", underline = true, reverse = true }`,
 	})
 
 	styles, err := parse(data)
@@ -110,7 +114,7 @@ func TestParseResolvesPaletteHexAndAttributes(t *testing.T) {
 		t.Fatalf("foreground = %v, want palette white", foreground)
 	}
 	if background != tcell.NewRGBColor(10, 11, 12) {
-		t.Fatalf("background = %v, want direct hex color", background)
+		t.Fatalf("background = %v, want hex role value", background)
 	}
 	if attrs&tcell.AttrUnderline == 0 {
 		t.Fatal("attrs do not include underline")
@@ -166,11 +170,11 @@ func TestParseLoadsPanelCursorIconFG(t *testing.T) {
 		o := map[string]string{}
 		for _, k := range requiredStyleKeys {
 			if k == key {
-				o[k] = `{ fg = "white", bg = "black", icon = "yellow" }`
+				o[k] = `{ fg = "fg", bg = "bg", icon = "warning" }`
 			} else if _, isOption := dialogSurfaceForegroundStyleKeys[k]; isOption {
-				o[k] = `{ fg = "white" }`
+				o[k] = `{ fg = "fg" }`
 			} else {
-				o[k] = `{ fg = "white", bg = "black" }`
+				o[k] = `{ fg = "fg", bg = "bg" }`
 			}
 		}
 		data := testTheme(t, "iconrow", nil, o)
@@ -187,7 +191,7 @@ func TestParseLoadsPanelCursorIconFG(t *testing.T) {
 
 func TestParseRejectsIconOnNonCursorStyle(t *testing.T) {
 	data := testTheme(t, "badicon", nil, map[string]string{
-		"menu.bar.active": `{ fg = "white", bg = "black", icon = "yellow" }`,
+		"menu.bar.active": `{ fg = "fg", bg = "bg", icon = "warning" }`,
 	})
 	_, err := parse(data)
 	if err == nil || !strings.Contains(err.Error(), `field "icon" is only allowed on panel cursor row and disk-usage bar styles`) {
@@ -212,9 +216,9 @@ func TestDiskUsageBarIconKey(t *testing.T) {
 		o := map[string]string{}
 		for _, k := range requiredStyleKeys {
 			if _, isOption := dialogSurfaceForegroundStyleKeys[k]; isOption {
-				o[k] = `{ fg = "white" }`
+				o[k] = `{ fg = "fg" }`
 			} else {
-				o[k] = `{ fg = "white", bg = "black" }`
+				o[k] = `{ fg = "fg", bg = "bg" }`
 			}
 		}
 		plain, err := parse(testTheme(t, "baricon", nil, o))
@@ -224,7 +228,7 @@ func TestDiskUsageBarIconKey(t *testing.T) {
 		if got := plain.DiskUsageBarIconKey(tc.active, tc.cursor, tc.selected); got != "" {
 			t.Fatalf("%s without icon: key = %q, want empty", tc.key, got)
 		}
-		o[tc.key] = `{ fg = "white", bg = "black", icon = "yellow" }`
+		o[tc.key] = `{ fg = "fg", bg = "bg", icon = "warning" }`
 		th, err := parse(testTheme(t, "baricon", nil, o))
 		if err != nil {
 			t.Fatalf("parse for %s: %v", tc.key, err)
@@ -257,7 +261,7 @@ func TestDefaultThemeBarIconOnlyOnNonCursorBar(t *testing.T) {
 
 func TestParseRejectsBGOnDialogOption(t *testing.T) {
 	data := testTheme(t, "badoptionbg", nil, map[string]string{
-		"dialog.option.active": `{ fg = "yellow", bg = "bright_black", bold = true }`,
+		"dialog.option.active": `{ fg = "warning", bg = "surface", bold = true }`,
 	})
 	_, err := parse(data)
 	if err == nil || !strings.Contains(err.Error(), `field "bg" is not allowed (background is merged at render time)`) {
@@ -267,7 +271,7 @@ func TestParseRejectsBGOnDialogOption(t *testing.T) {
 
 func TestParseRejectsBGOnDialogProgressLabel(t *testing.T) {
 	data := testTheme(t, "badprogresslabelbg", nil, map[string]string{
-		"dialog.progress.label.on_track": `{ fg = "white", bg = "black", bold = true }`,
+		"dialog.progress.label.on_track": `{ fg = "fg", bg = "bg", bold = true }`,
 	})
 	_, err := parse(data)
 	if err == nil || !strings.Contains(err.Error(), `field "bg" is not allowed (background is merged at render time)`) {
@@ -277,10 +281,10 @@ func TestParseRejectsBGOnDialogProgressLabel(t *testing.T) {
 
 func TestDialogProgressLabelOnBarUsesTrackBackground(t *testing.T) {
 	data := testTheme(t, "dedupprogress", nil, map[string]string{
-		"dialog.progress.track":          `{ fg = "black", bg = "yellow" }`,
-		"dialog.progress.fill":           `{ fg = "black", bg = "white" }`,
-		"dialog.progress.label.on_track": `{ fg = "white", bold = true }`,
-		"dialog.progress.label.on_fill":  `{ fg = "black", bold = true }`,
+		"dialog.progress.track":          `{ fg = "bg", bg = "warning" }`,
+		"dialog.progress.fill":           `{ fg = "bg", bg = "fg" }`,
+		"dialog.progress.label.on_track": `{ fg = "fg", bold = true }`,
+		"dialog.progress.label.on_fill":  `{ fg = "bg", bold = true }`,
 	})
 	th, err := parse(data)
 	if err != nil {
@@ -304,7 +308,7 @@ func TestDialogProgressLabelOnBarUsesTrackBackground(t *testing.T) {
 
 func TestParseRejectsBGOnDialogStatusSelectionSize(t *testing.T) {
 	data := testTheme(t, "badstatusbg", nil, map[string]string{
-		"dialog.status.selection_size": `{ fg = "yellow", bg = "bright_black" }`,
+		"dialog.status.selection_size": `{ fg = "warning", bg = "surface" }`,
 	})
 	_, err := parse(data)
 	if err == nil || !strings.Contains(err.Error(), `field "bg" is not allowed (background is merged at render time)`) {
@@ -314,8 +318,8 @@ func TestParseRejectsBGOnDialogStatusSelectionSize(t *testing.T) {
 
 func TestDialogStatusSelectionSizeStyleUsesSurfaceBackground(t *testing.T) {
 	data := testTheme(t, "findselectionsize", nil, map[string]string{
-		"dialog.surface":               `{ fg = "white", bg = "yellow" }`,
-		"dialog.status.selection_size": `{ fg = "yellow", bold = true }`,
+		"dialog.surface":               `{ fg = "fg", bg = "warning" }`,
+		"dialog.status.selection_size": `{ fg = "warning", bold = true }`,
 	})
 	th, err := parse(data)
 	if err != nil {
@@ -338,8 +342,8 @@ func TestDialogStatusSelectionSizeStyleUsesSurfaceBackground(t *testing.T) {
 
 func TestDialogOptionRowStyleUsesSurfaceBackground(t *testing.T) {
 	data := testTheme(t, "optionrow", nil, map[string]string{
-		"dialog.surface":       `{ fg = "white", bg = "yellow" }`,
-		"dialog.option.active": `{ fg = "yellow", bold = true }`,
+		"dialog.surface":       `{ fg = "fg", bg = "warning" }`,
+		"dialog.option.active": `{ fg = "warning", bold = true }`,
 	})
 	th, err := parse(data)
 	if err != nil {
@@ -362,8 +366,8 @@ func TestDialogOptionRowStyleUsesSurfaceBackground(t *testing.T) {
 
 func TestDialogOptionRowStyleActiveSelected(t *testing.T) {
 	data := testTheme(t, "optionrowactivesel", nil, map[string]string{
-		"dialog.surface":                `{ fg = "white", bg = "yellow" }`,
-		"dialog.option.active.selected": `{ fg = "yellow", bold = true }`,
+		"dialog.surface":                `{ fg = "fg", bg = "warning" }`,
+		"dialog.option.active.selected": `{ fg = "warning", bold = true }`,
 	})
 	th, err := parse(data)
 	if err != nil {
@@ -386,7 +390,7 @@ func TestDialogOptionRowStyleActiveSelected(t *testing.T) {
 
 func TestParseRejectsUnknownStyle(t *testing.T) {
 	data := testTheme(t, "custom", nil, map[string]string{
-		"fuzzy.unknown.token": `{ fg = "white", bg = "black" }`,
+		"fuzzy.unknown.token": `{ fg = "fg", bg = "bg" }`,
 	})
 
 	_, err := parse(data)
@@ -402,7 +406,7 @@ func TestParseRejectsStylesSection(t *testing.T) {
 black = "#040506"
 
 [styles]
-menu.bar = { fg = "white", bg = "black" }
+menu.bar = { fg = "fg", bg = "bg" }
 `)
 	_, err := parse(data)
 	if err == nil || !strings.Contains(err.Error(), "[styles] is not supported") {
@@ -412,7 +416,7 @@ menu.bar = { fg = "white", bg = "black" }
 
 func TestParseDialogSectionFlatKeys(t *testing.T) {
 	data := testTheme(t, "dialogflat", nil, map[string]string{
-		"dialog.input.active": `{ fg = "white", bg = "default", bold = true }`,
+		"dialog.input.active": `{ fg = "fg", bg = "bg", bold = true }`,
 	})
 	th, err := parse(data)
 	if err != nil {
@@ -429,7 +433,7 @@ func TestParseDialogSectionFlatKeys(t *testing.T) {
 
 func TestParseLeaderMenuStyles(t *testing.T) {
 	data := testTheme(t, "modemenu", nil, map[string]string{
-		"leader_menu.key": `{ fg = "white", bold = true }`,
+		"leader_menu.key": `{ fg = "fg", bold = true }`,
 	})
 	th, err := parse(data)
 	if err != nil {
@@ -446,13 +450,14 @@ func TestParseLeaderMenuStyles(t *testing.T) {
 	}
 }
 
-func TestParsePaletteDefaultTerminalColor(t *testing.T) {
+func TestParseRoleDefaultTerminalColor(t *testing.T) {
 	data := testTheme(t, "custom", nil, map[string]string{
-		"menu.bar.active": `{ fg = "termfg", bg = "termbg" }`,
+		"roles.fg":        `"default"`,
+		"roles.bg":        `"default"`,
+		"menu.bar.active": `{ fg = "fg", bg = "bg" }`,
 	})
-	dataStr := strings.Replace(string(data), "yellow = \"#ffff00\"\n", "yellow = \"#ffff00\"\ntermfg = \"default\"\ntermbg = \"default\"\n", 1)
 
-	styles, err := parse([]byte(dataStr))
+	styles, err := parse(data)
 	if err != nil {
 		t.Fatalf("parse() error = %v", err)
 	}
@@ -462,28 +467,10 @@ func TestParsePaletteDefaultTerminalColor(t *testing.T) {
 	}
 }
 
-func TestParseResolvesDefaultColorKeyword(t *testing.T) {
-	data := testTheme(t, "custom", nil, map[string]string{
-		"menu.bar.active": `{ fg = "default", bg = "default" }`,
-	})
-
-	styles, err := parse(data)
-	if err != nil {
-		t.Fatalf("parse() error = %v", err)
-	}
-
-	foreground, background, _ := styles.MenuBarActive.Decompose()
-	if foreground != tcell.ColorDefault {
-		t.Fatalf("foreground = %v, want ColorDefault", foreground)
-	}
-	if background != tcell.ColorDefault {
-		t.Fatalf("background = %v, want ColorDefault", background)
-	}
-}
-
 func TestParseResolvesPartialDefaultColorKeyword(t *testing.T) {
 	data := testTheme(t, "custom", nil, map[string]string{
-		"menu.bar.active": `{ fg = "default", bg = "black" }`,
+		"roles.fg":        `"default"`,
+		"menu.bar.active": `{ fg = "fg", bg = "bg" }`,
 	})
 
 	styles, err := parse(data)
@@ -502,12 +489,12 @@ func TestParseResolvesPartialDefaultColorKeyword(t *testing.T) {
 
 func TestParseRejectsInvalidColor(t *testing.T) {
 	data := testTheme(t, "custom", nil, map[string]string{
-		"menu.bar.active": `{ fg = "missing", bg = "black" }`,
+		"menu.bar.active": `{ fg = "missing", bg = "bg" }`,
 	})
 
 	_, err := parse(data)
-	if err == nil || !strings.Contains(err.Error(), `unknown color "missing"`) {
-		t.Fatalf("parse() error = %v, want unknown color", err)
+	if err == nil || !strings.Contains(err.Error(), `fg "missing" is not a role`) {
+		t.Fatalf("parse() error = %v, want not a role", err)
 	}
 }
 
@@ -534,7 +521,8 @@ func TestThemeChoicesAppendsDiskOnlyThemes(t *testing.T) {
 func TestThemeChoicesDiskOverridesBuiltInName(t *testing.T) {
 	dir := t.TempDir()
 	data := testTheme(t, "default", nil, map[string]string{
-		"menu.bar.active": `{ fg = "white", bg = "#111111" }`,
+		"roles.surface":   `"#111111"`,
+		"menu.bar.active": `{ fg = "fg", bg = "surface" }`,
 	})
 	if err := os.WriteFile(filepath.Join(dir, "local-default.toml"), data, 0o644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
@@ -588,7 +576,8 @@ func TestResolveFallsBackToDefaultForUnavailableTheme(t *testing.T) {
 func TestResolvePrefersDiskThemeOverBuiltInWithSameName(t *testing.T) {
 	dir := t.TempDir()
 	data := testTheme(t, "default", nil, map[string]string{
-		"menu.bar.active": `{ fg = "white", bg = "#112233" }`,
+		"roles.surface":   `"#112233"`,
+		"menu.bar.active": `{ fg = "fg", bg = "surface" }`,
 	})
 	if err := os.WriteFile(filepath.Join(dir, "custom.toml"), data, 0o644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
@@ -606,7 +595,8 @@ func TestResolvePrefersDiskThemeOverBuiltInWithSameName(t *testing.T) {
 func TestResolveSkipsBrokenSiblingTomlFiles(t *testing.T) {
 	dir := t.TempDir()
 	good := testTheme(t, "default", nil, map[string]string{
-		"menu.bar.active": `{ fg = "white", bg = "#111111" }`,
+		"roles.surface":   `"#111111"`,
+		"menu.bar.active": `{ fg = "fg", bg = "surface" }`,
 	})
 	if err := os.WriteFile(filepath.Join(dir, "good.toml"), good, 0o644); err != nil {
 		t.Fatalf("WriteFile good.toml: %v", err)
@@ -648,7 +638,7 @@ func testTheme(t *testing.T, name string, skip map[string]bool, overrides map[st
 
 func TestDialogTextSelectStyleFallsBackToSurface(t *testing.T) {
 	data := testTheme(t, "textselectfallback", nil, map[string]string{
-		"dialog.surface": `{ fg = "white", bg = "yellow" }`,
+		"dialog.surface": `{ fg = "fg", bg = "warning" }`,
 	})
 	th, err := parse(data)
 	if err != nil {
@@ -661,8 +651,8 @@ func TestDialogTextSelectStyleFallsBackToSurface(t *testing.T) {
 	}
 
 	data = testTheme(t, "textselectset", nil, map[string]string{
-		"dialog.surface":     `{ fg = "white", bg = "yellow" }`,
-		"dialog.text_select": `{ bg = "black" }`,
+		"dialog.surface":     `{ fg = "fg", bg = "warning" }`,
+		"dialog.text_select": `{ bg = "bg" }`,
 	})
 	th, err = parse(data)
 	if err != nil {
@@ -754,15 +744,15 @@ func TestPanelMetaAlertStylesFallBack(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	if fg, _, _ := th.PanelMetaWarn.Decompose(); fg != tcell.ColorYellow {
-		t.Fatalf("warn fg = %v, want yellow", fg)
+	if fg, _, _ := th.PanelMetaWarn.Decompose(); fg != tcell.NewRGBColor(0xff, 0xff, 0) {
+		t.Fatalf("warn fg = %v, want the warning role (test palette yellow)", fg)
 	}
-	if fg, _, attrs := th.PanelMetaCritical.Decompose(); fg != tcell.ColorRed || attrs&tcell.AttrBold == 0 {
-		t.Fatalf("critical fg = %v attrs = %v, want bold red", fg, attrs)
+	if fg, _, attrs := th.PanelMetaCritical.Decompose(); fg != tcell.PaletteColor(1) || attrs&tcell.AttrBold == 0 {
+		t.Fatalf("critical fg = %v attrs = %v, want bold danger role (ANSI red)", fg, attrs)
 	}
 }
 
-func TestBrokenLinkIconFallsBackToPaletteRed(t *testing.T) {
+func TestBrokenLinkIconFallsBackToDangerRole(t *testing.T) {
 	data, err := themes.Files.ReadFile("default.toml")
 	if err != nil {
 		t.Fatalf("ReadFile(default.toml): %v", err)
@@ -771,7 +761,7 @@ func TestBrokenLinkIconFallsBackToPaletteRed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse(default): %v", err)
 	}
-	const line = "broken_link = { fg = \"red\" }"
+	const line = "broken_link = { fg = \"danger\" }"
 	if !strings.Contains(string(data), line) {
 		t.Fatalf("default.toml has no %q", line)
 	}
@@ -781,5 +771,158 @@ func TestBrokenLinkIconFallsBackToPaletteRed(t *testing.T) {
 	}
 	if without.PanelIconBrokenLink != withKey.PanelIconBrokenLink {
 		t.Fatalf("fallback = %v, want the default theme's %v", without.PanelIconBrokenLink, withKey.PanelIconBrokenLink)
+	}
+}
+
+func TestParseRejectsUnknownRoleKey(t *testing.T) {
+	_, err := parse(testTheme(t, "custom", nil, map[string]string{"roles.nonesuch": `"red"`}))
+	if err == nil || !strings.Contains(err.Error(), "roles.nonesuch: unknown role") {
+		t.Fatalf("parse() error = %v, want unknown role", err)
+	}
+}
+
+func TestParseRejectsUnknownPaletteKey(t *testing.T) {
+	_, err := parse(testTheme(t, "custom", nil, map[string]string{"palette.fg": "7"}))
+	if err == nil || !strings.Contains(err.Error(), "palette.fg: unknown color name") {
+		t.Fatalf("parse() error = %v, want unknown palette key", err)
+	}
+}
+
+func TestParseRejectsRoleValueNotAPaletteName(t *testing.T) {
+	_, err := parse(testTheme(t, "custom", nil, map[string]string{"roles.accent": `"fg"`}))
+	if err == nil || !strings.Contains(err.Error(), "roles.accent") {
+		t.Fatalf("parse() error = %v, want role value error", err)
+	}
+}
+
+func TestParseRejectsHueHexAndDefaultInStyles(t *testing.T) {
+	for _, value := range []string{"yellow", "#112233", "default", "bright_black"} {
+		for _, field := range []string{"fg", "bg"} {
+			data := testTheme(t, "custom", nil, map[string]string{
+				"menu.bar.active": fmt.Sprintf(`{ %s = %q }`, field, value),
+			})
+			_, err := parse(data)
+			want := fmt.Sprintf(`style "menu.bar.active": %s %q is not a role; use one of`, field, value)
+			if err == nil || !strings.Contains(err.Error(), want) {
+				t.Errorf("%s = %q: parse() error = %v, want %q", field, value, err, want)
+			}
+		}
+	}
+	data := testTheme(t, "custom", nil, map[string]string{
+		"menu.bar.active": `{ fg = "fg", bg = "bg", icon = "red" }`,
+	})
+	if _, err := parse(data); err == nil {
+		t.Error("icon naming a hue parsed")
+	}
+	data = testTheme(t, "custom", nil, map[string]string{
+		"menu.progress.done.gfx.0": `{ fg = "yellow" }`,
+	})
+	if _, err := parse(data); err == nil || !strings.Contains(err.Error(), `fg "yellow" is not a role`) {
+		t.Errorf("gfx hue: parse() error = %v", err)
+	}
+}
+
+func TestRolesFallBackToDefaultPaletteNames(t *testing.T) {
+	th, err := parse(testTheme(t, "custom", nil, map[string]string{
+		"palette.bright_blue": `"#123456"`,
+		"roles.surface":       `"#abcdef"`,
+	}))
+	if err != nil {
+		t.Fatalf("parse() error = %v", err)
+	}
+	if got := th.roles["highlight_bg"]; got != tcell.NewRGBColor(0x12, 0x34, 0x56) {
+		t.Errorf("highlight_bg = %v, want its default palette name bright_blue (#123456)", got)
+	}
+	if got := th.roles["surface"]; got != tcell.NewRGBColor(0xab, 0xcd, 0xef) {
+		t.Errorf("surface = %v, want the explicit hex", got)
+	}
+	if got := th.roles["error"]; got != tcell.PaletteColor(9) {
+		t.Errorf("error = %v, want ANSI 9 (bright_red)", got)
+	}
+	if len(th.roles) != len(roleDefs) {
+		t.Errorf("%d roles, want %d", len(th.roles), len(roleDefs))
+	}
+}
+
+// Optional-style fallbacks resolve through roles, so recoloring a role recolors them.
+func TestOptionalStyleFallbackFollowsRoles(t *testing.T) {
+	th, err := parse(testTheme(t, "custom", nil, map[string]string{
+		"roles.danger": `"#102030"`,
+		"roles.muted":  `"#405060"`,
+	}))
+	if err != nil {
+		t.Fatalf("parse() error = %v", err)
+	}
+	if fg, _, _ := th.PanelMetaCritical.Decompose(); fg != tcell.NewRGBColor(0x10, 0x20, 0x30) {
+		t.Errorf("PanelMetaCritical fg = %v, want the danger role", fg)
+	}
+	if fg, _, _ := th.PanelIconBrokenLink.Decompose(); fg != tcell.NewRGBColor(0x10, 0x20, 0x30) {
+		t.Errorf("PanelIconBrokenLink fg = %v, want the danger role", fg)
+	}
+	if fg, _, _ := th.MenuStatusSeparator.Decompose(); fg != tcell.NewRGBColor(0x40, 0x50, 0x60) {
+		t.Errorf("MenuStatusSeparator fg = %v, want the muted role", fg)
+	}
+}
+
+func TestResolveColorRolesThenPaletteThenHex(t *testing.T) {
+	th, err := parse(testTheme(t, "custom", nil, map[string]string{
+		"palette.red":  `"#010101"`,
+		"roles.danger": `"#020202"`,
+		"roles.accent": `"red"`,
+	}))
+	if err != nil {
+		t.Fatalf("parse() error = %v", err)
+	}
+	for value, want := range map[string]tcell.Color{
+		"danger":  tcell.NewRGBColor(2, 2, 2), // role
+		"accent":  tcell.NewRGBColor(1, 1, 1), // role naming a palette color
+		"red":     tcell.NewRGBColor(1, 1, 1), // palette name
+		"#ff8800": tcell.GetColor("#ff8800"),  // hex
+		"default": tcell.ColorDefault,
+	} {
+		if got, err := th.ResolveColor(value); err != nil || got != want {
+			t.Errorf("ResolveColor(%q) = %v, %v; want %v", value, got, err, want)
+		}
+	}
+	if _, err := th.ResolveColor("nonesuch"); err == nil {
+		t.Error("unknown color resolved")
+	}
+}
+
+// themes/default.toml lists every role explicitly, equal to the built-in default table.
+func TestDefaultThemeRolesEqualGoTable(t *testing.T) {
+	data, err := themes.Files.ReadFile("default.toml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var raw struct {
+		Palette map[string]any    `toml:"palette"`
+		Roles   map[string]string `toml:"roles"`
+	}
+	if _, err := toml.Decode(string(data), &raw); err != nil {
+		t.Fatal(err)
+	}
+	if want := RoleDefaults(); !reflect.DeepEqual(raw.Roles, want) {
+		t.Errorf("default.toml [roles] = %v\nGo table      = %v", raw.Roles, want)
+	}
+	if len(raw.Palette) != len(ansiNames) {
+		t.Errorf("default.toml [palette] has %d entries, want %d", len(raw.Palette), len(ansiNames))
+	}
+}
+
+// Every embedded theme loads: default.toml in CI, plus the generated themes in local builds.
+func TestEveryEmbeddedThemeLoads(t *testing.T) {
+	entries, err := themes.Files.ReadDir(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		data, err := themes.Files.ReadFile(e.Name())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := parse(data); err != nil {
+			t.Errorf("%s: %v", e.Name(), err)
+		}
 	}
 }

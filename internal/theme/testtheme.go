@@ -38,9 +38,9 @@ func buildTestThemeBytes(name string, skip map[string]bool, overrides map[string
 			continue
 		}
 		section, relative := styleSectionRelative(key)
-		spec := `{ fg = "white", bg = "black" }`
+		spec := `{ fg = "fg", bg = "bg" }`
 		if _, ok := dialogSurfaceForegroundStyleKeys[key]; ok {
-			spec = `{ fg = "white" }`
+			spec = `{ fg = "fg" }`
 		}
 		if override, ok := overrides[key]; ok {
 			spec = override
@@ -52,7 +52,7 @@ func buildTestThemeBytes(name string, skip map[string]bool, overrides map[string
 	}
 	requiredSet := makeStyleKeySet(requiredStyleKeys)
 	for key, spec := range overrides {
-		if skip != nil && skip[key] || requiredSet[key] {
+		if skip != nil && skip[key] || requiredSet[key] || isColorOverride(key) {
 			continue
 		}
 		section, relative := styleSectionRelative(key)
@@ -65,9 +65,22 @@ func buildTestThemeBytes(name string, skip map[string]bool, overrides map[string
 	var builder strings.Builder
 	fmt.Fprintf(&builder, "name = %q\n\n", name)
 	builder.WriteString("[palette]\n")
-	builder.WriteString("black = \"#040506\"\n")
-	builder.WriteString("white = \"#010203\"\n")
-	builder.WriteString("yellow = \"#ffff00\"\n\n")
+	colors := map[string]string{"black": `"#040506"`, "white": `"#010203"`, "yellow": `"#ffff00"`}
+	for key, value := range overrides {
+		if name, ok := strings.CutPrefix(key, "palette."); ok {
+			colors[name] = value
+		}
+	}
+	writeSortedTable(&builder, colors)
+	builder.WriteString("\n[roles]\n")
+	roles := map[string]string{}
+	for key, value := range overrides {
+		if name, ok := strings.CutPrefix(key, "roles."); ok {
+			roles[name] = value
+		}
+	}
+	writeSortedTable(&builder, roles)
+	builder.WriteString("\n")
 	for _, root := range styleSectionRoots {
 		entries, ok := bySection[root]
 		if !ok || len(entries) == 0 {
@@ -85,6 +98,23 @@ func buildTestThemeBytes(name string, skip map[string]bool, overrides map[string
 		builder.WriteString("\n")
 	}
 	return []byte(builder.String())
+}
+
+// isColorOverride reports an override key that sets a [palette] ("palette.NAME") or [roles]
+// ("roles.NAME") entry (the value is raw TOML) instead of a style.
+func isColorOverride(key string) bool {
+	return strings.HasPrefix(key, "palette.") || strings.HasPrefix(key, "roles.")
+}
+
+func writeSortedTable(b *strings.Builder, table map[string]string) {
+	keys := make([]string, 0, len(table))
+	for k := range table {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		fmt.Fprintf(b, "%s = %s\n", k, table[k])
+	}
 }
 
 func styleSectionRelative(fullKey string) (section, relative string) {

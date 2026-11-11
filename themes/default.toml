@@ -1,14 +1,14 @@
 name = "default"
 
-# [palette] values may be hex "#RRGGBB", integers 0–255 (ANSI/xterm index), or "default" for
-# the emulator’s configured default foreground/background (separate from ANSI black/white).
-# Style fg/bg/icon values are strings: a [palette] name, hex "#RRGGBB", or "default"; add a
-# palette entry to use another xterm index.
-# Semantic names (the importer derives them from a scheme): fg/bg = text and background wells (body text,
-# input and list backgrounds), surface = dialog/chip fill (bg mixed toward fg), muted = dimmed text, range_bg /
-# range_unselect_bg = pending range select / unselect row tints, cursor_dim = cursor row of an inactive or blocked panel.
-# Roles: cursor_bg / cursor_fg = the current item (active cursor row, selected menu/button/completion entry, hovered footer entry),
-# header_bg = panel headers and menu dropdown fill, accent = shortcut letters, key hints and match highlights.
+# A theme has two colour layers.
+#
+# [palette] holds only raw colours: exactly the 16 ANSI slot names below. A value is an ANSI/xterm
+# index 0-255, "#RRGGBB", or "default" (the emulator's own default foreground/background, separate
+# from ANSI black/white). A slot left out keeps the ANSI index of its name.
+#
+# [roles] holds intents: a [palette] name, "#RRGGBB" or "default". Every style fg/bg/icon below
+# names a role, never a hue or a hex value, so a theme recolours the whole UI by editing [palette]
+# and [roles] only. A role left out takes its built-in default palette name (the ones listed here).
 [palette]
 black = 0
 red = 1
@@ -26,247 +26,270 @@ bright_blue = 12
 bright_magenta = 13
 bright_cyan = 14
 bright_white = 15
-fg = 7
-bg = 0
-surface = 8
-muted = 8
-range_bg = 8
-range_unselect_bg = 1
-cursor_dim = 0
-cursor_bg = 6
-cursor_fg = 0
-header_bg = 4
-accent = 5
+
+[roles]
+# Backgrounds
+bg = "black"                  # dark well: panel, input and list backgrounds, progress tracks
+surface = "bright_black"      # dialog fill, chips, bar tracks, carousel header, speed pill
+header_bg = "blue"            # panel headers and the menu dropdown fill and frame
+cursor_bg = "cyan"            # the current item: active cursor row, selected menu/button/completion entry, footer hover
+cursor_dim = "black"          # cursor row of an inactive, carousel-inactive or blocked panel
+highlight_bg = "bright_blue"  # selected dropdown entry, disk usage cursor on a selected row, mount mark
+range_bg = "bright_black"     # rows covered by a pending range select
+range_unselect_bg = "red"     # rows covered by a mouse-drag unselect
+inverse_bg = "white"          # light boxes: tooltips, info toast, toast sweep edge
+# Text
+fg = "white"                  # body text
+fg_strong = "bright_white"    # emphasised text: headers, hints, active input, progress labels
+muted = "bright_black"        # dimmed text: info columns, inactive frames, placeholders
+faint = "black"               # barely visible text on bg/surface: disabled options, remaining progress
+ink = "black"                 # dark text on a coloured fill
+cursor_fg = "black"           # text on cursor_bg
+# Structure
+accent = "magenta"            # shortcut letters, key hints, match highlights
+primary = "blue"              # active panel frame, info icon, git modified, tagged
+directory = "blue"            # directory names in listings
+symlink = "bright_cyan"       # symlinks, open-folder mark, disk usage cursor
+selected = "yellow"           # selected files, selection sizes, active/selected dialog options
+# States
+info = "cyan"                 # informational: decision, status text, group titles, other-panel marks
+success = "green"             # completed, synced, new git file, job mark
+success_strong = "bright_green"  # running, hashing, equal, new file mark, keep marks
+warning = "yellow"            # paused, warn toast, differs, renamed, skipped
+attention = "bright_yellow"   # canceling, parked find, entry filter, fuzzy input
+danger = "red"                # deleted, conflicted, broken link, destructive actions, invalid input
+error = "bright_red"          # failed, alerts, missing, no fuzzy match
+special = "magenta"           # queued, scanning, pinned, typechange, preview cold
 
 [status]                     # job and work states: menu-bar job strip, Jobs view, Commands view, file-list marks
-scanning = { fg = "bright_magenta", bold = true }   # also disk usage, fileindex scans, spinners
-queued = { fg = "magenta", bold = true }
-running = { fg = "bright_green", bold = true }
-paused = { fg = "yellow", bold = true }
-decision = { fg = "cyan", bold = true }
-failed = { fg = "bright_red", bold = true }
-canceling = { fg = "bright_yellow", bold = true }
-canceled = { fg = "red", bold = true }
-completed = { fg = "green", bold = true }
+scanning = { fg = "special", bold = true }   # also disk usage, fileindex scans, spinners
+queued = { fg = "special", bold = true }
+running = { fg = "success_strong", bold = true }
+paused = { fg = "warning", bold = true }
+decision = { fg = "info", bold = true }
+failed = { fg = "error", bold = true }
+canceling = { fg = "attention", bold = true }
+canceled = { fg = "danger", bold = true }
+completed = { fg = "success", bold = true }
 
 [menu]                       # misc menu chrome
 detail = { fg = "fg" }
-status = { fg = "cyan" }     # status-command text at top-left of menu bar (status.toml)
+status = { fg = "info" }     # status-command text at top-left of menu bar (status.toml)
 status.separator = { fg = "muted" }  # glyph between and after status-command segments
 # dropdown is both a leaf style and a parent of .accent/.frame/.selected — keep dotted here
-dropdown = { fg = "black", bg = "header_bg" }
-dropdown.accent = { fg = "white"}
-dropdown.frame = { fg = "bright_blue", bg = "header_bg" }
-dropdown.selected = { fg = "black", bg = "bright_blue", bold = true }
+dropdown = { fg = "ink", bg = "header_bg" }
+dropdown.accent = { fg = "fg"}
+dropdown.frame = { fg = "highlight_bg", bg = "header_bg" }
+dropdown.selected = { fg = "ink", bg = "highlight_bg", bold = true }
 
 [menu.bar]                   # top menu bar
-active = { fg = "default" }
+active = { fg = "fg" }
 inactive = { fg = "muted" }
 accent = { fg = "accent", bold = true }
-alert = { fg = "bright_red", bold = true }
+alert = { fg = "error", bold = true }
 selected = { fg = "cursor_fg", bg = "cursor_bg", bold = true }
 
 [menu.progress]              # menu-bar aggregate progress
-done = { fg = "green" }
-done.gfx.0 = { fg = "white" }          # light bar head (optional, gfx.0..gfx.9)
-done.gfx.1 = { fg = "bright_green" }   # light bar trail
-delete.gfx.0 = { fg = "bright_red" }   # delete light bar head (optional, gfx.0..gfx.9)
-delete.gfx.1 = { fg = "red" }
-delete.gfx.2 = { fg = "bright_yellow" }
-delete.gfx.3 = { fg = "yellow" }
-remove.gfx.0 = { fg = "red" }          # light bar head while a move removes copied sources (optional, gfx.0..gfx.9)
-remove.gfx.1 = { fg = "yellow" }
-remaining = { fg = "black" }
+done = { fg = "success" }
+done.gfx.0 = { fg = "fg" }          # light bar head (optional, gfx.0..gfx.9)
+done.gfx.1 = { fg = "success_strong" }   # light bar trail
+delete.gfx.0 = { fg = "error" }   # delete light bar head (optional, gfx.0..gfx.9)
+delete.gfx.1 = { fg = "danger" }
+delete.gfx.2 = { fg = "attention" }
+delete.gfx.3 = { fg = "warning" }
+remove.gfx.0 = { fg = "danger" }          # light bar head while a move removes copied sources (optional, gfx.0..gfx.9)
+remove.gfx.1 = { fg = "warning" }
+remaining = { fg = "faint" }
 
 [menu.speed]                 # menu-bar transfer speed pill left of the progress bar
 cap = { fg = "surface" }
-text = { fg = "default", bg = "surface" }
+text = { fg = "fg", bg = "surface" }
 
 [message]
-info = { fg = "black", bg = "white" }
-warn = { fg = "black", bg = "yellow", bold = true }
-error = { fg = "bright_white", bg = "red", bold = true }
-success = { fg = "black", bg = "green" }
-sweep = { fg = "black", bg = "bright_white" } # leading edge of a toast sweeping in
+info = { fg = "ink", bg = "inverse_bg" }
+warn = { fg = "ink", bg = "warning", bold = true }
+error = { fg = "fg_strong", bg = "danger", bold = true }
+success = { fg = "ink", bg = "success" }
+sweep = { fg = "ink", bg = "inverse_bg" } # leading edge of a toast sweeping in
 
 [footer]
 key = { fg = "accent", bold = true }
-label = { fg = "default" }
+label = { fg = "fg" }
 label.shift = { fg = "muted" }
 hover = { fg = "cursor_fg", bg = "cursor_bg" }  # entry under the mouse pointer
-hover.active = { fg = "bright_white", bg = "cursor_bg" }  # its part a click presses (key + hint, or the shift word)
+hover.active = { fg = "fg_strong", bg = "cursor_bg" }  # its part a click presses (key + hint, or the shift word)
 
 [panel]                      # panel-wide text
 text = { fg = "fg" }
-hint = { fg = "bright_white", bold = true }
+hint = { fg = "fg_strong", bold = true }
 empty = { fg = "muted" }  # "[empty]" text of empty lists
 
 [panel.row]                  # file-list row colors
-cursor.range = { fg = "black", bg = "yellow", icon = "black" }  # cursor row while a range select is pending
-cursor.range.selected = { fg = "black", bg = "yellow", bold = true, icon = "black" }
+cursor.range = { fg = "ink", bg = "selected", icon = "ink" }  # cursor row while a range select is pending
+cursor.range.selected = { fg = "ink", bg = "selected", bold = true, icon = "ink" }
 range = { bg = "range_bg" }   # other rows a pending range select covers; background only, rows keep their text colors
 range.unselect = { bg = "range_unselect_bg" }  # same, for a mouse drag that unselects them
-directory = { fg = "blue", bold = true }
+directory = { fg = "directory", bold = true }
 file = { fg = "fg" }
 info = { fg = "muted" }  # size / mtime / permissions / meta columns
-selected = { fg = "yellow", bold = true }
-symlink = { fg = "bright_cyan" }
+selected = { fg = "selected", bold = true }
+symlink = { fg = "symlink" }
 tree.connector = { fg = "muted" }
 
 [panel.row.mark]             # suffix marks on file rows
-selection_subtree = { fg = "yellow" }
-new = { fg = "bright_green" }
-new.previous = { fg = "bright_yellow" }
+selection_subtree = { fg = "selected" }
+new = { fg = "success_strong" }
+new.previous = { fg = "attention" }
 new.older = { fg = "muted" }
-renamed = { fg = "cyan" }
+renamed = { fg = "info" }
 no_permission = { fg = "muted" }
-pinned = { fg = "magenta" }
-range_anchor = { fg = "yellow" }
+pinned = { fg = "special" }
+range_anchor = { fg = "selected" }
 other_match = { fg = "muted" }
-other_match.cursor = { fg = "cyan" }
-job = { fg = "green" }
-job.read = { fg = "yellow" }
-job.move = { fg = "red" }
-job.delete = { fg = "red" }
-job.removing = { fg = "red" }   # move source being deleted after its copy (optional)
+other_match.cursor = { fg = "info" }
+job = { fg = "success" }
+job.read = { fg = "warning" }
+job.move = { fg = "danger" }
+job.delete = { fg = "danger" }
+job.removing = { fg = "danger" }   # move source being deleted after its copy (optional)
 
 [panel.icon]                 # file icon colors
-broken_link = { fg = "red" }  # symlink whose target does not resolve
+broken_link = { fg = "danger" }  # symlink whose target does not resolve
 
 [panel.icon.folder]          # folder icon colors
-open = { fg = "bright_cyan" }
-mount = { fg = "bright_blue" }
-excluded = { fg = "black" }
+open = { fg = "symlink" }
+mount = { fg = "highlight_bg" }
+excluded = { fg = "faint" }
 
 [panel.icon.preview]          # prefetch-cache debug tint for image/video file icons
-warm = { fg = "yellow" }            # cache warm (preloaded)
-cold = { fg = "magenta" }          # not yet preloaded
+warm = { fg = "warning" }            # cache warm (preloaded)
+cold = { fg = "special" }          # not yet preloaded
 
 [panel.status]                # bottom-border status segments
-sync = { fg = "green", bold = true }
-quick_view = { fg = "green", bold = true }
+sync = { fg = "success", bold = true }
+quick_view = { fg = "success", bold = true }
 selected = { fg = "fg" }
-selection_size = { fg = "yellow" }
+selection_size = { fg = "selected" }
 dotfiles_hidden = { fg = "muted" }
 gitignore = { fg = "muted" }
-stash = { fg = "yellow", bold = true }
-find_parked = { fg = "yellow", bold = true }   # find dialog parked from this panel
-entry_filter = { fg = "yellow", bold = true }
-other_panel = { fg = "cyan", bold = true }
+stash = { fg = "selected", bold = true }
+find_parked = { fg = "attention", bold = true }   # find dialog parked from this panel
+entry_filter = { fg = "attention", bold = true }
+other_panel = { fg = "info", bold = true }
 image_sixel = { fg = "muted" }
-image_sixel_tmux = { fg = "bright_red", bold = true }
+image_sixel_tmux = { fg = "error", bold = true }
 
 [panel.git]                   # git status colors
-conflicted = { fg = "red" }
-deleted = { fg = "red" }
+conflicted = { fg = "danger" }
+deleted = { fg = "danger" }
 ignored = { fg = "muted" }
-modified = { fg = "blue" }
-new = { fg = "green" }
+modified = { fg = "primary" }
+new = { fg = "success" }
 not_modified = { fg = "muted", bold = true }
-renamed = { fg = "yellow" }
-typechange = { fg = "magenta" }
+renamed = { fg = "warning" }
+typechange = { fg = "special" }
 
 [panel.fileindex]             # "browse with fileindex" state icon colors (replace git status)
 indexed = { fg = "muted" }
-unhashed = { fg = "cyan" }       # indexed, hash pending
-changed = { fg = "yellow" }
-new = { fg = "red" }
-missing = { fg = "bright_red" }
+unhashed = { fg = "info" }       # indexed, hash pending
+changed = { fg = "warning" }
+new = { fg = "danger" }
+missing = { fg = "error" }
 excluded = { fg = "muted" }
-differs = { fg = "yellow", bold = true }
-unchecked = { fg = "cyan" }
-tagged = { fg = "blue" }
+differs = { fg = "warning", bold = true }
+unchecked = { fg = "info" }
+tagged = { fg = "primary" }
 
 [panel.meta]                  # meta cells matching a warn/critical rule; black under the active cursor
-warn = { fg = "yellow" }
-critical = { fg = "red" }
+warn = { fg = "warning" }
+critical = { fg = "danger" }
 
 [panel.scrollbar]             # scrollbar track/thumb colors and search match markers
 track = { fg = "muted" }
 thumb = { fg = "fg" }
-match = { fg = "red" }
+match = { fg = "accent" }
 
 [panel.usage]                 # disk usage bar colors; icon colors icons on bar cells only
-normal = { fg = "fg", bg = "surface", icon = "black" }
-selected = { fg = "yellow", bg = "surface", icon = "black" }
+normal = { fg = "fg", bg = "surface", icon = "faint" }
+selected = { fg = "selected", bg = "surface", icon = "faint" }
 
 [terminal]
 text = { fg = "fg" }
 
 [panel.dedup]
-row.all_marked = { fg = "red", bold = true }
-row.cursor.all_marked = { fg = "red", bg = "cursor_bg", bold = true }
-row.keep = { fg = "bright_green", bold = true }
-row.cursor.keep = { fg = "bright_green", bg = "cursor_bg", bold = true }
-row.mark.keep_subtree = { fg = "bright_green" }
-full_dir = { fg = "bright_magenta" }
-full_dir_content = { fg = "yellow" }
-full_dir_hidden = { fg = "red" }
-potential = { fg = "yellow" }
+row.all_marked = { fg = "danger", bold = true }
+row.cursor.all_marked = { fg = "danger", bg = "cursor_bg", bold = true }
+row.keep = { fg = "success_strong", bold = true }
+row.cursor.keep = { fg = "success_strong", bg = "cursor_bg", bold = true }
+row.mark.keep_subtree = { fg = "success_strong" }
+full_dir = { fg = "special" }
+full_dir_content = { fg = "warning" }
+full_dir_hidden = { fg = "danger" }
+potential = { fg = "warning" }
 
 [panel.active]
-disk_usage_overview = { fg = "blue"}
-frame = { fg = "blue" }
-header = { fg = "bright_white", bg = "header_bg", bold = true }
+disk_usage_overview = { fg = "primary"}
+frame = { fg = "primary" }
+header = { fg = "fg_strong", bg = "header_bg", bold = true }
 header.carousel = { fg = "fg", bg = "surface" }
 row.cursor = { fg = "cursor_fg", bg = "cursor_bg", icon = "cursor_fg" }
-row.cursor.selected = { fg = "yellow", bg = "cursor_bg", bold = true, icon = "cursor_fg" }
-row.cursor.unique = { fg = "black", bg = "green", icon = "black" }
+row.cursor.selected = { fg = "selected", bg = "cursor_bg", bold = true, icon = "cursor_fg" }
+row.cursor.unique = { fg = "ink", bg = "success", icon = "ink" }
 surface = { fg = "fg" }
 title = { fg = "fg", bold = true }
-usage.cursor = { fg = "black", bg = "bright_cyan" }
-usage.cursor.selected = { fg = "yellow", bg = "bright_blue", bold = true }
+usage.cursor = { fg = "ink", bg = "symlink" }
+usage.cursor.selected = { fg = "selected", bg = "highlight_bg", bold = true }
 
 [panel.target]
-frame = { fg = "green" }
-title = { fg = "green", bold = true }
+frame = { fg = "success" }
+title = { fg = "success", bold = true }
 
 [panel.target.warning]
-frame = { fg = "yellow" }
-title = { fg = "yellow", bold = true }
+frame = { fg = "warning" }
+title = { fg = "warning", bold = true }
 
 [panel.vimotion]
-frame = { fg = "yellow" }
+frame = { fg = "warning" }
 
 [panel.carousel.inactive]
 row.cursor = { bg = "cursor_dim" }
-row.cursor.selected = { fg = "yellow", bg = "cursor_dim", bold = true }
+row.cursor.selected = { fg = "selected", bg = "cursor_dim", bold = true }
 
 [panel.inactive]
 disk_usage_overview = { fg = "muted"}
 frame = { fg = "muted" }
-header = { fg = "bright_white", bg = "header_bg", bold = true }
-header.carousel = { fg = "black", bg = "surface" }
+header = { fg = "fg_strong", bg = "header_bg", bold = true }
+header.carousel = { fg = "faint", bg = "surface" }
 row.cursor = { bg = "cursor_dim" }
-row.cursor.selected = { fg = "yellow", bg = "cursor_dim", bold = true }
+row.cursor.selected = { fg = "selected", bg = "cursor_dim", bold = true }
 surface = { fg = "fg" }
 title = { fg = "fg" }
 usage.cursor = { fg = "fg", bg = "cursor_dim" }
-usage.cursor.selected = { fg = "yellow", bg = "bright_blue", bold = true }
+usage.cursor.selected = { fg = "selected", bg = "highlight_bg", bold = true }
 
 [panel.blocked]
 disk_usage_overview = { fg = "muted" }
 frame = { fg = "muted" }
 header = { fg = "muted", bold = true }
-header.carousel = { fg = "muted", bg = "default", bold = true }
+header.carousel = { fg = "muted", bg = "bg", bold = true }
 row.cursor = { fg = "fg", bg = "cursor_dim" }
 row.cursor.selected = { fg = "fg" }
 row.directory = { fg = "muted", bold = true }
 row.file = { fg = "muted" }
 row.selected = { fg = "fg" }
-row.symlink = { fg = "cyan" }
+row.symlink = { fg = "muted" }
 surface = { fg = "muted" }
 text = { fg = "muted" }
 title = { fg = "muted" }
 
 [fuzzy]
 highlight = { fg = "accent", bold = true }
-highlight.cursor = { fg = "red", bold = true }
-input = { fg = "bright_yellow", bold = true }
-input.nomatch = { fg = "bright_red", bold = true }
+highlight.cursor = { fg = "accent", bold = true }
+input = { fg = "attention", bold = true }
+input.nomatch = { fg = "error", bold = true }
 
 [preview]                    # F3 fullscreen preview
-search_icon = { fg = "cyan" }   # foreground of the search bar's leading icon ([icons.search] icon); bg ignored
+search_icon = { fg = "info" }   # foreground of the search bar's leading icon ([icons.search] icon); bg ignored
 
 [dialog]                     # dialog chrome
 frame = { fg = "fg" }
@@ -279,101 +302,101 @@ title = { bold = true }
 accent = { fg = "fg", bg = "bg", bold = true }
 # shortcut letter that needs Alt: AltOnly dialogs, and every mnemonic while focus is in a text input
 accent_alt = { fg = "accent", bold = true }
-search_icon = { fg = "black", bg = "surface" }
+search_icon = { fg = "faint", bg = "surface" }
 
 [dialog.button]
 active = { fg = "cursor_fg", bg = "cursor_bg" }
-active_destructive = { fg = "white", bg = "red" }
+active_destructive = { fg = "fg", bg = "danger" }
 inactive = { fg = "fg", bg = "bg" }
 
 [dialog.input]
-active = { fg = "bright_white", bold = true }
-active.error = { fg = "red" }
+active = { fg = "fg_strong", bold = true }
+active.error = { fg = "danger" }
 active.placeholder = { fg = "muted" }
 inactive = { fg = "fg", bg = "bg" }
-inactive.error = { fg = "red", bg = "bg" }
+inactive.error = { fg = "danger", bg = "bg" }
 inactive.placeholder = { fg = "muted", bg = "bg" }
 
 [dialog.option]
-active = { fg = "yellow", bold = true }
-active.selected = { fg = "bright_white", bold = true }
+active = { fg = "selected", bold = true }
+active.selected = { fg = "fg_strong", bold = true }
 inactive = { fg = "fg" }
-selected = { fg = "yellow" }
-invalid = { fg = "red" }
-disabled = { fg = "black" }
+selected = { fg = "selected" }
+invalid = { fg = "danger" }
+disabled = { fg = "faint" }
 
 [dialog.status]              # dialog status segments (e.g. find selection size)
-selection_size = { fg = "yellow" }
+selection_size = { fg = "selected" }
 
 [dialog.progress]
 fill = { fg = "fg", bg = "bg" }
-label.on_fill = { fg = "bright_white", bold = true }
-label.on_track = { fg = "bright_white", bold = true }
+label.on_fill = { fg = "fg_strong", bold = true }
+label.on_track = { fg = "fg_strong", bold = true }
 track = { fg = "fg", bg = "surface" }
 
 [leader_menu]                 # Esc function menu letters
 surface = { bg = "bg" }
-group = { fg = "cyan", bold = true }
+group = { fg = "info", bold = true }
 key = { fg = "accent", bold = true }
 arrow = { fg = "muted" }
 label = { fg = "fg" }
 disabled = { fg = "muted" }
 
 [dialog.help]
-section = { fg = "cyan", bold = true }
+section = { fg = "info", bold = true }
 key     = { fg = "accent", bold = true }
 
 [dialog.completion]        # path completion dropdown (see docs/path-completion.md)
 item          = { fg = "fg", bg = "bg" }
 item.selected = { fg = "cursor_fg", bg = "cursor_bg", bold = true }
-match         = { fg = "yellow", bg = "bg", bold = true }
+match         = { fg = "selected", bg = "bg", bold = true }
 match.selected = { fg = "cursor_fg", bg = "cursor_bg", bold = true, underline = true }
 
 [tooltip]                  # explanation box of the focused dialog widget (dlg Item.Tooltip)
-text = { fg = "black", bg = "white" }
-info = { fg = "blue" }       # foreground of the info icon ([icons.dialog] info) on the box
+text = { fg = "ink", bg = "inverse_bg" }
+info = { fg = "primary" }       # foreground of the info icon ([icons.dialog] info) on the box
 
 [dialog.massrename]
 before = { fg = "fg" }
-before.removed = { fg = "red", bold = true }
-before.replaced = { fg = "yellow", bold = true }
-after = { fg = "yellow" }
-after.added = { fg = "green", bold = true }
-after.error = { fg = "bright_red", bold = true }
+before.removed = { fg = "danger", bold = true }
+before.replaced = { fg = "warning", bold = true }
+after = { fg = "warning" }
+after.added = { fg = "success", bold = true }
+after.error = { fg = "error", bold = true }
 
 [jobs]                       # jobs list row text
 row = { fg = "fg" }
-row.hover = { fg = "bright_white", bg = "surface" }  # queue row under the mouse pointer
+row.hover = { fg = "fg_strong", bg = "surface" }  # queue row under the mouse pointer
 
 [jobs.progress]
-fill = { fg = "black", bg = "green" }
-label.on_fill = { fg = "black", bold = true }
-label.on_track = { fg = "bright_white", bold = true }
+fill = { fg = "ink", bg = "success" }
+label.on_fill = { fg = "ink", bold = true }
+label.on_track = { fg = "fg_strong", bold = true }
 track = { fg = "muted", bg = "bg" }
 
 [jobs.progress.inactive]       # paused / canceled job progress (grey fill)
-fill = { fg = "bright_white", bg = "surface" }
-label.on_fill = { fg = "bright_white", bold = true }
-label.on_track = { fg = "bright_white", bold = true }
+fill = { fg = "fg_strong", bg = "surface" }
+label.on_fill = { fg = "fg_strong", bold = true }
+label.on_track = { fg = "fg_strong", bold = true }
 track = { fg = "muted", bg = "bg" }
 
 [jobs.progress.completed]      # completed job progress (always a full bar)
-fill = { fg = "green", bg = "surface" }
+fill = { fg = "success", bg = "surface" }
 
 [jobs.detail]                # jobs view Details panel body
 label = { fg = "fg" }
-text = { fg = "default" }
-plot = { fg = "green" }
+text = { fg = "fg" }
+plot = { fg = "success" }
 
 [jobs.operations]            # Operations pane result icons
-success = { fg = "bright_green", bold = true }
-failed = { fg = "bright_red", bold = true }
-skipped = { fg = "yellow", bold = true }
+success = { fg = "success_strong", bold = true }
+failed = { fg = "error", bold = true }
+skipped = { fg = "warning", bold = true }
 
 [compare]
-hashing = { fg = "bright_green", bold = true }
-equal = { fg = "bright_green" }
-content_diff = { fg = "bright_red" }
+hashing = { fg = "success_strong", bold = true }
+equal = { fg = "success_strong" }
+content_diff = { fg = "error" }
 
 [icons]
 empty = "[empty]"   # plain text shown in empty lists (not a glyph)

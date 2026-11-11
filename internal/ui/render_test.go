@@ -1105,8 +1105,10 @@ func TestDrawFooterPaintsHoveredEntryInHoverStyle(t *testing.T) {
 	if _, st, _ := screen.Get(spans[0].X, 0); st != styles.FooterKey {
 		t.Fatalf("other entry key style = %v, want FooterKey", st)
 	}
-	if _, st, _ := screen.Get(spans[1].X+spans[1].Width, 0); st != styles.FooterLabel {
-		t.Fatalf("cell after hovered entry style = %v, want FooterLabel", st)
+	if after := spans[1].X + spans[1].Width; after < rect.Width {
+		if _, st, _ := screen.Get(after, 0); st != styles.FooterLabel {
+			t.Fatalf("cell after hovered entry style = %v, want FooterLabel", st)
+		}
 	}
 }
 

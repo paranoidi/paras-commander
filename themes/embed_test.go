@@ -8,13 +8,23 @@ import (
 )
 
 // TestDefaultThemeUsesOnly16ANSIColors keeps default.toml on the terminal's 16 ANSI colors: every
-// [palette] value is an index 0–15 (or "default") and no style names a hex color directly.
+// [palette] value is an index 0–15 (or "default"), every [roles] value is a [palette] name and no
+// style names a hex color directly.
 func TestDefaultThemeUsesOnly16ANSIColors(t *testing.T) {
 	data, err := Files.ReadFile("default.toml")
 	if err != nil {
 		t.Fatal(err)
 	}
 	section := ""
+	paletteNames := map[string]bool{}
+	for _, line := range strings.Split(string(data), "\n") {
+		if t := strings.TrimSpace(line); strings.HasPrefix(t, "[") {
+			section = t
+		} else if m := regexp.MustCompile(`^([a-z_]+)\s*=`).FindStringSubmatch(t); m != nil && section == "[palette]" {
+			paletteNames[m[1]] = true
+		}
+	}
+	section = ""
 	entry := regexp.MustCompile(`^([a-z_]+)\s*=\s*([^#]+?)\s*(#.*)?$`)
 	hexColor := regexp.MustCompile(`"#[0-9a-fA-F]{6}"`)
 	for i, line := range strings.Split(string(data), "\n") {
@@ -26,11 +36,17 @@ func TestDefaultThemeUsesOnly16ANSIColors(t *testing.T) {
 		if hexColor.MatchString(trimmed) && !strings.HasPrefix(trimmed, "#") {
 			t.Errorf("line %d: hex color in default theme: %s", i+1, trimmed)
 		}
-		if section != "[palette]" {
+		if section != "[palette]" && section != "[roles]" {
 			continue
 		}
 		m := entry.FindStringSubmatch(trimmed)
 		if m == nil {
+			continue
+		}
+		if section == "[roles]" {
+			if name := strings.Trim(m[2], `"`); !paletteNames[name] {
+				t.Errorf("line %d: roles.%s = %s is not a [palette] name", i+1, m[1], m[2])
+			}
 			continue
 		}
 		if m[2] == `"default"` {

@@ -375,6 +375,15 @@ const (
 	// NarrowPanelRowTextWidthThreshold render only the name column (size / meta / mtime / perm hidden).
 	DefaultNarrowPanelsNameOnly = true
 
+	// VolumeInfo* are the [ui].volume_info modes for the panel title's free-space label:
+	// full "313G / 1817G (17%)", medium "313G (17%)", small "313G", none hides it.
+	VolumeInfoFull   = "full"
+	VolumeInfoMedium = "medium"
+	VolumeInfoSmall  = "small"
+	VolumeInfoNone   = "none"
+	// DefaultVolumeInfo is the built-in [ui].volume_info mode.
+	DefaultVolumeInfo = VolumeInfoSmall
+
 	// DefaultOtherPanelMatchMarks: when true, each panel marks names that also exist in the other
 	// panel's (different) directory.
 	DefaultOtherPanelMatchMarks = true

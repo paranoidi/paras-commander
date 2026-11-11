@@ -112,7 +112,7 @@ func drawDedupBrowsePanel(screen tcell.Screen, layout Layout, model Model, style
 			SyncDriverPanelID: -1, QuickViewDriverPanelID: -1, SplitOrientation: model.SplitOrientation,
 		},
 		PanelDisplayConfig{
-			ShowIcons: model.UseNerdfontIcons, UserHomeDir: model.UserHomeDir,
+			ShowIcons: model.UseNerdfontIcons, UserHomeDir: model.UserHomeDir, VolumeInfo: model.PanelVolumeInfo,
 			Painter: model.DiskUsage, DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints,
 			DiskUsageGoduIgnore: model.DiskUsageGoduIgnore, JobMarks: model.JobPathMarks,
 			NarrowPanelsNameOnly: model.NarrowPanelsNameOnly, ScrollbarShowInactive: model.PanelScrollbarInactive,

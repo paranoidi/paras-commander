@@ -39,7 +39,7 @@ color = "bright_yellow"
 - `show` lists the names drawn in the menu bar, in order. The Status commands dialog rewrites this line and leaves the rest of the file untouched. Unknown names are ignored.
 - Each `[[command]]` adds a command. Using a built-in's name replaces that built-in (give all fields again).
 - `command` runs via `sh -c`, with no `%f`-style macro expansion. Only the first line of its output is shown, cut to fit in `max_width` terminal cells (the `…` included).
-- `color` sets that command's text color: a palette name from the active theme (`yellow`, `bright_cyan`, …), `"#RRGGBB"`, or `"default"`. Without it the theme's `menu.status` color is used.
+- `color` sets that command's text color: a role of the active theme (`warning`, `success`, `muted`, …), else a palette name (`yellow`, `bright_cyan`, …), `"#RRGGBB"`, or `"default"`; a role follows theme switches, a palette name or hex value stays what it names. Without it the theme's `menu.status` color is used.
 - Empty output, a non-zero exit or a run longer than 10 s hides that segment until the next run.
 
 Field reference: [`status.toml`](config.md#statustoml).

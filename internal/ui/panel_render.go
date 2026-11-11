@@ -169,8 +169,10 @@ type PanelDisplayConfig struct {
 	MetaColumns           []MetaColumnState
 	NarrowPanelsNameOnly  bool
 	ScrollbarShowInactive bool
-	CarouselLayout        panelcarousel.Layout
-	CarouselFilePreview   FilePreviewState
+	// VolumeInfo is the config.VolumeInfo* mode of the title's free-space label.
+	VolumeInfo          string
+	CarouselLayout      panelcarousel.Layout
+	CarouselFilePreview FilePreviewState
 }
 
 func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle PanelStyleConfig, ctx PanelContext, display PanelDisplayConfig) {
@@ -232,7 +234,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	if inner.Width > 0 && inner.Height > 0 {
 		primitive.Fill(screen, inner, ' ', chrome.Surface)
 	}
-	titleRow := newPanelTitleRow(rect, state, panelStyle.Styles, ctx.TitleEndLabel)
+	titleRow := newPanelTitleRow(rect, state, panelStyle.Styles, ctx.TitleEndLabel, display.VolumeInfo)
 	if panelTitleShowsFilter(state, ctx.FileListActive) {
 		drawQuickFilterTitle(screen, titleRow.X, rect.Y, titleRow.ContentCols, state.Filter, panelStyle.Styles)
 	} else {
@@ -959,10 +961,10 @@ type panelTitleRow struct {
 
 // newPanelTitleRow lays out rect's top border title; endOverride replaces the volume overview
 // (PanelContext.TitleEndLabel) when non-empty.
-func newPanelTitleRow(rect Rect, state panel.State, styles theme.Theme, endOverride string) panelTitleRow {
+func newPanelTitleRow(rect Rect, state panel.State, styles theme.Theme, endOverride, volumeInfo string) panelTitleRow {
 	r := panelTitleRow{X: rect.X + 2, InnerRight: rect.X + rect.Width - 2, PathPrefix: indexTitlePrefix(state, styles)}
 	r.ContentCols = max(r.InnerRight-r.X+1, 1)
-	r.EndLabel = panelVolumeFreeSpaceTitle(state.VolumeSpaceOK, state.VolumeAvailBytes, state.VolumeTotalBytes)
+	r.EndLabel = panelVolumeFreeSpaceTitle(volumeInfo, state.VolumeSpaceOK, state.VolumeAvailBytes, state.VolumeTotalBytes)
 	r.VolumeDecorated = true
 	// Plain end labels (filename / QV dir basename) leave one frame-dash before the corner;
 	// volume labels already include a trailer " ─".
@@ -1347,8 +1349,10 @@ const (
 	panelVolumeTitleMaxUnit = 8 // same compact binary scaling as listing sizes (K/M/G/…)
 )
 
-func panelVolumeFreeSpaceTitle(ok bool, avail, total uint64) string {
-	if !ok || total == 0 {
+// panelVolumeFreeSpaceTitle formats the free-space label for mode (a config.VolumeInfo* value;
+// unknown or empty renders as config.VolumeInfoSmall).
+func panelVolumeFreeSpaceTitle(mode string, ok bool, avail, total uint64) string {
+	if !ok || total == 0 || mode == config.VolumeInfoNone {
 		return ""
 	}
 	pct := int(avail * 100 / total)
@@ -1358,7 +1362,16 @@ func panelVolumeFreeSpaceTitle(ok bool, avail, total uint64) string {
 		pct = 100
 	}
 	freeStr, totalStr := panelVolumePairSizes(avail, total, panelVolumeTitleMaxUnit)
-	return fmt.Sprintf("%s%s / %s (%d%%)%s", panelVolumeTitleLeader, freeStr, totalStr, pct, panelVolumeTitleTrailer)
+	var body string
+	switch mode {
+	case config.VolumeInfoFull:
+		body = fmt.Sprintf("%s / %s (%d%%)", freeStr, totalStr, pct)
+	case config.VolumeInfoMedium:
+		body = fmt.Sprintf("%s (%d%%)", freeStr, pct)
+	default:
+		body = freeStr
+	}
+	return panelVolumeTitleLeader + body + panelVolumeTitleTrailer
 }
 
 // panelVolumePairSizes formats free/total with the same unit suffix when possible so compact tiers align (e.g. 28G / 1817G).
