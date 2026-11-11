@@ -56,6 +56,13 @@ type ExtractPlan struct {
 	// the previous answer was rejected). ok=false skips that archive; nil fails it. The last
 	// accepted password is tried first on the following archives of the same ExecuteExtract.
 	Password ArchivePasswordFunc
+	// Throttle paces OnTransfer; zero fields use the worker progress defaults.
+	Throttle ProgressEmitThrottle
+	// OnTransfer, when set, hears the bytes moved while a remote archive is downloaded or a remote
+	// destination is uploaded: the user-facing path being transferred (the remote archive, the
+	// remote destination file; never a temporary one) and the bytes moved so far in this
+	// ExecuteExtract call. Local extracts never call it.
+	OnTransfer func(path string, doneBytes int64)
 	// OnItem, when set, reports each archive extracted (ItemDone), skipped or failed, with the
 	// reason for the last two.
 	OnItem ItemFunc
@@ -195,7 +202,7 @@ func ExecuteExtract(ctx context.Context, plan ExtractPlan, progress ExtractProgr
 	var firstErr error
 	var failCount int
 	claimedStream := make(map[string]string)
-	var pw string // last accepted archive password, in memory for this call only
+	run := &extractRun{meter: transferMeter{th: effectiveProgressThrottle(plan.Throttle), fn: plan.OnTransfer}}
 
 	for _, item := range plan.Items {
 		if err := itemBoundaryErr(ctx); err != nil {
@@ -219,7 +226,7 @@ func ExecuteExtract(ctx context.Context, plan ExtractPlan, progress ExtractProgr
 			}
 			claimedStream[name] = item.Path
 		}
-		err := extractStaged(ctx, item, plan, &pw)
+		kept, err := extractStaged(ctx, item, plan, run)
 		if errors.Is(err, errExtractNoPassword) {
 			plan.report(item, ItemSkipped, ReasonNoPassword)
 			if progress != nil {
@@ -248,7 +255,7 @@ func ExecuteExtract(ctx context.Context, plan ExtractPlan, progress ExtractProgr
 				firstErr = fmt.Errorf("%s: %w", filepath.Base(item.Path), err)
 			}
 		} else {
-			plan.report(item, ItemDone, "")
+			plan.report(item, ItemDone, ReasonKeptExisting(kept))
 			done++
 		}
 		if progress != nil {
@@ -264,19 +271,56 @@ func ExecuteExtract(ctx context.Context, plan ExtractPlan, progress ExtractProgr
 	return done, nil
 }
 
+// extractRun is the state ExecuteExtract keeps across its archives.
+type extractRun struct {
+	pw    string // last accepted archive password, in memory for this call only
+	meter transferMeter
+}
+
+// transferMeter counts the bytes of staged transfers and reports them (through fn) at most as
+// often as th allows.
+type transferMeter struct {
+	th        ProgressEmitThrottle
+	fn        func(path string, doneBytes int64)
+	total     int64
+	sinceEmit int64
+	lastEmit  time.Time
+}
+
+// add counts delta bytes moved for path and reports unless throttled.
+func (m *transferMeter) add(path string, delta int64) {
+	m.total += delta
+	m.sinceEmit += delta
+	if m.fn == nil {
+		return
+	}
+	if m.sinceEmit >= m.th.MinBytes || (m.sinceEmit > 0 && !m.lastEmit.IsZero() && time.Since(m.lastEmit) >= m.th.MinInterval) {
+		m.flush(path)
+	}
+}
+
+// flush reports the current total for path.
+func (m *transferMeter) flush(path string) {
+	if m.fn == nil {
+		return
+	}
+	m.fn(path, m.total)
+	m.sinceEmit, m.lastEmit = 0, time.Now()
+}
+
 // extractStaged extracts one archive. When the archive or the destination is remote it works
 // through local temporary directories that are removed again whatever the outcome: a remote
 // archive is downloaded first, a remote destination receives the extracted top-level entries
 // afterwards through the copy executor (so ExtractPlan.Conflict decides about existing files). The
 // scratch work is not reported to ctx's fschange sink.
-func extractStaged(ctx context.Context, item ExtractItem, plan ExtractPlan, pw *string) error {
+func extractStaged(ctx context.Context, item ExtractItem, plan ExtractPlan, run *extractRun) (kept int, err error) {
 	srcLoc, err := pathloc.Parse(item.Path)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	destLoc, err := pathloc.Parse(plan.Destination)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	ask := plan.Password
 	if ask != nil { // the prompt names the archive as the user knows it, not its temporary copy
@@ -288,54 +332,74 @@ func extractStaged(ctx context.Context, item ExtractItem, plan ExtractPlan, pw *
 	if !srcLoc.IsLocal() {
 		dir, err := os.MkdirTemp("", "pc-extract-src-")
 		if err != nil {
-			return err
+			return 0, err
 		}
 		defer func() { _ = os.RemoveAll(dir) }()
 		local.Path = filepath.Join(dir, srcLoc.Base())
 		dstLoc, err := pathloc.File(local.Path)
 		if err != nil {
-			return err
+			return 0, err
 		}
-		if res, err := copyFileTransfer(fschange.WithoutSink(ctx), srcLoc, dstLoc, DefaultOptions(), nil, nil, nil); err != nil || res != copyDone {
+		onWritten := func(n int64) { run.meter.add(item.Path, n) }
+		res, err := copyFileTransfer(fschange.WithoutSink(ctx), srcLoc, dstLoc, DefaultOptions(), nil, nil, onWritten)
+		if err != nil || res != copyDone {
 			if err == nil {
 				err = errExtractSkipped
 			}
-			return fmt.Errorf("download: %w", err)
+			return 0, fmt.Errorf("download: %w", err)
 		}
+		run.meter.flush(item.Path)
 	}
 	if !destLoc.IsLocal() {
 		stage, err := os.MkdirTemp("", "pc-extract-dst-")
 		if err != nil {
-			return err
+			return 0, err
 		}
 		defer func() { _ = os.RemoveAll(stage) }()
 		destDir, extractCtx = stage, fschange.WithoutSink(ctx)
 	}
-	if err := extractOne(extractCtx, local, destDir, plan.AsDirectory, plan.Toolchain, plan.Conflict, ask, pw); err != nil {
-		return err
+	if err := extractOne(extractCtx, local, destDir, plan.AsDirectory, plan.Toolchain, plan.Conflict, ask, &run.pw); err != nil {
+		return 0, err
 	}
 	if destLoc.IsLocal() {
-		return nil
+		return 0, nil
 	}
 	entries, err := os.ReadDir(destDir)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	staged := make([]pathloc.Path, 0, len(entries))
 	for _, e := range entries {
 		p, err := pathloc.File(filepath.Join(destDir, e.Name()))
 		if err != nil {
-			return err
+			return 0, err
 		}
 		staged = append(staged, p)
 	}
 	if len(staged) == 0 {
-		return nil
+		return 0, nil
 	}
-	if _, _, err := ExecuteCopy(ctx, staged, destLoc, DefaultOptions(), ProgressEmitThrottle{}, nil, plan.Conflict, nil); err != nil {
-		return fmt.Errorf("upload: %w", err)
+	resolver := plan.Conflict
+	if resolver != nil { // count what the user's answers kept in place
+		resolver = func(ctx context.Context, src, dst string, facts FileConflictFacts) (ConflictResolution, error) {
+			res, err := plan.Conflict(ctx, src, dst, facts)
+			if err == nil && res.Action == ActionSkip {
+				kept++
+			}
+			return res, err
+		}
 	}
-	return nil
+	base := run.meter.total
+	progress := func(_, dst string, _ int, doneBytes int64) {
+		run.meter.total = base + doneBytes
+		run.meter.flush(dst)
+	}
+	_, doneBytes, err := ExecuteCopy(ctx, staged, destLoc, DefaultOptions(), plan.Throttle, progress, resolver, nil)
+	run.meter.total = base + doneBytes
+	if err != nil {
+		return kept, fmt.Errorf("upload: %w", err)
+	}
+	return kept, nil
 }
 
 func extractOne(ctx context.Context, item ExtractItem, destDir string, asDir bool, tc archive.Toolchain, resolver ConflictResolver, askPassword ArchivePasswordFunc, pw *string) error {

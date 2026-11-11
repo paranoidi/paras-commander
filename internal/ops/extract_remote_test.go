@@ -374,3 +374,122 @@ func TestExtractRemoteSymlinkToArchive(t *testing.T) {
 	}
 	assertEmptyDir(t, tmp)
 }
+
+// transferLog collects ExtractPlan.OnTransfer reports.
+type transferLog struct {
+	paths []string
+	last  int64
+}
+
+func (l *transferLog) hook(path string, doneBytes int64) {
+	l.paths = append(l.paths, path)
+	l.last = doneBytes
+}
+
+func (l *transferLog) assertRemoteOnly(t *testing.T) {
+	t.Helper()
+	if len(l.paths) == 0 || l.last <= 0 {
+		t.Fatalf("no transfer progress: paths=%v bytes=%d", l.paths, l.last)
+	}
+	for _, p := range l.paths {
+		if !strings.HasPrefix(p, memRemoteHost+"/") {
+			t.Fatalf("progress path %q is not a user-facing remote path", p)
+		}
+	}
+}
+
+func TestExtractRemoteTransferProgress(t *testing.T) {
+	tc := archive.ProbeToolchain()
+	scratchTmp(t)
+	throttle := ProgressEmitThrottle{MinBytes: 1, MinInterval: time.Millisecond}
+
+	t.Run("download", func(t *testing.T) {
+		mem := newMemRemote("/quarry")
+		mem.files[memRemoteHost+"/quarry/orchard.tar.gz"] = tarGzBytes(t, "heron.txt", "marsh")
+		installOpsBackend(t, mem)
+		plan, _, err := PlanExtract([]string{memRemoteHost + "/quarry/orchard.tar.gz"}, t.TempDir(), tc)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var log transferLog
+		plan.Throttle, plan.OnTransfer = throttle, log.hook
+		if _, err := ExecuteExtract(context.Background(), plan, nil); err != nil {
+			t.Fatal(err)
+		}
+		log.assertRemoteOnly(t)
+		if want := int64(len(mem.files[memRemoteHost+"/quarry/orchard.tar.gz"])); log.last != want {
+			t.Fatalf("downloaded %d bytes, want %d", log.last, want)
+		}
+	})
+
+	t.Run("upload", func(t *testing.T) {
+		mem := newMemRemote("/thicket")
+		installOpsBackend(t, mem)
+		srcDir := t.TempDir()
+		if err := os.WriteFile(filepath.Join(srcDir, "meadow.tar.gz"), tarGzBytes(t, "willow.txt", "reed"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		plan, _, err := PlanExtract([]string{filepath.Join(srcDir, "meadow.tar.gz")}, memRemoteHost+"/thicket", tc)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var log transferLog
+		plan.Throttle, plan.OnTransfer = throttle, log.hook
+		if _, err := ExecuteExtract(context.Background(), plan, nil); err != nil {
+			t.Fatal(err)
+		}
+		log.assertRemoteOnly(t)
+		if log.last != int64(len("reed")) {
+			t.Fatalf("uploaded %d bytes, want %d", log.last, len("reed"))
+		}
+	})
+
+	t.Run("local extract reports nothing", func(t *testing.T) {
+		srcDir, dest := t.TempDir(), t.TempDir()
+		writeGzipFile(t, filepath.Join(srcDir, "lantern.gz"), "moss")
+		plan, _, err := PlanExtract([]string{filepath.Join(srcDir, "lantern.gz")}, dest, tc)
+		if err != nil {
+			t.Fatal(err)
+		}
+		plan.OnTransfer = func(string, int64) { t.Error("local extract reported a transfer") }
+		if _, err := ExecuteExtract(context.Background(), plan, nil); err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
+func TestExtractRemoteReportsKeptExistingCount(t *testing.T) {
+	tc := archive.ProbeToolchain()
+	scratchTmp(t)
+	mem := newMemRemote("/thicket")
+	mem.files[memRemoteHost+"/thicket/heron.txt"] = []byte("keep-harbor")
+	installOpsBackend(t, mem)
+	srcDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(srcDir, "orchard.tar.gz"), tarGzBytes(t, "heron.txt", "marsh"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	writeGzipFile(t, filepath.Join(srcDir, "lantern.gz"), "moss")
+	plan, _, err := PlanExtract([]string{filepath.Join(srcDir, "orchard.tar.gz"), filepath.Join(srcDir, "lantern.gz")}, memRemoteHost+"/thicket", tc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan.Conflict = func(context.Context, string, string, FileConflictFacts) (ConflictResolution, error) {
+		return ConflictResolution{Action: ActionSkip}, nil
+	}
+	reasons := map[string]string{}
+	plan.OnItem = func(item PlanItem, res ItemResult, reason string) {
+		if res != ItemDone {
+			t.Errorf("%s result %v (%s)", item.Src.Base(), res, reason)
+		}
+		reasons[item.Src.Base()] = reason
+	}
+	if _, err := ExecuteExtract(context.Background(), plan, nil); err != nil {
+		t.Fatal(err)
+	}
+	if reasons["orchard.tar.gz"] != ReasonKeptExisting(1) || reasons["orchard.tar.gz"] != "1 kept existing" || reasons["lantern.gz"] != "" {
+		t.Fatalf("reasons = %v", reasons)
+	}
+	if got, _ := mem.file("/thicket/heron.txt"); got != "keep-harbor" {
+		t.Fatalf("existing file = %q", got)
+	}
+}

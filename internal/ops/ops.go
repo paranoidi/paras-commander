@@ -164,6 +164,15 @@ const (
 	ReasonNoPassword    = "no password"
 )
 
+// ReasonKeptExisting is the reason of a staged extract's done row when the upload left n existing
+// remote files in place (the conflict resolver answered skip); "" for none.
+func ReasonKeptExisting(n int) string {
+	if n <= 0 {
+		return ""
+	}
+	return fmt.Sprintf("%d kept existing", n)
+}
+
 // itemDone reports item, tagged with the current source, through o.OnItemDone when set.
 func (o Options) itemDone(item PlanItem, res ItemResult, reason string) {
 	if o.OnItemDone != nil {

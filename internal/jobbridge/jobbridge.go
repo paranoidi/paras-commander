@@ -757,6 +757,7 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 		// The job plan keeps existing/colliding stream outputs so Conflict (the jobs overwrite
 		// blocker) can keep-existing or replace.
 		plan, _, extractPlanErr := ops.PlanExtractForJob(tc.ctx, pathloc.Strings(job.Sources), dest, toolchain)
+		plan.Throttle = tc.throttle
 		plan.AsDirectory = job.ExtractAsDirectory
 		plan.Password = ops.ArchivePasswordFromPermission(tc.permWait)
 		plan.Conflict = tc.resolver
@@ -765,18 +766,34 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 		if extractPlanErr != nil {
 			err = extractPlanErr
 		} else {
+			var doneArchives int
+			var transferred int64
 			extractProgress := func(path string, df int) {
+				doneArchives = df
 				tc.emit(jobs.Event{
 					Type:        jobs.EventProgress,
 					JobID:       job.ID,
 					Status:      jobs.StatusRunning,
 					DoneFiles:   df,
-					DoneBytes:   0,
+					DoneBytes:   transferred,
+					CurrentPath: path,
+				})
+			}
+			// Bytes of a remote archive's download or a remote destination's upload (shown as
+			// throughput; the extract job has no byte total).
+			plan.OnTransfer = func(path string, doneBytes int64) {
+				transferred = doneBytes
+				tc.emit(jobs.Event{
+					Type:        jobs.EventProgress,
+					JobID:       job.ID,
+					Status:      jobs.StatusRunning,
+					DoneFiles:   doneArchives,
+					DoneBytes:   doneBytes,
 					CurrentPath: path,
 				})
 			}
 			doneFiles, err = ops.ExecuteExtract(tc.ctx, plan, extractProgress)
-			doneBytes = 0
+			doneBytes = transferred
 		}
 	default:
 		return 0, 0, fmt.Errorf("unknown job type: %s", job.Type)
