@@ -76,3 +76,41 @@ func TestMismatchRename(t *testing.T) {
 		t.Fatalf("directory contents lost: %q", got)
 	}
 }
+
+// TestExactDestJobRaisesMismatchAtTheTarget: a job whose Destination is the exact target path
+// asks about the directory sitting there instead of copying or moving the file inside it.
+func TestExactDestJobRaisesMismatchAtTheTarget(t *testing.T) {
+	t.Parallel()
+	for _, typ := range []jobs.Type{jobs.TypeCopy, jobs.TypeMove} {
+		dir := t.TempDir()
+		target := filepath.Join(dir, "out", "orchard")
+		if err := os.MkdirAll(target, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		src := filepath.Join(dir, "orchard")
+		if err := os.WriteFile(src, []byte("new"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		cfg := config.Default()
+		transfer := TransferFunc(cfg.Operations, cfg.Jobs, config.CompareConfig{ChunkBytes: 4}, nil, nil, nil, nil, nil)
+		job := &jobs.Job{
+			ID: jobs.NewJobID(), Type: typ, Status: jobs.StatusRunning, ExactDest: true,
+			Sources:     []pathloc.Path{pathloc.FileMust(src)},
+			Destination: pathloc.FileMust(target),
+		}
+		var reqs []jobs.ConflictRequest
+		err := transfer(context.Background(), job, func(jobs.Event) {}, func(r jobs.BlockerRequest) jobs.BlockerAnswer {
+			reqs = append(reqs, *r.Conflict)
+			return jobs.BlockerAnswer{Decision: jobs.DecisionSkip}
+		})
+		if err != nil {
+			t.Fatalf("%s: transfer: %v", typ, err)
+		}
+		if len(reqs) != 1 || !reqs[0].Mismatch || !reqs[0].DestIsDir || reqs[0].Destination != target {
+			t.Fatalf("%s: want one mismatch prompt at %q, got %+v", typ, target, reqs)
+		}
+		if _, err := os.Stat(filepath.Join(target, "orchard")); !os.IsNotExist(err) {
+			t.Fatalf("%s: file landed inside the directory: %v", typ, err)
+		}
+	}
+}

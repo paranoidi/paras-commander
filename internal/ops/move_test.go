@@ -195,7 +195,7 @@ func moveViaCopyFallback(ctx context.Context, sources []pathloc.Path, destinatio
 	var files int
 	var bytes int64
 	for _, src := range sources {
-		dst, err := resolveMoveDestination(ctx, destination, src.Base())
+		dst, err := resolveMoveDestination(ctx, destination, src.Base(), false)
 		if err != nil {
 			return files, bytes, err
 		}

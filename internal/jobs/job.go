@@ -111,7 +111,11 @@ type Job struct {
 	Destination pathloc.Path
 	// DestIsDir is whether Destination was an existing directory at enqueue time (same as ops.ResolveDestination Stat semantics).
 	// Used by UI path marks so listing render does not Stat the destination per row.
-	DestIsDir  bool
+	DestIsDir bool
+	// ExactDest makes Destination the target path of the job's single source instead of a
+	// directory the source goes into (ops.Options.ExactDest). DestIsDir is false for such a job,
+	// so path marks resolve to Destination itself.
+	ExactDest  bool
 	TotalFiles int
 	TotalDirs  int
 	DoneFiles  int
@@ -408,7 +412,7 @@ func (j *Job) RetryClone() *Job {
 	}
 	// A remote destination is never Stat-ed on the UI goroutine; its enqueue-time value carries over.
 	destIsDir := j.DestIsDir
-	if j.Destination.IsLocal() {
+	if j.Destination.IsLocal() && !j.ExactDest {
 		destIsDir = ops.DestinationIsDirAtEnqueue(j.Destination)
 	}
 	var plan []ops.PlanItem
@@ -432,6 +436,7 @@ func (j *Job) RetryClone() *Job {
 		Sources:         j.Sources,
 		Destination:     j.Destination,
 		DestIsDir:       destIsDir,
+		ExactDest:       j.ExactDest,
 		TotalFiles:      totalFiles,
 		TotalDirs:       totalDirs,
 		// A retry plan skips the pre-scan: SummarizePlan's totals are already final.

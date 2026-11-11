@@ -72,6 +72,10 @@ type Options struct {
 	// FlatDestNames resolves every source to dest/<basename> (flatten jobs) instead of
 	// batch-relative names below the sources' common parent (see TransferNameRoot).
 	FlatDestNames bool
+	// ExactDest makes the destination the target path of the job's single source: it is never
+	// descended into when it is an existing directory, so a file-vs-directory clash goes through
+	// the conflict resolver. Requires exactly one source (see requireSingleSource).
+	ExactDest bool
 	// DereferenceSymlinks copies through symlinks (file or directory targets) instead of
 	// recreating them at the destination. Local-to-local Copy only; never applies to Move
 	// (enforced at enqueue, see apphandler/jobs.Handler.AddTransferJob) and has no effect when
@@ -317,6 +321,15 @@ func TransferDestName(src, root pathloc.Path) string {
 		}
 	}
 	return src.Base()
+}
+
+// requireSingleSource rejects an exact-destination transfer (Options.ExactDest) that does not
+// have exactly one source: a single target path cannot receive several sources.
+func requireSingleSource(exact bool, sources []pathloc.Path) error {
+	if exact && len(sources) != 1 {
+		return fmt.Errorf("exact destination needs exactly one source, got %d", len(sources))
+	}
+	return nil
 }
 
 // DestinationUnderSource reports whether resolvedDest lies inside src (strict descendant).
@@ -576,6 +589,9 @@ func buildPlan(ctx context.Context, sources []pathloc.Path, destination pathloc.
 		}
 		return nil
 	}
+	if err := requireSingleSource(opts.ExactDest, sources); err != nil {
+		return err
+	}
 	var nameRoot pathloc.Path
 	if !opts.FlatDestNames {
 		nameRoot = TransferNameRoot(sources)
@@ -585,9 +601,12 @@ func buildPlan(ctx context.Context, sources []pathloc.Path, destination pathloc.
 			return err
 		}
 		srcSink, srcOpts := sourceStamped(int32(i), sink, opts)
-		dstLoc, err := resolveDestinationNamedCtx(ctx, destination, TransferDestName(srcLoc, nameRoot))
-		if err != nil {
-			return err
+		dstLoc := destination
+		if !opts.ExactDest {
+			var err error
+			if dstLoc, err = resolveDestinationNamedCtx(ctx, destination, TransferDestName(srcLoc, nameRoot)); err != nil {
+				return err
+			}
 		}
 		if DestinationUnderSource(srcLoc, dstLoc) {
 			return fmt.Errorf("cannot copy %s into a subdirectory of itself", srcLoc)

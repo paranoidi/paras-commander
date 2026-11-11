@@ -1460,9 +1460,14 @@ func (h *Handler) AddTransferJob(req TransferJobRequest) bool {
 		h.host.SetTransientMessage(msg, ui.MessageUrgencyWarn)
 		return false
 	}
-	// A remote destination's directory-ness is only known from a caller's worker probe.
-	destIsDir := ops.DestinationIsDirAtEnqueue(destLoc)
-	if req.DestIsDir != nil {
+	if req.ExactDest && len(srcLocs) != 1 {
+		h.host.SetTransientMessage("Queue job: exact destination needs exactly one source", ui.MessageUrgencyError)
+		return false
+	}
+	// A remote destination's directory-ness is only known from a caller's worker probe. An exact
+	// destination is never a container.
+	destIsDir := !req.ExactDest && ops.DestinationIsDirAtEnqueue(destLoc)
+	if req.DestIsDir != nil && !req.ExactDest {
 		destIsDir = *req.DestIsDir
 	}
 	job := &jobs.Job{
@@ -1472,6 +1477,7 @@ func (h *Handler) AddTransferJob(req TransferJobRequest) bool {
 		Sources:             srcLocs,
 		Destination:         destLoc,
 		DestIsDir:           destIsDir,
+		ExactDest:           req.ExactDest,
 		PausedAfterScan:     req.StartPaused,
 		PreservePermissions: req.Preserve.PreservePermissions,
 		PreserveTimestamps:  req.Preserve.PreserveTimestamps,

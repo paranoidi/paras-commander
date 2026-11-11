@@ -2,15 +2,12 @@ package compare
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/gdamore/tcell/v2"
 	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/jobbridge"
 	"github.com/paranoidi/paras-commander/internal/jobs"
-	"github.com/paranoidi/paras-commander/internal/ops"
-	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
@@ -123,13 +120,14 @@ func (h *Handler) confirmMerge() {
 	}
 	for _, item := range plan.Copies {
 		h.jobsCtrl.AddTransferJob(jobsctrl.TransferJobRequest{
-			Type: jobType, Sources: []string{item.Src}, Dest: mergeCopyDest(item.Dst), Preserve: preserve,
+			Type: jobType, Sources: []string{item.Src}, Dest: item.Dst, Preserve: preserve, ExactDest: true,
 		})
 	}
-	// A rename's Dest is the target file path (not a directory), so the move takes its name.
+	// Every merge Dest is the exact target file path: a directory already there is a conflict,
+	// never a place the file lands inside.
 	for _, item := range plan.Renames {
 		h.jobsCtrl.AddTransferJob(jobsctrl.TransferJobRequest{
-			Type: jobs.TypeMove, Sources: []string{item.Src}, Dest: item.Dst, Preserve: preserve,
+			Type: jobs.TypeMove, Sources: []string{item.Src}, Dest: item.Dst, Preserve: preserve, ExactDest: true,
 		})
 	}
 	h.closeMergeDialog()
@@ -143,17 +141,6 @@ func (h *Handler) confirmMerge() {
 		msg = fmt.Sprintf("Merge queued (%d %s, %d %s)", len(plan.Copies), verb, n, jobbridge.Plural(n, "rename", "renames"))
 	}
 	h.host.SetTransientMessage(msg, ui.MessageUrgencyInfo)
-}
-
-// mergeCopyDest is the job destination for a merge copy to the file path dst: dst itself, so
-// the job writes that name and creates missing parent directories. When a directory already
-// sits at dst it is the parent instead, so the file-vs-directory clash goes through the
-// conflict prompt rather than landing inside that directory.
-func mergeCopyDest(dst string) string {
-	if loc, err := pathloc.Parse(dst); err == nil && ops.DestinationIsDirAtEnqueue(loc) {
-		return filepath.Dir(dst)
-	}
-	return dst
 }
 
 // MergeDialogOK confirms the merge dialog.

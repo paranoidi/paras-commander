@@ -71,6 +71,7 @@ func ScanFunc(jobsCfg config.JobsConfig) jobs.ScanFunc {
 			YieldEveryN:         config.DefaultScanYieldCheckEveryN,
 			Yield:               newDutyCycleYield(hooks.Yield, hooks.YieldWork, time.Now),
 			FlatDestNames:       hooks.FlatDestNames,
+			ExactDest:           hooks.ExactDest,
 			OnPath:              hooks.OnPath,
 			DereferenceSymlinks: hooks.DereferenceSymlinks,
 			OnWarning:           hooks.OnWarning,
@@ -366,7 +367,7 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, com
 			// package to guard a job.Warnings append the way jobs/scan.go does for the normal
 			// path. DereferenceSymlinks fallbacks still relink correctly; they just go unlogged
 			// on this rare path.
-			opsPlan, tf, _, totalBytes, planErr = ops.BuildCopyPlanWithTotalsCtx(ctx, job.Sources, job.Destination, ops.PlanBuildOptions{FlatDestNames: job.FlatDestNames(), DereferenceSymlinks: job.DereferenceSymlinks})
+			opsPlan, tf, _, totalBytes, planErr = ops.BuildCopyPlanWithTotalsCtx(ctx, job.Sources, job.Destination, ops.PlanBuildOptions{FlatDestNames: job.FlatDestNames(), ExactDest: job.ExactDest, DereferenceSymlinks: job.DereferenceSymlinks})
 			if planErr == nil {
 				emit(jobs.Event{
 					Type:       jobs.EventPlanTotals,
@@ -456,6 +457,7 @@ func buildTransferOptions(job *jobs.Job, opsCfg config.OperationsConfig, jobsCfg
 		SyncMinFileKiB:             opsCfg.SyncMinFileKiB,
 		SyncWriteBehindMiB:         opsCfg.SyncWriteBehindMiB,
 		FlatDestNames:              job.FlatDestNames(),
+		ExactDest:                  job.ExactDest,
 		DereferenceSymlinks:        job.DereferenceSymlinks,
 		RateLimit:                  rateWait,
 		SourceSizeHints:            job.SourceSizeHints,

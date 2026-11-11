@@ -12,10 +12,13 @@ import (
 )
 
 // resolveMoveDestination is ResolveDestinationNamed using the job context, so a canceled dest
-// Stat unwinds the rename phase.
-func resolveMoveDestination(ctx context.Context, dest pathloc.Path, name string) (pathloc.Path, error) {
+// Stat unwinds the rename phase. exact (Options.ExactDest) makes dest itself the target.
+func resolveMoveDestination(ctx context.Context, dest pathloc.Path, name string, exact bool) (pathloc.Path, error) {
 	if err := ctx.Err(); err != nil {
 		return pathloc.Path{}, err
+	}
+	if exact {
+		return dest, nil
 	}
 	isDir, err := destinationIsDir(ctx, dest)
 	if err != nil {
@@ -199,6 +202,9 @@ func renameFastPathOrFallback(ctx context.Context, src, dst pathloc.Path) (renam
 // renames are never rolled back when a later source fails or needs the copy fallback. doneFiles
 // counts top-level sources moved by rename plus the items copied for fallback sources.
 func ExecuteMove(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
+	if err := requireSingleSource(opts.ExactDest, sources); err != nil {
+		return 0, 0, err
+	}
 	var nameRoot pathloc.Path
 	if !opts.FlatDestNames {
 		nameRoot = TransferNameRoot(sources)
@@ -217,7 +223,7 @@ func ExecuteMove(ctx context.Context, sources []pathloc.Path, destination pathlo
 		}
 		r.opts.enterSource(int32(i))
 		name := TransferDestName(src, nameRoot)
-		dst, err := resolveMoveDestination(ctx, destination, name)
+		dst, err := resolveMoveDestination(ctx, destination, name, opts.ExactDest)
 		if err != nil {
 			return doneFiles, doneBytes, err
 		}
@@ -259,7 +265,7 @@ func ExecuteMove(ctx context.Context, sources []pathloc.Path, destination pathlo
 		}
 		if slices.ContainsFunc(pending, func(t moveTask) bool { return !t.rmdir }) {
 			phase.Count = func(ctx context.Context, popts PlanBuildOptions, sink func(PlanItem)) error {
-				popts.FlatDestNames, popts.DereferenceSymlinks = r.opts.FlatDestNames, r.opts.DereferenceSymlinks
+				popts.FlatDestNames, popts.ExactDest, popts.DereferenceSymlinks = r.opts.FlatDestNames, r.opts.ExactDest, r.opts.DereferenceSymlinks
 				return countMoveTasks(ctx, pending, popts, sink)
 			}
 		}
@@ -499,9 +505,9 @@ func countMoveTasks(ctx context.Context, tasks []moveTask, opts PlanBuildOptions
 		if t.rmdir {
 			continue
 		}
-		planDest, planOpts := fallbackPlanTarget(t.dst, t.destination, opts.FlatDestNames, opts.DereferenceSymlinks)
+		planDest, planOpts := fallbackPlanTarget(t.dst, t.destination, opts.FlatDestNames, opts.ExactDest, opts.DereferenceSymlinks)
 		walkOpts := opts
-		walkOpts.FlatDestNames = planOpts.FlatDestNames
+		walkOpts.FlatDestNames, walkOpts.ExactDest = planOpts.FlatDestNames, planOpts.ExactDest
 		if err := buildPlan(ctx, []pathloc.Path{t.src}, planDest, true, walkOpts, feed); err != nil {
 			return err
 		}
@@ -512,19 +518,20 @@ func countMoveTasks(ctx context.Context, tasks []moveTask, opts PlanBuildOptions
 // fallbackPlanTarget is where a copy fallback plans src: dst is the already-resolved destination
 // path of src. Unless it is destination itself (a rename-to-new-name move), the plan targets
 // dst's parent with flat names so the nested name resolved by ExecuteMove is reproduced exactly.
-func fallbackPlanTarget(dst, destination pathloc.Path, flatDestNames, dereference bool) (pathloc.Path, PlanBuildOptions) {
-	planOpts := PlanBuildOptions{FlatDestNames: flatDestNames, DereferenceSymlinks: dereference}
+// An exact-destination move (exact) keeps planning exactly at destination, never into it.
+func fallbackPlanTarget(dst, destination pathloc.Path, flatDestNames, exact, dereference bool) (pathloc.Path, PlanBuildOptions) {
+	planOpts := PlanBuildOptions{FlatDestNames: flatDestNames, ExactDest: exact, DereferenceSymlinks: dereference}
 	if dst.Equal(destination) {
 		return destination, planOpts
 	}
-	planOpts.FlatDestNames = true
+	planOpts.FlatDestNames, planOpts.ExactDest = true, false
 	return dst.Parent(), planOpts
 }
 
 // moveCopyFallback copies one source whose rename was not possible to dst (see
 // fallbackPlanTarget), then removes it. The plan covers only src.
 func (r moveRun) moveCopyFallback(ctx context.Context, src, dst, destination pathloc.Path) (int, int64, error) {
-	planDest, planOpts := fallbackPlanTarget(dst, destination, r.opts.FlatDestNames, r.opts.DereferenceSymlinks)
+	planDest, planOpts := fallbackPlanTarget(dst, destination, r.opts.FlatDestNames, r.opts.ExactDest, r.opts.DereferenceSymlinks)
 	sources := []pathloc.Path{src}
 	plan, _, _, tb, err := BuildCopyPlanWithTotalsCtx(ctx, sources, planDest, planOpts)
 	if err != nil {

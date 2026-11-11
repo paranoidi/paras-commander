@@ -554,6 +554,34 @@ func TestAddTransferJobCopyKeepsDereferenceSymlinks(t *testing.T) {
 	}
 }
 
+// TestAddTransferJobExactDestIsNeverADirectory: an exact destination is the source's target path,
+// so the job is not a dest-is-dir job even when a directory already sits there, and it survives a
+// retry clone.
+func TestAddTransferJobExactDestIsNeverADirectory(t *testing.T) {
+	t.Parallel()
+	state := jobs.NewState()
+	h := New(Deps{Host: jobsHostStub{}, Model: &ui.Model{}, State: state, Config: config.Default()})
+	clash := t.TempDir() // an existing directory at the target path
+
+	if !h.AddTransferJob(TransferJobRequest{Type: jobs.TypeCopy, Sources: []string{"/src/thistlewood.txt"}, Dest: clash, ExactDest: true}) {
+		t.Fatal("exact transfer was not queued")
+	}
+	all := state.AllJobs()
+	if len(all) != 1 || !all[0].ExactDest || all[0].DestIsDir {
+		t.Fatalf("job = %+v, want ExactDest with DestIsDir false", all)
+	}
+	if clone := all[0].RetryClone(); !clone.ExactDest || clone.DestIsDir {
+		t.Fatalf("retry clone ExactDest=%v DestIsDir=%v, want true/false", clone.ExactDest, clone.DestIsDir)
+	}
+
+	if h.AddTransferJob(TransferJobRequest{Type: jobs.TypeMove, Sources: []string{"/src/a.txt", "/src/b.txt"}, Dest: clash, ExactDest: true}) {
+		t.Fatal("exact transfer with two sources was queued")
+	}
+	if n := len(state.AllJobs()); n != 1 {
+		t.Fatalf("len(AllJobs()) = %d, want 1", n)
+	}
+}
+
 // newMaximizeTestHandler builds a jobs-view handler with a failed job selected and the
 // Operations pane focused (FocusPane 2: list, Details, Operations).
 func newMaximizeTestHandler(t *testing.T) (*Handler, *ui.Model, *jobs.State) {

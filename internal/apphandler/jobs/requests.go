@@ -13,6 +13,10 @@ type TransferJobRequest struct {
 	// (a worker probe of a remote destination, or a directory the caller just created). Nil
 	// means the enqueue decides it, which is false for a remote destination.
 	DestIsDir *bool
+	// ExactDest makes Dest the target path of the single source (copy to a new file name, a
+	// rename), never a directory the source goes into: a directory already at Dest is a
+	// file-vs-directory conflict. Needs exactly one source.
+	ExactDest bool
 }
 
 // FlattenJobRequest enqueues a flatten (move children + optional empty-dir cleanup) job.
