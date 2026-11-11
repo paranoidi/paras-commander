@@ -1348,6 +1348,15 @@ func (a *App) handleEarlyInterruptPayload(data any) (eventOutcome, bool) {
 		a.render()
 		return eventOutcome{pollDiskUsageAfter: true, didRender: true}, true
 	}
+	if p, ok := data.(openFilesResultPayload); ok {
+		if p.err != nil {
+			a.setErrorMessage("External open", p.err)
+		} else {
+			a.setTransientMessage(fmt.Sprintf("Opened %d files externally", p.count), ui.MessageUrgencySuccess)
+		}
+		a.render()
+		return eventOutcome{didRender: true}, true
+	}
 	if p, ok := data.(folderColorsPayload); ok {
 		a.setErrorMessage("Folder color failed", p.err)
 		a.render()

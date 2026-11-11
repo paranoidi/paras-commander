@@ -6,7 +6,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
+	"strings"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -17,6 +20,79 @@ var runDetachedXDGOpen = func(path string) error {
 		return err
 	}
 	return cmd.Process.Release()
+}
+
+// defaultAppForPath returns the desktop id of path's default application (xdg-mime). Tests replace this.
+var defaultAppForPath = func(path string) (string, error) {
+	mime, err := exec.Command("xdg-mime", "query", "filetype", path).Output()
+	if err != nil {
+		return "", err
+	}
+	mt := strings.TrimSpace(string(mime))
+	id, err := exec.Command("xdg-mime", "query", "default", mt).Output()
+	if err != nil {
+		return "", err
+	}
+	if d := strings.TrimSpace(string(id)); d != "" {
+		return d, nil
+	}
+	return "", fmt.Errorf("no default application for %s (%s)", filepath.Base(path), mt)
+}
+
+// runDetachedLaunch launches the desktop application desktopID with paths (gtk-launch) without
+// waiting for it. Tests replace this.
+var runDetachedLaunch = func(desktopID string, paths []string) error {
+	cmd := exec.Command("gtk-launch", append([]string{desktopID}, paths...)...)
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	return cmd.Process.Release()
+}
+
+// openFilesResultPayload reports the outcome of openFilesExternally back to the UI goroutine.
+type openFilesResultPayload struct {
+	count int
+	err   error
+}
+
+// openFilesExternally opens every path in their shared default application with one launch.
+// Files whose default applications differ launch nothing and report an error.
+func (a *App) openFilesExternally(paths []string) {
+	hosts := make([]string, len(paths))
+	for i, p := range paths {
+		if host, ok := hostPathOf(p); ok {
+			p = host
+		}
+		hosts[i] = filepath.Clean(p)
+	}
+	screen := a.screen
+	go func() {
+		res := openFilesResultPayload{count: len(hosts), err: launchSharedApp(hosts)}
+		_ = screen.PostEvent(tcell.NewEventInterrupt(res))
+	}()
+}
+
+func launchSharedApp(paths []string) error {
+	byApp := map[string][]string{}
+	for _, p := range paths {
+		id, err := defaultAppForPath(p)
+		if err != nil {
+			return err
+		}
+		byApp[id] = append(byApp[id], p)
+	}
+	if len(byApp) > 1 {
+		parts := make([]string, 0, len(byApp))
+		for id, ps := range byApp {
+			parts = append(parts, fmt.Sprintf("%s (%d)", id, len(ps)))
+		}
+		sort.Strings(parts)
+		return fmt.Errorf("selected files open with different applications: %s", strings.Join(parts, ", "))
+	}
+	for id, ps := range byApp {
+		return runDetachedLaunch(id, ps)
+	}
+	return nil
 }
 
 // openPanelPathInExternalBrowser runs xdg-open on the given panel's directory (freedesktop GUI file manager).

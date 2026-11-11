@@ -104,6 +104,10 @@ func (a *App) handleNavOpen(activePanel *panel.State, viewportRows int) bool {
 	if a.model.ViewMode != ui.ViewBrowser {
 		return false
 	}
+	if paths := a.selectedFilesToOpen(activePanel); paths != nil {
+		a.openFilesExternally(paths)
+		return false
+	}
 	if path, ok := a.resolveExecutableOpenPath(activePanel); ok {
 		a.runExecutableFromPanel(path)
 		return false
@@ -114,6 +118,27 @@ func (a *App) handleNavOpen(activePanel *panel.State, viewportRows int) bool {
 	}
 	a.openFileExternally(entry.Path)
 	return false
+}
+
+// selectedFilesToOpen returns the selected paths when open_files_externally is on, the cursor is on a
+// selected file and at least two entries are selected; otherwise nil.
+func (a *App) selectedFilesToOpen(activePanel *panel.State) []string {
+	if !a.config.Panels.OpenFilesExternally {
+		return nil
+	}
+	cur, ok := activePanel.CurrentEntry()
+	if !ok || cur.Type == localfs.EntryDirectory || !activePanel.SelectedPaths[filepath.Clean(cur.Path)] {
+		return nil
+	}
+	entries, err := activePanel.SelectedEntries(true, nil)
+	if err != nil || len(entries) < 2 {
+		return nil
+	}
+	paths := make([]string, len(entries))
+	for i, e := range entries {
+		paths[i] = e.Path
+	}
+	return paths
 }
 
 func (a *App) handleChooserOpen(activePanel *panel.State) bool {

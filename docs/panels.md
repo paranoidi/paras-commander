@@ -89,7 +89,7 @@ After a copy or move into the other panel's directory, that panel's cursor jumps
 
 ## Opening files
 
-- `Enter` / `Right` enters a directory. On a local executable (`+x` with a shebang or ELF header) it runs the file when `run_executables_on_enter` is on; the output appears in the Commands view, or in the background for rules in `panels.execute_rules` (AppImages by default). Other files open with the desktop default application when `open_files_externally` is on; when `xdg-open` is not installed they open in the full-screen preview.
+- `Enter` / `Right` enters a directory. On a local executable (`+x` with a shebang or ELF header) it runs the file when `run_executables_on_enter` is on; the output appears in the Commands view, or in the background for rules in `panels.execute_rules` (AppImages by default). Other files open with the desktop default application when `open_files_externally` is on; with a selection, `Enter` on a selected file opens all selected files together in their shared default application, and files with different default applications show an error and open nothing. When `xdg-open` is not installed they open in the full-screen preview.
 - `F4` (also `M-e`) edits the file in `$EDITOR`.
 - `F3` opens the file preview.
 
