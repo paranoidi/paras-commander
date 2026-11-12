@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -98,7 +99,7 @@ func TestIndexDriftAutoPassUsesDepthAndCanBeOff(t *testing.T) {
 		{Name: "orchard", Type: localfs.EntryDirectory, IndexStatus: localfs.IndexStatusIndexed},
 		{Name: "pasture", Type: localfs.EntryDirectory, IndexStatus: localfs.IndexStatusUnchecked},
 	}}
-	s.scheduleIndexDrift()
+	s.scheduleIndexDrift(nil)
 	if len(reqs) != 1 || reqs[0].MaxDepth != 3 || len(reqs[0].Subdirs) != 2 {
 		t.Fatalf("auto request = %+v", reqs)
 	}
@@ -107,7 +108,7 @@ func TestIndexDriftAutoPassUsesDepthAndCanBeOff(t *testing.T) {
 		t.Fatalf("explicit request = %+v", reqs)
 	}
 	s.IndexAutoDriftDepth = -1
-	s.scheduleIndexDrift()
+	s.scheduleIndexDrift(nil)
 	if len(reqs) != 2 {
 		t.Fatalf("a negative depth must turn the automatic pass off: %+v", reqs)
 	}
@@ -148,7 +149,7 @@ func TestIndexDriftPendingFollowsThePass(t *testing.T) {
 	}}
 	pending := func(i int) bool { return s.IndexDriftPending(s.Entries[i]) }
 
-	s.scheduleIndexDrift()
+	s.scheduleIndexDrift(nil)
 	if !pending(0) || !pending(1) || pending(2) || pending(3) {
 		t.Fatalf("pending after the automatic pass = %v", s.indexDriftPending)
 	}
@@ -176,7 +177,7 @@ func TestIndexDriftPendingFollowsThePass(t *testing.T) {
 	// A pass that did not start leaves nothing waiting.
 	started = false
 	s.Entries[0].IndexStatus = localfs.IndexStatusIndexed
-	s.scheduleIndexDrift()
+	s.scheduleIndexDrift(nil)
 	if pending(0) || pending(1) {
 		t.Fatalf("pending after a refused pass = %v", s.indexDriftPending)
 	}
@@ -192,7 +193,7 @@ func TestFinishIndexDriftDirsEndsOnlyTheNamedRows(t *testing.T) {
 	}}
 	pending := func(i int) bool { return s.IndexDriftPending(s.Entries[i]) }
 
-	s.scheduleIndexDrift()
+	s.scheduleIndexDrift(nil)
 	first := reqs[0].Seq
 	s.RequestIndexDrift("marsh") // the newer pass owns marsh
 
@@ -203,5 +204,46 @@ func TestFinishIndexDriftDirsEndsOnlyTheNamedRows(t *testing.T) {
 	s.FinishIndexDriftDirs(map[string]uint64{"marsh": reqs[1].Seq})
 	if pending(1) || !pending(2) {
 		t.Fatalf("pending after the newer pass reported marsh = %v", s.indexDriftPending)
+	}
+}
+
+func TestSameDirReloadKeepsDriftOfUnchangedDirs(t *testing.T) {
+	root, _ := pathloc.File("/vol")
+	var reqs []IndexDriftRequest
+	s := State{Path: root, WithIndex: true, ScheduleIndexDrift: func(r IndexDriftRequest) bool { reqs = append(reqs, r); return true }}
+	when := time.Unix(1_700_000_000, 0)
+	dir := func(name string, mod time.Time) fsbackend.Entry {
+		loc, _ := pathloc.File("/vol/" + name)
+		return fsbackend.Entry{Name: name, Loc: loc, Type: fsbackend.EntryDirectory, ModifiedAt: mod, IndexStatus: localfs.IndexStatusIndexed}
+	}
+	file := func(name string) fsbackend.Entry {
+		loc, _ := pathloc.File("/vol/" + name)
+		return fsbackend.Entry{Name: name, Loc: loc, Type: fsbackend.EntryFile, ModifiedAt: when, IndexStatus: localfs.IndexStatusIndexed}
+	}
+	listing := []fsbackend.Entry{dir("marsh", when), dir("orchard", when), dir("pasture", when), file("lantern.txt")}
+	if err := s.ApplyListing(root, listing, "", 10, -1, false); err != nil || len(reqs) != 1 || len(reqs[0].Subdirs) != 3 {
+		t.Fatalf("first listing drift = %+v err=%v, want both dirs", reqs, err)
+	}
+	s.ApplyIndexDrift(map[string]string{"marsh": localfs.IndexStatusIndexed, "orchard": localfs.IndexStatusDiffers, "pasture": localfs.IndexStatusIndexed})
+	s.FinishIndexDrift(reqs[0].Seq)
+
+	// lantern.txt deleted, pasture touched: only pasture walks again; orchard keeps differs.
+	reload := []fsbackend.Entry{dir("marsh", when), dir("orchard", when), dir("pasture", when.Add(time.Second))}
+	if err := s.ApplyListing(root, reload, "", 10, -1, false); err != nil {
+		t.Fatal(err)
+	}
+	if len(reqs) != 2 || len(reqs[1].Subdirs) != 1 || reqs[1].Subdirs[0] != "pasture" {
+		t.Fatalf("reload drift = %+v, want only pasture", reqs)
+	}
+	if e := s.Entries[1]; e.Name != "orchard" || e.IndexStatus != localfs.IndexStatusDiffers || s.IndexDriftPending(e) {
+		t.Fatalf("orchard = %+v, want its differs kept and not pending", e)
+	}
+
+	s.ForgetIndexDrift()
+	if err := s.ApplyListing(root, reload, "", 10, -1, false); err != nil {
+		t.Fatal(err)
+	}
+	if len(reqs) != 3 || len(reqs[2].Subdirs) != 3 {
+		t.Fatalf("after ForgetIndexDrift drift = %+v, want both dirs", reqs)
 	}
 }

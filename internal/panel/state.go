@@ -277,6 +277,10 @@ type State struct {
 	// newest asked for it; FinishIndexDrift removes it. indexDriftSeq numbers the passes.
 	indexDriftPending map[string]uint64
 	indexDriftSeq     uint64
+	// indexListed holds each drift-candidate directory of the listing by name, as the overlay
+	// listed it (before any drift pass): carryIndexDrift compares the next same-directory listing
+	// with it. ForgetIndexDrift drops it.
+	indexListed map[string]indexListedDir
 	// IndexAutoDriftDepth is the depth of the automatic drift pass after a WithIndex listing:
 	// levels to check, 0 unlimited, negative off (set by app from [fileindex].browser_scan_max_depth).
 	IndexAutoDriftDepth int
@@ -1672,6 +1676,7 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 	}
 	s.prepareGitColumn(listingLoc, localEntries, probes)
 	s.ClearFilterIfInapplicable()
+	driftCarried := s.carryIndexDrift(sameDirReload, localEntries)
 	s.Entries = localEntries
 	if len(newlyAppeared) > 0 {
 		s.AddNewFileMarks(listingLoc, newlyAppeared)
@@ -1776,7 +1781,7 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 		}
 	}
 	if !s.SkipIndexDrift {
-		s.scheduleIndexDrift()
+		s.scheduleIndexDrift(driftCarried)
 	}
 	if s.OnDirectoryChange != nil {
 		s.OnDirectoryChange()

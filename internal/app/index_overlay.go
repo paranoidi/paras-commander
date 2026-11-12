@@ -153,6 +153,18 @@ func (a *App) indexChangeAffects(p *panel.State, dirs []string) bool {
 	return len(ids) > 0
 }
 
+// indexChangeReachesSubtrees reports whether a change to dirs can have changed the panel's
+// subdirectory trees without their rows showing it: anything (nil dirs), or a directory under the
+// panel's own. A change only in the panel's directory (a file deleted there) leaves the drift
+// results of its subdirectories standing (panel.State.carryIndexDrift).
+func (a *App) indexChangeReachesSubtrees(p *panel.State, dirs []string) bool {
+	if dirs == nil {
+		return true
+	}
+	shown := a.fileIndex.ShownDir(p.Path)
+	return slices.ContainsFunc(dirs, func(d string) bool { return d != shown })
+}
+
 // refreshIndexViews re-reads what shows index data after a change anywhere in the index.
 func (a *App) refreshIndexViews() { a.refreshIndexViewsIn(nil) }
 
@@ -168,6 +180,9 @@ func (a *App) refreshIndexViewsIn(dirs []string) {
 			continue
 		}
 		if p.ShowsIndex() {
+			if a.indexChangeReachesSubtrees(p, dirs) {
+				p.ForgetIndexDrift()
+			}
 			_ = p.Refresh(a.panelViewportRows(id))
 		}
 		a.metaCtrl.RefreshProviders(id)

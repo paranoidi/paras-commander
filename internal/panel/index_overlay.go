@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -95,14 +96,64 @@ func (s *State) IndexDriftPending(e localfs.Entry) bool {
 	return pending && driftCandidate(e)
 }
 
-// scheduleIndexDrift is the automatic pass after a listing lands: every indexed directory is
-// checked down to IndexAutoDriftDepth levels (negative: off).
-func (s *State) scheduleIndexDrift() {
+// scheduleIndexDrift is the automatic pass after a listing lands: every indexed directory not in
+// carried is checked down to IndexAutoDriftDepth levels (negative: off).
+func (s *State) scheduleIndexDrift(carried map[string]bool) {
 	if s.IndexAutoDriftDepth < 0 {
 		return
 	}
-	s.requestIndexDrift(s.IndexAutoDriftDepth, false, func(string) bool { return true })
+	s.requestIndexDrift(s.IndexAutoDriftDepth, false, func(name string) bool { return !carried[name] })
 }
+
+// indexListedDir is a drift-candidate directory as the overlay listed it.
+type indexListedDir struct {
+	status string
+	mod    time.Time
+}
+
+// carryIndexDrift keeps the drift results of a same-directory reload: a directory listed again
+// with the same mtime and overlay state takes the state the previous listing's row ended with,
+// and its name is returned so the automatic pass skips it. A change beside it (a file deleted in
+// the directory) says nothing about its tree, so re-walking every directory would only flash
+// every row pending. It records entries for the next reload; entries is the incoming listing.
+func (s *State) carryIndexDrift(sameDir bool, entries []localfs.Entry) map[string]bool {
+	prior := s.indexListed
+	s.indexListed = nil
+	var shown map[string]string
+	if sameDir && len(prior) > 0 {
+		shown = make(map[string]string, len(prior))
+		for _, e := range s.Entries {
+			if _, ok := prior[e.Name]; ok && e.Type == localfs.EntryDirectory {
+				shown[e.Name] = e.IndexStatus
+			}
+		}
+	}
+	var carried map[string]bool
+	for i, e := range entries {
+		if !driftCandidate(e) {
+			continue
+		}
+		listed := indexListedDir{status: e.IndexStatus, mod: e.ModifiedAt}
+		if s.indexListed == nil {
+			s.indexListed = map[string]indexListedDir{}
+		}
+		s.indexListed[e.Name] = listed
+		st, ok := shown[e.Name]
+		if !ok || prior[e.Name].status != listed.status || !prior[e.Name].mod.Equal(listed.mod) {
+			continue
+		}
+		entries[i].IndexStatus = st
+		if carried == nil {
+			carried = map[string]bool{}
+		}
+		carried[e.Name] = true
+	}
+	return carried
+}
+
+// ForgetIndexDrift makes the next listing walk every indexed directory again: the index changed
+// in a way a directory's own row does not show (a scan ended, a prune).
+func (s *State) ForgetIndexDrift() { s.indexListed = nil }
 
 // RequestIndexDrift is the explicit pass of the directory-size requests: the named indexed or
 // tagged directories are checked without a depth limit (the walk costs as much as a size scan).
