@@ -34,6 +34,7 @@ surface = "bright_black"      # dialog fill, chips, bar tracks, carousel header,
 header_bg = "blue"            # panel headers
 inactive_header_bg = "bright_black"  # header of the inactive panel
 menu_bg = "blue"              # menu dropdown fill and frame
+leader_bg = "black"           # leader (Esc) menu fill, apart from the panels behind it
 focus_bg = "cyan"             # the focused item: open menu-bar title, selected pulldown entry, selected completion entry, hovered footer entry
 button_bg = "black"           # face of an unfocused dialog button
 button_focus_bg = "cyan"      # face of the focused dialog button
@@ -364,7 +365,7 @@ label.on_track = { fg = "fg_strong", bold = true }
 track = { fg = "fg", bg = "surface" }
 
 [leader_menu]                 # Esc function menu letters
-surface = { bg = "bg" }
+surface = { bg = "leader_bg" }
 group = { fg = "info", bold = true }
 key = { fg = "accent", bold = true }
 arrow = { fg = "muted" }
