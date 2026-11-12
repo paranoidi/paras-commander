@@ -47,17 +47,27 @@ func DialogButtonWidth(label string) int {
 	return dialogButtonWidth(label)
 }
 
-// capStyle is base with cap's fg, when cap sets one.
+// capStyle is base with cap's fg and bg, each when cap sets it.
 func capStyle(base, cap tcell.Style) tcell.Style {
-	if fg, _, _ := cap.Decompose(); fg != tcell.ColorDefault {
-		return base.Foreground(fg)
+	fg, bg, _ := cap.Decompose()
+	if fg != tcell.ColorDefault {
+		base = base.Foreground(fg)
+	}
+	if bg != tcell.ColorDefault {
+		base = base.Background(bg)
 	}
 	return base
 }
 
-// drawRunes paints s one rune per cell from x and returns the x after it.
-func drawRunes(screen tcell.Screen, x, y int, s string, style tcell.Style) int {
+// drawCap paints cap one rune per cell from x and returns the x after it: spaces in the button
+// face (base), other runes in capStyle (edge glyphs such as pill half-circles).
+func drawCap(screen tcell.Screen, x, y int, s string, base, cap tcell.Style) int {
+	glyph := capStyle(base, cap)
 	for _, r := range s {
+		style := glyph
+		if r == ' ' {
+			style = base
+		}
 		screen.SetContent(x, y, r, nil, style)
 		x++
 	}
@@ -77,7 +87,7 @@ func DrawDialogButton(screen tcell.Screen, x, y int, label string, shortcut rune
 		baseStyle, caps = styles.DialogButtonActive, styles.DialogButtonActiveCaps
 	}
 	startCap, endCap := activeButtonCaps()
-	out := drawRunes(screen, x, y, startCap, capStyle(baseStyle, caps.Start))
+	out := drawCap(screen, x, y, startCap, baseStyle, caps.Start)
 
 	highlighted := false
 	for _, r := range label {
@@ -90,6 +100,6 @@ func DrawDialogButton(screen tcell.Screen, x, y int, label string, shortcut rune
 		out++
 	}
 
-	out = drawRunes(screen, out, y, endCap, capStyle(baseStyle, caps.End))
+	out = drawCap(screen, out, y, endCap, baseStyle, caps.End)
 	return out - x
 }

@@ -39,4 +39,7 @@ func TestDialogButtonUsesThemeCaps(t *testing.T) {
 	if fg, bg, _ := style.Decompose(); fg != tcell.ColorRed || bg != bgBase {
 		t.Fatalf("start cap fg/bg = %v/%v, want red over the button bg %v", fg, bg, bgBase)
 	}
+	if _, style, _ := screen.Get(1, 0); style != th.DialogButtonInactive { // cap space: button face
+		t.Fatalf("cap space style = %v, want the button style", style)
+	}
 }

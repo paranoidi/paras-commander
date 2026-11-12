@@ -149,8 +149,8 @@ func (t Theme) DialogButtonCaps() (start, end string) {
 	return t.Icons[IconKeyDialogButtonStart], t.Icons[IconKeyDialogButtonEnd]
 }
 
-// ButtonCapStyles colors a dialog button's start and end caps; only fg counts (no fg: the
-// button state's own fg).
+// ButtonCapStyles colors the non-space runes of a dialog button's start and end caps: fg and bg
+// each replace the button state's own when set.
 type ButtonCapStyles struct{ Start, End tcell.Style }
 
 func buttonCaps(styles map[string]tcell.Style, state string) ButtonCapStyles {

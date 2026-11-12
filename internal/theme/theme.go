@@ -288,7 +288,7 @@ type Theme struct {
 	DialogButtonInactive           tcell.Style
 	DialogButtonActive             tcell.Style
 	DialogButtonActiveDestructive  tcell.Style
-	// Cap fg over each button state ([dialog.button] <state>.start / <state>.end).
+	// Cap fg / bg over each button state ([dialog.button] <state>.start / <state>.end).
 	DialogButtonInactiveCaps          ButtonCapStyles
 	DialogButtonActiveCaps            ButtonCapStyles
 	DialogButtonActiveDestructiveCaps ButtonCapStyles
@@ -1638,21 +1638,15 @@ func decodeSource(data []byte) (source, error) {
 // dialogSurfaceForegroundKeys are the styles that may not set bg: the dialog surface is merged in at
 // render time.
 var dialogSurfaceForegroundKeys = map[string]bool{
-	"dialog.option.inactive":                 true,
-	"dialog.option.active":                   true,
-	"dialog.option.active.selected":          true,
-	"dialog.option.selected":                 true,
-	"dialog.option.invalid":                  true,
-	"dialog.option.disabled":                 true,
-	"dialog.status.selection_size":           true,
-	"dialog.progress.label.on_fill":          true,
-	"dialog.progress.label.on_track":         true,
-	"dialog.button.inactive.start":           true, // cap fg over the button state's style
-	"dialog.button.inactive.end":             true,
-	"dialog.button.active.start":             true,
-	"dialog.button.active.end":               true,
-	"dialog.button.active_destructive.start": true,
-	"dialog.button.active_destructive.end":   true,
+	"dialog.option.inactive":         true,
+	"dialog.option.active":           true,
+	"dialog.option.active.selected":  true,
+	"dialog.option.selected":         true,
+	"dialog.option.invalid":          true,
+	"dialog.option.disabled":         true,
+	"dialog.status.selection_size":   true,
+	"dialog.progress.label.on_fill":  true,
+	"dialog.progress.label.on_track": true,
 }
 
 // build resolves a merged source into a Theme. Every key of styleKeys must be present: themes

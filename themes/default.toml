@@ -314,8 +314,9 @@ accent_alt = { fg = "accent", bold = true }
 search_icon = { fg = "faint", bg = "surface" }
 
 [dialog.button]
-# <state>.start / <state>.end color the [icons.dialog.button] caps: only fg counts, laid over
-# the state's style (no fg = the state's own fg). bold = false only makes the entry a style.
+# <state>.start / <state>.end color the non-space runes of the [icons.dialog.button] caps: fg and
+# bg each replace the state's own when set (spaces keep the state's style). bold = false only
+# makes the entry a style.
 active = { fg = "focus_fg", bg = "focus_bg" }
 active.start = { bold = false }
 active.end = { bold = false }
