@@ -33,8 +33,9 @@ bg = "default"                # base background of every cell without its own; a
 surface = "bright_black"      # dialog fill, chips, bar tracks, carousel header, speed pill
 header_bg = "blue"            # panel headers
 menu_bg = "blue"              # menu dropdown fill and frame
-focus_bg = "cyan"             # the focused item: open menu-bar title, selected pulldown entry, active dialog button, selected completion entry, hovered footer entry
+focus_bg = "cyan"             # the focused item: open menu-bar title, selected pulldown entry, selected completion entry, hovered footer entry
 button_bg = "black"           # face of an unfocused dialog button
+button_focus_bg = "cyan"      # face of the focused dialog button
 file_cursor_bg = "cyan"       # cursor row of an active file list (panels, duplicate finder)
 file_cursor_dim = "black"     # cursor row of an inactive, carousel-inactive or blocked panel
 highlight_bg = "bright_blue"  # clickable part of the hovered footer entry, disk usage cursor on a selected row, mount mark
@@ -52,6 +53,7 @@ focus_fg = "black"            # text on focus_bg
 file_cursor_fg = "black"      # text and icon on file_cursor_bg
 # Structure
 accent = "magenta"            # shortcut letters, key hints, match highlights
+accent_alt = "magenta"        # dialog shortcut letters that need Alt
 primary = "blue"              # active panel frame, info icon, git modified, tagged
 inactive_frame = "bright_black"  # inactive panel frame
 directory = "blue"            # directory names in listings
@@ -311,18 +313,24 @@ title = { bold = true }
 # bg matters for the path-picker trailing icon when that control is focused; shortcut letters use fg+bold only.
 accent = { fg = "fg", bg = "bg", bold = true }
 # shortcut letter that needs Alt: AltOnly dialogs, and every mnemonic while focus is in a text input
-accent_alt = { fg = "accent", bold = true }
+accent_alt = { fg = "accent_alt", bold = true }
 search_icon = { fg = "faint", bg = "surface" }
 
 [dialog.button]
 # <state>.start / <state>.end color the non-space runes of the [icons.dialog.button] caps: fg and
 # bg each replace the state's own when set (spaces keep the state's style). Pill caps: the
 # half-circle in the face color on the dialog surface. Without Nerd Font icons the caps are
-# "[ " / " ]" in the state's style and these are ignored.
-active = { fg = "focus_fg", bg = "focus_bg" }
-active.start = { fg = "focus_bg", bg = "surface" }
-active.end = { fg = "focus_bg", bg = "surface" }
+# "[ " / " ]" in the state's style and these are ignored. <state>.accent / <state>.accent_alt: the
+# shortcut letter on the focused button, plain and when it needs Alt (fg and bold over the face;
+# unfocused buttons use [dialog] accent / accent_alt).
+active = { fg = "focus_fg", bg = "button_focus_bg" }
+active.accent = { fg = "fg", bold = true }
+active.accent_alt = { fg = "accent_alt", bold = true }
+active.start = { fg = "button_focus_bg", bg = "surface" }
+active.end = { fg = "button_focus_bg", bg = "surface" }
 active_destructive = { fg = "fg", bg = "danger" }
+active_destructive.accent = { fg = "fg", bold = true }
+active_destructive.accent_alt = { fg = "accent_alt", bold = true }
 active_destructive.start = { fg = "danger", bg = "surface" }
 active_destructive.end = { fg = "danger", bg = "surface" }
 inactive = { fg = "fg", bg = "button_bg" }

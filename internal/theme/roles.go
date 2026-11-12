@@ -20,7 +20,7 @@ var ansiNames = [16]string{
 // lists every role explicitly and a test keeps it equal to this table.
 type roleDef struct{ name, palette string }
 
-// roleDefs are the 34 roles in presentation order (backgrounds, text, structure, states).
+// roleDefs are the 36 roles in presentation order (backgrounds, text, structure, states).
 var roleDefs = []roleDef{
 	// Backgrounds.
 	{"bg", "default"},
@@ -29,6 +29,7 @@ var roleDefs = []roleDef{
 	{"menu_bg", "blue"},
 	{"focus_bg", "cyan"},
 	{"button_bg", "black"},
+	{"button_focus_bg", "cyan"},
 	{"file_cursor_bg", "cyan"},
 	{"file_cursor_dim", "black"},
 	{"highlight_bg", "bright_blue"},
@@ -46,6 +47,7 @@ var roleDefs = []roleDef{
 	{"file_cursor_fg", "black"},
 	// Structure.
 	{"accent", "magenta"},
+	{"accent_alt", "magenta"},
 	{"primary", "blue"},
 	{"inactive_frame", "bright_black"},
 	{"directory", "blue"},

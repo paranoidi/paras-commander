@@ -26,6 +26,8 @@ surface = "#2e3440"
 header_bg = "#4c566a"
 menu_bg = "#1e222a"
 focus_bg = "#4c566a"
+button_bg = "#242933"
+button_focus_bg = "#4c566a"
 file_cursor_bg = "#3b4252"
 file_cursor_dim = "#3b4252"
 highlight_bg = "bright_blue"
@@ -41,6 +43,7 @@ ink = "#191d24"
 focus_fg = "#d8dee9"
 file_cursor_fg = "#bbc3d4"
 accent = "#ebcb8b"
+accent_alt = "#ebcb8b"
 primary = "#81a1c1"
 inactive_frame = "#4c566a"
 directory = "#81a1c1"
@@ -87,11 +90,10 @@ usage.cursor.selected = { fg = "ink", bg = "highlight_bg", bold = true }
 frame = { fg = "inactive_frame" }  # keep the dim frame: repair would brighten it  # tuned
 usage.cursor.selected = { fg = "ink", bg = "highlight_bg", bold = true }
 
-[dialog]
-accent = { fg = "fg_strong", bg = "bg", bold = true }  # white0 letters are 4.2:1 on the focused button  # tuned
-
 [dialog.button]
 active_destructive = { fg = "ink", bg = "danger" }
+active_destructive.accent = { fg = "ink", bold = true }
+active_destructive.accent_alt = { fg = "ink", bold = true }
 
 [dialog.input]
 active.error = { fg = "fg" }

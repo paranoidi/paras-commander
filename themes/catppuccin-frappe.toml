@@ -26,6 +26,8 @@ surface = "#414559"
 header_bg = "#8caaee"
 menu_bg = "#232634"
 focus_bg = "#51576d"
+button_bg = "#303446"
+button_focus_bg = "#51576d"
 file_cursor_bg = "#949cbb"
 file_cursor_dim = "#414559"
 highlight_bg = "#babbf1"
@@ -41,6 +43,7 @@ ink = "#232634"
 focus_fg = "#c6d0f5"
 file_cursor_fg = "#232634"
 accent = "#ca9ee6"
+accent_alt = "#f2d5cf"
 primary = "blue"
 inactive_frame = "#626880"
 directory = "blue"
@@ -94,6 +97,8 @@ title = { fg = "faint" }  # tuned
 
 [dialog.button]
 active_destructive = { fg = "ink", bg = "danger" }
+active_destructive.accent = { fg = "ink", bold = true }
+active_destructive.accent_alt = { fg = "accent_alt", bold = true }  # tuned
 
 [dialog.option]
 invalid = { fg = "fg" }

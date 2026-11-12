@@ -484,11 +484,11 @@ func liveMnemonic(it Item, inInput bool) rune {
 	return it.Mnemonic
 }
 
-// mnemonicStyles is styles with the mnemonic letter accent (dialog.accent, the only accent the
-// draw helpers use) swapped for dialog.accent_alt when the letters need Alt.
+// mnemonicStyles is styles with the shortcut-letter accents swapped for their Alt forms
+// (Theme.WithAltMnemonics) when the letters need Alt.
 func mnemonicStyles(styles theme.Theme, alt bool) theme.Theme {
 	if alt {
-		styles.DialogAccent = styles.DialogAccentAlt
+		return styles.WithAltMnemonics()
 	}
 	return styles
 }

@@ -23,7 +23,7 @@
      │ ( ) Orchard Theme    │                                                                │      
      │ ( ) Pebble Theme     │            [ Selected ]  [ Unselected ]  [ Delete ]            │      
      │ ( ) Quartz Theme     │                                                                │      
-     │                      │                                                                │      
+     │                      │            [ Selected ]  [ Unselected ]  [ Delete ]            │      
      │                      │                                                                │      
      │                      │                                                                │      
      │                      │                                                                │      
@@ -59,7 +59,9 @@ p fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 q fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 r fg=0x100000007 bg=0x100000001 attrs=0 ul=0 ulc=0x0
 s fg=0x100000007 bg=0x100000001 attrs=1 ul=0 ulc=0x0
-t fg=0x100000005 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+t fg=0x100000005 bg=0x100000006 attrs=1 ul=0 ulc=0x0
+u fg=0x100000005 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+v fg=0x100000005 bg=0x100000001 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -85,6 +87,7 @@ aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbmbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbnnonnnnnnnnnbbppqpppppppppppbbrrsrrrrrrrbbbbbbbbbbbbbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbnntnnnnnnnnnbbppupppppppppppbbrrvrrrrrrrbbbbbbbbbbbbbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
@@ -92,8 +95,7 @@ aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbpptpppbbpptpppppppbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbppupppbbppupppppppbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

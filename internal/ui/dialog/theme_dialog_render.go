@@ -229,8 +229,9 @@ func drawThemePreview(screen tcell.Screen, p dlg.Placement, pane draw.Rect, page
 }
 
 // themeInputPageRows is the rows of the input page: a blank row, four input demos of three rows,
-// two checkboxes, a blank row and the buttons.
-const themeInputPageRows = 17
+// two checkboxes, a blank row and two button rows (plain letters, then letters that need Alt)
+// with a blank row between them.
+const themeInputPageRows = 19
 
 // paintThemeInputPage paints sample inputs (a tooltip under the active one), checkboxes and buttons.
 func paintThemeInputPage(c *themePreviewCtx) {
@@ -279,9 +280,7 @@ func paintThemeInputPage(c *themePreviewCtx) {
 	previewY++
 	if fits(previewY) {
 		// Shows dialog.accent_alt: the mnemonic as drawn when it needs Alt (focus in an input).
-		altStyles := styles
-		altStyles.DialogAccent = styles.DialogAccentAlt
-		draw.DrawDialogCheckbox(screen, previewLeft, previewY, "Unselected", 'U', false, false, false, altStyles)
+		draw.DrawDialogCheckbox(screen, previewLeft, previewY, "Unselected", 'U', false, false, false, styles.WithAltMnemonics())
 	}
 	previewY += 2 // blank row before the buttons
 
@@ -293,15 +292,19 @@ func paintThemeInputPage(c *themePreviewCtx) {
 	if withDelete {
 		btnWidth += btnGap + draw.DialogButtonWidth("Delete")
 	}
-	btnStartX := max(previewLeft, previewLeft+(previewWidth-btnWidth)/2)
-	if fits(previewY) {
-		draw.DrawDialogButton(screen, btnStartX, previewY, "Selected", 'S', true, false, false, styles)
-		btnStartX += draw.DialogButtonWidth("Selected") + btnGap
-		draw.DrawDialogButton(screen, btnStartX, previewY, "Unselected", 'U', false, false, false, styles)
-		if withDelete {
-			btnStartX += draw.DialogButtonWidth("Unselected") + btnGap
-			draw.DrawDialogButton(screen, btnStartX, previewY, "Delete", 'D', true, true, false, styles)
+	// Second row, after a blank one: the same buttons with letters that need Alt (accent_alt forms).
+	for _, rowStyles := range []theme.Theme{styles, styles.WithAltMnemonics()} {
+		x := max(previewLeft, previewLeft+(previewWidth-btnWidth)/2)
+		if fits(previewY) {
+			draw.DrawDialogButton(screen, x, previewY, "Selected", 'S', true, false, false, rowStyles)
+			x += draw.DialogButtonWidth("Selected") + btnGap
+			draw.DrawDialogButton(screen, x, previewY, "Unselected", 'U', false, false, false, rowStyles)
+			if withDelete {
+				x += draw.DialogButtonWidth("Unselected") + btnGap
+				draw.DrawDialogButton(screen, x, previewY, "Delete", 'D', true, true, false, rowStyles)
+			}
 		}
+		previewY += 2
 	}
 }
 

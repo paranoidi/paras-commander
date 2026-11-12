@@ -292,29 +292,36 @@ type Theme struct {
 	DialogButtonInactiveCaps          ButtonCapStyles
 	DialogButtonActiveCaps            ButtonCapStyles
 	DialogButtonActiveDestructiveCaps ButtonCapStyles
-	DialogOptionInactive              tcell.Style
-	DialogOptionActive                tcell.Style
-	DialogOptionActiveSelected        tcell.Style
-	DialogOptionSelected              tcell.Style
-	DialogOptionInvalid               tcell.Style
-	DialogOptionDisabled              tcell.Style
-	DialogStatusSelectionSize         tcell.Style
-	DialogProgressTrack               tcell.Style
-	DialogProgressFill                tcell.Style
-	DialogProgressLabelOnFill         tcell.Style
-	DialogProgressLabelOnTrack        tcell.Style
-	DialogMassRenameBefore            tcell.Style
-	DialogMassRenameBeforeRemoved     tcell.Style
-	DialogMassRenameBeforeReplaced    tcell.Style
-	DialogMassRenameAfter             tcell.Style
-	DialogMassRenameAfterAdded        tcell.Style
-	DialogMassRenameAfterError        tcell.Style
-	DialogHelpSection                 tcell.Style
-	DialogHelpKey                     tcell.Style
-	DialogCompletionItem              tcell.Style
-	DialogCompletionItemSelected      tcell.Style
-	DialogCompletionMatch             tcell.Style
-	DialogCompletionMatchSelected     tcell.Style
+	// Shortcut letter on the focused button ([dialog.button] active.accent /
+	// active_destructive.accent; fg and bold, on the button's face), and its Alt form
+	// (<state>.accent_alt) that WithAltMnemonics swaps in.
+	DialogButtonActiveAccent               tcell.Style
+	DialogButtonActiveDestructiveAccent    tcell.Style
+	DialogButtonActiveAccentAlt            tcell.Style
+	DialogButtonActiveDestructiveAccentAlt tcell.Style
+	DialogOptionInactive                   tcell.Style
+	DialogOptionActive                     tcell.Style
+	DialogOptionActiveSelected             tcell.Style
+	DialogOptionSelected                   tcell.Style
+	DialogOptionInvalid                    tcell.Style
+	DialogOptionDisabled                   tcell.Style
+	DialogStatusSelectionSize              tcell.Style
+	DialogProgressTrack                    tcell.Style
+	DialogProgressFill                     tcell.Style
+	DialogProgressLabelOnFill              tcell.Style
+	DialogProgressLabelOnTrack             tcell.Style
+	DialogMassRenameBefore                 tcell.Style
+	DialogMassRenameBeforeRemoved          tcell.Style
+	DialogMassRenameBeforeReplaced         tcell.Style
+	DialogMassRenameAfter                  tcell.Style
+	DialogMassRenameAfterAdded             tcell.Style
+	DialogMassRenameAfterError             tcell.Style
+	DialogHelpSection                      tcell.Style
+	DialogHelpKey                          tcell.Style
+	DialogCompletionItem                   tcell.Style
+	DialogCompletionItemSelected           tcell.Style
+	DialogCompletionMatch                  tcell.Style
+	DialogCompletionMatchSelected          tcell.Style
 	// TooltipText is a dialog tooltip's box and text (tooltip.text); TooltipInfo the
 	// foreground of its info icon on that box (tooltip.info, foreground only).
 	TooltipText tcell.Style
@@ -1196,6 +1203,10 @@ var styleKeys = append([]string{
 	"dialog.button.active.end",
 	"dialog.button.active_destructive.start",
 	"dialog.button.active_destructive.end",
+	"dialog.button.active.accent",
+	"dialog.button.active_destructive.accent",
+	"dialog.button.active.accent_alt",
+	"dialog.button.active_destructive.accent_alt",
 	"dialog.option.inactive",
 	"dialog.option.active",
 	"dialog.option.active.selected",
@@ -1638,15 +1649,19 @@ func decodeSource(data []byte) (source, error) {
 // dialogSurfaceForegroundKeys are the styles that may not set bg: the dialog surface is merged in at
 // render time.
 var dialogSurfaceForegroundKeys = map[string]bool{
-	"dialog.option.inactive":         true,
-	"dialog.option.active":           true,
-	"dialog.option.active.selected":  true,
-	"dialog.option.selected":         true,
-	"dialog.option.invalid":          true,
-	"dialog.option.disabled":         true,
-	"dialog.status.selection_size":   true,
-	"dialog.progress.label.on_fill":  true,
-	"dialog.progress.label.on_track": true,
+	"dialog.option.inactive":                      true,
+	"dialog.option.active":                        true,
+	"dialog.option.active.selected":               true,
+	"dialog.option.selected":                      true,
+	"dialog.option.invalid":                       true,
+	"dialog.option.disabled":                      true,
+	"dialog.status.selection_size":                true,
+	"dialog.progress.label.on_fill":               true,
+	"dialog.progress.label.on_track":              true,
+	"dialog.button.active.accent":                 true,
+	"dialog.button.active_destructive.accent":     true,
+	"dialog.button.active.accent_alt":             true,
+	"dialog.button.active_destructive.accent_alt": true,
 }
 
 // build resolves a merged source into a Theme. Every key of styleKeys must be present: themes
@@ -1903,52 +1918,56 @@ func build(src source) (Theme, error) {
 		FuzzyHighlight:       styles["fuzzy.highlight"],
 		FuzzyHighlightCursor: styles["fuzzy.highlight.cursor"],
 
-		DialogFrame:                       styles["dialog.frame"],
-		DialogTitle:                       styles["dialog.title"],
-		DialogText:                        styles["dialog.text"],
-		DialogSurface:                     styles["dialog.surface"],
-		DialogTextSelect:                  styles["dialog.text_select"],
-		DialogAccent:                      styles["dialog.accent"],
-		DialogAccentAlt:                   styles["dialog.accent_alt"],
-		DialogSearchIcon:                  styles["dialog.search_icon"],
-		DialogInputActive:                 styles["dialog.input.active"],
-		DialogInputActivePlaceholder:      styles["dialog.input.active.placeholder"],
-		DialogInputActiveError:            styles["dialog.input.active.error"],
-		DialogInputInactive:               styles["dialog.input.inactive"],
-		DialogInputInactivePlaceholder:    styles["dialog.input.inactive.placeholder"],
-		DialogInputInactiveError:          styles["dialog.input.inactive.error"],
-		DialogButtonInactive:              styles["dialog.button.inactive"],
-		DialogButtonActive:                styles["dialog.button.active"],
-		DialogButtonActiveDestructive:     styles["dialog.button.active_destructive"],
-		DialogButtonInactiveCaps:          buttonCaps(styles, "inactive"),
-		DialogButtonActiveCaps:            buttonCaps(styles, "active"),
-		DialogButtonActiveDestructiveCaps: buttonCaps(styles, "active_destructive"),
-		DialogOptionInactive:              styles["dialog.option.inactive"],
-		DialogOptionActive:                styles["dialog.option.active"],
-		DialogOptionActiveSelected:        styles["dialog.option.active.selected"],
-		DialogOptionSelected:              styles["dialog.option.selected"],
-		DialogOptionInvalid:               styles["dialog.option.invalid"],
-		DialogOptionDisabled:              styles["dialog.option.disabled"],
-		DialogStatusSelectionSize:         styles["dialog.status.selection_size"],
-		DialogProgressTrack:               styles["dialog.progress.track"],
-		DialogProgressFill:                styles["dialog.progress.fill"],
-		DialogProgressLabelOnFill:         styles["dialog.progress.label.on_fill"],
-		DialogProgressLabelOnTrack:        styles["dialog.progress.label.on_track"],
-		DialogMassRenameBefore:            styles["dialog.massrename.before"],
-		DialogMassRenameBeforeRemoved:     styles["dialog.massrename.before.removed"],
-		DialogMassRenameBeforeReplaced:    styles["dialog.massrename.before.replaced"],
-		DialogMassRenameAfter:             styles["dialog.massrename.after"],
-		DialogMassRenameAfterAdded:        styles["dialog.massrename.after.added"],
-		DialogMassRenameAfterError:        styles["dialog.massrename.after.error"],
-		DialogHelpSection:                 styles["dialog.help.section"],
-		DialogHelpKey:                     styles["dialog.help.key"],
-		DialogCompletionItem:              styles["dialog.completion.item"],
-		DialogCompletionItemSelected:      styles["dialog.completion.item.selected"],
-		DialogCompletionMatch:             styles["dialog.completion.match"],
-		DialogCompletionMatchSelected:     styles["dialog.completion.match.selected"],
-		TooltipText:                       styles["tooltip.text"],
-		TooltipInfo:                       styles["tooltip.info"],
-		PreviewSearchIcon:                 styles["preview.search_icon"],
+		DialogFrame:                            styles["dialog.frame"],
+		DialogTitle:                            styles["dialog.title"],
+		DialogText:                             styles["dialog.text"],
+		DialogSurface:                          styles["dialog.surface"],
+		DialogTextSelect:                       styles["dialog.text_select"],
+		DialogAccent:                           styles["dialog.accent"],
+		DialogAccentAlt:                        styles["dialog.accent_alt"],
+		DialogSearchIcon:                       styles["dialog.search_icon"],
+		DialogInputActive:                      styles["dialog.input.active"],
+		DialogInputActivePlaceholder:           styles["dialog.input.active.placeholder"],
+		DialogInputActiveError:                 styles["dialog.input.active.error"],
+		DialogInputInactive:                    styles["dialog.input.inactive"],
+		DialogInputInactivePlaceholder:         styles["dialog.input.inactive.placeholder"],
+		DialogInputInactiveError:               styles["dialog.input.inactive.error"],
+		DialogButtonInactive:                   styles["dialog.button.inactive"],
+		DialogButtonActive:                     styles["dialog.button.active"],
+		DialogButtonActiveDestructive:          styles["dialog.button.active_destructive"],
+		DialogButtonInactiveCaps:               buttonCaps(styles, "inactive"),
+		DialogButtonActiveCaps:                 buttonCaps(styles, "active"),
+		DialogButtonActiveDestructiveCaps:      buttonCaps(styles, "active_destructive"),
+		DialogButtonActiveAccent:               styles["dialog.button.active.accent"],
+		DialogButtonActiveDestructiveAccent:    styles["dialog.button.active_destructive.accent"],
+		DialogButtonActiveAccentAlt:            styles["dialog.button.active.accent_alt"],
+		DialogButtonActiveDestructiveAccentAlt: styles["dialog.button.active_destructive.accent_alt"],
+		DialogOptionInactive:                   styles["dialog.option.inactive"],
+		DialogOptionActive:                     styles["dialog.option.active"],
+		DialogOptionActiveSelected:             styles["dialog.option.active.selected"],
+		DialogOptionSelected:                   styles["dialog.option.selected"],
+		DialogOptionInvalid:                    styles["dialog.option.invalid"],
+		DialogOptionDisabled:                   styles["dialog.option.disabled"],
+		DialogStatusSelectionSize:              styles["dialog.status.selection_size"],
+		DialogProgressTrack:                    styles["dialog.progress.track"],
+		DialogProgressFill:                     styles["dialog.progress.fill"],
+		DialogProgressLabelOnFill:              styles["dialog.progress.label.on_fill"],
+		DialogProgressLabelOnTrack:             styles["dialog.progress.label.on_track"],
+		DialogMassRenameBefore:                 styles["dialog.massrename.before"],
+		DialogMassRenameBeforeRemoved:          styles["dialog.massrename.before.removed"],
+		DialogMassRenameBeforeReplaced:         styles["dialog.massrename.before.replaced"],
+		DialogMassRenameAfter:                  styles["dialog.massrename.after"],
+		DialogMassRenameAfterAdded:             styles["dialog.massrename.after.added"],
+		DialogMassRenameAfterError:             styles["dialog.massrename.after.error"],
+		DialogHelpSection:                      styles["dialog.help.section"],
+		DialogHelpKey:                          styles["dialog.help.key"],
+		DialogCompletionItem:                   styles["dialog.completion.item"],
+		DialogCompletionItemSelected:           styles["dialog.completion.item.selected"],
+		DialogCompletionMatch:                  styles["dialog.completion.match"],
+		DialogCompletionMatchSelected:          styles["dialog.completion.match.selected"],
+		TooltipText:                            styles["tooltip.text"],
+		TooltipInfo:                            styles["tooltip.info"],
+		PreviewSearchIcon:                      styles["preview.search_icon"],
 
 		LeaderMenuSurface:  styles["leader_menu.surface"],
 		LeaderMenuGroup:    styles["leader_menu.group"],

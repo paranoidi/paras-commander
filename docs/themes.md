@@ -6,7 +6,7 @@ Colors, text styles and status glyphs come from a TOML theme file. One theme shi
 
 - Options -> Theme opens the theme picker. Typing fuzzy-filters the list. Moving the cursor previews the highlighted theme live once you stop (holding an arrow key does not load every theme on the way), `Enter` applies it and saves `theme` in `config.toml`, `Esc` restores the previous theme, and the footer shows two entries:
   - **Reload** (`F5`, on when the picker opens): while it is on, the highlighted theme's file in the themes directory is checked twice a second and the preview reloads by itself when the file changes, so you can edit a theme and watch it. Switching it on reloads the highlighted theme at once. Built-in themes with no file on disk are not watched. A file that fails to load is reported once per saved change.
-  - **Preview** (`F6` next page, `Shift+F6` previous page, wrapping; the footer shows the current page, such as "Preview 1/3"): the preview pane has several pages and the picker opens on page 1. Page 3 shows sample inputs (with a tooltip under the active one), checkboxes and sample buttons (selected, unselected and a red destructive one, as in the delete confirmation). Pages 1 and 2 fill the whole right side of the dialog with the background the Jobs view uses, so they look as they do in the app. Page 2 shows app samples: a menu bar with an open pulldown, one job row per job status (with sample ETA and speed), and progress bars (active, inactive and completed). Page 1 shows a file panel with sample entries: a parent row, folders (one with a disk usage bar, one being scanned, one skipped), symlinks (one broken), files of several types, selected rows and the cursor, pinned, new, renamed and job marks, a no-permission file, and git statuses. The dialog keeps its size on every page, and on a short terminal the pane shows what fits.
+  - **Preview** (`F6` next page, `Shift+F6` previous page, wrapping; the footer shows the current page, such as "Preview 1/3"): the preview pane has several pages and the picker opens on page 1. Page 3 shows sample inputs (with a tooltip under the active one), checkboxes and two rows of sample buttons (selected, unselected and a red destructive one, as in the delete confirmation): the second row shows the shortcut letters as drawn when they need Alt. Pages 1 and 2 fill the whole right side of the dialog with the background the Jobs view uses, so they look as they do in the app. Page 2 shows app samples: a menu bar with an open pulldown, one job row per job status (with sample ETA and speed), and progress bars (active, inactive and completed). Page 1 shows a file panel with sample entries: a parent row, folders (one with a disk usage bar, one being scanned, one skipped), symlinks (one broken), files of several types, selected rows and the cursor, pinned, new, renamed and job marks, a no-permission file, and git statuses. The dialog keeps its size on every page, and on a short terminal the pane shows what fits.
   The page keys can be rebound in `[dialog.theme]` in `keybindings.toml`.
 - Or set it directly:
 
@@ -43,7 +43,7 @@ red = 1
 bg = "#303446"       # background of the whole UI; "default" keeps the terminal's own
 surface = "bright_black"   # dialog / chip fill
 muted = "bright_black"     # dimmed text
-# ... 34 roles in all, listed in themes/default.toml
+# ... 36 roles in all, listed in themes/default.toml
 
 [menu.bar]
 active   = { fg = "fg" }
@@ -61,8 +61,9 @@ Colors come in two layers. `[palette]` holds only raw colors: the 16 ANSI slot n
 | `surface` | `bright_black` | dialog fill, chips, bar tracks, speed pill |
 | `header_bg` | `blue` | panel headers |
 | `menu_bg` | `blue` | menu dropdown fill and frame |
-| `focus_bg` / `focus_fg` | `cyan` / `black` | the focused item: open menu-bar title, selected pulldown entry, active dialog button, selected completion entry, hovered footer entry |
+| `focus_bg` / `focus_fg` | `cyan` / `black` | the focused item: open menu-bar title, selected pulldown entry, selected completion entry, hovered footer entry; `focus_fg` is also the focused dialog button's text |
 | `button_bg` | `black` | face of an unfocused dialog button |
+| `button_focus_bg` | `cyan` | face of the focused dialog button |
 | `file_cursor_bg` / `file_cursor_fg` | `cyan` / `black` | cursor row of an active file list (panels, duplicate finder) |
 | `file_cursor_dim` | `black` | cursor row of an inactive or blocked panel |
 | `highlight_bg` | `bright_blue` | clickable part of the hovered footer entry, disk usage cursor on a selected row, mount mark |
@@ -73,6 +74,7 @@ Colors come in two layers. `[palette]` holds only raw colors: the 16 ANSI slot n
 | `info_columns` | `bright_black` | file-list info columns: size, date, permissions, meta |
 | `ink` | `black` | dark text on a colored fill |
 | `accent` | `magenta` | shortcut letters, key hints, match highlights |
+| `accent_alt` | `magenta` | dialog shortcut letters that need Alt |
 | `primary` / `directory` / `symlink` / `selected` | `blue` / `blue` / `bright_cyan` / `yellow` | active panel frame, directories, symlinks, selected files |
 | `inactive_frame` | `bright_black` | inactive panel frame |
 | `info` / `success` / `success_strong` | `cyan` / `green` / `bright_green` | informational, completed, running |
@@ -118,7 +120,7 @@ The default theme recolors `file`, `folder_open`, `folder_mount`, `folder_exclud
 
 ## Status glyphs
 
-Job states each have an icon and a color: scanning, queued, running, paused, canceling, canceled, failed, decision and completed. Glyphs are under `[icons.jobs.list]` and colors under `[status]`; the menu-bar job strip uses `[icons.menu.job]`. The result icons of the jobs view Operations panel are `[icons.jobs.operations]` `success` / `failed` / `skipped`, colored by `[jobs.operations]` (the same colors mark the failed and skipped counts in the Details panel); without them the completed / failed / paused job colors and matching icons are used. Dialog buttons are drawn as `[icons.dialog.button]` `start`, the label and `end` (default: powerline half-circles that make each button a pill; without Nerd Font icons `"[ "` and `" ]"` in the button's own colors; spaces are kept and count toward the button width, so `start = " "` / `end = " "` drops the brackets). `[dialog.button]` `active.start`, `inactive.end` and so on color those caps per button state (`active`, `active_destructive`, `inactive`). A cap color's `fg` and `bg` each replace the button's own when set, and apply to the cap's glyphs only: spaces in a cap keep the button's colors. Examples: a light left edge and a dark right edge for a raised look, or powerline half-circles colored as the button on the dialog background for a pill. Other icon groups: `[icons.menu.status]` (`separator` between status commands), `[icons.filelist]` (row suffixes such as new, renamed, selection, pinned), `[icons.dialog]` (missing, history), `[icons.tree]`, `[icons.scrollbar]`. Without Nerd Font icons (`use_nerdfont_icons = false`) ASCII markers are used instead.
+Job states each have an icon and a color: scanning, queued, running, paused, canceling, canceled, failed, decision and completed. Glyphs are under `[icons.jobs.list]` and colors under `[status]`; the menu-bar job strip uses `[icons.menu.job]`. The result icons of the jobs view Operations panel are `[icons.jobs.operations]` `success` / `failed` / `skipped`, colored by `[jobs.operations]` (the same colors mark the failed and skipped counts in the Details panel); without them the completed / failed / paused job colors and matching icons are used. Dialog buttons are drawn as `[icons.dialog.button]` `start`, the label and `end` (default: powerline half-circles that make each button a pill; without Nerd Font icons `"[ "` and `" ]"` in the button's own colors; spaces are kept and count toward the button width, so `start = " "` / `end = " "` drops the brackets). `[dialog.button]` `active.start`, `inactive.end` and so on color those caps per button state (`active`, `active_destructive`, `inactive`). A cap color's `fg` and `bg` each replace the button's own when set, and apply to the cap's glyphs only: spaces in a cap keep the button's colors. Examples: a light left edge and a dark right edge for a raised look, or powerline half-circles colored as the button on the dialog background for a pill. `active.accent` and `active_destructive.accent` color the shortcut letter on the focused button (foreground and bold), and `active.accent_alt` / `active_destructive.accent_alt` the same letter when it needs Alt, so a light button face can keep readable letters; unfocused buttons use the dialog's `accent` / `accent_alt`. Other icon groups: `[icons.menu.status]` (`separator` between status commands), `[icons.filelist]` (row suffixes such as new, renamed, selection, pinned), `[icons.dialog]` (missing, history), `[icons.tree]`, `[icons.scrollbar]`. Without Nerd Font icons (`use_nerdfont_icons = false`) ASCII markers are used instead.
 
 Changing the theme also changes how the Messages toasts look (`message.info`, `message.warn`, `message.error`).
 

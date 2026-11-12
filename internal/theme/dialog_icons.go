@@ -168,3 +168,13 @@ func buttonCaps(styles map[string]tcell.Style, state string) ButtonCapStyles {
 		End:   styles["dialog.button."+state+".end"],
 	}
 }
+
+// WithAltMnemonics is t with every shortcut-letter accent the draw helpers use swapped for its
+// Alt form: dialog.accent for dialog.accent_alt and the focused button's <state>.accent for
+// <state>.accent_alt. Dialogs draw with it while their letters need Alt.
+func (t Theme) WithAltMnemonics() Theme {
+	t.DialogAccent = t.DialogAccentAlt
+	t.DialogButtonActiveAccent = t.DialogButtonActiveAccentAlt
+	t.DialogButtonActiveDestructiveAccent = t.DialogButtonActiveDestructiveAccentAlt
+	return t
+}

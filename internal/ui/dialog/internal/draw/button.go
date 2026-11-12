@@ -83,12 +83,14 @@ func drawCap(screen tcell.Screen, x, y int, s string, base, cap tcell.Style) int
 // Output shape: start cap, label, end cap ([icons.dialog.button]), all on the state's background.
 // Returns the rendered width in rune columns.
 func DrawDialogButton(screen tcell.Screen, x, y int, label string, shortcut rune, focused, destructive, disabled bool, styles theme.Theme) int {
-	baseStyle, caps := styles.DialogButtonInactive, styles.DialogButtonInactiveCaps
+	// The focused button's letter takes its own accent (the face may be light), an unfocused one
+	// dialog.accent; Theme.WithAltMnemonics swaps in the Alt forms of both.
+	baseStyle, caps, accent := styles.DialogButtonInactive, styles.DialogButtonInactiveCaps, styles.DialogAccent
 	switch {
 	case focused && destructive && !disabled:
-		baseStyle, caps = styles.DialogButtonActiveDestructive, styles.DialogButtonActiveDestructiveCaps
+		baseStyle, caps, accent = styles.DialogButtonActiveDestructive, styles.DialogButtonActiveDestructiveCaps, styles.DialogButtonActiveDestructiveAccent
 	case focused: // disabled buttons remain focusable; show active chrome while focused
-		baseStyle, caps = styles.DialogButtonActive, styles.DialogButtonActiveCaps
+		baseStyle, caps, accent = styles.DialogButtonActive, styles.DialogButtonActiveCaps, styles.DialogButtonActiveAccent
 	}
 	set := activeButtonCaps()
 	if !set.styled {
@@ -100,7 +102,7 @@ func DrawDialogButton(screen tcell.Screen, x, y int, label string, shortcut rune
 	for _, r := range label {
 		style := baseStyle
 		if !highlighted && (r == shortcut || r == unicode.ToUpper(shortcut) || r == unicode.ToLower(shortcut)) {
-			style = AccentIconStyle(baseStyle, styles.DialogAccent)
+			style = AccentIconStyle(baseStyle, accent)
 			highlighted = true
 		}
 		screen.SetContent(out, y, r, nil, style)

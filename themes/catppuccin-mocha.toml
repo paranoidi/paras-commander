@@ -26,6 +26,8 @@ surface = "#313244"
 header_bg = "#89b4fa"
 menu_bg = "#11111b"
 focus_bg = "#45475a"
+button_bg = "#1e1e2e"
+button_focus_bg = "#45475a"
 file_cursor_bg = "#9399b2"
 file_cursor_dim = "#313244"
 highlight_bg = "#b4befe"
@@ -41,6 +43,7 @@ ink = "#11111b"
 focus_fg = "#cdd6f4"
 file_cursor_fg = "#11111b"
 accent = "#cba6f7"
+accent_alt = "#f5e0dc"
 primary = "blue"
 inactive_frame = "#585b70"
 directory = "blue"
@@ -94,6 +97,8 @@ title = { fg = "faint" }  # tuned
 
 [dialog.button]
 active_destructive = { fg = "ink", bg = "danger" }
+active_destructive.accent = { fg = "ink", bold = true }
+active_destructive.accent_alt = { fg = "accent_alt", bold = true }  # tuned
 
 [tooltip]
 info = { fg = "ink" }       # foreground of the info icon ([icons.dialog] info) on the box
