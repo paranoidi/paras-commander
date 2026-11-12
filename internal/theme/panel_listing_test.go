@@ -54,3 +54,20 @@ func TestPanelListingInfoStyleOnSelectedCursorRowIsNotSelectedColor(t *testing.T
 		t.Fatalf("selected cursor-row info style = %v, want the unselected cursor style %v", got, th.PanelCursorActive)
 	}
 }
+
+// The inactive panel's cursor bar sets only a background: its info columns keep panel.row.info,
+// not the entry-type color (a directory's blue).
+func TestPanelListingInfoStyleOnInactiveCursorRowKeepsInfoColor(t *testing.T) {
+	th := Theme{
+		PanelRowInfo:        tcell.StyleDefault.Foreground(tcell.ColorGray),
+		PanelCursorInactive: tcell.StyleDefault.Background(tcell.ColorBlack),
+	}
+	dir := tcell.StyleDefault.Foreground(tcell.ColorBlue).Bold(true)
+	opts := PanelListingCursorOpts{}
+	row := th.PanelListingCursorStyle(dir, opts)
+	got := th.PanelListingInfoStyle(row, "panel.inactive.row.cursor", th.PanelListingCursorInfoStyle(dir, opts))
+	want := tcell.StyleDefault.Foreground(tcell.ColorGray).Background(tcell.ColorBlack)
+	if got != want {
+		t.Fatalf("inactive cursor-row info style = %v, want %v", got, want)
+	}
+}

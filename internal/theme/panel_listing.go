@@ -88,10 +88,15 @@ func (t Theme) PanelListingCursorStyle(base tcell.Style, opts PanelListingCursor
 
 // PanelListingCursorInfoStyle is the cursor row's style for its info columns (size, date and the
 // rest): the cursor style of base, the row's unselected style, as if the entry were not selected, so
-// the columns never take the selected color.
+// the columns never take the selected color. A cursor style without a foreground (the inactive
+// panel's dim bar) keeps panel.row.info on the cursor background, not the entry-type color.
 func (t Theme) PanelListingCursorInfoStyle(base tcell.Style, opts PanelListingCursorOpts) tcell.Style {
 	opts.Selected = false
-	return t.PanelListingCursorStyle(base, opts)
+	cursor := t.panelListingCursorThemeStyle(opts)
+	if fg, _, _ := cursor.Decompose(); fg == tcell.ColorDefault {
+		return t.PanelListingInfoStyle(cursor, "", tcell.Style{})
+	}
+	return cursor
 }
 
 func (t Theme) panelListingCursorThemeStyle(opts PanelListingCursorOpts) tcell.Style {
