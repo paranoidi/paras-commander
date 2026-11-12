@@ -136,10 +136,7 @@ type diskUsageState struct {
 	idleSort       [2]diskIdleSortPanel // indexed by ui.PrimaryPanel / ui.SecondaryPanel (0/1)
 	// idleNavPath records last reconciled panel cwd so idle-sort debounce survives benign reconcile but resets on chdir.
 	idleNavPath [2]string
-	// lastCheckedCacheVer records the engine cache version last checked by handlePanelDirChanged
-	// per panel, so a fully-cached recheck is skipped when the engine's cache hasn't changed since.
-	lastCheckedCacheVer [2]uint64
-	redrawTimer         sched.Debouncer
+	redrawTimer sched.Debouncer
 	// deferPoll skips one pollDiskUsageUpdates drain after partial file-list nav while a scan is busy.
 	deferPoll atomic.Bool
 }

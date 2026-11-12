@@ -296,6 +296,7 @@ func TestPollDiskUsageUpdatesRechecksIdleSortOnceRegardlessOfEventBacklog(t *tes
 		return realSorter(abs)
 	}
 
+	app.reconcileAfterEvent() // the Run loop records the cwd before the user starts a scan
 	app.startDiskUsageScanForPanel(ui.PrimaryPanel)
 
 	// Let the scan finish and queue all its EventSubtreeIndexed events without draining them, so
@@ -319,9 +320,14 @@ func TestPollDiskUsageUpdatesRechecksIdleSortOnceRegardlessOfEventBacklog(t *tes
 	if got, want := diskSorterCalls.Load(), int64(8*numFiles); got > want {
 		t.Fatalf("DiskSorter called %d times by one pollDiskUsageUpdates after a %d-file scan, want <= %d; this indicates the per-event recheck regression (cost scaling with queued events, not with panel entries)", got, numFiles, want)
 	}
-	if !left.IdleDiskTotalsSort {
-		t.Fatal("IdleDiskTotalsSort should have activated once the listing was fully cached")
+	// The scan finishing must not reorder rows under the user: it arms the idle timer instead.
+	if left.IdleDiskTotalsSort {
+		t.Fatal("IdleDiskTotalsSort must wait for the idle timer, not latch when the scan finishes")
 	}
+	if app.disk.idleSort[ui.PrimaryPanel].timer == nil {
+		t.Fatal("expected idle timer armed once the listing was fully cached")
+	}
+	app.invalidateIdleDiskSortPanel(ui.PrimaryPanel)
 }
 
 func TestHandlePanelDirChangedAppliesDiskSortWhenUsageSortEnabledWithoutActivatedLatch(t *testing.T) {
@@ -477,6 +483,7 @@ func TestNavigateOutsideDiskUsageScanScopeClearsIdleSort(t *testing.T) {
 		time.Sleep(2 * time.Millisecond)
 	}
 	app.handlePanelDirChanged(ui.PrimaryPanel)
+	app.applyIdleDiskSort(ui.PrimaryPanel, app.disk.idleSort[ui.PrimaryPanel].epoch)
 	if !left.IdleDiskTotalsSort {
 		t.Fatal("IdleDiskTotalsSort should apply inside scan scope when fully cached")
 	}
@@ -608,6 +615,7 @@ func TestDiskSortRestoredAfterNewScanReplacesScope(t *testing.T) {
 	if err := left.Parent(vr); err != nil {
 		t.Fatalf("Parent: %v", err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load lands before handlePanelDirChanged checks Path
 	app.handlePanelDirChanged(ui.PrimaryPanel)
 
 	if !left.IdleDiskTotalsSort {

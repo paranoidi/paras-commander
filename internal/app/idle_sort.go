@@ -112,15 +112,18 @@ func (a *App) idleSortDeferOnUserActivity(s idleSortSpec) {
 
 // idleSortDirChanged invalidates any pending timer for panelID when its directory changed since
 // the last reconcile, so a stale timer never fires a re-sort meant for the directory the user
-// just left. Early-returns when not eligible, before computing the path.
-func (a *App) idleSortDirChanged(s idleSortSpec, panelID int) {
+// just left. Early-returns when not eligible, before computing the path. Reports whether the
+// directory changed.
+func (a *App) idleSortDirChanged(s idleSortSpec, panelID int) bool {
 	if !s.eligible(panelID) {
-		return
+		return false
 	}
 	p := a.panelByID(panelID)
 	cur := filepath.Clean(p.PathString())
 	if s.idleNavPath[panelID] != cur {
 		a.idleSortInvalidate(s, panelID)
 		s.idleNavPath[panelID] = cur
+		return true
 	}
+	return false
 }

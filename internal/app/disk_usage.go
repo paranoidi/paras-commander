@@ -395,10 +395,11 @@ func (a *App) scheduleDiskUsageRedrawDebounced() {
 
 // handlePanelDirChanged reconciles disk-usage idle-sort for the given panel. It is
 // invoked from App.reconcileAfterEvent for both panels every iteration of the Run loop.
-// Idempotent: short-circuits when DiskUsageIdleSizeSort is off (the common case) or when
-// appropriate. After a user-initiated disk-usage analysis (DiskUsageShown), a fully
-// disk-cached listing applies disk-total ordering immediately; selection-size cache alone
-// must not. Otherwise pending idle-sort debounce for this panel is invalidated on cwd change.
+// Idempotent: short-circuits when DiskUsageIdleSizeSort is off (the common case). On a cwd
+// change it invalidates any pending idle-sort timer and, after a user-initiated disk-usage
+// analysis (DiskUsageShown), applies disk-total ordering at once when the new listing is
+// already fully cached. A listing that becomes fully cached while the user stays in it (a scan
+// finishing) is left to the idle timer, so rows never reorder under an active user.
 func (a *App) handlePanelDirChanged(panelID int) {
 	if a.model.ViewMode != ui.ViewBrowser {
 		return
@@ -407,26 +408,16 @@ func (a *App) handlePanelDirChanged(panelID int) {
 	if !p.Sort.DiskUsageIdleSizeSort {
 		return
 	}
-	a.idleSortDirChanged(a.diskIdleSortSpec(), panelID)
-	if !a.model.DiskUsageShown {
+	if !a.idleSortDirChanged(a.diskIdleSortSpec(), panelID) {
 		return
 	}
-	if len(p.Entries) == 0 {
+	if !a.model.DiskUsageShown || len(p.Entries) == 0 || p.IdleDiskTotalsSort {
 		return
 	}
-	if p.IdleDiskTotalsSort {
-		return
-	}
-	ver := a.disk.engine.CacheVersion()
-	if a.disk.lastCheckedCacheVer[panelID] == ver {
-		return
-	}
-	a.disk.lastCheckedCacheVer[panelID] = ver
 	if p.ListingFullyDiskCached() {
 		p.DiskUsageIdleSortActivated = true
 		p.IdleDiskTotalsSort = true
 		p.RefreshDiskUsageOrdering(a.panelViewportRows(panelID))
-		return
 	}
 }
 
