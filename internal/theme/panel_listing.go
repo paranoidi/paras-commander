@@ -86,6 +86,14 @@ func (t Theme) PanelListingCursorStyle(base tcell.Style, opts PanelListingCursor
 	return cursor
 }
 
+// PanelListingCursorInfoStyle is the cursor row's style for its info columns (size, date and the
+// rest): the cursor style of base, the row's unselected style, as if the entry were not selected, so
+// the columns never take the selected color.
+func (t Theme) PanelListingCursorInfoStyle(base tcell.Style, opts PanelListingCursorOpts) tcell.Style {
+	opts.Selected = false
+	return t.PanelListingCursorStyle(base, opts)
+}
+
 func (t Theme) panelListingCursorThemeStyle(opts PanelListingCursorOpts) tcell.Style {
 	if opts.RangePending {
 		if opts.Selected {
@@ -121,11 +129,14 @@ func (t Theme) panelListingCursorThemeStyle(opts PanelListingCursorOpts) tcell.S
 }
 
 // PanelListingInfoStyle applies panel.row.info foreground/attributes onto a listing cell's background.
-// On the cursor row (cursorKey is the row's cursor style key, "" off the cursor) the info columns keep
-// the row's own style, so they read like the file name on the cursor bar.
-func (t Theme) PanelListingInfoStyle(rowCell tcell.Style, cursorKey string) tcell.Style {
+// On the cursor row (cursorKey is the row's cursor style key, "" off the cursor) the info columns take
+// cursorInfo's foreground and attributes (PanelListingCursorInfoStyle), so they read like an unselected
+// file name on the cursor bar.
+func (t Theme) PanelListingInfoStyle(rowCell tcell.Style, cursorKey string, cursorInfo tcell.Style) tcell.Style {
 	if cursorKey != "" {
-		return rowCell
+		fg, _, attrs := cursorInfo.Decompose()
+		_, bg, _ := rowCell.Decompose()
+		return tcell.StyleDefault.Foreground(fg).Background(bg).Attributes(attrs)
 	}
 	info := t.PanelRowInfo
 	if info == (tcell.Style{}) {

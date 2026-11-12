@@ -32,17 +32,25 @@ func TestPanelListingInfoStyleKeepsRowBackground(t *testing.T) {
 		PanelRowFile: tcell.StyleDefault.Foreground(tcell.ColorWhite),
 	}
 	row := tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorTeal)
-	got := th.PanelListingInfoStyle(row, "")
+	got := th.PanelListingInfoStyle(row, "", tcell.Style{})
 	fg, bg, _ := got.Decompose()
 	if fg != tcell.ColorGray || bg != tcell.ColorTeal {
 		t.Fatalf("info style = fg %v bg %v, want gray on teal", fg, bg)
 	}
 }
 
-func TestPanelListingInfoStyleOnCursorRowMatchesName(t *testing.T) {
-	th := Theme{PanelRowInfo: tcell.StyleDefault.Foreground(tcell.ColorGray)}
-	row := tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorTeal).Bold(true)
-	if got := th.PanelListingInfoStyle(row, "panel.active.row.cursor"); got != row {
-		t.Fatalf("cursor-row info style = %v, want the row's own style %v", got, row)
+// On a selected cursor row the info columns take the unselected cursor style, never the selected color.
+func TestPanelListingInfoStyleOnSelectedCursorRowIsNotSelectedColor(t *testing.T) {
+	th := Theme{
+		PanelRowInfo:              tcell.StyleDefault.Foreground(tcell.ColorGray),
+		PanelCursorActive:         tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorTeal),
+		PanelActiveCursorSelected: tcell.StyleDefault.Foreground(tcell.ColorYellow).Background(tcell.ColorTeal).Bold(true),
+	}
+	opts := PanelListingCursorOpts{FileListActive: true, Selected: true}
+	row := th.PanelListingCursorStyle(tcell.StyleDefault, opts)
+	info := th.PanelListingCursorInfoStyle(tcell.StyleDefault, opts)
+	got := th.PanelListingInfoStyle(row, "panel.active.row.cursor.selected", info)
+	if got != th.PanelCursorActive {
+		t.Fatalf("selected cursor-row info style = %v, want the unselected cursor style %v", got, th.PanelCursorActive)
 	}
 }

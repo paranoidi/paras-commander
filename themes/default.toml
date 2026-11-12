@@ -43,14 +43,16 @@ inverse_bg = "white"          # light boxes: tooltips, info toast, toast sweep e
 # Text
 fg = "white"                  # body text
 fg_strong = "bright_white"    # emphasised text: headers, hints, active input, progress labels
-muted = "bright_black"        # dimmed text: info columns, inactive frames, placeholders
+muted = "bright_black"        # dimmed text: blocked frames, placeholders
 faint = "black"               # barely visible text on bg/surface: disabled options, remaining progress
+info_columns = "bright_black"  # file-list info columns: size, mtime, permissions, meta
 ink = "black"                 # dark text on a coloured fill
 focus_fg = "black"            # text on focus_bg
 file_cursor_fg = "black"      # text and icon on file_cursor_bg
 # Structure
 accent = "magenta"            # shortcut letters, key hints, match highlights
 primary = "blue"              # active panel frame, info icon, git modified, tagged
+inactive_frame = "bright_black"  # inactive panel frame
 directory = "blue"            # directory names in listings
 symlink = "bright_cyan"       # symlinks, open-folder mark, disk usage cursor
 selected = "yellow"           # selected files, selection sizes, active/selected dialog options
@@ -134,7 +136,7 @@ range = { bg = "range_bg" }   # other rows a pending range select covers; backgr
 range.unselect = { bg = "range_unselect_bg" }  # same, for a mouse drag that unselects them
 directory = { fg = "directory", bold = true }
 file = { fg = "fg" }
-info = { fg = "muted" }  # size / mtime / permissions / meta columns
+info = { fg = "info_columns" }  # size / mtime / permissions / meta columns
 selected = { fg = "selected", bold = true }
 symlink = { fg = "symlink" }
 tree.connector = { fg = "muted" }
@@ -264,7 +266,7 @@ row.cursor.selected = { fg = "selected", bg = "file_cursor_dim", bold = true }
 
 [panel.inactive]
 disk_usage_overview = { fg = "muted"}
-frame = { fg = "muted" }
+frame = { fg = "inactive_frame" }
 header = { fg = "fg_strong", bg = "header_bg", bold = true }
 header.carousel = { fg = "faint", bg = "surface" }
 row.cursor = { bg = "file_cursor_dim" }

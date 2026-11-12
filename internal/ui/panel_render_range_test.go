@@ -21,7 +21,7 @@ func TestPanelRowStyleRangeSpan(t *testing.T) {
 	state.AddSelection("/tmp/cedar")
 	ctx := PanelContext{RangeSpan: state.PendingRange()}
 	bg := func(i int) tcell.Color {
-		st, _ := panelRowStyle(state.Entries[i], i, state, ctx, styles)
+		st, _, _ := panelRowStyle(state.Entries[i], i, state, ctx, styles)
 		_, b, _ := st.Decompose()
 		return b
 	}
@@ -35,7 +35,7 @@ func TestPanelRowStyleRangeSpan(t *testing.T) {
 			t.Fatalf("row %d must not be on the range background", i)
 		}
 	}
-	st, _ := panelRowStyle(state.Entries[2], 2, state, ctx, styles)
+	st, _, _ := panelRowStyle(state.Entries[2], 2, state, ctx, styles)
 	if fg, _, _ := st.Decompose(); fg != tcell.ColorYellow {
 		t.Fatalf("selected row in the span lost its foreground: %v", fg)
 	}

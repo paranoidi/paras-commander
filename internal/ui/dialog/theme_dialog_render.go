@@ -16,8 +16,10 @@ const (
 	ThemeAppMenuRows     = 5
 	ThemeAppJobRows      = 9
 	ThemeAppProgressRows = 3
-	// ThemePanelRows is the height of the file panel sample (frame, header and entry rows).
-	ThemePanelRows = 18
+	// ThemePanelRows is the height of the file panel sample: the active panel (frame, header and every
+	// entry row), then ThemeInactivePanelRows of the same listing as the inactive panel.
+	ThemePanelRows         = 18 + ThemeInactivePanelRows
+	ThemeInactivePanelRows = 7
 )
 
 // ThemeSamplePainter paints one app sample at x, y, width wide, leaving every row from maxY on
@@ -30,7 +32,7 @@ type ThemeAppSamples struct {
 	MenuBar  ThemeSamplePainter // ThemeAppMenuRows rows: the bar, then its open pulldown
 	Jobs     ThemeSamplePainter // ThemeAppJobRows rows: one per job status
 	Progress ThemeSamplePainter // ThemeAppProgressRows rows: active, inactive and completed bars
-	Panel    ThemeSamplePainter // ThemePanelRows rows: a file panel with its frame, header and entries
+	Panel    ThemeSamplePainter // ThemePanelRows rows: the active file panel, the inactive one below it
 }
 
 // themePreviewCtx is what a preview page paints with: the pane's geometry (y is the page's first row,
@@ -293,9 +295,9 @@ func paintThemeInputPage(c *themePreviewCtx) {
 	}
 	btnStartX := max(previewLeft, previewLeft+(previewWidth-btnWidth)/2)
 	if fits(previewY) {
-		draw.DrawDialogButton(screen, btnStartX, previewY, "Selected", 'S', false, false, false, styles)
+		draw.DrawDialogButton(screen, btnStartX, previewY, "Selected", 'S', true, false, false, styles)
 		btnStartX += draw.DialogButtonWidth("Selected") + btnGap
-		draw.DrawDialogButton(screen, btnStartX, previewY, "Unselected", 'U', true, false, false, styles)
+		draw.DrawDialogButton(screen, btnStartX, previewY, "Unselected", 'U', false, false, false, styles)
 		if withDelete {
 			btnStartX += draw.DialogButtonWidth("Unselected") + btnGap
 			draw.DrawDialogButton(screen, btnStartX, previewY, "Delete", 'D', true, true, false, styles)

@@ -82,7 +82,7 @@ Text matching ignores case. Anything not starting with an operator is a substrin
 
 Blank cells, still-running cells and output split into sub-columns never alert. An invalid rule, such as `>abc`, is reported as a `meta.toml` error in the picker.
 
-The colors are `warn` and `critical` in the theme's `[panel.meta]` table. On the cursor row every column takes the file name's color, so an alerting cell under the active panel's cursor takes the cursor's icon color, like row icons and marks, and is bold to stand out from its neighbours. Under a dialog the panel stays dimmed and shows no alerts.
+The colors are `warn` and `critical` in the theme's `[panel.meta]` table. On the cursor row every column takes the file name's color (an unselected name's, so a selected file's columns are not drawn in the selection color), so an alerting cell under the active panel's cursor takes the cursor's icon color, like row icons and marks, and is bold to stand out from its neighbours. Under a dialog the panel stays dimmed and shows no alerts.
 
 Built-in columns can come with their own rules, such as the [fileindex](fileindex.md#columns) Copies column; these are fixed and cannot be changed from `meta.toml`.
 

@@ -118,7 +118,7 @@ func TestDrawPanelRowQuickViewIndicatorIcon(t *testing.T) {
 				t.Fatalf("cursor row border icon = %q, want %q", r, tc.wantIcon)
 			}
 
-			cursorState, _ := panelRowStyle(state.Entries[0], 0, state,
+			cursorState, _, _ := panelRowStyle(state.Entries[0], 0, state,
 				PanelContext{ChromeBlocked: false, CursorRowActive: true}, styles)
 			_, wantBG, _ := cursorState.Decompose()
 			gotFG, _, _ := gotStyle.Decompose()

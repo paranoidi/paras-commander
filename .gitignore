@@ -21,6 +21,12 @@ test-data/
 themes/import/
 /themes/*.toml
 !/themes/default.toml
+!/themes/catppuccin-frappe.toml
+!/themes/catppuccin-latte.toml
+!/themes/catppuccin-macchiato.toml
+!/themes/catppuccin-mocha.toml
+!/themes/nord-default.toml
+!/themes/nordic-default.toml
 /site/
 !/docs/tapes/*.sh
 /dist/

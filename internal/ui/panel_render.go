@@ -354,7 +354,7 @@ func drawPanelQuickViewIndicator(screen tcell.Screen, rect Rect, state panel.Sta
 		icon = quickViewIndicatorIconRight
 		x = rect.X + rect.Width - 1
 	}
-	style, _ := panelRowStyle(entry, state.Cursor, state, ctx, styles)
+	style, _, _ := panelRowStyle(entry, state.Cursor, state, ctx, styles)
 	_, rowBG, _ := style.Decompose()
 	screen.SetContent(x, rect.Y+2+row, icon, nil, borderStyle.Foreground(rowBG))
 }
@@ -436,6 +436,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 	hasEntry := false
 	var cur localfs.Entry
 	selected := false
+	var cursorInfo tcell.Style // info columns on the cursor row (panelRowStyle)
 	fillCols := 0
 	sliver := false
 
@@ -474,7 +475,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		}
 		effTextWidth := listTextWidth - treeGutterWidth
 		effNameWidth := max(1, nameWidth-treeGutterWidth)
-		style, selected = panelRowStyle(entry, entryIndex, state, ctx, panelStyle.Styles)
+		style, selected, cursorInfo = panelRowStyle(entry, entryIndex, state, ctx, panelStyle.Styles)
 		subtreeMark = entry.Type == localfs.EntryDirectory && effNameWidth > 2 && state.HasSelectionInSubtree(entry.Path)
 		newFileTier = state.NewFileMarkTier(entry)
 		renameMark = state.IsRenameMarked(entry)
@@ -605,7 +606,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 	primitive.StyledTextCellwise(screen, listContentStart, y, listTextWidth, text, func(ci int) tcell.Style {
 		st := blendCell(leftGutter + gitStrip + iconStrip + treeGutterWidth + ci)
 		if ci >= nameWidth {
-			return panellist.MetaCellStyle(panelStyle.Styles.PanelListingInfoStyle(st, cursorIconKey), ci-panellist.MetaStart(nameWidth), metaAlerts, cursorIconKey, panelStyle.Styles)
+			return panellist.MetaCellStyle(panelStyle.Styles.PanelListingInfoStyle(st, cursorIconKey, cursorInfo), ci-panellist.MetaStart(nameWidth), metaAlerts, cursorIconKey, panelStyle.Styles)
 		}
 		return st
 	}, spans)
@@ -613,26 +614,31 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 
 // panelRowStyle resolves the row's file/selected/cursor style, moved out of drawPanelRow's
 // per-entry style-resolution block.
-func panelRowStyle(entry localfs.Entry, entryIndex int, state panel.State, ctx PanelContext, styles theme.Theme) (style tcell.Style, selected bool) {
-	style = styles.PanelListingFolderStyle(entry, ctx.ChromeBlocked, ctx.FolderColor)
+// cursorInfo is the info columns' style on a cursor (or hovered) row, zero elsewhere.
+func panelRowStyle(entry localfs.Entry, entryIndex int, state panel.State, ctx PanelContext, styles theme.Theme) (style tcell.Style, selected bool, cursorInfo tcell.Style) {
+	base := styles.PanelListingFolderStyle(entry, ctx.ChromeBlocked, ctx.FolderColor)
+	style = base
 	selected = state.IsSelected(entry)
 	if selected {
 		style = styles.PanelListingSelectedStyle(ctx.ChromeBlocked)
 	}
 	if entryIndex == state.Cursor {
-		style = styles.PanelListingCursorStyle(style, theme.PanelListingCursorOpts{
+		opts := theme.PanelListingCursorOpts{
 			ChromeBlocked:     ctx.ChromeBlocked,
 			FileListActive:    ctx.CursorRowActive,
 			Selected:          selected,
 			FilterUniqueMatch: ctx.CursorRowActive && state.FilterUniqueMatch(),
 			RangePending:      state.RangeAnchor != "",
-		})
+		}
+		style = styles.PanelListingCursorStyle(style, opts)
+		cursorInfo = styles.PanelListingCursorInfoStyle(base, opts)
 	} else if rowHovered(entryIndex, state, ctx) {
 		style = styles.PanelListingCursorStyle(style, theme.PanelListingCursorOpts{Selected: selected})
+		cursorInfo = styles.PanelListingCursorInfoStyle(base, theme.PanelListingCursorOpts{})
 	} else if rowInRangeSpan(entryIndex, state, ctx) {
 		style = styles.PanelListingRangeStyle(style, ctx.RangeSpan.Unselect)
 	}
-	return style, selected
+	return style, selected, cursorInfo
 }
 
 // rowInRangeSpan reports whether entryIndex is drawn on the range background: covered by the

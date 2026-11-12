@@ -43,7 +43,7 @@ red = 1
 bg = "#303446"       # background of the whole UI; "default" keeps the terminal's own
 surface = "bright_black"   # dialog / chip fill
 muted = "bright_black"     # dimmed text
-# ... 32 roles in all, listed in themes/default.toml
+# ... 33 roles in all, listed in themes/default.toml
 
 [menu.bar]
 active   = { fg = "fg" }
@@ -69,9 +69,11 @@ Colors come in two layers. `[palette]` holds only raw colors: the 16 ANSI slot n
 | `inverse_bg` | `white` | light boxes: tooltips, info toast |
 | `fg` / `fg_strong` | `white` / `bright_white` | body text / emphasised text |
 | `muted` / `faint` | `bright_black` / `black` | dimmed text / barely visible text (disabled options) |
+| `info_columns` | `bright_black` | file-list info columns: size, date, permissions, meta |
 | `ink` | `black` | dark text on a colored fill |
 | `accent` | `magenta` | shortcut letters, key hints, match highlights |
 | `primary` / `directory` / `symlink` / `selected` | `blue` / `blue` / `bright_cyan` / `yellow` | active panel frame, directories, symlinks, selected files |
+| `inactive_frame` | `bright_black` | inactive panel frame |
 | `info` / `success` / `success_strong` | `cyan` / `green` / `bright_green` | informational, completed, running |
 | `warning` / `attention` / `danger` / `error` / `special` | `yellow` / `bright_yellow` / `red` / `bright_red` / `magenta` | paused, canceling, deleted, failed, queued |
 

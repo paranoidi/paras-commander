@@ -290,7 +290,7 @@ func drawCarouselColumn(cp carouselColumnParams) {
 			return blendCell(nameColOffset + di)
 		})...)
 		drawCarouselRowIconAndText(screen, cp, carouselRowPaintState{
-			Y: y, Entry: entry, CursorKey: cursorKey, BarIconKey: barIconKey, FillCols: fillCols, BlendCell: blendCell,
+			Y: y, Entry: entry, CursorKey: cursorKey, CursorInfo: ce.CursorInfo, BarIconKey: barIconKey, FillCols: fillCols, BlendCell: blendCell,
 			Sliver: sliver, SliverStyle: p.Styles.DiskUsageBarStyle(p.FileListActive && c.Active && !inactive, isCursor, selected),
 			ListStart: listStart, ListW: listW, NameColOffset: nameColOffset, NameWidth: nameWidth,
 			Text: text, Spans: spans, MetaAlerts: metaAlerts, Styles: p.Styles,
@@ -321,6 +321,7 @@ type carouselColumnEntry struct {
 	IsCursor   bool
 	Selected   bool
 	Style      tcell.Style
+	CursorInfo tcell.Style // info columns' style on the cursor row (Theme.PanelListingCursorInfoStyle)
 }
 
 // resolveCarouselColumnEntry looks up the entry for one row (Active columns read the live
@@ -351,15 +352,18 @@ func resolveCarouselColumnEntry(cp carouselColumnParams, row int) (carouselColum
 	style := p.Styles.PanelListingFolderStyle(entry, p.ChromeBlocked, p.FolderColor)
 	selected := selState.IsSelected(entry)
 	isCursor := entryIndex == cursor
+	var cursorInfo tcell.Style
 	if isCursor {
-		style = p.Styles.PanelListingCursorStyle(style, theme.PanelListingCursorOpts{
+		opts := theme.PanelListingCursorOpts{
 			ChromeBlocked:     p.ChromeBlocked,
 			FileListActive:    p.FileListActive && !inactive,
 			CarouselInactive:  inactive,
 			Selected:          selected,
 			FilterUniqueMatch: p.FileListActive && !inactive && p.Center.FilterUniqueMatch(),
 			RangePending:      c.Active && p.Center.RangeAnchor != "",
-		})
+		}
+		cursorInfo = p.Styles.PanelListingCursorInfoStyle(style, opts)
+		style = p.Styles.PanelListingCursorStyle(style, opts)
 	} else {
 		if selected {
 			style = p.Styles.PanelListingSelectedStyle(p.ChromeBlocked)
@@ -368,7 +372,7 @@ func resolveCarouselColumnEntry(cp carouselColumnParams, row int) (carouselColum
 			style = p.Styles.PanelListingRangeStyle(style, cp.RangeSpan.Unselect)
 		}
 	}
-	return carouselColumnEntry{Entry: entry, SelState: selState, EntryIndex: entryIndex, IsCursor: isCursor, Selected: selected, Style: style}, true
+	return carouselColumnEntry{Entry: entry, SelState: selState, EntryIndex: entryIndex, IsCursor: isCursor, Selected: selected, Style: style, CursorInfo: cursorInfo}, true
 }
 
 // carouselRowPaintState carries the per-row values drawCarouselColumn computes that the
@@ -377,6 +381,7 @@ type carouselRowPaintState struct {
 	Y             int
 	Entry         localfs.Entry
 	CursorKey     string
+	CursorInfo    tcell.Style // info columns' style on the cursor row
 	BarIconKey    string // Theme.DiskUsageBarIconKey of the row; applies to cells before FillCols
 	FillCols      int
 	Sliver        bool        // disk-usage share under one cell: draw the sliver glyph in the left gutter
@@ -421,7 +426,7 @@ func drawCarouselRowIconAndText(screen tcell.Screen, cp carouselColumnParams, rp
 	primitive.StyledTextCellwise(screen, rp.ListStart, rp.Y, rp.ListW, rp.Text, func(ci int) tcell.Style {
 		st := rp.BlendCell(rp.NameColOffset + ci)
 		if ci >= rp.NameWidth {
-			return panellist.MetaCellStyle(rp.Styles.PanelListingInfoStyle(st, rp.CursorKey), ci-panellist.MetaStart(rp.NameWidth), rp.MetaAlerts, rp.CursorKey, rp.Styles)
+			return panellist.MetaCellStyle(rp.Styles.PanelListingInfoStyle(st, rp.CursorKey, rp.CursorInfo), ci-panellist.MetaStart(rp.NameWidth), rp.MetaAlerts, rp.CursorKey, rp.Styles)
 		}
 		return st
 	}, rp.Spans)

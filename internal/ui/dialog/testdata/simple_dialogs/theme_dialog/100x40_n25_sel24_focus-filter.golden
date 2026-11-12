@@ -23,13 +23,13 @@
      │ ( ) Orchard Theme    │panel 16                                                        │      
      │ ( ) Pebble Theme     │panel 17                                                        │      
      │ ( ) Quartz Theme     │panel 18                                                        │      
-     │ ( ) River Theme      │                                                                │      
-     │ ( ) Saffron Theme    │                                                                │      
-     │ ( ) Thistle Theme    │                                                                │      
-     │ ( ) Umber Theme      │                                                                │      
-     │ ( ) Velvet Theme     │                                                                │      
-     │ ( ) Willow Theme     │                                                                │      
-     │ ( ) Yarrow Theme     │                                                                │      
+     │ ( ) River Theme      │panel 19                                                        │      
+     │ ( ) Saffron Theme    │panel 20                                                        │      
+     │ ( ) Thistle Theme    │panel 21                                                        │      
+     │ ( ) Umber Theme      │panel 22                                                        │      
+     │ ( ) Velvet Theme     │panel 23                                                        │      
+     │ ( ) Willow Theme     │panel 24                                                        │      
+     │ ( ) Yarrow Theme     │panel 25                                                        │      
      │ (*) Zephyr Theme     │                                                                │      
      ├──────────────────────┴────────────────────────────────────────────────────────────────┤      
      │                                 [ OK ]    [ Cancel ]                                  │      
@@ -75,13 +75,13 @@ aaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggg
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbaaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbaaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbaaaaaa
 aaaaabhhhhhiiiiiiiiiiiiiiibbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbgggjggggbbgggjggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa

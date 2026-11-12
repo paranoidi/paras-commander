@@ -93,16 +93,29 @@ func themeSamplePanel() (panel.State, map[string]struct{}, []JobPathMark, themeS
 }
 
 // drawThemeSamplePanel draws the sample listing with drawPanel, the routine the app's panels
-// use, as the active panel at x, y, width wide; the frame is cut short (closed early) above maxY.
+// use, at x, y, width wide: as the active panel, then below it a short window of the same listing
+// as the inactive panel (its cursor on an unselected file next to selected ones). A frame is cut
+// short (closed early) above maxY.
 func drawThemeSamplePanel(screen tcell.Screen, x, y, width, maxY int, styles theme.Theme, model Model) {
-	st, pinned, marks, disk := themeSamplePanel()
-	rect := Rect{X: x, Y: y, Width: width, Height: min(maxY-y, dialog.ThemePanelRows)}
+	activeRows := dialog.ThemePanelRows - dialog.ThemeInactivePanelRows
+	drawThemeSampleListing(screen, Rect{X: x, Y: y, Width: width, Height: min(maxY-y, activeRows)}, true, styles, model)
+	y += activeRows
+	drawThemeSampleListing(screen, Rect{X: x, Y: y, Width: width, Height: min(maxY-y, dialog.ThemeInactivePanelRows)}, false, styles, model)
+}
+
+func drawThemeSampleListing(screen tcell.Screen, rect Rect, active bool, styles theme.Theme, model Model) {
 	if rect.Width < 12 || rect.Height < 3 {
 		return
 	}
+	st, pinned, marks, disk := themeSamplePanel()
+	id := PrimaryPanel
+	if !active {
+		id = SecondaryPanel
+		st.Cursor, st.ScrollOffset = 6, 5 // main.go, between the broken link and two selected files
+	}
 	drawPanel(screen, rect, st,
 		PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
-		PanelContext{PanelID: PrimaryPanel, FileListActive: true, CursorRowActive: true, ActivePanel: PrimaryPanel, SyncDriverPanelID: -1, QuickViewDriverPanelID: -1},
+		PanelContext{PanelID: id, FileListActive: active, CursorRowActive: active, ActivePanel: PrimaryPanel, SyncDriverPanelID: -1, QuickViewDriverPanelID: -1},
 		PanelDisplayConfig{
 			ShowIcons: model.UseNerdfontIcons, Painter: disk, ShowDiskUsage: true, JobMarks: marks, PinnedPaths: pinned,
 			ScrollbarShowInactive: true, CarouselLayout: panelcarousel.DefaultLayout(), UserHomeDir: "/home/user",
