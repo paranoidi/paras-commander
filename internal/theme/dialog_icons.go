@@ -17,6 +17,8 @@ const (
 	IconKeyDialogDepth             = "dialog.depth"
 	IconKeyDialogCriteria          = "dialog.criteria"
 	IconKeyMessageSuccess          = "message.success"
+	IconKeyDialogButtonStart       = "dialog.button.start"
+	IconKeyDialogButtonEnd         = "dialog.button.end"
 
 	// IconDialogInfoASCII is the info marker used when Nerd Font icons are disabled; it is
 	// also the widest form, so dialog sizing reserves its width.
@@ -138,4 +140,11 @@ func (t Theme) IconDialogRadio(selected bool) string {
 		return t.icon(IconKeyDialogRadioSelected)
 	}
 	return t.icon(IconKeyDialogRadioUnselected)
+}
+
+// DialogButtonCaps returns the strings drawn before and after a dialog button's label
+// ([icons.dialog.button] start / end). They are not trimmed: their spaces are part of the
+// button. Not gated on UseNerdfontIcons; a theme picks glyphs its fonts have.
+func (t Theme) DialogButtonCaps() (start, end string) {
+	return t.Icons[IconKeyDialogButtonStart], t.Icons[IconKeyDialogButtonEnd]
 }

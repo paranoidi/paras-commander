@@ -288,6 +288,8 @@ type Theme struct {
 	DialogButtonInactive           tcell.Style
 	DialogButtonActive             tcell.Style
 	DialogButtonActiveDestructive  tcell.Style
+	DialogButtonStart              tcell.Style
+	DialogButtonEnd                tcell.Style
 	DialogOptionInactive           tcell.Style
 	DialogOptionActive             tcell.Style
 	DialogOptionActiveSelected     tcell.Style
@@ -1186,6 +1188,8 @@ var styleKeys = append([]string{
 	"dialog.button.inactive",
 	"dialog.button.active",
 	"dialog.button.active_destructive",
+	"dialog.button.start",
+	"dialog.button.end",
 	"dialog.option.inactive",
 	"dialog.option.active",
 	"dialog.option.active.selected",
@@ -1637,6 +1641,8 @@ var dialogSurfaceForegroundKeys = map[string]bool{
 	"dialog.status.selection_size":   true,
 	"dialog.progress.label.on_fill":  true,
 	"dialog.progress.label.on_track": true,
+	"dialog.button.start":            true, // fg over the button state's style
+	"dialog.button.end":              true,
 }
 
 // build resolves a merged source into a Theme. Every key of styleKeys must be present: themes
@@ -1910,6 +1916,8 @@ func build(src source) (Theme, error) {
 		DialogButtonInactive:           styles["dialog.button.inactive"],
 		DialogButtonActive:             styles["dialog.button.active"],
 		DialogButtonActiveDestructive:  styles["dialog.button.active_destructive"],
+		DialogButtonStart:              styles["dialog.button.start"],
+		DialogButtonEnd:                styles["dialog.button.end"],
 		DialogOptionInactive:           styles["dialog.option.inactive"],
 		DialogOptionActive:             styles["dialog.option.active"],
 		DialogOptionActiveSelected:     styles["dialog.option.active.selected"],

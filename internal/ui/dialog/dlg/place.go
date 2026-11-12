@@ -463,6 +463,10 @@ func Place(screenW, screenH int, spec Spec) (Placement, bool) {
 	return p, true
 }
 
+// SetButtonCaps makes t's [icons.dialog.button] caps the ones every dialog button is drawn and
+// measured with; the app's single theme-apply path calls it.
+func SetButtonCaps(t theme.Theme) { draw.SetButtonCaps(t) }
+
 // MarkerWidth is the width of a radio or checkbox marker in the theme's icons, for Spec.MarkerWidth.
 func MarkerWidth(styles theme.Theme) int {
 	return max(

@@ -58,6 +58,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 	"github.com/paranoidi/paras-commander/internal/usermenu"
 	"github.com/paranoidi/paras-commander/internal/workpool"
@@ -1484,7 +1485,7 @@ func (a *App) handlePreviewInterruptPayload(data any) (eventOutcome, bool) {
 
 // setStyles is the single path that applies a theme (startup, picker preview and apply, config
 // reload): it stamps the UseNerdfontIcons and Tooltips config onto it, sets the screen's base
-// background (frameScreen) and the path display prefixes.
+// background (frameScreen), the path display prefixes and the dialog button caps.
 func (a *App) setStyles(t theme.Theme) {
 	t.UseNerdfontIcons = a.config.UI.UseNerdfontIcons
 	t.HideTooltips = !a.config.UI.Tooltips
@@ -1493,6 +1494,7 @@ func (a *App) setStyles(t theme.Theme) {
 	bg, _ := t.ResolveColor("bg") // a zero Theme has no roles: ColorDefault, the terminal's own
 	a.screen.SetStyle(tcell.StyleDefault.Background(bg))
 	syncPathDisplayPrefixes(t)
+	dlg.SetButtonCaps(t)
 }
 
 // syncPathDisplayPrefixes shows fileindex:// paths as the theme's fileindex icon + " " when
