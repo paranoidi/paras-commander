@@ -22,14 +22,14 @@ bright_white = "#a6adc8"
 
 [roles]
 bg = "#1e1e2e"
-surface = "#313244"
+surface = "#45475a"
 header_bg = "#89b4fa"
-inactive_header_bg = "#585b70"
+inactive_header_bg = "#45475a"
 menu_bg = "#11111b"
 leader_bg = "#11111b"
 focus_bg = "#45475a"
 button_bg = "#1e1e2e"
-button_focus_bg = "#45475a"
+button_focus_bg = "#585b70"
 file_cursor_bg = "#9399b2"
 file_cursor_dim = "#313244"
 highlight_bg = "#b4befe"
@@ -76,7 +76,7 @@ row.cursor.keep = { fg = "ink", bg = "file_cursor_bg", bold = true }
 
 [panel.active]
 header = { fg = "ink", bg = "header_bg", bold = true }
-row.cursor.selected = { fg = "ink", bg = "file_cursor_bg", bold = true, icon = "file_cursor_fg" }
+row.cursor.selected = { fg = "selected", bg = "file_cursor_bg", bold = true, icon = "file_cursor_fg" }  # keep yellow marked files on the cursor row: repair would swap it for ink  # tuned
 usage.cursor = { fg = "ink", bg = "highlight_bg" }  # tuned
 usage.cursor.selected = { fg = "ink", bg = "highlight_bg", bold = true }
 
@@ -101,5 +101,11 @@ active_destructive = { fg = "ink", bg = "danger" }
 active_destructive.accent = { fg = "ink", bold = true }
 active_destructive.accent_alt = { fg = "accent_alt", bold = true }  # tuned
 
+[dialog.option]
+invalid = { fg = "fg" }
+
 [tooltip]
 info = { fg = "ink" }       # foreground of the info icon ([icons.dialog] info) on the box
+
+[dialog.massrename]
+before.removed = { fg = "fg", bold = true }

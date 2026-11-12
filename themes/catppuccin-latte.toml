@@ -22,14 +22,14 @@ bright_white = "#6c6f85"
 
 [roles]
 bg = "#eff1f5"
-surface = "#dce0e8"
+surface = "#bcc0cc"
 header_bg = "#1e66f5"
 inactive_header_bg = "#acb0be"
 menu_bg = "#dce0e8"
 leader_bg = "#dce0e8"
 focus_bg = "#ccd0da"
 button_bg = "#eff1f5"
-button_focus_bg = "#ccd0da"
+button_focus_bg = "#acb0be"
 file_cursor_bg = "#7c7f93"
 file_cursor_dim = "#dce0e8"
 highlight_bg = "#1e66f5"
@@ -126,7 +126,7 @@ unchecked = { fg = "fg" }
 warn = { fg = "fg" }
 
 [panel.usage]
-selected = { fg = "fg", bg = "surface", icon.file = "faint", icon.folder_open = "faint", icon.folder_mount = "faint", icon.folder_excluded = "faint", icon.fileindex = "faint", icon.git = "faint", icon.suffix = "faint" }
+selected = { fg = "fg_strong", bg = "surface", icon.file = "faint", icon.folder_open = "faint", icon.folder_mount = "faint", icon.folder_excluded = "faint", icon.fileindex = "faint", icon.git = "faint", icon.suffix = "faint" }
 
 [panel.dedup]
 row.cursor.all_marked = { fg = "fg_strong", bg = "file_cursor_bg", bold = true }
@@ -137,7 +137,7 @@ full_dir_content = { fg = "fg" }
 potential = { fg = "fg" }
 
 [panel.active]
-row.cursor.selected = { fg = "fg_strong", bg = "file_cursor_bg", bold = true, icon = "file_cursor_fg" }
+row.cursor.selected = { fg = "selected", bg = "file_cursor_bg", bold = true, icon = "file_cursor_fg" }  # keep yellow marked files on the cursor row: repair would swap it for ink  # tuned
 row.cursor.unique = { fg = "fg_strong", bg = "success", icon = "ink" }
 usage.cursor = { fg = "ink", bg = "highlight_bg" }  # tuned
 usage.cursor.selected = { fg = "ink", bg = "highlight_bg", bold = true }
@@ -176,26 +176,30 @@ title = { fg = "faint" }  # tuned
 input = { fg = "fg", bold = true }
 
 [dialog]
-accent_alt = { fg = "fg", bold = true }
+accent_alt = { fg = "fg_strong", bold = true }
 
 [dialog.button]
-active.accent_alt = { fg = "fg", bold = true }
+active = { fg = "fg_strong", bg = "button_focus_bg" }
+active.accent = { fg = "fg_strong", bold = true }
+active.accent_alt = { fg = "fg_strong", bold = true }
 active_destructive = { fg = "ink", bg = "danger" }
 active_destructive.accent = { fg = "ink", bold = true }
 active_destructive.accent_alt = { fg = "accent_alt", bold = true }  # tuned
 
 [dialog.option]
-active = { fg = "fg", bold = true }
-selected = { fg = "fg" }
+active = { fg = "fg_strong", bold = true }
+selected = { fg = "fg_strong" }
+invalid = { fg = "fg_strong" }
 
 [dialog.status]
-selection_size = { fg = "fg" }
+selection_size = { fg = "fg_strong" }
 
 [leader_menu]
 group = { fg = "fg", bold = true }
 
 [dialog.help]
-section = { fg = "fg", bold = true }
+section = { fg = "fg_strong", bold = true }
+key     = { fg = "fg_strong", bold = true }
 
 [dialog.completion]
 match         = { fg = "fg", bg = "bg", bold = true }
@@ -204,16 +208,17 @@ match         = { fg = "fg", bg = "bg", bold = true }
 info = { fg = "ink" }       # foreground of the info icon ([icons.dialog] info) on the box
 
 [dialog.massrename]
-before.replaced = { fg = "fg", bold = true }
-after = { fg = "fg" }
-after.added = { fg = "fg", bold = true }
+before.removed = { fg = "fg_strong", bold = true }
+before.replaced = { fg = "fg_strong", bold = true }
+after = { fg = "fg_strong" }
+after.added = { fg = "fg_strong", bold = true }
 
 [jobs.progress]
 fill = { fg = "fg_strong", bg = "success" }
 label.on_fill = { fg = "fg_strong", bold = true }
 
 [jobs.progress.completed]
-fill = { fg = "fg", bg = "surface" }
+fill = { fg = "fg_strong", bg = "surface" }
 
 [jobs.detail]
 plot = { fg = "fg" }
