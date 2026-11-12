@@ -32,6 +32,7 @@ bright_white = 15
 bg = "default"                # base background of every cell without its own; also input and list backgrounds, progress tracks
 surface = "bright_black"      # dialog fill, chips, bar tracks, carousel header, speed pill
 header_bg = "blue"            # panel headers
+inactive_header_bg = "blue"   # header of the inactive panel
 menu_bg = "blue"              # menu dropdown fill and frame
 focus_bg = "cyan"             # the focused item: open menu-bar title, selected pulldown entry, selected completion entry, hovered footer entry
 button_bg = "black"           # face of an unfocused dialog button
@@ -270,7 +271,7 @@ row.cursor.selected = { fg = "selected", bg = "file_cursor_dim", bold = true }
 [panel.inactive]
 disk_usage_overview = { fg = "muted"}
 frame = { fg = "inactive_frame" }
-header = { fg = "fg_strong", bg = "header_bg", bold = true }
+header = { fg = "fg_strong", bg = "inactive_header_bg", bold = true }
 header.carousel = { fg = "faint", bg = "surface" }
 row.cursor = { bg = "file_cursor_dim" }
 row.cursor.selected = { fg = "selected", bg = "file_cursor_dim", bold = true }

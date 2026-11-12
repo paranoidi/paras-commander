@@ -43,7 +43,7 @@ red = 1
 bg = "#303446"       # background of the whole UI; "default" keeps the terminal's own
 surface = "bright_black"   # dialog / chip fill
 muted = "bright_black"     # dimmed text
-# ... 36 roles in all, listed in themes/default.toml
+# ... 37 roles in all, listed in themes/default.toml
 
 [menu.bar]
 active   = { fg = "fg" }
@@ -60,6 +60,7 @@ Colors come in two layers. `[palette]` holds only raw colors: the 16 ANSI slot n
 | `bg` | `default` | background of every cell that has none of its own (so the whole file list and every plain area), input and list backgrounds, progress tracks; `default` keeps the terminal's own background |
 | `surface` | `bright_black` | dialog fill, chips, bar tracks, speed pill |
 | `header_bg` | `blue` | panel headers |
+| `inactive_header_bg` | `blue` | header of the inactive panel |
 | `menu_bg` | `blue` | menu dropdown fill and frame |
 | `focus_bg` / `focus_fg` | `cyan` / `black` | the focused item: open menu-bar title, selected pulldown entry, selected completion entry, hovered footer entry; `focus_fg` is also the focused dialog button's text |
 | `button_bg` | `black` | face of an unfocused dialog button |
