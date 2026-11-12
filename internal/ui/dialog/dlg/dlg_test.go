@@ -186,8 +186,8 @@ func TestPlace(t *testing.T) {
 		"b1":   {X: 41, Y: 9, Width: 5 + 5, Height: 1},
 		"c0":   {X: 21, Y: 11, Width: 5 + 7, Height: 1}, // groups stack without blank rows
 		"c1":   {X: 21, Y: 12, Width: 5 + 4, Height: 1},
-		OK:     {X: 29, Y: 14, Width: 8, Height: 1},
-		Cancel: {X: 39, Y: 14, Width: 12, Height: 1},
+		OK:     {X: 31, Y: 14, Width: 6, Height: 1},
+		Cancel: {X: 39, Y: 14, Width: 10, Height: 1},
 	}
 	got := map[ID]Rect{}
 	for _, it := range p.Items {
@@ -238,7 +238,7 @@ func TestHitTestAndClick(t *testing.T) {
 	if hit(21, 8) != "a0" || hit(25, 8) != "a0" || hit(32, 8) != "" {
 		t.Error("item hit/miss wrong on row 8")
 	}
-	if hit(42, 9) != "b1" || hit(30, 14) != OK || hit(45, 14) != Cancel {
+	if hit(42, 9) != "b1" || hit(32, 14) != OK || hit(45, 14) != Cancel {
 		t.Error("expected b1, OK, Cancel hits")
 	}
 	for _, miss := range [][2]int{{20, 8}, {20, 7}, {40, 9}, {41, 10}, {41, 13}, {37, 14}, {0, 0}} {
@@ -454,12 +454,12 @@ func TestWidthGrowsToFitButtons(t *testing.T) {
 			{ID: "c", Label: "Cable", Mnemonic: 'C'},
 		},
 	}
-	// Three buttons are 12 + 10 + 11 wide with two 2-cell gaps: 37 between the borders.
+	// Three buttons are 10 + 8 + 9 wide with two 2-cell gaps: 31 between the borders.
 	for _, unclamped := range []bool{false, true} {
 		spec.Unclamped = unclamped
 		p, ok := Place(80, 24, spec)
-		if !ok || p.Rect.Width != 39 {
-			t.Fatalf("unclamped=%v: rect %+v ok=%v, want width 39", unclamped, p.Rect, ok)
+		if !ok || p.Rect.Width != 33 {
+			t.Fatalf("unclamped=%v: rect %+v ok=%v, want width 33", unclamped, p.Rect, ok)
 		}
 		last := p.Items[len(p.Items)-1]
 		if last.Rect.X < p.Rect.X+1 || last.Rect.X+last.Rect.Width > p.Rect.X+p.Rect.Width-1 {

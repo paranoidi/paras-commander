@@ -465,7 +465,8 @@ func TestMouseDialogOptionsAndOK(t *testing.T) {
 	if !app.model.SortDialog.SortReverse {
 		t.Fatal("checkbox click did not toggle Reverse")
 	}
-	x, y = screenTextCell(t, app, "[ OK ]")
+	start, end := app.styles.DialogButtonCaps()
+	x, y = screenTextCell(t, app, start+"OK"+end)
 	click(app, x+2, y, tcell.Button1)
 	if app.model.SortDialog.Open {
 		t.Fatal("OK click did not apply and close")
@@ -741,7 +742,8 @@ func styleAt(a *App, x, y int) tcell.Style {
 func TestMouseHoverHighlightsDialogButton(t *testing.T) {
 	app := tallMouseTestApp(t)
 	app.openSortDialog()
-	x, y := screenTextCell(t, app, "[ Cancel ]") // x+3 is "a", past the mnemonic
+	start, end := app.styles.DialogButtonCaps()
+	x, y := screenTextCell(t, app, start+"Cancel"+end) // x+3 is "a", past the mnemonic
 	focus := app.model.SortDialog.Focus
 	plain := styleAt(app, x+3, y)
 	if _, rendered := app.handleMouse(mouseEv(x+3, y, tcell.ButtonNone)); !rendered {

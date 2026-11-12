@@ -10,7 +10,7 @@
   │  amber/cinder_fable.md                                                  │  
   │  amber/delta_harbor.png                                                 │  
   ├──────────────────────────────────────────────────────────────────────────┤  
-  │                           [ OK ]    [ Cancel ]                           │  
+  │                            [ OK ]  [ Cancel ]                            │  
   └──────────────────────────────────────────────────────────────────────────┘  
                                                                                 
 -- legend --
@@ -27,7 +27,8 @@ j fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 k fg=0x300519aba bg=0x100000008 attrs=0 ul=0 ulc=0x0
 l fg=0x300dddddd bg=0x100000008 attrs=0 ul=0 ulc=0x0
 m fg=0x100000005 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-n fg=0x100000005 bg=0x0 attrs=1 ul=0 ulc=0x0
+n fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+o fg=0x100000005 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
@@ -40,6 +41,6 @@ aabbkbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabblbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbmbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbbbbbbbbgggnggggbbgggnggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbnnonnnbbnnonnnnnnnbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

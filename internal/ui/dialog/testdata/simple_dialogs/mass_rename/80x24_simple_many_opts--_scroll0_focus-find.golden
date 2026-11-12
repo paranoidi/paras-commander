@@ -20,7 +20,7 @@
   │ marble-8.txt                        marble-8.txt                         │  
   │ otter-9.txt                         otter-9.txt                          │  
   ├──────────────────────────────────────────────────────────────────────────┤  
-  │                    [ OK ]    [ Apply ]    [ Cancel ]                     │  
+  │                      [ OK ]  [ Apply ]  [ Cancel ]                       │  
   └──────────────────────────────────────────────────────────────────────────┘  
                                                                                 
 -- legend --
@@ -35,7 +35,8 @@ h fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
 i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 j fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 k fg=0x100000002 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-l fg=0x100000005 bg=0x0 attrs=1 ul=0 ulc=0x0
+l fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+m fg=0x100000005 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
@@ -58,6 +59,6 @@ aabbbbbbbbbbjjjjbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddbbaa
 aabbbbbbbbbbjjjjbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddbbaa
 aabbbbbbbbbjjjjbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbhhhlhhhhbbhhhlhhhhhhhbbhhhlhhhhhhhhbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbllmlllbbllmllllllbbllmlllllllbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

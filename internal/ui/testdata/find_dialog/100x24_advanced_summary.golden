@@ -18,7 +18,7 @@
   │ 󰉋 cinder                                                                                     │  
   │  cinder/delta_fable.png                                                                     │  
   ├──────────────────────────────────────────────────────────────────────────────────────────────┤  
-  │                                     [ OK ]    [ Cancel ]                                     │  
+  │                                      [ OK ]  [ Cancel ]                                      │  
   └──────────────────────────────────────────────────────────────────────────────────────────────┘  
                                                                                                     
                                                                                                     
@@ -38,7 +38,8 @@ k fg=0x300519aba bg=0x100000008 attrs=0 ul=0 ulc=0x0
 l fg=0x300dddddd bg=0x100000008 attrs=0 ul=0 ulc=0x0
 m fg=0x100000005 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 n fg=0x30089e051 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-o fg=0x100000005 bg=0x0 attrs=1 ul=0 ulc=0x0
+o fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+p fg=0x100000005 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -59,7 +60,7 @@ aabbnbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 aabbiibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbmbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbgggoggggbbgggoggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbboopooobboopooooooobbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

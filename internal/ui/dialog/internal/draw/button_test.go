@@ -9,9 +9,10 @@ import (
 
 func TestDialogButtonUsesThemeCaps(t *testing.T) {
 	th := theme.Default()
-	if got := DialogButtonWidth("OK"); got != 8 { // " [ OK ] "
-		t.Fatalf("default width = %d, want 8", got)
+	if got := DialogButtonWidth("OK"); got != 6 { // no Nerd Font icons: "[ OK ]"
+		t.Fatalf("default width = %d, want 6", got)
 	}
+	th.UseNerdfontIcons = true
 	th.Icons = map[string]string{theme.IconKeyDialogButtonStart: "▎ ", theme.IconKeyDialogButtonEnd: " ▕"}
 	th.DialogButtonInactiveCaps.Start = tcell.StyleDefault.Foreground(tcell.ColorRed)
 	SetButtonCaps(th)

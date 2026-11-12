@@ -144,10 +144,19 @@ func (t Theme) IconDialogRadio(selected bool) string {
 
 // DialogButtonCaps returns the strings drawn before and after a dialog button's label
 // ([icons.dialog.button] start / end). They are not trimmed: their spaces are part of the
-// button. Not gated on UseNerdfontIcons; a theme picks glyphs its fonts have.
+// button. When UseNerdfontIcons is false, returns the ASCII caps "[ " / " ]", as wide as the
+// default pill caps so the icon setting never changes a button's width (the cap colors are then
+// not applied, DialogButtonCapsStyled).
 func (t Theme) DialogButtonCaps() (start, end string) {
+	if !t.UseNerdfontIcons {
+		return "[ ", " ]"
+	}
 	return t.Icons[IconKeyDialogButtonStart], t.Icons[IconKeyDialogButtonEnd]
 }
+
+// DialogButtonCapsStyled reports whether the [dialog.button] <state>.start / .end colors apply:
+// they are tuned for the theme's own caps, not the ASCII fallback.
+func (t Theme) DialogButtonCapsStyled() bool { return t.UseNerdfontIcons }
 
 // ButtonCapStyles colors the non-space runes of a dialog button's start and end caps: fg and bg
 // each replace the button state's own when set.

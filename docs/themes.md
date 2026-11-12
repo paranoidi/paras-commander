@@ -43,7 +43,7 @@ red = 1
 bg = "#303446"       # background of the whole UI; "default" keeps the terminal's own
 surface = "bright_black"   # dialog / chip fill
 muted = "bright_black"     # dimmed text
-# ... 33 roles in all, listed in themes/default.toml
+# ... 34 roles in all, listed in themes/default.toml
 
 [menu.bar]
 active   = { fg = "fg" }
@@ -62,6 +62,7 @@ Colors come in two layers. `[palette]` holds only raw colors: the 16 ANSI slot n
 | `header_bg` | `blue` | panel headers |
 | `menu_bg` | `blue` | menu dropdown fill and frame |
 | `focus_bg` / `focus_fg` | `cyan` / `black` | the focused item: open menu-bar title, selected pulldown entry, active dialog button, selected completion entry, hovered footer entry |
+| `button_bg` | `black` | face of an unfocused dialog button |
 | `file_cursor_bg` / `file_cursor_fg` | `cyan` / `black` | cursor row of an active file list (panels, duplicate finder) |
 | `file_cursor_dim` | `black` | cursor row of an inactive or blocked panel |
 | `highlight_bg` | `bright_blue` | clickable part of the hovered footer entry, disk usage cursor on a selected row, mount mark |
@@ -117,7 +118,7 @@ The default theme recolors `file`, `folder_open`, `folder_mount`, `folder_exclud
 
 ## Status glyphs
 
-Job states each have an icon and a color: scanning, queued, running, paused, canceling, canceled, failed, decision and completed. Glyphs are under `[icons.jobs.list]` and colors under `[status]`; the menu-bar job strip uses `[icons.menu.job]`. The result icons of the jobs view Operations panel are `[icons.jobs.operations]` `success` / `failed` / `skipped`, colored by `[jobs.operations]` (the same colors mark the failed and skipped counts in the Details panel); without them the completed / failed / paused job colors and matching icons are used. Dialog buttons are drawn as `[icons.dialog.button]` `start`, the label and `end` (default `" [ "` and `" ] "`; spaces are kept and count toward the button width, so `start = " "` / `end = " "` drops the brackets). `[dialog.button]` `active.start`, `inactive.end` and so on color those caps per button state (`active`, `active_destructive`, `inactive`). A cap color's `fg` and `bg` each replace the button's own when set, and apply to the cap's glyphs only: spaces in a cap keep the button's colors. Examples: a light left edge and a dark right edge for a raised look, or powerline half-circles colored as the button on the dialog background for a pill. Other icon groups: `[icons.menu.status]` (`separator` between status commands), `[icons.filelist]` (row suffixes such as new, renamed, selection, pinned), `[icons.dialog]` (missing, history), `[icons.tree]`, `[icons.scrollbar]`. Without Nerd Font icons (`use_nerdfont_icons = false`) ASCII markers are used instead.
+Job states each have an icon and a color: scanning, queued, running, paused, canceling, canceled, failed, decision and completed. Glyphs are under `[icons.jobs.list]` and colors under `[status]`; the menu-bar job strip uses `[icons.menu.job]`. The result icons of the jobs view Operations panel are `[icons.jobs.operations]` `success` / `failed` / `skipped`, colored by `[jobs.operations]` (the same colors mark the failed and skipped counts in the Details panel); without them the completed / failed / paused job colors and matching icons are used. Dialog buttons are drawn as `[icons.dialog.button]` `start`, the label and `end` (default: powerline half-circles that make each button a pill; without Nerd Font icons `"[ "` and `" ]"` in the button's own colors; spaces are kept and count toward the button width, so `start = " "` / `end = " "` drops the brackets). `[dialog.button]` `active.start`, `inactive.end` and so on color those caps per button state (`active`, `active_destructive`, `inactive`). A cap color's `fg` and `bg` each replace the button's own when set, and apply to the cap's glyphs only: spaces in a cap keep the button's colors. Examples: a light left edge and a dark right edge for a raised look, or powerline half-circles colored as the button on the dialog background for a pill. Other icon groups: `[icons.menu.status]` (`separator` between status commands), `[icons.filelist]` (row suffixes such as new, renamed, selection, pinned), `[icons.dialog]` (missing, history), `[icons.tree]`, `[icons.scrollbar]`. Without Nerd Font icons (`use_nerdfont_icons = false`) ASCII markers are used instead.
 
 Changing the theme also changes how the Messages toasts look (`message.info`, `message.warn`, `message.error`).
 

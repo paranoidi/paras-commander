@@ -14,8 +14,8 @@
   ├──────────────────────────────────────────────────────────────────────────┤  
   │ No rule matched. Overwrite this file?                                    │  
   ├──────────────────────────────────────────────────────────────────────────┤  
-  │           [ Overwrite ]    [ Overwrite All ]    [ Advanced… ]            │  
-  │                 [ Skip ]    [ Skip All ]    [ Postpone ]                 │  
+  │             [ Overwrite ]  [ Overwrite All ]  [ Advanced… ]              │  
+  │                   [ Skip ]  [ Skip All ]  [ Postpone ]                   │  
   │                                [ Cancel ]                                │  
   └──────────────────────────────────────────────────────────────────────────┘  
                                                                                 
@@ -29,8 +29,8 @@ b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 d fg=0x100000007 bg=0x100000001 attrs=0 ul=0 ulc=0x0
 e fg=0x100000005 bg=0x100000001 attrs=1 ul=0 ulc=0x0
-f fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
-g fg=0x100000005 bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000005 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -47,9 +47,9 @@ aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbdddedddddddddddbbfffffffffffffgfffffbbffffgffffffffffbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbfffgffffffbbffffgfffffffffbbfffgffffffffffbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbfffgffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbddeddddddddddbbffffffffffffgffffbbfffgfffffffffbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbffgfffffbbfffgffffffffbbffgfffffffffbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbffgfffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

@@ -34,6 +34,7 @@ surface = "bright_black"      # dialog fill, chips, bar tracks, carousel header,
 header_bg = "blue"            # panel headers
 menu_bg = "blue"              # menu dropdown fill and frame
 focus_bg = "cyan"             # the focused item: open menu-bar title, selected pulldown entry, active dialog button, selected completion entry, hovered footer entry
+button_bg = "black"           # face of an unfocused dialog button
 file_cursor_bg = "cyan"       # cursor row of an active file list (panels, duplicate finder)
 file_cursor_dim = "black"     # cursor row of an inactive, carousel-inactive or blocked panel
 highlight_bg = "bright_blue"  # clickable part of the hovered footer entry, disk usage cursor on a selected row, mount mark
@@ -315,17 +316,18 @@ search_icon = { fg = "faint", bg = "surface" }
 
 [dialog.button]
 # <state>.start / <state>.end color the non-space runes of the [icons.dialog.button] caps: fg and
-# bg each replace the state's own when set (spaces keep the state's style). bold = false only
-# makes the entry a style.
+# bg each replace the state's own when set (spaces keep the state's style). Pill caps: the
+# half-circle in the face color on the dialog surface. Without Nerd Font icons the caps are
+# "[ " / " ]" in the state's style and these are ignored.
 active = { fg = "focus_fg", bg = "focus_bg" }
-active.start = { bold = false }
-active.end = { bold = false }
+active.start = { fg = "focus_bg", bg = "surface" }
+active.end = { fg = "focus_bg", bg = "surface" }
 active_destructive = { fg = "fg", bg = "danger" }
-active_destructive.start = { bold = false }
-active_destructive.end = { bold = false }
-inactive = { fg = "fg", bg = "bg" }
-inactive.start = { bold = false }
-inactive.end = { bold = false }
+active_destructive.start = { fg = "danger", bg = "surface" }
+active_destructive.end = { fg = "danger", bg = "surface" }
+inactive = { fg = "fg", bg = "button_bg" }
+inactive.start = { fg = "button_bg", bg = "surface" }
+inactive.end = { fg = "button_bg", bg = "surface" }
 
 [dialog.input]
 active = { fg = "fg_strong", bold = true }
@@ -458,8 +460,8 @@ unchecked = "\U000F0131"
 mixed = "\U000F06F2"
 
 [icons.dialog.button]       # drawn around every dialog button label; spaces count as button width
-start = " [ "
-end = " ] "
+start = "\ue0b6 "            # powerline left half-circle (pill)
+end = " \ue0b4"              # powerline right half-circle
 
 [icons.dialog.radio]
 selected = "\U000F043E"

@@ -14,7 +14,7 @@
      ├────────────────────────────────────────────────────────────────────┤     
      │ [x] Extract as directory                                           │     
      ├────────────────────────────────────────────────────────────────────┤     
-     │                        [ OK ]    [ Cancel ]                        │     
+     │                         [ OK ]  [ Cancel ]                         │     
      └────────────────────────────────────────────────────────────────────┘     
                                                                                 
                                                                                 
@@ -33,8 +33,8 @@ f fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 g fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
 h fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 i fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-j fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
-k fg=0x100000005 bg=0x0 attrs=1 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+k fg=0x100000005 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -51,7 +51,7 @@ aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabhhhhhibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbjjjkjjjjbbjjjkjjjjjjjjbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
+aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbjjkjjjbbjjkjjjjjjjbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

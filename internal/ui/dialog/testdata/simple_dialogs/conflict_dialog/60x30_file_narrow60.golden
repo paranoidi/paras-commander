@@ -14,8 +14,8 @@
   ├──────────────────────────────────────────────────────┤  
   │ Overwrite this file?                                 │  
   ├──────────────────────────────────────────────────────┤  
-  │ [ Overwrite ]    [ Overwrite All ]    [ Advanced… ]  │  
-  │       [ Skip ]    [ Skip All ]    [ Postpone ]       │  
+  │   [ Overwrite ]  [ Overwrite All ]  [ Advanced… ]    │  
+  │         [ Skip ]  [ Skip All ]  [ Postpone ]         │  
   │                      [ Cancel ]                      │  
   └──────────────────────────────────────────────────────┘  
                                                             
@@ -27,8 +27,8 @@
 a fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
 b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
-e fg=0x100000005 bg=0x0 attrs=1 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+e fg=0x100000005 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000001 attrs=0 ul=0 ulc=0x0
 g fg=0x100000005 bg=0x100000001 attrs=1 ul=0 ulc=0x0
 -- styles --
@@ -47,9 +47,9 @@ aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabdddedddddddddddbbdddddddddddddedddddbbffffgffffffffffbbaa
-aabbbbbbbdddeddddddbbddddedddddddddbbdddeddddddddddbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbbbdddeddddddddbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbddeddddddddddbbddddddddddddeddddbbfffgfffffffffbbbbbaa
+aabbbbbbbbbbddedddddbbdddeddddddddbbddedddddddddbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbddedddddddbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

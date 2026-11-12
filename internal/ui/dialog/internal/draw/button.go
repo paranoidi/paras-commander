@@ -15,31 +15,35 @@ import (
 // and drawing reads the same pair: measured and drawn widths always agree.
 // ponytail: process-wide like SetListScroll; thread theme.Theme through dlg.Place if two themes
 // ever need to be laid out at once.
-var buttonCaps atomic.Pointer[[2]string]
+var buttonCaps atomic.Pointer[capSet]
 
-var defaultButtonCaps = sync.OnceValue(func() [2]string {
-	start, end := theme.Default().DialogButtonCaps()
-	return [2]string{start, end}
-})
+// capSet is the applied theme's caps and whether its cap colors apply to them.
+type capSet struct {
+	start, end string
+	styled     bool
+}
+
+func capSetOf(t theme.Theme) *capSet {
+	start, end := t.DialogButtonCaps()
+	return &capSet{start: start, end: end, styled: t.DialogButtonCapsStyled()}
+}
+
+var defaultButtonCaps = sync.OnceValue(func() *capSet { return capSetOf(theme.Default()) })
 
 // SetButtonCaps makes t's [icons.dialog.button] caps the ones every dialog button is drawn and
 // measured with.
-func SetButtonCaps(t theme.Theme) {
-	start, end := t.DialogButtonCaps()
-	buttonCaps.Store(&[2]string{start, end})
-}
+func SetButtonCaps(t theme.Theme) { buttonCaps.Store(capSetOf(t)) }
 
-func activeButtonCaps() (start, end string) {
+func activeButtonCaps() *capSet {
 	if p := buttonCaps.Load(); p != nil {
-		return p[0], p[1]
+		return p
 	}
-	c := defaultButtonCaps()
-	return c[0], c[1]
+	return defaultButtonCaps()
 }
 
 func dialogButtonWidth(label string) int {
-	start, end := activeButtonCaps()
-	return utf8.RuneCountInString(start) + utf8.RuneCountInString(label) + utf8.RuneCountInString(end)
+	c := activeButtonCaps()
+	return utf8.RuneCountInString(c.start) + utf8.RuneCountInString(label) + utf8.RuneCountInString(c.end)
 }
 
 // DialogButtonWidth returns the rune width occupied by DrawDialogButton for label.
@@ -86,8 +90,11 @@ func DrawDialogButton(screen tcell.Screen, x, y int, label string, shortcut rune
 	case focused: // disabled buttons remain focusable; show active chrome while focused
 		baseStyle, caps = styles.DialogButtonActive, styles.DialogButtonActiveCaps
 	}
-	startCap, endCap := activeButtonCaps()
-	out := drawCap(screen, x, y, startCap, baseStyle, caps.Start)
+	set := activeButtonCaps()
+	if !set.styled {
+		caps = theme.ButtonCapStyles{}
+	}
+	out := drawCap(screen, x, y, set.start, baseStyle, caps.Start)
 
 	highlighted := false
 	for _, r := range label {
@@ -100,6 +107,6 @@ func DrawDialogButton(screen tcell.Screen, x, y int, label string, shortcut rune
 		out++
 	}
 
-	out = drawCap(screen, out, y, endCap, baseStyle, caps.End)
+	out = drawCap(screen, out, y, set.end, baseStyle, caps.End)
 	return out - x
 }
