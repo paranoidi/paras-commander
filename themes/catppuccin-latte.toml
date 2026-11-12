@@ -30,7 +30,7 @@ leader_bg = "#dce0e8"
 focus_bg = "#ccd0da"
 button_bg = "#eff1f5"
 button_focus_bg = "#acb0be"
-file_cursor_bg = "#7c7f93"
+file_cursor_bg = "#c9cdd8"
 file_cursor_dim = "#dce0e8"
 highlight_bg = "#1e66f5"
 range_bg = "#9ca0b0"
@@ -50,7 +50,7 @@ primary = "blue"
 inactive_frame = "#acb0be"
 directory = "blue"
 symlink = "bright_cyan"
-selected = "yellow"
+selected = "#a85600"
 info = "cyan"
 success = "green"
 success_strong = "bright_green"
@@ -86,16 +86,14 @@ error = { fg = "ink", bg = "danger", bold = true }
 success = { fg = "fg_strong", bg = "success" }
 
 [panel.row]
-cursor.range = { fg = "fg", bg = "selected", icon = "fg" }  # tuned
-cursor.range.selected = { fg = "fg", bg = "selected", bold = true, icon = "fg" }  # tuned
-selected = { fg = "fg", bold = true }
+cursor.range = { fg = "bg", bg = "selected", icon = "bg" }  # light text on the amber range row  # tuned
+cursor.range.selected = { fg = "bg", bg = "selected", bold = true, icon = "bg" }  # tuned
+selected = { fg = "selected", bold = true }  # marked files: the same amber on every row  # tuned
 symlink = { fg = "fg" }
 
 [panel.row.mark]
-selection_subtree = { fg = "fg" }
 new.previous = { fg = "fg" }
 pinned = { fg = "fg" }
-range_anchor = { fg = "fg" }
 job.read = { fg = "fg" }
 
 [panel.icon.preview]
@@ -105,8 +103,6 @@ cold = { fg = "fg" }          # not yet preloaded
 [panel.status]
 sync = { fg = "fg", bold = true }
 quick_view = { fg = "fg", bold = true }
-selection_size = { fg = "fg" }
-stash = { fg = "fg", bold = true }
 find_parked = { fg = "fg", bold = true }   # find dialog parked from this panel
 entry_filter = { fg = "fg", bold = true }
 other_panel = { fg = "fg", bold = true }
@@ -129,15 +125,15 @@ warn = { fg = "fg" }
 selected = { fg = "fg_strong", bg = "surface", icon.file = "faint", icon.folder_open = "faint", icon.folder_mount = "faint", icon.folder_excluded = "faint", icon.fileindex = "faint", icon.git = "faint", icon.suffix = "faint" }
 
 [panel.dedup]
-row.cursor.all_marked = { fg = "fg_strong", bg = "file_cursor_bg", bold = true }
+row.cursor.all_marked = { fg = "fg", bg = "file_cursor_bg", bold = true }
 row.keep = { fg = "fg", bold = true }
-row.cursor.keep = { fg = "fg_strong", bg = "file_cursor_bg", bold = true }
+row.cursor.keep = { fg = "fg", bg = "file_cursor_bg", bold = true }
 full_dir = { fg = "fg" }
 full_dir_content = { fg = "fg" }
 potential = { fg = "fg" }
 
 [panel.active]
-row.cursor.selected = { fg = "selected", bg = "file_cursor_bg", bold = true, icon = "file_cursor_fg" }  # keep yellow marked files on the cursor row: repair would swap it for ink  # tuned
+row.cursor.selected = { fg = "selected", bg = "file_cursor_bg", bold = true, icon = "file_cursor_fg" }  # marked files: the same amber on the cursor row  # tuned
 row.cursor.unique = { fg = "fg_strong", bg = "success", icon = "ink" }
 usage.cursor = { fg = "ink", bg = "highlight_bg" }  # tuned
 usage.cursor.selected = { fg = "ink", bg = "highlight_bg", bold = true }
@@ -153,11 +149,11 @@ title = { fg = "fg", bold = true }
 frame = { fg = "fg" }
 
 [panel.carousel.inactive]
-row.cursor.selected = { fg = "fg", bg = "file_cursor_dim", bold = true }
+row.cursor.selected = { fg = "selected", bg = "file_cursor_dim", bold = true }  # tuned
 
 [panel.inactive]
 frame = { fg = "inactive_frame" }  # keep the dim frame: repair would brighten it  # tuned
-row.cursor.selected = { fg = "fg", bg = "file_cursor_dim", bold = true }
+row.cursor.selected = { fg = "selected", bg = "file_cursor_dim", bold = true }  # tuned
 usage.cursor.selected = { fg = "ink", bg = "highlight_bg", bold = true }
 
 [panel.blocked]
@@ -200,9 +196,6 @@ group = { fg = "fg", bold = true }
 [dialog.help]
 section = { fg = "fg_strong", bold = true }
 key     = { fg = "fg_strong", bold = true }
-
-[dialog.completion]
-match         = { fg = "fg", bg = "bg", bold = true }
 
 [tooltip]
 info = { fg = "ink" }       # foreground of the info icon ([icons.dialog] info) on the box
