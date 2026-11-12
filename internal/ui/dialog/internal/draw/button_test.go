@@ -13,7 +13,7 @@ func TestDialogButtonUsesThemeCaps(t *testing.T) {
 		t.Fatalf("default width = %d, want 8", got)
 	}
 	th.Icons = map[string]string{theme.IconKeyDialogButtonStart: "▎ ", theme.IconKeyDialogButtonEnd: " ▕"}
-	th.DialogButtonStart = tcell.StyleDefault.Foreground(tcell.ColorRed)
+	th.DialogButtonInactiveCaps.Start = tcell.StyleDefault.Foreground(tcell.ColorRed)
 	SetButtonCaps(th)
 	t.Cleanup(func() { SetButtonCaps(theme.Default()) })
 

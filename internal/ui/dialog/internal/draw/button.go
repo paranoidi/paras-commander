@@ -69,22 +69,15 @@ func drawRunes(screen tcell.Screen, x, y int, s string, style tcell.Style) int {
 // Output shape: start cap, label, end cap ([icons.dialog.button]), all on the state's background.
 // Returns the rendered width in rune columns.
 func DrawDialogButton(screen tcell.Screen, x, y int, label string, shortcut rune, focused, destructive, disabled bool, styles theme.Theme) int {
-	var baseStyle tcell.Style
+	baseStyle, caps := styles.DialogButtonInactive, styles.DialogButtonInactiveCaps
 	switch {
-	case disabled && focused:
-		// Disabled buttons remain focusable; show active chrome while focused.
-		baseStyle = styles.DialogButtonActive
-	case disabled:
-		baseStyle = styles.DialogButtonInactive
-	case focused && destructive:
-		baseStyle = styles.DialogButtonActiveDestructive
-	case focused:
-		baseStyle = styles.DialogButtonActive
-	default:
-		baseStyle = styles.DialogButtonInactive
+	case focused && destructive && !disabled:
+		baseStyle, caps = styles.DialogButtonActiveDestructive, styles.DialogButtonActiveDestructiveCaps
+	case focused: // disabled buttons remain focusable; show active chrome while focused
+		baseStyle, caps = styles.DialogButtonActive, styles.DialogButtonActiveCaps
 	}
 	startCap, endCap := activeButtonCaps()
-	out := drawRunes(screen, x, y, startCap, capStyle(baseStyle, styles.DialogButtonStart))
+	out := drawRunes(screen, x, y, startCap, capStyle(baseStyle, caps.Start))
 
 	highlighted := false
 	for _, r := range label {
@@ -97,6 +90,6 @@ func DrawDialogButton(screen tcell.Screen, x, y int, label string, shortcut rune
 		out++
 	}
 
-	out = drawRunes(screen, out, y, endCap, capStyle(baseStyle, styles.DialogButtonEnd))
+	out = drawRunes(screen, out, y, endCap, capStyle(baseStyle, caps.End))
 	return out - x
 }

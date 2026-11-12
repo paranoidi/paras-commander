@@ -148,3 +148,14 @@ func (t Theme) IconDialogRadio(selected bool) string {
 func (t Theme) DialogButtonCaps() (start, end string) {
 	return t.Icons[IconKeyDialogButtonStart], t.Icons[IconKeyDialogButtonEnd]
 }
+
+// ButtonCapStyles colors a dialog button's start and end caps; only fg counts (no fg: the
+// button state's own fg).
+type ButtonCapStyles struct{ Start, End tcell.Style }
+
+func buttonCaps(styles map[string]tcell.Style, state string) ButtonCapStyles {
+	return ButtonCapStyles{
+		Start: styles["dialog.button."+state+".start"],
+		End:   styles["dialog.button."+state+".end"],
+	}
+}
