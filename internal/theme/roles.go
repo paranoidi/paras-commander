@@ -26,7 +26,7 @@ var roleDefs = []roleDef{
 	{"bg", "default"},
 	{"surface", "bright_black"},
 	{"header_bg", "blue"},
-	{"inactive_header_bg", "blue"},
+	{"inactive_header_bg", "bright_black"},
 	{"menu_bg", "blue"},
 	{"focus_bg", "cyan"},
 	{"button_bg", "black"},

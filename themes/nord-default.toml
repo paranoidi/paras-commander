@@ -23,14 +23,14 @@ bright_white = "#eceff4"
 [roles]
 bg = "#2e3440"
 surface = "#3f4758"
-header_bg = "#4c566a"
+header_bg = "#5e81ac"
 inactive_header_bg = "#4c566a"
 menu_bg = "#3b4252"
 focus_bg = "#4c566a"
 button_bg = "#2e3440"
 button_focus_bg = "#4c566a"
-file_cursor_bg = "#3f4758"
-file_cursor_dim = "#434c5e"
+file_cursor_bg = "#4c566a"
+file_cursor_dim = "#3b4252"
 highlight_bg = "bright_blue"
 range_bg = "#434c5e"
 range_unselect_bg = "#3b4252"
@@ -87,6 +87,7 @@ critical = { fg = "fg" }
 [panel.dedup]
 row.all_marked = { fg = "fg", bold = true }
 row.cursor.all_marked = { fg = "fg", bg = "file_cursor_bg", bold = true }
+row.cursor.keep = { fg = "fg", bg = "file_cursor_bg", bold = true }
 full_dir_hidden = { fg = "fg" }
 
 [panel.active]

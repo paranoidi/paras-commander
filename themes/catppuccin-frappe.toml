@@ -24,7 +24,7 @@ bright_white = "#a5adce"
 bg = "#303446"
 surface = "#414559"
 header_bg = "#8caaee"
-inactive_header_bg = "#8caaee"
+inactive_header_bg = "#626880"
 menu_bg = "#232634"
 focus_bg = "#51576d"
 button_bg = "#303446"
@@ -81,7 +81,6 @@ usage.cursor.selected = { fg = "ink", bg = "highlight_bg", bold = true }
 
 [panel.inactive]
 frame = { fg = "inactive_frame" }  # keep the dim frame: repair would brighten it  # tuned
-header = { fg = "ink", bg = "inactive_header_bg", bold = true }
 usage.cursor.selected = { fg = "ink", bg = "highlight_bg", bold = true }
 
 [panel.blocked]
