@@ -247,3 +247,25 @@ func TestSameDirReloadKeepsDriftOfUnchangedDirs(t *testing.T) {
 		t.Fatalf("after ForgetIndexDrift drift = %+v, want both dirs", reqs)
 	}
 }
+
+func TestRefreshIfChangedAppliesOnlyADifference(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "harbor.txt"), []byte("anchor"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	loc, _ := pathloc.File(dir)
+	var s State
+	if err := s.NavigateToPath(loc, "", 10); err != nil {
+		t.Fatal(err)
+	}
+	epoch := s.ListingEpoch
+	if err := s.RefreshIfChanged(10); err != nil || s.ListingEpoch != epoch {
+		t.Fatalf("unchanged reload applied: epoch %d -> %d err=%v", epoch, s.ListingEpoch, err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "beacon.txt"), []byte("light"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.RefreshIfChanged(10); err != nil || s.ListingEpoch == epoch || len(s.Entries) < 2 {
+		t.Fatalf("changed reload not applied: epoch %d entries %d err=%v", s.ListingEpoch, len(s.Entries), err)
+	}
+}

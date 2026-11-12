@@ -23,6 +23,9 @@ type AsyncLoadRequest struct {
 	Rollback func()
 	// OnApplied runs on the main thread once, after ApplyListing succeeds for this request.
 	OnApplied func()
+	// SkipUnchanged drops a same-directory flat listing equal to the rows shown
+	// (fsbackend.EntriesListingEqual), so a confirming reload costs no apply.
+	SkipUnchanged bool
 	// SyncHistoryHead, when true, sets History[0] to Path after a successful load (NavigateToPath).
 	SyncHistoryHead bool
 	// ListingEpoch is State.ListingEpoch at schedule time. Same-directory applies whose epoch no
@@ -204,6 +207,7 @@ type AsyncLoadScheduler func(req AsyncLoadRequest) bool
 type asyncLoadOpts struct {
 	rollback        func()
 	onApplied       func()
+	skipUnchanged   bool
 	syncHistoryHead bool
 	historyVisit    uint64
 	historyPath     string

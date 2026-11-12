@@ -442,6 +442,25 @@ func (s *State) RefreshWithHook(viewportRows int, onApplied func()) error {
 	return s.load(s.Path, selectedName, viewportRows, priorCursor, asyncLoadOpts{onApplied: onApplied})
 }
 
+// RefreshIfChanged is Refresh that applies the reload only when the listing differs from the rows
+// shown (ListingUnchanged): for a reload that usually confirms what a refresh already showed.
+func (s *State) RefreshIfChanged(viewportRows int) error {
+	if s.ListingPending && s.ListingPendingPath != "" && s.ListingPendingPath != s.Path.String() {
+		return nil
+	}
+	selectedName := ""
+	if e, ok := s.CurrentEntry(); ok {
+		selectedName = e.Name
+	}
+	return s.load(s.Path, selectedName, viewportRows, s.Cursor, asyncLoadOpts{skipUnchanged: true})
+}
+
+// ListingUnchanged reports whether a listing of loc equals the flat listing shown. A tree reload
+// also re-expands its children, so it never counts as unchanged.
+func (s *State) ListingUnchanged(loc pathloc.Path, entries []fsbackend.Entry) bool {
+	return s.ListLayout != ListLayoutTree && loc.Equal(s.Path) && fsbackend.EntriesListingEqual(entries, BackendEntriesFromPanel(s.Entries))
+}
+
 // RefreshOrNavigateToExistingAncestor reloads the current directory when it still exists.
 // When the current path is missing, it walks up to the nearest existing ancestor and navigates
 // there in one step (highlighting the first missing child name when possible).
@@ -1510,6 +1529,7 @@ func (s *State) load(loc pathloc.Path, selectedName string, viewportRows int, in
 			CenterRecalledCursor: centerRecalled,
 			Rollback:             remote.rollback,
 			OnApplied:            remote.onApplied,
+			SkipUnchanged:        remote.skipUnchanged,
 			SyncHistoryHead:      remote.syncHistoryHead,
 			ListingEpoch:         s.ListingEpoch,
 			TreePrefetch:         s.TreePrefetchIDs(loc),
@@ -1530,6 +1550,9 @@ func (s *State) load(loc pathloc.Path, selectedName string, viewportRows int, in
 	}
 	s.GitignoreActive = gitignoreActive
 	s.DotfilesHiddenActive = dotfilesHiddenActive
+	if remote.skipUnchanged && s.ListingUnchanged(listingLoc, backendEntries) {
+		return nil
+	}
 	if err := s.ApplyListing(listingLoc, backendEntries, selectedName, viewportRows, indexFallback, centerRecalled); err != nil {
 		return err
 	}

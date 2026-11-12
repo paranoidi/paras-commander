@@ -351,6 +351,9 @@ func (a *App) applyOnePanelAsyncLoad(p panelAsyncLoadPayload) bool {
 	}
 	pan.GitignoreActive = p.res.gitignoreActive
 	pan.DotfilesHiddenActive = p.res.dotfilesHiddenActive
+	if p.req.SkipUnchanged && pan.ListingUnchanged(p.res.loc, p.res.entries) {
+		return true
+	}
 	// The prefetch ids were computed for req.Loc; if the listing landed elsewhere (ancestor climb)
 	// they say nothing about the folders remembered there, so nothing may be collapsed.
 	collapseMissing := p.res.collapseMissing && p.res.loc.Equal(p.req.Loc)

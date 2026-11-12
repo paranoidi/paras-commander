@@ -172,7 +172,7 @@ func (a *App) refreshIndexViews() { a.refreshIndexViewsIn(nil) }
 // with fileindex, or showing the index itself, fileindex://, whose listing follows the changes jobs
 // make on disk through the fschange sink), and those panels' fileindex meta columns, so index state
 // and those columns follow an index change. A listing in flight may have read the index before the
-// change, so Refresh replaces it (it leaves a navigation alone). UI goroutine.
+// change, so the reload replaces it (it leaves a navigation alone). UI goroutine.
 func (a *App) refreshIndexViewsIn(dirs []string) {
 	for _, id := range []int{ui.PrimaryPanel, ui.SecondaryPanel} {
 		p := a.panelByID(id)
@@ -182,8 +182,12 @@ func (a *App) refreshIndexViewsIn(dirs []string) {
 		if p.ShowsIndex() {
 			if a.indexChangeReachesSubtrees(p, dirs) {
 				p.ForgetIndexDrift()
+				_ = p.Refresh(a.panelViewportRows(id))
+			} else {
+				// A change in the panel's own directory: the delete or rename that caused it
+				// reloaded the panel already, so this one only lands a difference (a ghost row).
+				_ = p.RefreshIfChanged(a.panelViewportRows(id))
 			}
-			_ = p.Refresh(a.panelViewportRows(id))
 		}
 		a.metaCtrl.RefreshProviders(id)
 	}
