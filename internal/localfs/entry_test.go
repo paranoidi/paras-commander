@@ -251,6 +251,32 @@ func TestListDirLinkToUnreadableTargetStaysAccessDenied(t *testing.T) {
 	}
 }
 
+func TestListDirTraverseOnlyDirIsAccessDenied(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root bypasses permission checks")
+	}
+	dir := t.TempDir()
+	vault := filepath.Join(dir, "vault")
+	if err := os.Mkdir(vault, 0o711); err != nil {
+		t.Fatal(err)
+	}
+	// 0o711 lets the owner list it; drop owner read so only traverse remains.
+	if err := os.Chmod(vault, 0o311); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(vault, 0o755) })
+
+	listing, err := ListDir(dir, DefaultListOptions())
+	if err != nil {
+		t.Fatalf("ListDir() error = %v", err)
+	}
+	for _, e := range listing.Entries {
+		if e.Name == "vault" && !e.AccessDenied {
+			t.Fatal("vault (traverse-only): AccessDenied = false, want true")
+		}
+	}
+}
+
 func mustMkdir(t *testing.T, path string) {
 	t.Helper()
 	if err := os.Mkdir(path, 0o755); err != nil {
