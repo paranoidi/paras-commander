@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"maps"
 	"path/filepath"
 	"strings"
 
@@ -28,15 +27,15 @@ type gitStatusPayload struct {
 	err          error
 }
 
-// primeGitStatusForCLIPreview synchronously resolves Git status for path's directory and merges
-// it into the primary panel's GitByPath map. It exists only for the CLI `pc <file>` startup
-// preview (applyStartPaths), which opens a fullscreen preview before any panel has dispatched
+// primeGitStatusForCLIPreview synchronously resolves Git status for path alone (a one-file
+// pathspec, not the directory scan, which costs a repo-wide --ignored walk when the file sits at
+// the work-tree root) and merges it into the primary panel's GitByPath map. It exists only for
+// the CLI `pc <file>` startup preview (applyStartPaths), which opens a fullscreen preview before any panel has dispatched
 // its own async git-status fetch: without this, that one preview would open with no git-diff
 // status. Merging into GitByPath (rather than just warming the shared cache) is deliberate:
 // StatusesForListing's own git-status subprocess call refreshes the repo's .git/index mtime as a
-// side effect, which immediately invalidates the cache's mtime-based fingerprint for this same
-// directory — so a cache peek performed right after would still miss. Writing straight into
-// GitByPath lets gitStatusForPath's normal panel-map lookup find the result deterministically.
+// side effect, which invalidates the cache's mtime-based fingerprint, and a one-file result must
+// not be cached as a directory snapshot anyway. Writing straight into GitByPath lets gitStatusForPath's normal panel-map lookup find the result deterministically.
 // Every other preview call site (quick view, carousel, F3 from the browser) reads only the
 // panel map or a passive cache peek and shows no diff until an in-flight async fetch lands,
 // rather than blocking the UI goroutine on a synchronous git subprocess.
@@ -49,15 +48,15 @@ func (a *App) primeGitStatusForCLIPreview(path string) {
 	if workRoot == "" {
 		return
 	}
-	paths := []gitstatus.ListingPaths{{AbsPath: filepath.Clean(path), IsDir: false}}
-	by, err := a.gitStatusCache.StatusesForListing(context.Background(), workRoot, listDir, paths)
-	if err != nil || len(by) == 0 {
+	path = filepath.Clean(path)
+	cell, err := gitstatus.StatusForFile(context.Background(), workRoot, path)
+	if err != nil {
 		return
 	}
 	if a.model.Primary.GitByPath == nil {
-		a.model.Primary.GitByPath = make(map[string]gitstatus.Cell, len(by))
+		a.model.Primary.GitByPath = make(map[string]gitstatus.Cell, 1)
 	}
-	maps.Copy(a.model.Primary.GitByPath, by)
+	a.model.Primary.GitByPath[path] = cell
 }
 
 func (a *App) wireGitStatusLoaders() {

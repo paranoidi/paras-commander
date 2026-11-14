@@ -50,3 +50,16 @@ func querySnapshot(ctx context.Context, workRoot, listDir string) (*snapshot, er
 	entries := parsePorcelain(out, workRoot)
 	return &snapshot{entries: entries}, nil
 }
+
+// StatusForFile returns path's Git cell from a `git status` scoped to that one file. It is not
+// cached: the Cache keys whole-directory snapshots, and a one-file snapshot would answer every
+// other row of that directory as clean. It exists so a synchronous caller (CLI `pc <file>`)
+// pays for one pathspec instead of a repo-wide --ignored scan when the file sits at the root.
+func StatusForFile(ctx context.Context, workRoot, path string) (Cell, error) {
+	path = filepath.Clean(path)
+	sn, err := querySnapshot(ctx, filepath.Clean(workRoot), path)
+	if err != nil {
+		return Cell{}, err
+	}
+	return sn.fileCell(path), nil
+}

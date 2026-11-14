@@ -86,6 +86,39 @@ func TestCacheStatusesForListingRealGit(t *testing.T) {
 	}
 }
 
+func TestStatusForFileRealGit(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not in PATH")
+	}
+	root := initGitRepo(t)
+	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte("lantern.log\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	harbor := filepath.Join(root, "harbor.txt")
+	if err := os.WriteFile(harbor, []byte("a"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, root, "add", ".")
+	runGit(t, root, "commit", "-m", "init")
+	if err := os.WriteFile(harbor, []byte("b"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	lantern := filepath.Join(root, "lantern.log")
+	if err := os.WriteFile(lantern, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	GitCommand = defaultGitCommand
+	for path, want := range map[string]Status{harbor: Modified, lantern: Ignored} {
+		cell, err := StatusForFile(context.Background(), root, path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cell.Unstaged != want {
+			t.Fatalf("%s = %+v, want unstaged %v", filepath.Base(path), cell, want)
+		}
+	}
+}
+
 func initGitRepo(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
