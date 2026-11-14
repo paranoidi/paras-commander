@@ -68,6 +68,20 @@ While the input has candidates:
 
 Accepting a directory appends a trailing `/`.
 
+## Creating a missing directory
+
+A path that does not exist is drawn in the error color. When you end such a
+path with `/`, the dropdown opens with one row, **Create directory**. It
+appears only after the `/`, not while you are still typing a name.
+**Enter** creates the directory, together with any missing parent
+directories. The text in the field stays the same and the error color
+clears. **Tab** moves to the next field as usual, and **Esc** closes the
+dropdown, both without creating anything. While the row is open, the first
+Enter creates the directory and a second Enter confirms the dialog. This works
+for local paths only, not for SFTP or the file index. If the directory
+cannot be created (for example, because of missing permissions), an error
+message explains why and the field is left as it was.
+
 ## Appearance
 
 The dropdown shows up to 5 rows below the input (or above it, if it would run

@@ -197,9 +197,9 @@ func TestHandlePathCompletionKeyTabSingleItemAccepts(t *testing.T) {
 	c.Set(value, 5, []pathpick.Candidate{{Name: "foo", IsDir: true}})
 	c.Open = false // closed dropdown, but a single candidate is known
 
-	handled, accepted := HandlePathCompletionKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone), &c, &value, &cursor)
-	if !handled || !accepted {
-		t.Fatalf("handled=%v accepted=%v, want true,true", handled, accepted)
+	handled, outcome := HandlePathCompletionKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone), &c, &value, &cursor)
+	if !handled || outcome != CompletionAccepted {
+		t.Fatalf("handled=%v outcome=%v, want true,true", handled, outcome)
 	}
 	if value != "/tmp/foo/" {
 		t.Fatalf("value = %q, want /tmp/foo/", value)
@@ -213,16 +213,16 @@ func TestHandlePathCompletionKeyTabMultiItemOpensThenCycles(t *testing.T) {
 	c.Set(value, 5, []pathpick.Candidate{{Name: "foo"}, {Name: "fum"}})
 	c.Open = false
 
-	handled, accepted := HandlePathCompletionKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone), &c, &value, &cursor)
-	if !handled || accepted {
-		t.Fatalf("first Tab: handled=%v accepted=%v, want true,false (opens, doesn't accept)", handled, accepted)
+	handled, outcome := HandlePathCompletionKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone), &c, &value, &cursor)
+	if !handled || outcome != CompletionNone {
+		t.Fatalf("first Tab: handled=%v outcome=%v, want true,false (opens, doesn't accept)", handled, outcome)
 	}
 	if !c.Open || c.Selected != 0 {
 		t.Fatalf("expected dropdown open with Selected=0, got Open=%v Selected=%d", c.Open, c.Selected)
 	}
 
-	handled, accepted = HandlePathCompletionKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone), &c, &value, &cursor)
-	if !handled || accepted {
+	handled, outcome = HandlePathCompletionKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone), &c, &value, &cursor)
+	if !handled || outcome != CompletionNone {
 		t.Fatal("second Tab should cycle, not accept")
 	}
 	if c.Selected != 1 {
@@ -239,8 +239,8 @@ func TestHandlePathCompletionKeyEnterAcceptsAndEscClosesOnly(t *testing.T) {
 		t.Fatal("expected auto-open")
 	}
 
-	handled, accepted := HandlePathCompletionKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone), &c, &value, &cursor)
-	if !handled || accepted {
+	handled, outcome := HandlePathCompletionKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone), &c, &value, &cursor)
+	if !handled || outcome != CompletionNone {
 		t.Fatal("Esc should be handled without accepting")
 	}
 	if c.Open {
@@ -259,9 +259,9 @@ func TestHandlePathCompletionKeyEnterAcceptsAndEscClosesOnly(t *testing.T) {
 	// Re-open and accept via Enter.
 	c.Open = true
 	c.Selected = 1
-	handled, accepted = HandlePathCompletionKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone), &c, &value, &cursor)
-	if !handled || !accepted {
-		t.Fatalf("handled=%v accepted=%v, want true,true", handled, accepted)
+	handled, outcome = HandlePathCompletionKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone), &c, &value, &cursor)
+	if !handled || outcome != CompletionAccepted {
+		t.Fatalf("handled=%v outcome=%v, want true,true", handled, outcome)
 	}
 	if value != "/tmp/fum" {
 		t.Fatalf("value = %q, want /tmp/fum", value)
@@ -274,17 +274,66 @@ func TestHandlePathCompletionKeyUpDownMoveWhileOpen(t *testing.T) {
 	cursor := len([]rune(value))
 	c.Set(value, 5, []pathpick.Candidate{{Name: "foo"}, {Name: "fum"}, {Name: "fizz"}})
 
-	handled, accepted := HandlePathCompletionKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone), &c, &value, &cursor)
-	if !handled || accepted || c.Selected != 1 {
-		t.Fatalf("Down: handled=%v accepted=%v Selected=%d, want true,false,1", handled, accepted, c.Selected)
+	handled, outcome := HandlePathCompletionKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone), &c, &value, &cursor)
+	if !handled || outcome != CompletionNone || c.Selected != 1 {
+		t.Fatalf("Down: handled=%v outcome=%v Selected=%d, want true,false,1", handled, outcome, c.Selected)
 	}
-	handled, accepted = HandlePathCompletionKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone), &c, &value, &cursor)
-	if !handled || accepted || c.Selected != 0 {
-		t.Fatalf("Up: handled=%v accepted=%v Selected=%d, want true,false,0", handled, accepted, c.Selected)
+	handled, outcome = HandlePathCompletionKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone), &c, &value, &cursor)
+	if !handled || outcome != CompletionNone || c.Selected != 0 {
+		t.Fatalf("Up: handled=%v outcome=%v Selected=%d, want true,false,0", handled, outcome, c.Selected)
 	}
 }
 
 func (c *PathCompletion) hasGhost(value string) bool {
 	_, ok := c.ghost(value)
 	return ok
+}
+
+func TestSetCreateTabFallsThrough(t *testing.T) {
+	var c PathCompletion
+	value := "/tmp/lantern/"
+	cursor := len([]rune(value))
+	c.SetCreate(value, "/tmp/lantern")
+	if handled, _ := HandlePathCompletionKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone), &c, &value, &cursor); handled {
+		t.Fatal("Tab on the create row must fall through to the form (focus move)")
+	}
+	if c.Open {
+		t.Fatal("Tab should close the create row so it is not painted over the next widget")
+	}
+}
+
+func TestSetCreateOpensAndEnterReportsCreate(t *testing.T) {
+	for _, key := range []tcell.Key{tcell.KeyEnter} {
+		var c PathCompletion
+		value := "/tmp/lantern/"
+		cursor := len([]rune(value))
+		c.SetCreate(value, "/tmp/lantern")
+		if !c.Open || len(c.Items) != 1 || !c.Items[0].Create || c.CreatePath != "/tmp/lantern" {
+			t.Fatalf("SetCreate: open=%v items=%+v path=%q", c.Open, c.Items, c.CreatePath)
+		}
+		if c.GhostSuffix(value) != "" {
+			t.Fatal("the create row must not paint ghost text")
+		}
+		handled, outcome := HandlePathCompletionKey(tcell.NewEventKey(key, 0, tcell.ModNone), &c, &value, &cursor)
+		if !handled || outcome != CompletionCreateDir {
+			t.Fatalf("key %v: handled=%v outcome=%v, want true, CompletionCreateDir", key, handled, outcome)
+		}
+		if value != "/tmp/lantern/" || cursor != len([]rune(value)) {
+			t.Fatalf("value/cursor changed: %q %d", value, cursor)
+		}
+	}
+}
+
+func TestSetCreateSameValueKeepsClosed(t *testing.T) {
+	var c PathCompletion
+	c.SetCreate("/tmp/lantern/", "/tmp/lantern")
+	c.Open = false
+	c.SetCreate("/tmp/lantern/", "/tmp/lantern")
+	if c.Open {
+		t.Fatal("a same-value resync must keep the dropdown closed after Esc")
+	}
+	c.Set("/tmp/lantern/x", 13, []pathpick.Candidate{{Name: "xa"}, {Name: "xb"}})
+	if c.CreatePath != "" {
+		t.Fatal("Set must drop the create path")
+	}
 }

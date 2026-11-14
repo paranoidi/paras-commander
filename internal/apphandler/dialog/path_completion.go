@@ -2,6 +2,7 @@ package dialog
 
 import (
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/pathpick"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -9,12 +10,31 @@ import (
 
 // syncPathCompletion recomputes filesystem completion candidates for a path input's value.
 func (h *Handler) syncPathCompletion(c *dialog.PathCompletion, value string, cursor int, dirsOnly bool) {
-	start, cands, ok := pathpick.Suggest(h.host.ActivePanel().PathString(), h.model.UserHomeDir, value, cursor, h.host.Config().Panels.ShowHidden, dirsOnly)
-	if !ok {
-		c.Clear()
+	panelPath := h.host.ActivePanel().PathString()
+	start, cands, ok := pathpick.Suggest(panelPath, h.model.UserHomeDir, value, cursor, h.host.Config().Panels.ShowHidden, dirsOnly)
+	if ok {
+		c.Set(value, start, cands)
 		return
 	}
-	c.Set(value, start, cands)
+	if host, missing := pathpick.MissingDir(panelPath, h.model.UserHomeDir, value, cursor); missing {
+		c.SetCreate(value, host)
+		return
+	}
+	c.Clear()
+}
+
+// createCompletionDir creates the directory the completion dropdown's "Create directory" row
+// names (with its missing parents) and reports the outcome. Local paths only, so it runs on
+// the UI goroutine like a local mkdir; the fschange sink refreshes the panels showing it.
+func (h *Handler) createCompletionDir(host string) {
+	if host == "" {
+		return
+	}
+	if err := ops.ExecuteMkdir(h.fsCtx(), ops.MkdirPlan{Path: host, Name: host, Parents: true}); err != nil {
+		h.host.SetErrorMessage("Create directory", err)
+		return
+	}
+	h.host.SetTransientMessage("Created directory "+host, ui.MessageUrgencyInfo)
 }
 
 // resyncPathFieldCompletion recomputes filesystem completion for a path input field. A
@@ -57,11 +77,15 @@ func (h *Handler) tryPathFieldCompletionKey(event *tcell.EventKey, f *dialog.Fil
 	if f == nil {
 		return false
 	}
-	handled, accepted := dialog.HandlePathCompletionKey(event, &f.Completion, &f.Value, &f.Cursor)
+	createPath := f.Completion.CreatePath
+	handled, outcome := dialog.HandlePathCompletionKey(event, &f.Completion, &f.Value, &f.Cursor)
 	if !handled {
 		return false
 	}
-	if accepted {
+	if outcome == dialog.CompletionCreateDir {
+		h.createCompletionDir(createPath)
+	}
+	if outcome != dialog.CompletionNone {
 		if afterAccept != nil {
 			afterAccept()
 		}

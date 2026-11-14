@@ -1,6 +1,6 @@
 == open ==
 focus=dest dest="/srv/thicket-lantern/" cursor=21 pending=true recursive=false removeEmpty=true dropdown=false selected=0
 == End ==
-focus=dest dest="/srv/thicket-lantern/" cursor=21 pending=false recursive=false removeEmpty=true dropdown=false selected=0
+focus=dest dest="/srv/thicket-lantern/" cursor=21 pending=false recursive=false removeEmpty=true dropdown=true selected=0
 == x ==
 focus=dest dest="/srv/thicket-lantern/x" cursor=22 pending=false recursive=false removeEmpty=true dropdown=false selected=0

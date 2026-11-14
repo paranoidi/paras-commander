@@ -2,6 +2,7 @@ package ops
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -13,6 +14,8 @@ import (
 type MkdirPlan struct {
 	Path string // canonical pathloc string
 	Name string // display name
+	// Parents creates missing parent directories too (mkdir -p). Local paths only.
+	Parents bool
 }
 
 // PlanMkdir validates a mkdir operation.
@@ -76,6 +79,9 @@ func ExecuteMkdir(ctx context.Context, plan MkdirPlan) error {
 	if err != nil {
 		return err
 	}
+	if plan.Parents {
+		return mkdirParents(ctx, host)
+	}
 	if err := withElevation(ctx, "mkdir", host, []string{"mkdir", "--", host}, func() error {
 		return localfs.Mkdir(host, 0o755)
 	}); err != nil {
@@ -83,4 +89,34 @@ func ExecuteMkdir(ctx context.Context, plan MkdirPlan) error {
 	}
 	reportCreatedHost(ctx, host)
 	return nil
+}
+
+// mkdirParents creates host and its missing parents and reports the topmost directory it
+// created (everything below it is new too).
+func mkdirParents(ctx context.Context, host string) error {
+	top := topmostMissing(host)
+	if err := withElevation(ctx, "mkdir", host, []string{"mkdir", "-p", "--", host}, func() error {
+		return localfs.MkdirAll(host, 0o755)
+	}); err != nil {
+		return err
+	}
+	if top != "" {
+		reportCreatedHost(ctx, top)
+	}
+	return nil
+}
+
+// topmostMissing returns the highest ancestor of host (host included) that does not exist, or
+// "" when host exists.
+func topmostMissing(host string) string {
+	top := ""
+	for p := filepath.Clean(host); ; p = filepath.Dir(p) {
+		if _, err := os.Lstat(p); err == nil {
+			return top
+		}
+		top = p
+		if filepath.Dir(p) == p {
+			return top
+		}
+	}
 }

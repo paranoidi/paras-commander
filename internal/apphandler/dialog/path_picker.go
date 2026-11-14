@@ -203,8 +203,12 @@ func (h *Handler) HandlePathPickerKey(event *tcell.EventKey) {
 		return
 	}
 	if st.FilterFocused() {
-		if handled, accepted := dialog.HandlePathCompletionKey(event, &st.Completion, &st.Query, &st.QueryCursor); handled {
-			if accepted {
+		createPath := st.Completion.CreatePath
+		if handled, outcome := dialog.HandlePathCompletionKey(event, &st.Completion, &st.Query, &st.QueryCursor); handled {
+			if outcome == dialog.CompletionCreateDir {
+				h.createCompletionDir(createPath)
+			}
+			if outcome != dialog.CompletionNone {
 				h.resyncPathPickerCompletion()
 				h.SyncPathPickerRanks()
 				h.ArmPathPickerValidateTimer()

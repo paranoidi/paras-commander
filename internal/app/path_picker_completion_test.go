@@ -130,3 +130,50 @@ func TestPathPickerItemsHistoryIncludesMissingPaths(t *testing.T) {
 		t.Fatalf("expected missing path %q to still be present in picker items, got %d items", gone, len(items))
 	}
 }
+
+func TestPathPickerCreateDirRow(t *testing.T) {
+	root := t.TempDir()
+	marksPath := filepath.Join(root, "marks")
+	if err := os.WriteFile(marksPath, []byte("m : "+root+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(80, 24)
+	cfg := config.Default()
+	cfg.Bookmarks.File = marksPath
+	app := newTestApp(t, screen, Options{
+		CWD:    func() (string, error) { return root, nil },
+		Config: cfg,
+	})
+	app.dialogCtrl.OpenBookmarkDialog()
+	st := &app.model.PathPicker
+
+	target := filepath.Join(root, "copper", "kettle")
+	st.Query = target + "/"
+	st.QueryCursor = len([]rune(st.Query))
+	app.dialogCtrl.SyncPathPickerCompletion()
+	if !st.Completion.Open || len(st.Completion.Items) != 1 || !st.Completion.Items[0].Create {
+		t.Fatalf("want create row, got open=%v items=%+v", st.Completion.Open, st.Completion.Items)
+	}
+
+	app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if fi, err := os.Stat(target); err != nil || !fi.IsDir() {
+		t.Fatalf("directory not created: %v", err)
+	}
+	if !st.Open {
+		t.Fatal("picker should stay open after creating")
+	}
+	if st.Query != target+"/" {
+		t.Fatalf("query changed to %q", st.Query)
+	}
+	if len(st.Completion.Items) != 0 {
+		t.Fatalf("create row should be gone, got %+v", st.Completion.Items)
+	}
+	if !app.dialogCtrl.PathPickerValidateArmed() {
+		t.Fatal("validation should be re-armed")
+	}
+}

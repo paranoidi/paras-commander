@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/search"
 )
 
@@ -15,6 +16,35 @@ type Candidate struct {
 	Name   string
 	IsDir  bool
 	Ranges []search.Range // match ranges within Name, for highlighting
+	// Create marks the synthetic "create this missing directory" row (see MissingDir): it is
+	// not an entry name and accepting it creates the directory instead of inserting text.
+	Create bool
+}
+
+// MissingDir returns the host path of the directory raw names when raw is a local, path-shaped
+// value ending with a separator (the typed intent "this is a directory"), the caret is at the
+// end, and nothing exists at that path. Its parents may be missing too. URIs (sftp://,
+// fileindex://) and relative paths typed on a non-local panel are never offered.
+func MissingDir(panelPath, home, raw string, cursor int) (string, bool) {
+	runes := []rune(raw)
+	if cursor != len(runes) || len(runes) == 0 {
+		return "", false
+	}
+	last := runes[len(runes)-1]
+	if last != '/' && last != filepath.Separator {
+		return "", false
+	}
+	if !QueryLooksPathlike(raw) || pathloc.HasURIPrefix(strings.TrimSpace(raw)) {
+		return "", false
+	}
+	if pathloc.HasURIPrefix(panelPath) && !filepath.IsAbs(ExpandTilde(home, raw)) {
+		return "", false
+	}
+	resolved := ResolveQuery(panelPath, home, raw)
+	if _, err := os.Lstat(resolved); !os.IsNotExist(err) {
+		return "", false
+	}
+	return resolved, true
 }
 
 // Suggest returns filesystem-entry candidates for the partial path segment at the caret,

@@ -5,4 +5,4 @@ focus=dest dest="/srv/thicket-lantern/" cursor=21 pending=true recursive=false r
 == Up ==
 focus=dest dest="/srv/thicket-lantern/" cursor=21 pending=true recursive=false removeEmpty=true dropdown=true selected=0
 == Enter ==
-focus=dest dest="/srv/thicket-lantern/orchard/" cursor=29 pending=true recursive=false removeEmpty=true dropdown=false selected=0
+focus=dest dest="/srv/thicket-lantern/orchard/" cursor=29 pending=true recursive=false removeEmpty=true dropdown=true selected=0

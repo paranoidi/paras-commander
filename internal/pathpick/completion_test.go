@@ -202,3 +202,44 @@ func TestSuggestDirsOnly(t *testing.T) {
 		t.Fatalf("got %v ok=%v, want [lantern-meadow]", got, ok)
 	}
 }
+
+func TestMissingDir(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, "orchard"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "pebble.txt"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cases := []struct {
+		name   string
+		raw    string
+		cursor int // -1: end of raw
+		panel  string
+		want   string
+	}{
+		{"missing with separator", root + "/lantern/", -1, root, filepath.Join(root, "lantern")},
+		{"missing nested parent", root + "/lantern/meadow/", -1, root, filepath.Join(root, "lantern", "meadow")},
+		{"relative to panel", "./lantern/", -1, root, filepath.Join(root, "lantern")},
+		{"no trailing separator", root + "/lantern", -1, root, ""},
+		{"existing dir", root + "/orchard/", -1, root, ""},
+		{"existing file", root + "/pebble.txt/", -1, root, ""},
+		{"below a file", root + "/pebble.txt/thicket/", -1, root, ""},
+		{"caret not at end", root + "/lantern/", 3, root, ""},
+		{"sftp uri", "sftp://user@host/lantern/", -1, root, ""},
+		{"fileindex uri", "fileindex://" + root + "/lantern/", -1, root, ""},
+		{"relative on remote panel", "lantern/", -1, "sftp://user@host/home", ""},
+		{"plain word", "lantern", -1, root, ""},
+	}
+	for _, tc := range cases {
+		cursor := tc.cursor
+		if cursor < 0 {
+			cursor = len([]rune(tc.raw))
+		}
+		got, ok := MissingDir(tc.panel, "/home/nobody", tc.raw, cursor)
+		if got != tc.want || ok != (tc.want != "") {
+			t.Errorf("%s: MissingDir(%q) = %q, %v; want %q", tc.name, tc.raw, got, ok, tc.want)
+		}
+	}
+}

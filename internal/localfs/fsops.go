@@ -25,6 +25,14 @@ func Mkdir(path string, perm os.FileMode) error {
 	return nil
 }
 
+// MkdirAll creates a directory and any missing parents.
+func MkdirAll(path string, perm os.FileMode) error {
+	if err := os.MkdirAll(path, perm); err != nil {
+		return fmt.Errorf("mkdir -p %q: %w", path, err)
+	}
+	return nil
+}
+
 // Remove removes a single file or empty directory.
 func Remove(path string) error {
 	if err := os.Remove(path); err != nil {

@@ -17,6 +17,24 @@ import (
 // PathCompletionRows is the maximum number of visible rows in the completion dropdown.
 const PathCompletionRows = 5
 
+// PathCompletionCreateDirLabel is the text of the dropdown row offered for a typed directory
+// that does not exist (see PathCompletion.SetCreate).
+const PathCompletionCreateDirLabel = "Create directory"
+
+// CompletionOutcome says what a key handled by HandlePathCompletionKey did to the owning input.
+type CompletionOutcome int
+
+const (
+	// CompletionNone: the dropdown consumed the key (moved, opened, closed) without changing
+	// the value.
+	CompletionNone CompletionOutcome = iota
+	// CompletionAccepted: a candidate was inserted into the value.
+	CompletionAccepted
+	// CompletionCreateDir: the "Create directory" row was chosen; the caller creates
+	// PathCompletion.CreatePath. The value is unchanged.
+	CompletionCreateDir
+)
+
 // PathCompletion is the shared filesystem-completion dropdown state for a path-shaped dialog
 // input: FileDialogField (transfer/flatten destination, file-dialog path fields) and
 // PathPickerState's query. Start marks the rune offset in the owning field's value where the
@@ -29,6 +47,9 @@ type PathCompletion struct {
 	Scroll   int
 	// Open is true while the dropdown is visible.
 	Open bool
+	// CreatePath is the host path the "Create directory" row creates (set by SetCreate,
+	// empty otherwise).
+	CreatePath string
 	// forValue is the value Items was last computed for, so Set can tell a same-value
 	// resync (FS refresh) from an actual edit (which resets Selected/Scroll and re-opens).
 	forValue string
@@ -47,6 +68,7 @@ func (c *PathCompletion) Set(value string, start int, items []pathpick.Candidate
 	c.forValue = value
 	c.Start = start
 	c.Items = items
+	c.CreatePath = ""
 	c.maxNameW = 0
 	for _, item := range items {
 		c.maxNameW = max(c.maxNameW, runewidth.StringWidth(completionLabel(item)))
@@ -71,6 +93,29 @@ func (c *PathCompletion) Set(value string, start int, items []pathpick.Candidate
 	c.Scroll = 0
 	partialEmpty := start >= len([]rune(value))
 	c.Open = !ghost && !partialEmpty
+}
+
+// SetCreate offers the single "Create directory" row for value, which names the missing
+// directory host (pathpick.MissingDir). Unlike Set it opens the dropdown although the segment
+// after the trailing separator is empty: typing the separator is what asks for it. Re-syncing
+// the same value keeps the current Open state, so Esc stays respected.
+func (c *PathCompletion) SetCreate(value, host string) {
+	sameValue := value == c.forValue && c.CreatePath == host
+	c.forValue = value
+	c.Start = len([]rune(value))
+	c.Items = []pathpick.Candidate{{Name: PathCompletionCreateDirLabel, Create: true}}
+	c.CreatePath = host
+	c.maxNameW = runewidth.StringWidth(PathCompletionCreateDirLabel)
+	c.Selected = 0
+	c.Scroll = 0
+	if !sameValue {
+		c.Open = true
+	}
+}
+
+// selectedCreate reports whether the selected row is the "Create directory" row.
+func (c *PathCompletion) selectedCreate() bool {
+	return c.Selected >= 0 && c.Selected < len(c.Items) && c.Items[c.Selected].Create
 }
 
 // ghost returns the remaining characters of the single candidate's Name after the typed partial
@@ -129,7 +174,7 @@ func (c *PathCompletion) clampScroll() {
 }
 
 func completionLabel(item pathpick.Candidate) string {
-	if item.IsDir {
+	if item.IsDir && !item.Create {
 		return item.Name + "/"
 	}
 	return item.Name
@@ -140,7 +185,7 @@ func completionLabel(item pathpick.Candidate) string {
 // there is nothing to accept.
 func (c *PathCompletion) Accept(value string) (string, int) {
 	runes := []rune(value)
-	if len(c.Items) == 0 || c.Selected < 0 || c.Selected >= len(c.Items) {
+	if len(c.Items) == 0 || c.Selected < 0 || c.Selected >= len(c.Items) || c.Items[c.Selected].Create {
 		return value, len(runes)
 	}
 	nameRunes := []rune(completionLabel(c.Items[c.Selected]))
@@ -152,18 +197,24 @@ func (c *PathCompletion) Accept(value string) (string, int) {
 // HandlePathCompletionKey handles Tab/Up/Down/Enter/Esc for an open or openable completion
 // dropdown on a path input's text focus. value/cursor are the owning field's Value/Cursor,
 // mutated in place by Accept. handled is true when the key was consumed by the dropdown
-// (caller should not fall through to its own Esc/Enter/Tab/Up/Down handling); accepted is true
-// when a candidate was inserted into *value (caller should re-sync completion, arm its
-// destination-validate timer, etc. — see callers in apphandler/dialog).
-func HandlePathCompletionKey(ev *tcell.EventKey, c *PathCompletion, value *string, cursor *int) (handled, accepted bool) {
+// (caller should not fall through to its own Esc/Enter/Tab/Up/Down handling); outcome says
+// whether a candidate was inserted into *value (caller should re-sync completion, arm its
+// destination-validate timer, etc. — see callers in apphandler/dialog) or the "Create
+// directory" row was chosen (caller creates CreatePath, *value is unchanged).
+func HandlePathCompletionKey(ev *tcell.EventKey, c *PathCompletion, value *string, cursor *int) (handled bool, outcome CompletionOutcome) {
 	if c == nil || value == nil || cursor == nil {
-		return false, false
+		return false, CompletionNone
+	}
+	// Tab never creates: it closes the "Create directory" row and falls through, so focus
+	// still moves past a typed missing directory and only Enter on the row creates it.
+	if len(c.Items) > 0 && c.Items[0].Create && ev.Key() == tcell.KeyTab {
+		c.Open = false
+		return false, CompletionNone
 	}
 	if len(c.Items) > 0 && ev.Key() == tcell.KeyTab {
 		switch {
 		case len(c.Items) == 1:
-			*value, *cursor = c.Accept(*value)
-			return true, true
+			return true, c.choose(value, cursor)
 		case c.Open:
 			c.Cycle()
 		default:
@@ -171,26 +222,36 @@ func HandlePathCompletionKey(ev *tcell.EventKey, c *PathCompletion, value *strin
 			c.Selected = 0
 			c.clampScroll()
 		}
-		return true, false
+		return true, CompletionNone
 	}
 	if !c.Open {
-		return false, false
+		return false, CompletionNone
 	}
 	switch ev.Key() {
 	case tcell.KeyUp:
 		c.Move(-1)
-		return true, false
+		return true, CompletionNone
 	case tcell.KeyDown:
 		c.Move(1)
-		return true, false
+		return true, CompletionNone
 	case tcell.KeyEnter:
-		*value, *cursor = c.Accept(*value)
-		return true, true
+		return true, c.choose(value, cursor)
 	case tcell.KeyEsc:
 		c.Open = false
-		return true, false
+		return true, CompletionNone
 	}
-	return false, false
+	return false, CompletionNone
+}
+
+// choose acts on the selected row: the "Create directory" row leaves the value alone and
+// reports CompletionCreateDir, any other row is accepted into *value.
+func (c *PathCompletion) choose(value *string, cursor *int) CompletionOutcome {
+	if c.selectedCreate() {
+		c.Open = false
+		return CompletionCreateDir
+	}
+	*value, *cursor = c.Accept(*value)
+	return CompletionAccepted
 }
 
 // drawPathCompletionDropdown paints the completion dropdown below (or, if it would run off the
