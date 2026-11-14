@@ -339,7 +339,7 @@ func EncodeDefaultStub(w io.Writer) error {
 		"#\n" +
 		overlayStubHeaderComments() +
 		"#\n" +
-		"# [leader_key] — Esc function-menu keys (case-sensitive: f and F may differ; ?, comma, period allowed; empty omits).\n" +
+		"# [leader_key] — Esc function-menu keys (case-sensitive: f and F may differ; ?, comma, period, < and \" allowed; empty omits).\n" +
 		"# [copy_menu] — `\"` copy-menu keys (letters only; empty omits).\n" +
 		"# [preview_menu] — `:` fullscreen-preview-menu keys (letters only; empty omits;\n" +
 		"# applies only while the F3 fullscreen preview is focused).\n" +

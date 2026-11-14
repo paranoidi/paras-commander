@@ -14,13 +14,13 @@ Hide the bar with `show_menu_bar = false` ([Layout](layout.md#menu-bar)). The fu
 
 ## Leader (function) menu
 
-Press `:` (press again to close) for a grouped, multi-column strip docked at the bottom: File, Selection, View, Navigation, Tools, Add mark, Display, App. Press the letter shown next to an entry to run it.
+Press `:` (press again to close) for a grouped, multi-column strip docked at the bottom: File, Selection, View, Navigation, Tools, Add mark, Display, Menu, App. The Menu group opens the user menu, the copy-to-clipboard menu and the fileindex menu. Press the letter shown next to an entry to run it.
 
 - Letters come from `[leader_key]` in `keybindings.toml`; set one to `""` to drop the row. Keys must be unique within each menu; upper and lower case are distinct. Letters can differ between menus.
 - `F3` toggles showing each action's direct key after its name (`[ui] leader_menu_show_direct_keys`).
 - `Esc` closes the strip.
-- `"` opens the copy-to-clipboard menu (`[copy_menu]`) with file URL, directory URL, file name and git-relative paths (each target is made relative to the work tree that holds it; targets outside any repository are skipped, and the submenu is dimmed when none is in one). In the fullscreen preview of a text file it also copies the file's contents (the row is dimmed elsewhere). In the fullscreen preview, `:` opens a preview menu (`[preview_menu]`) instead.
-- `<` (also `<` in the `:` menu's Tools group) opens the [fileindex](fileindex.md) menu (`[fileindex_menu]`). Its letters are the actions' own shortcut letters in lowercase; those shortcuts are all `Alt+Shift` plus the letter (`t` for `M-T`).
+- `"` (also `"` in the `:` menu's Menu group) opens the copy-to-clipboard menu (`[copy_menu]`) with file URL, directory URL, file name and git-relative paths (each target is made relative to the work tree that holds it; targets outside any repository are skipped, and the submenu is dimmed when none is in one). In the fullscreen preview of a text file it also copies the file's contents (the row is dimmed elsewhere). In the fullscreen preview, `:` opens a preview menu (`[preview_menu]`) instead.
+- `<` (also `<` in the `:` menu's Menu group) opens the [fileindex](fileindex.md) menu (`[fileindex_menu]`). Its letters are the actions' own shortcut letters in lowercase; those shortcuts are all `Alt+Shift` plus the letter (`t` for `M-T`).
 - `M-g` opens the git menu: filter by git state (staged, unstaged, tracked, untracked), commit / pull / push, and stage / unstage / untrack the selection or cursor entry.
 - `M-C` opens a menu to set or clear the folder color (see `folder-colors.md`).
 

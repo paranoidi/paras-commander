@@ -171,6 +171,8 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys:  []string{"\""},
 			PreferredKey: "\"",
 			Keywords:     []string{"copy to clipboard menu", "copy menu", "clipboard", "quote"},
+			LeaderKey:    "\"",
+			LeaderLabel:  "Clipboard menu",
 		},
 		{
 			ID:          ActionClipboardCopyFileURL,

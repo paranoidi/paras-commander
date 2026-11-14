@@ -14,6 +14,7 @@ const (
 	LeaderMenuGroupNavigation = "Navigation"
 	LeaderMenuGroupAddMark    = "Add mark"
 	LeaderMenuGroupDisplay    = "Display"
+	LeaderMenuGroupMenu       = "Menu"
 	LeaderMenuGroupApp        = "App"
 )
 
@@ -34,7 +35,7 @@ const (
 )
 
 // leaderMenuGroupColumn assigns each group to a macro column
-// (0=File, 1=Selection+View, 2=Navigation+Tools, 3=Add mark+Display+App).
+// (0=File, 1=Selection+View, 2=Navigation+Tools, 3=Add mark+Display+Menu+App).
 var leaderMenuGroupColumn = map[string]int{
 	LeaderMenuGroupFile:       0,
 	LeaderMenuGroupSelection:  1,
@@ -43,6 +44,7 @@ var leaderMenuGroupColumn = map[string]int{
 	LeaderMenuGroupTools:      2,
 	LeaderMenuGroupAddMark:    3,
 	LeaderMenuGroupDisplay:    3,
+	LeaderMenuGroupMenu:       3,
 	LeaderMenuGroupApp:        3,
 }
 
@@ -54,6 +56,7 @@ var leaderMenuGroupOrder = []string{
 	LeaderMenuGroupTools,
 	LeaderMenuGroupAddMark,
 	LeaderMenuGroupDisplay,
+	LeaderMenuGroupMenu,
 	LeaderMenuGroupApp,
 }
 
@@ -94,8 +97,6 @@ var leaderMenuGroupActions = map[string][]string{
 		ActionFileRunForEach,
 		ActionFileExtract,
 		ActionFileFlatten,
-		ActionAppUserMenu,
-		ActionFileIndexMenu,
 	},
 	LeaderMenuGroupNavigation: {
 		ActionPanelJumpDialog,
@@ -114,6 +115,11 @@ var leaderMenuGroupActions = map[string][]string{
 		ActionMessagesOpen,
 		ActionCommandsOpen,
 		ActionAppDropToShell,
+	},
+	LeaderMenuGroupMenu: {
+		ActionAppUserMenu,
+		ActionAppCopyMenu,
+		ActionFileIndexMenu,
 	},
 	LeaderMenuGroupApp: {
 		ActionAppShowHelp,
@@ -373,11 +379,11 @@ func DefaultLeaderKeys() map[string]string {
 }
 
 func validLeaderKeyRune(r rune) bool {
-	return unicode.IsLetter(r) || r == '?' || r == ',' || r == '.' || r == '<'
+	return unicode.IsLetter(r) || r == '?' || r == ',' || r == '.' || r == '<' || r == '"'
 }
 
 func validateLeaderKeys(keys map[string]string) error {
-	return validateMenuKeys("leader_key", keys, validLeaderKeyRune, "a letter, ?, comma, period or <")
+	return validateMenuKeys("leader_key", keys, validLeaderKeyRune, "a letter, ?, comma, period, < or \"")
 }
 
 func leaderMenuEntryForAction(keys map[string]string, actionID string) (LeaderMenuEntry, bool) {
