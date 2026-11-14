@@ -106,7 +106,7 @@ func transferView(st TransferDialogState, ctx TransferViewContext) dlg.Spec {
 			dlg.Item{Kind: dlg.KindLabel, Label: primitive.PathWithHomeTilde(st.CommonRoot, ctx.UserHomeDir), Fit: dlg.FitPath},
 			dlg.Item{Kind: dlg.KindLabel})
 	}
-	destInvalid := st.DestPathInvalid && !st.DestPathCheckPending
+	destInvalid := st.DestPathInvalid
 	head = append(head, dlg.Item{Kind: dlg.KindLabel, Label: "Destination:"}, fileFieldInput(TransferDest, st.Destination, destInvalid))
 	var options []dlg.Item
 	if st.Kind == TransferKindCopy {

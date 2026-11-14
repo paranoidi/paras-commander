@@ -107,7 +107,7 @@ func pathPickerFrame(state PathPickerState, layout Layout, styles theme.Theme, s
 		ID: PathPickerFilter, Kind: dlg.KindInput, Drives: PathPickerList, LeadingIcon: styles.IconSearchIcon(),
 		Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll,
 		CompletionSuffix: state.Completion.GhostSuffix(state.Query),
-		Invalid:          state.QueryPathInvalid && !state.QueryPathCheckPending,
+		Invalid:          state.QueryPathInvalid,
 	}
 	label := ""
 	if n := len(state.Marked); n > 0 {

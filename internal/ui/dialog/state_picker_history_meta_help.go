@@ -71,7 +71,8 @@ type PathPickerState struct {
 	ListScroll     int // first visible row index into Ranked
 	// Focus is PathPickerFilter ("" = the filter, which also steers the list), dlg.OK or dlg.Cancel.
 	Focus dlg.ID
-	// QueryPathInvalid is true after a debounced check when the filter looks like a path and os.Lstat fails.
+	// QueryPathInvalid is the result of the last debounced check (filter looks like a path and
+	// os.Lstat fails); it is kept while a newer check is pending so the input color changes once.
 	QueryPathInvalid bool
 	// QueryPathCheckPending is true until debounced validation runs after Query changed.
 	QueryPathCheckPending bool

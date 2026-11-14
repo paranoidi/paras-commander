@@ -162,6 +162,7 @@ func TestPathPickerGoldenRender(t *testing.T) {
 	inv := pickerGoldenState(6, 1, 0, false, "filter")
 	inv.Query, inv.QueryCursor, inv.QueryPathInvalid = "/home/nowhere", 13, true
 	add("query_path_invalid", 80, 24, inv, ascii, nil)
+	// A newer check in flight keeps the last result painted (no flash back to the normal color).
 	inv.QueryPathCheckPending = true
 	add("query_path_check_pending", 80, 24, inv, ascii, nil)
 	// completion dropdown over the list

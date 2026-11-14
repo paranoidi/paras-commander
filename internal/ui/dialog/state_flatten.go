@@ -12,7 +12,8 @@ type FlattenDialogState struct {
 	// dlg.Cancel); empty is the destination field.
 	Focus    dlg.ID
 	DirRoots []string // pruned directory roots at open (path strings)
-	// DestPathInvalid is true after a debounced check when the destination looks like a path and os.Lstat fails.
+	// DestPathInvalid is the result of the last debounced check (destination looks like a path and
+	// os.Lstat fails); it is kept while a newer check is pending so the input color changes once.
 	DestPathInvalid bool
 	// DestPathCheckPending is true until debounced validation runs after Destination.Value changed.
 	DestPathCheckPending bool

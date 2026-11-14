@@ -19,7 +19,7 @@ func FlattenView(s FlattenDialogState) dlg.Spec {
 		Groups: []dlg.Group{
 			{Columns: [][]dlg.Item{{
 				{Kind: dlg.KindLabel, Label: "Destination:"},
-				fileFieldInput(FlattenDest, s.Destination, s.DestPathInvalid && !s.DestPathCheckPending),
+				fileFieldInput(FlattenDest, s.Destination, s.DestPathInvalid),
 				{Kind: dlg.KindSeparator},
 			}}},
 			{Columns: [][]dlg.Item{{

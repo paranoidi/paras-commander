@@ -70,7 +70,9 @@ Accepting a directory appends a trailing `/`.
 
 ## Creating a missing directory
 
-A path that does not exist is drawn in the error color. When you end such a
+A path that does not exist is drawn in the error color. The color is updated
+shortly after you stop typing; until then the field keeps its previous color,
+so it does not flicker while you type. When you end such a
 path with `/`, the dropdown opens with one row, **Create directory**. It
 appears only after the `/`, not while you are still typing a name.
 **Enter** creates the directory, together with any missing parent
