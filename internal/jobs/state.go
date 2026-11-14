@@ -36,7 +36,7 @@ type State struct {
 
 	// transferLease serializes filesystem transfer work across concurrent job goroutines.
 	transferLease sync.Mutex
-	// taskLeases serializes TypeTask jobs per Task.Lease name (taskLeaseUnlocked); guarded by mu.
+	// taskLeases serializes jobs that run a Task per Task.Lease name (taskLeaseUnlocked); guarded by mu.
 	taskLeases map[string]*sync.Mutex
 
 	// blockerWait maps job ID -> channel for one in-flight blocker prompt per job.
@@ -280,7 +280,7 @@ func (s *State) AddJob(job *Job) {
 		cfg := s.opLog
 		cfg.Sources = len(job.Sources)
 		job.Ops = oplog.New(job.ID, cfg)
-		if job.Type == TypeTask {
+		if job.Task != nil {
 			job.sourcePhases = newTaskSourceProgress(len(job.Sources))
 		} else {
 			job.sourcePhases = newSourceProgress(len(job.Sources))
@@ -979,7 +979,7 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 	holder := s.leaseHolderUnlocked()
 	needLease := job.holdsTransferLease(holder)
 	var taskLease *sync.Mutex
-	if job.Type == TypeTask && job.Task != nil {
+	if job.Task != nil {
 		taskLease = s.taskLeaseUnlocked(job.Task.Lease)
 	}
 	s.mu.Unlock()
@@ -1025,7 +1025,7 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 
 	var transferErr error
 	switch {
-	case job.Type == TypeTask:
+	case job.Task != nil:
 		// A task reports through its own reporter; its counts become the terminal totals.
 		lastDoneFiles, lastDoneBytes, transferErr = s.runTask(jobCtx, job)
 	case s.TransferFunc != nil:

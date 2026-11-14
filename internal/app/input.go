@@ -349,7 +349,7 @@ func (a *App) primaryModalFooterKeys() []menu.FunctionKey {
 	if hints := a.dialogCtrl.TransferDialogOverlayFooterKeys(a.keys.TransferDialog); len(hints) > 0 {
 		rest = append(hints, rest...)
 	}
-	if hints := a.dialogCtrl.ExtractDialogOverlayFooterKeys(a.keys.TransferDialog); len(hints) > 0 {
+	if hints := a.dialogCtrl.DestinationDialogOverlayFooterKeys(a.keys.TransferDialog); len(hints) > 0 {
 		rest = append(hints, rest...)
 	}
 	if a.dialogCtrl.PathPickerHostFooterEligible() {

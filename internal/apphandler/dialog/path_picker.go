@@ -165,6 +165,9 @@ func (h *Handler) activatePathPickerSelection() {
 		f.Prefill = ""
 		f.PrefillPending = false
 		h.ClosePathPicker()
+		if extra := h.fileDialogExtra(); extra != nil {
+			extra()
+		}
 	case dialog.PathPickerPurposeNavigateFile:
 		if host.ShowInPanel(h.host, h.model.ActivePanel, filepath.Dir(path), filepath.Base(path), st.IndexPanel, "Show file") {
 			h.host.CloseJobsView() // a picker reopened from the jobs view lands in the browser

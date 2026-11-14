@@ -21,12 +21,11 @@ import (
 )
 
 // CloseFileDialog closes the file dialog and clears its disk-usage scan reconcile cache.
-// Closing FileDialogDuplicate or FileDialogExtract also clears its destination-target panel markers.
+// Closing FileDialogDuplicate, FileDialogExtract or FileDialogRsync also clears its destination-target panel markers.
 // Closing FileDialogSFTPPassword also releases the SFTP password waiter.
 func (h *Handler) CloseFileDialog() {
 	wasSFTPPassword := h.model.FileDialog.Open && h.model.FileDialog.DialogType == dialog.FileDialogSFTPPassword
-	wasTargetMarking := h.model.FileDialog.Open &&
-		(h.model.FileDialog.DialogType == dialog.FileDialogDuplicate || h.model.FileDialog.DialogType == dialog.FileDialogExtract)
+	wasTargetMarking := h.model.FileDialog.Open && dialog.FileDialogMarksDestinationPanel(h.model.FileDialog.DialogType)
 	massRenameApplied := h.model.FileDialog.Open && h.model.FileDialog.DialogType == dialog.FileDialogMassRename && h.model.FileDialog.MassRenameApplied
 	h.ClearDeleteDialogReconcileCache()
 	h.model.FileDialog = dialog.FileDialogState{}
@@ -64,6 +63,8 @@ func (h *Handler) TryDispatchFileOps(actionID string) bool {
 		h.openHardlinkDialog(activePanel)
 	case keymap.ActionFileExtract:
 		h.OpenExtractDialog(activePanel)
+	case keymap.ActionFileRsync:
+		h.OpenRsyncDialog(activePanel)
 	case keymap.ActionFileFlatten:
 		h.OpenFlattenDialog()
 	case keymap.ActionCopy:
@@ -444,6 +445,8 @@ func (h *Handler) ExecuteFileDialog() {
 		h.executeHardlink()
 	case dialog.FileDialogExtract:
 		h.ExecuteExtract()
+	case dialog.FileDialogRsync:
+		h.ExecuteRsync()
 	case dialog.FileDialogAddBookmark:
 		h.ExecuteAddBookmark()
 	case dialog.FileDialogSFTPPassword:

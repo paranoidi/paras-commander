@@ -1,0 +1,30 @@
+== open ==
+focus=f0 fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Down ==
+focus=archive fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Down ==
+focus=newer fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Down ==
+focus=compress fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Down ==
+focus=dry fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Down ==
+focus=f1 fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Down ==
+focus=f2 fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Down ==
+focus=f3 fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Down ==
+focus=ok fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Down ==
+focus=ok fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Down ==
+focus=ok fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Down ==
+focus=ok fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Down ==
+focus=ok fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Down ==
+focus=ok fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Down ==
+focus=ok fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/" err=""

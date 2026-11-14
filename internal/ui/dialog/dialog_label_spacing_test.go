@@ -53,6 +53,23 @@ func TestDialogLabelsAreFollowedByContentRow(t *testing.T) {
 			labels: []string{"Pattern:"},
 		},
 		{
+			name: "rsync",
+			draw: func(screen tcell.Screen) {
+				DrawFileDialog(screen, layout, FileDialogState{
+					Open:       true,
+					DialogType: FileDialogRsync,
+					Fields: []FileDialogField{
+						{Label: "Destination", Value: "/srv/meadow/"},
+						{Label: "Exclude", Value: "*.tmp"},
+						{Label: "Bandwidth limit (KiB/s)", Value: "512"},
+						{Label: "Extra arguments", Value: "--hard-links"},
+					},
+					RsyncSources: pathloc.PathsForTest("/srv/harbor/orchard"),
+				}, DialogRenderContext{Styles: styles}, nil)
+			},
+			labels: []string{"Mode:", "Destination:", "Exclude:", "Bandwidth limit (KiB/s):", "Extra arguments:"},
+		},
+		{
 			name: "mass rename",
 			draw: func(screen tcell.Screen) {
 				DrawFileDialog(screen, layout, FileDialogState{

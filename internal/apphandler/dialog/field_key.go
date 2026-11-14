@@ -17,6 +17,8 @@ func (h *Handler) fileDialogExtra() func() {
 		return h.commands.RecomputeRunForEachValidation
 	case dialog.FileDialogExtract:
 		return h.updateExtractTargetPanels
+	case dialog.FileDialogRsync:
+		return h.updateRsyncPreview
 	default:
 		return nil
 	}

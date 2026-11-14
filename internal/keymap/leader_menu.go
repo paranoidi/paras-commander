@@ -62,6 +62,7 @@ var leaderMenuGroupActions = map[string][]string{
 	LeaderMenuGroupFile: {
 		ActionCopy,
 		ActionMove,
+		ActionFileRsync,
 		ActionFileRename,
 		ActionFileDelete,
 		ActionFileEdit,

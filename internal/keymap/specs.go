@@ -2004,6 +2004,15 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:    "p",
 		},
 		{
+			ID:          ActionFileRsync,
+			Views:       HelpBrowser,
+			Title:       "Rsync",
+			Section:     "File",
+			DefaultKeys: nil, // no free F-key or chord: leader menu and File menu
+			Keywords:    []string{"sync", "mirror", "backup", "incremental", "remote"},
+			LeaderKey:   "S",
+		},
+		{
 			ID:          ActionFileExtract,
 			Views:       HelpBrowser,
 			Title:       "Extract archives",

@@ -8,9 +8,10 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
-// Task is the work of a TypeTask job: a function a built-in feature runs in the background
-// with the job queue's progress, cancel and failure handling, but none of a transfer's
-// pre-scan, conflicts, undo, retry or pause.
+// Task is the work of a task job (a Type that runsTask): a function a built-in feature runs in the
+// background with the job queue's progress, cancel and failure handling, but none of a
+// transfer's pre-scan, conflicts, undo or pause. A TypeRsync job can be retried (Run runs again);
+// a TypeTask job cannot.
 type Task struct {
 	// Title names the task in the jobs view Details pane (e.g. "fileindex scan").
 	Title string
@@ -40,9 +41,12 @@ type TaskResults struct {
 // TaskProgress is a task's progress: the same fields a transfer reports. TotalFiles 0 means
 // unknown; it never shrinks once reported.
 type TaskProgress struct {
-	TotalFiles  int
-	DoneFiles   int
-	DoneBytes   int64
+	TotalFiles int
+	DoneFiles  int
+	DoneBytes  int64
+	// TotalBytes is the byte total when the task knows it (0 = unknown), shown as the byte ratio
+	// and bar and used for the ETA. Like TotalFiles it never shrinks once reported.
+	TotalBytes  int64
 	CurrentPath string
 	// Workers is how many parallel workers the task runs now (0 = not reported).
 	Workers int
@@ -62,6 +66,16 @@ type TaskReporter interface {
 	// clears while the task works on the others (every source starts with the task,
 	// Job.StartAllSources).
 	FinishSource(i int)
+}
+
+// NewRsyncJob builds a queued TypeRsync job for task: sources are read and dest (a directory)
+// written, like a transfer's, for the path marks and volume contention.
+func NewRsyncJob(task *Task, sources []pathloc.Path, dest pathloc.Path) *Job {
+	job := NewTaskJob(task, sources)
+	job.Type = TypeRsync
+	job.Destination = dest
+	job.DestIsDir = true
+	return job
 }
 
 // NewTaskJob builds a queued TypeTask job for task. sources are the paths the task works on:
@@ -101,13 +115,15 @@ type taskReporter struct {
 	mu       sync.Mutex
 	last     TaskProgress
 	lastEmit time.Time
-	total    int // TotalFiles last sent as EventPlanTotals
+	total    int   // TotalFiles last sent as EventPlanTotals
+	totalB   int64 // TotalBytes last sent as EventPlanTotals
 }
 
 func (r *taskReporter) Progress(p TaskProgress) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	p.TotalFiles = max(p.TotalFiles, r.last.TotalFiles)
+	p.TotalBytes = max(p.TotalBytes, r.last.TotalBytes)
 	r.last = p
 	if now := time.Now(); now.Sub(r.lastEmit) >= r.min {
 		r.lastEmit = now
@@ -121,9 +137,9 @@ func (r *taskReporter) emitUnlocked() {
 	if r.ctx != nil && r.ctx.Err() != nil {
 		return
 	}
-	if r.last.TotalFiles > r.total {
-		r.total = r.last.TotalFiles
-		r.s.emit(Event{Type: EventPlanTotals, JobID: r.job.ID, Status: StatusRunning, TotalFiles: r.total})
+	if r.last.TotalFiles > r.total || r.last.TotalBytes > r.totalB {
+		r.total, r.totalB = r.last.TotalFiles, r.last.TotalBytes
+		r.s.emit(Event{Type: EventPlanTotals, JobID: r.job.ID, Status: StatusRunning, TotalFiles: r.total, TotalBytes: r.totalB})
 	}
 	r.s.emit(Event{
 		Type:        EventProgress,
@@ -163,7 +179,7 @@ func (r *taskReporter) finish() (doneFiles int, doneBytes int64) {
 	return r.last.DoneFiles, r.last.DoneBytes
 }
 
-// runTask runs a TypeTask job's Task and returns its final counts and error.
+// runTask runs a task job's Task and returns its final counts and error.
 func (s *State) runTask(ctx context.Context, job *Job) (doneFiles int, doneBytes int64, err error) {
 	s.mu.Lock()
 	r := &taskReporter{s: s, job: job, min: s.scanConfig.ProgressMinInterval, ctx: s.workerCtx}

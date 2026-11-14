@@ -1,0 +1,10 @@
+== open ==
+focus=f0 fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== End ==
+focus=f0 fields=["~/projects/meadow/"@18/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== a ==
+focus=f0 fields=["~/projects/meadow/a"@19/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/a/" err=""
+== Space ==
+focus=f0 fields=["~/projects/meadow/a "@20/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/a/" err=""
+== b ==
+focus=f0 fields=["~/projects/meadow/a b"@21/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard '<tmp>/projects/meadow/a b/'" err=""

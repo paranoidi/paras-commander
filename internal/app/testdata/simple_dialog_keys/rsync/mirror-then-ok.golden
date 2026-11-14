@@ -1,0 +1,6 @@
+== open ==
+focus=f0 fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Alt+m ==
+focus=f0 fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=1 flags=a preview="rsync -a --delete /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Alt+o ==
+CLOSED: jobs=1 type="rsync" message="Rsync queued"

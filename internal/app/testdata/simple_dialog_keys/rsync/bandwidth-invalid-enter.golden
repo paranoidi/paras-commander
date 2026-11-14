@@ -1,0 +1,12 @@
+== open ==
+focus=f0 fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Tab ==
+focus=archive fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Tab ==
+focus=f1 fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Tab ==
+focus=f2 fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== a ==
+focus=f2 fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; "a"@1/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="" err="Bandwidth limit must be a whole number of KiB/s"
+== Enter ==
+focus=f2 fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; "a"@1/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="" err="Bandwidth limit must be a whole number of KiB/s"

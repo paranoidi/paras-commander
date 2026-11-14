@@ -105,6 +105,9 @@ func fileDialogView(st FileDialogState, ctx FileDialogViewContext) dlg.Spec {
 	if st.DialogType == FileDialogRunForEach {
 		return runForEachView(st, ctx)
 	}
+	if st.DialogType == FileDialogRsync {
+		return rsyncView(st, ctx)
+	}
 	if st.DialogType == FileDialogMassRename && st.MassRenamePhase == MassRenamePhaseMain {
 		return massRenameView(st, ctx)
 	}
@@ -310,6 +313,10 @@ func (st *FileDialogState) Apply(ev dlg.Event) {
 	}
 	if st.DialogType == FileDialogRunForEach {
 		st.applyRunForEachEvent(ev)
+		return
+	}
+	if st.DialogType == FileDialogRsync {
+		st.applyRsyncEvent(ev)
 		return
 	}
 	switch ev.ID {

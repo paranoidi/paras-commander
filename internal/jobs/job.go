@@ -28,6 +28,9 @@ const (
 	TypeUndo Type = "undo"
 	// TypeTask runs a built-in feature's Task (Job.Task) instead of a file transfer.
 	TypeTask Type = "task"
+	// TypeRsync runs an rsync process as a Task (Job.Task): a transfer for the path marks and the
+	// jobs view, but run, canceled and retried through the task machinery.
+	TypeRsync Type = "rsync"
 )
 
 // CanceledCount is how well CanceledItems can count what a canceled job left undone.
@@ -45,6 +48,9 @@ const (
 // the files under a skipped directory); delete, extract and undo count their items at enqueue
 // and log one row each. A move never runs the counting walk, so its remainder is unknown.
 func CanceledItems(t Type, totalFiles, totalDirs int, totalsComplete bool, processed, recorded int) (n int, count CanceledCount) {
+	if t.runsTask() {
+		return 0, CanceledKnown // a task logs no items; its Progress line says how far it got
+	}
 	switch t {
 	case TypeCopy:
 		if !totalsComplete {
@@ -55,8 +61,6 @@ func CanceledItems(t Type, totalFiles, totalDirs int, totalsComplete bool, proce
 		return 0, CanceledUnknown
 	case TypeDelete, TypeExtract, TypeUndo:
 		return max(0, totalFiles-recorded), CanceledKnown
-	case TypeTask:
-		return 0, CanceledKnown // a task logs no items; its Progress line says how far it got
 	}
 	return 0, CanceledUnsupported
 }
@@ -301,12 +305,13 @@ type Job struct {
 	// RemovingSources is true while a move's copy fallback is deleting its transferred sources.
 	RemovingSources bool
 
-	// Task is the work of a TypeTask job (nil for every other type). It runs under its own
-	// lease (Task.Lease), never the transfer lease, and cannot be paused or retried.
+	// Task is the work of a job whose Type runsTask (nil for every other type). It runs under
+	// its own lease (Task.Lease), never the transfer lease, and cannot be paused; only a TypeRsync
+	// job can be retried (it runs the same Task again).
 	Task *Task
 }
 
-// Title is the job's display title: the task title for a TypeTask job, else empty.
+// Title is the job's display title: the task title for a task job, else empty.
 func (j *Job) Title() string {
 	if j == nil || j.Task == nil {
 		return ""
@@ -314,12 +319,15 @@ func (j *Job) Title() string {
 	return j.Task.Title
 }
 
-// Pausable reports whether a queued job of this type can be paused (every type but TypeTask).
-func (t Type) Pausable() bool { return t != TypeTask }
+// runsTask reports whether jobs of type t run a Task (Job.Task).
+func (t Type) runsTask() bool { return t == TypeTask || t == TypeRsync }
+
+// Pausable reports whether a queued job of this type can be paused (every type but the task types).
+func (t Type) Pausable() bool { return !t.runsTask() }
 
 // SoftStoppable reports whether a running job of this type can be asked to stop after the file it
-// is working on (every type but TypeTask).
-func (t Type) SoftStoppable() bool { return t != TypeTask }
+// is working on (every type but the task types).
+func (t Type) SoftStoppable() bool { return !t.runsTask() }
 
 // Retryable reports whether State.RetryJob may re-run a finished job of this type.
 func (t Type) Retryable() bool { return t != TypeRename && t != TypeUndo && t != TypeTask }
@@ -410,9 +418,10 @@ func (j *Job) RetryClone() *Job {
 	if j.Type == TypeDelete || j.Type == TypeExtract {
 		totalFiles = len(j.Sources)
 	}
-	// A remote destination is never Stat-ed on the UI goroutine; its enqueue-time value carries over.
+	// A remote destination is never Stat-ed on the UI goroutine; its enqueue-time value carries
+	// over, as does a task's (it never pre-scans, and its destination is as enqueued).
 	destIsDir := j.DestIsDir
-	if j.Destination.IsLocal() && !j.ExactDest {
+	if j.Task == nil && j.Destination.IsLocal() && !j.ExactDest {
 		destIsDir = ops.DestinationIsDirAtEnqueue(j.Destination)
 	}
 	var plan []ops.PlanItem
@@ -426,6 +435,7 @@ func (j *Job) RetryClone() *Job {
 		totalFiles, totalDirs, planBytes = ops.SummarizePlan(plan)
 	}
 	clone := &Job{
+		Task:            j.Task,
 		Plan:            plan,
 		TotalBytes:      planBytes,
 		EstimatedBytes:  estimated,
@@ -463,17 +473,17 @@ func (j *Job) RetryClone() *Job {
 
 // holdsTransferLease reports whether the job must serialize on the single transfer lease.
 // Copy/move/flatten/extract/undo always take the lease. A delete takes it only when its source
-// roots overlap other (an active transfer's sources or destination). other may be nil. A task
-// never does: it serializes on its own Task.Lease.
+// roots overlap other (an active transfer's sources or destination). other may be nil. A job that
+// runs a Task never does: it serializes on its own Task.Lease.
 // ponytail: global lease; becomes a per-device lane key when device queues land
 func (j *Job) holdsTransferLease(other *Job) bool {
 	if j == nil {
 		return false
 	}
-	switch j.Type {
-	case TypeTask:
+	if j.Task != nil {
 		return false
-	case TypeDelete:
+	}
+	if j.Type == TypeDelete {
 		return deleteOverlapsTransfer(j, other)
 	}
 	return true

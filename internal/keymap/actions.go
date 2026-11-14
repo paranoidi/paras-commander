@@ -216,6 +216,7 @@ const (
 	ActionFileSymlink                  = "file.symlink"
 	ActionFileHardlink                 = "file.hardlink"
 	ActionFileExtract                  = "file.extract"
+	ActionFileRsync                    = "file.rsync"
 	ActionFileView                     = "file.view"
 	ActionPreviewMenu                  = "preview.menu"
 	ActionPreviewThemePicker           = "preview.theme-picker"
@@ -582,6 +583,7 @@ var KnownActions = map[string]struct{}{
 	ActionFileSymlink:                  {},
 	ActionFileHardlink:                 {},
 	ActionFileExtract:                  {},
+	ActionFileRsync:                    {},
 	ActionFileView:                     {},
 	ActionPreviewMenu:                  {},
 	ActionPreviewThemePicker:           {},

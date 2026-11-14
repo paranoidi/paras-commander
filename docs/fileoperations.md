@@ -140,8 +140,9 @@ rebindable in `keybindings.toml`.
 | Hard link | unbound | File -> Link |
 | Flatten | `C-z` | File -> Flatten |
 | Extract archive | `C-x` | File -> Extract |
+| Rsync | unbound | File -> Rsync..., Esc menu `S` |
 
-Symlinks, hard links, chmod and chown are local-only. All dialogs accept
+Rsync has its own page: [Rsync](rsync.md). Symlinks, hard links, chmod and chown are local-only. All dialogs accept
 `M-o` (OK) and `Esc` (Cancel).
 
 ### Copy and move

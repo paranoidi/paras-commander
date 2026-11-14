@@ -142,6 +142,11 @@ func runTracked(ctx context.Context, argv, extraEnv []string, dir string, maxStr
 	return out
 }
 
+// DetachProcessGroup starts cmd in its own session and process group (no controlling terminal)
+// and makes a cancelled context SIGKILL the whole group. A caller that wants a gentler cancel
+// replaces cmd.Cancel afterwards and signals the group itself with SignalGroup. A no-op on Windows.
+func DetachProcessGroup(cmd *exec.Cmd) { detachProcessGroup(cmd) }
+
 // jobControlNoise are substrings of the harmless startup warnings a job-control
 // shell (e.g. bash -i) emits when Setsid puts it in a new session with no
 // controlling terminal. tcsetpgrp() then fails with pgrp -1. This is an expected

@@ -26,10 +26,7 @@ func (h *Handler) OpenExtractDialog(p *panel.State) {
 		h.host.SetTransientMessage("No supported archives selected", ui.MessageUrgencyWarn)
 		return
 	}
-	dest := TransferPrefilledDestination(h.host.InactivePanel().PathString())
-	dest.Label = "Destination"
-	dest.PathPicker = true
-	fields := []dialog.FileDialogField{dest}
+	fields := []dialog.FileDialogField{DialogDestinationField(h.host.InactivePanel().PathString(), false)}
 	msg := ""
 	if skipped > 0 {
 		msg = fmt.Sprintf("%d non-archive item(s) will be skipped.", skipped)

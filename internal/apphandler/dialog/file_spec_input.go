@@ -34,17 +34,21 @@ func (h *Handler) focusedFieldIndex() int { return h.model.FileDialog.FileDialog
 func (h *Handler) applyFileDialogEvent(ev dlg.Event) {
 	d := &h.model.FileDialog
 	d.Apply(ev)
+	_, field := dialog.FileFieldIndex(ev.ID)
 	switch d.DialogType {
 	case dialog.FileDialogRunForEach:
 		if ev.ID == dialog.RunForEachInDirs {
 			h.commands.RecomputeRunForEachValidation()
+		}
+	case dialog.FileDialogRsync:
+		if ev.ID != dlg.OK && ev.ID != dlg.Cancel && !field { // those run or close the dialog
+			h.updateRsyncPreview()
 		}
 	case dialog.FileDialogMassRename:
 		if h.applyMassRenameEvent(ev) {
 			return
 		}
 	}
-	_, field := dialog.FileFieldIndex(ev.ID)
 	switch {
 	case ev.ID == dlg.OK, field:
 		h.FileDialogOK()
@@ -144,15 +148,16 @@ func (h *Handler) handleFileDialogSpecKey(event *tcell.EventKey) bool {
 }
 
 // tryFileDialogChord handles the open dialog's own chords that run before the widget engine: the
-// rename and mkdir shortcuts, the extract destination shortcuts, the run-for-each history key and
+// rename and mkdir shortcuts, the Extract and Rsync destination shortcuts, the run-for-each history key and
 // the mass rename pattern and editor keys. Returns true when the key was consumed.
 func (h *Handler) tryFileDialogChord(event *tcell.EventKey) bool {
 	d := &h.model.FileDialog
+	if dialog.FileDialogHasDestinationField(d.DialogType) {
+		return h.tryDestinationDialogShortcut(event)
+	}
 	switch d.DialogType {
 	case dialog.FileDialogRunForEach:
 		return h.tryRunForEachDialogShortcut(event)
-	case dialog.FileDialogExtract:
-		return h.tryExtractDialogDestinationShortcut(event)
 	case dialog.FileDialogMassRename:
 		switch d.MassRenamePhase {
 		case dialog.MassRenamePhaseMain:

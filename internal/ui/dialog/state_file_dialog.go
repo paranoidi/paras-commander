@@ -2,6 +2,8 @@ package dialog
 
 import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/rsync"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
@@ -23,12 +25,28 @@ const (
 	FileDialogRunForEach
 	FileDialogMassRename
 	FileDialogExtract
+	// FileDialogRsync is the Rsync dialog (see RsyncOptions); its text inputs are the RsyncField*
+	// indexes of Fields.
+	FileDialogRsync
 	FileDialogSFTPConnect
 	FileDialogSFTPPassword
 	// FileDialogIndexInit asks whether to create the missing fileindex database at Message, or
 	// with IndexUpgrade whether to upgrade the outdated one there.
 	FileDialogIndexInit
 )
+
+// FileDialogHasDestinationField reports dialog types whose first text input (Fields[0]) is a
+// destination path picker that follows the active or inactive panel (Extract, Rsync).
+func FileDialogHasDestinationField(t FileDialogType) bool {
+	return t == FileDialogExtract || t == FileDialogRsync
+}
+
+// FileDialogMarksDestinationPanel reports dialog types that mark the panel their destination
+// points at while open: the destination-field dialogs, and Duplicate (the copy lands in the
+// active panel's directory).
+func FileDialogMarksDestinationPanel(t FileDialogType) bool {
+	return t == FileDialogDuplicate || FileDialogHasDestinationField(t)
+}
 
 // MassRenameModeUI selects literal vs regexp transform in the mass rename dialog.
 type MassRenameModeUI int
@@ -155,6 +173,19 @@ type FileDialogState struct {
 	// ExtractAsDirectory extracts each container archive into its own subdirectory of the
 	// destination (the "Extract as directory" checkbox).
 	ExtractAsDirectory bool
+	// RsyncSources are the local paths rsync sends (resolved at dialog open) and RsyncAllDirs is
+	// true when every one is a directory, which enables the Copy dir contents checkbox.
+	RsyncSources []pathloc.Path
+	RsyncAllDirs bool
+	// RsyncOptions holds the Rsync dialog's mode and checkboxes; the rest of an rsync.Options is
+	// built from Fields when the dialog runs.
+	RsyncOptions rsync.Options
+	// RsyncPreview is the command the dialog would run, one display token per argument
+	// (rsync.DisplayArgs of rsync.BuildArgv; the view wraps them between arguments) and
+	// RsyncError says why the options do not build one (a bad bandwidth limit, a destination that
+	// rsync cannot reach); the preview row shows the error in its place.
+	RsyncPreview []string
+	RsyncError   string
 	// MkdirShowActions enables the extra "Create / Create and copy selected / Create and move selected" radio
 	// rows below the directory-name input. Set by openMkdirDialog when the active panel has selections.
 	MkdirShowActions bool

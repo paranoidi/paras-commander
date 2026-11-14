@@ -184,6 +184,11 @@ type Handler struct {
 	promptElevate        ops.PermissionWaitFunc
 	getenv               func(string) string // nil: bookmarks fall back to os.Getenv
 
+	// rsyncLast is the Rsync dialog's last-used options (session only, see rsyncMemory).
+	rsyncLast rsyncMemory
+	// lookPath replaces exec.LookPath for finding rsync; tests inject a fake.
+	lookPath func(file string) (string, error)
+
 	// filePickerHiddenForView: the file-list picker is hidden behind the fullscreen viewer it opened.
 	filePickerHiddenForView bool
 
@@ -259,6 +264,7 @@ type Handler struct {
 // New constructs a Handler.
 func New(d Deps) *Handler {
 	return &Handler{
+		rsyncLast:            newRsyncMemory(),
 		host:                 d.Host,
 		screen:               d.Screen,
 		model:                d.Model,

@@ -264,3 +264,56 @@ func TestCancelRunningTaskShowsCanceling(t *testing.T) {
 		t.Fatalf("final status = %s, want canceled", got.Status)
 	}
 }
+
+// TestRsyncJobBytesTotalsAndRetry: a TypeRsync job reports its byte total through the task
+// reporter (so the jobs view has a ratio and an ETA), is not pausable but is retryable, and a
+// retry runs the same task again under the same ID.
+func TestRsyncJobBytesTotalsAndRetry(t *testing.T) {
+	s := NewState()
+	s.SetScanConfig(ScanConfig{})
+	stop := make(chan struct{})
+	s.StartWorker(stop)
+	defer close(stop)
+
+	var mu sync.Mutex
+	runs := 0
+	task := &Task{Title: "rsync", Lease: "rsync", Run: func(_ context.Context, r TaskReporter) error {
+		mu.Lock()
+		runs++
+		n := runs
+		mu.Unlock()
+		r.Progress(TaskProgress{TotalFiles: 4, DoneFiles: 2, DoneBytes: 500, TotalBytes: 800})
+		r.Progress(TaskProgress{TotalFiles: 4, DoneFiles: 4, DoneBytes: 900, TotalBytes: 900})
+		if n == 1 {
+			return errors.New("rsync: partial transfer due to error (exit 23)")
+		}
+		return nil
+	}}
+	job := NewRsyncJob(task, pathloc.PathsForTest("/orchard/acorn"), pathloc.MustParse("/meadow"))
+	if job.Type != TypeRsync || !job.DestIsDir || job.Destination.String() != "/meadow" {
+		t.Fatalf("job = type %s dest %q isDir %v", job.Type, job.Destination, job.DestIsDir)
+	}
+	if TypeRsync.Pausable() || TypeRsync.SoftStoppable() || !TypeRsync.Retryable() || TypeTask.Retryable() {
+		t.Fatal("rsync runs as a task: not pausable or soft-stoppable, but retryable")
+	}
+	s.AddJob(job)
+	got := applyUntilFinished(t, s, job.ID)
+	if got.Status != StatusFailed || got.TotalBytes != 900 || got.DoneBytes != 900 || got.TotalFiles != 4 {
+		t.Fatalf("first run: status %s bytes %d/%d files %d", got.Status, got.DoneBytes, got.TotalBytes, got.TotalFiles)
+	}
+	if !s.RetryJob(job.ID) {
+		t.Fatal("a failed rsync job must be retryable")
+	}
+	got = applyUntilFinished(t, s, job.ID)
+	mu.Lock()
+	defer mu.Unlock()
+	if runs != 2 || got.Status != StatusCompleted || got.Type != TypeRsync || got.Destination.String() != "/meadow" || !got.DestIsDir {
+		t.Fatalf("retry: runs %d status %s type %s dest %q", runs, got.Status, got.Type, got.Destination)
+	}
+}
+
+func TestCanceledItemsRsyncKnowsNothingLeft(t *testing.T) {
+	if n, count := CanceledItems(TypeRsync, 0, 0, false, 0, 0); n != 0 || count != CanceledKnown {
+		t.Fatalf("CanceledItems(rsync) = %d, %v", n, count)
+	}
+}

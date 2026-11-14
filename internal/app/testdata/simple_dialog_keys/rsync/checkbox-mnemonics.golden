@@ -1,0 +1,14 @@
+== open ==
+focus=f0 fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=a preview="rsync -a /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Alt+a ==
+focus=f0 fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags= preview="rsync -r /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Alt+h ==
+focus=f0 fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=c preview="rsync -r -c /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Alt+n ==
+focus=f0 fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=cu preview="rsync -r -c -u /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Alt+s ==
+focus=f0 fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=cus preview="rsync -r -c -u --ignore-existing /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Alt+z ==
+focus=f0 fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=cusz preview="rsync -r -c -u --ignore-existing -z /srv/harbor/orchard <tmp>/projects/meadow/" err=""
+== Alt+r ==
+focus=f0 fields=["~/projects/meadow/"@19/0 pending=true dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false; ""@0/0 pending=false dropdown=false] mode=0 flags=cuszn preview="rsync -r -c -u --ignore-existing -z -n /srv/harbor/orchard <tmp>/projects/meadow/" err=""

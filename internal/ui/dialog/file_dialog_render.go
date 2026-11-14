@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"fmt"
 	"strings"
 	"unicode/utf8"
 
@@ -65,6 +66,9 @@ func fileDialogOuterTitle(state FileDialogState) string {
 		}
 		return "Delete empty leftover dirs?"
 	}
+	if state.DialogType == FileDialogRsync && len(state.RsyncSources) > 1 {
+		return fmt.Sprintf("Rsync %d items", len(state.RsyncSources))
+	}
 	return fileDialogTitle(state.DialogType)
 }
 
@@ -94,6 +98,8 @@ func fileDialogTitle(dialogType FileDialogType) string {
 		return "Mass rename"
 	case FileDialogExtract:
 		return "Extract"
+	case FileDialogRsync:
+		return "Rsync"
 	case FileDialogSFTPConnect:
 		return "SFTP"
 	case FileDialogSFTPPassword:

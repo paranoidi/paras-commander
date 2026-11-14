@@ -38,6 +38,17 @@ func (h *Handler) ActivateMoveAction() {
 	h.OpenMoveDialog()
 }
 
+// DialogDestinationField is the Destination path-picker input of the Extract and Rsync dialogs,
+// prefilled with path (see TransferPrefilledDestination); dirsOnly limits its completion to
+// directories.
+func DialogDestinationField(path string, dirsOnly bool) dialog.FileDialogField {
+	f := TransferPrefilledDestination(path)
+	f.Label = "Destination"
+	f.PathPicker = true
+	f.CompletionDirsOnly = dirsOnly
+	return f
+}
+
 // TransferPrefilledDestination builds a destination FileDialogField prefilled (as a pending
 // suggestion) with path, trailing-separated when non-empty. Shared by the transfer, flatten,
 // and extract dialogs.

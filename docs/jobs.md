@@ -1,6 +1,6 @@
 # Jobs
 
-Copy, move, flatten, extract and delete operations run as background jobs, so
+Copy, move, flatten, extract, rsync and delete operations run as background jobs, so
 the file manager stays usable while they work. The menu bar shows a compact
 summary: an icon with a count for each job state, a progress bar for the
 running job and, to its left, a pill with the current transfer speed while a
@@ -91,6 +91,10 @@ in the Details panel, reports items, bytes and the current path like a
 transfer, and can be canceled. It cannot be paused or retried; run the action
 again instead. One task of each kind runs at a time, beside any copy or move.
 A fileindex scan shows an ETA only once hashing starts, estimated from the file count.
+
+An [Rsync](rsync.md) job is a task that also shows a destination and byte progress
+with an ETA. Unlike other tasks it can be retried. Only one rsync job runs at a
+time, beside any copy or move.
 
 Jobs copy and move one at a time; deletes start immediately. Add a transfer
 paused from the copy or move dialog (**Advanced**, then **Add paused**) and start it later with

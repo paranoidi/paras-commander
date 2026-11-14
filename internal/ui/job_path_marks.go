@@ -133,7 +133,7 @@ func jobTypeMarkPriority(t string) int {
 		return 3
 	case jobs.TypeMove, jobs.TypeFlatten:
 		return 2
-	case jobs.TypeCopy:
+	case jobs.TypeCopy, jobs.TypeRsync:
 		return 1
 	default:
 		return 0

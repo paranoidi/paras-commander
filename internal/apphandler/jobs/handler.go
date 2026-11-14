@@ -1443,6 +1443,12 @@ func (h *Handler) AddTaskJob(task *jobs.Task, sources []pathloc.Path) {
 	h.commitJob(jobs.NewTaskJob(task, sources))
 }
 
+// AddRsyncJob queues an rsync job running task: sources are read and dest written, for the path
+// marks (see jobs.NewRsyncJob).
+func (h *Handler) AddRsyncJob(task *jobs.Task, sources []pathloc.Path, dest pathloc.Path) {
+	h.commitJob(jobs.NewRsyncJob(task, sources, dest))
+}
+
 // AddTransferJob enqueues a copy or move job after scanning. It reports false, after showing why,
 // when no job was queued.
 func (h *Handler) AddTransferJob(req TransferJobRequest) bool {

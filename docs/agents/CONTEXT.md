@@ -148,12 +148,16 @@ _Avoid_: host terminal
 ### Jobs
 
 **Job**:
-A queued background file operation (copy, move, delete, flatten, extract), or a task job.
+A queued background file operation (copy, move, delete, flatten, extract), or a task job (a fileindex scan, an rsync).
 _Avoid_: task (for a transfer), transfer (as a general term)
 
 **Task job**:
 A job that runs a built-in feature's own function (`jobs.TypeTask`, e.g. a fileindex scan) instead of a file transfer: progress, cancel and failure like any job, but no pre-scan, conflicts, undo, retry or pause; one task per lease name runs at a time.
 _Avoid_: background task, worker job
+
+**Rsync job**:
+A task job (`jobs.TypeRsync`) that runs the installed `rsync` for the Rsync dialog's options: shown and marked like a transfer (sources read, destination written), run through the task machinery, so it has progress and cancel but no conflicts, undo or pause; it can be retried. A dry run keeps its itemized changes as the job's results.
+_Avoid_: sync job
 
 **Job source**:
 One top-level path a job was queued with (one per selected entry); a job with several expands into one Queue sub-row per source.

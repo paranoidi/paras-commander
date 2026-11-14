@@ -119,6 +119,7 @@ func Definitions() []Definition {
 				{Action: keymap.ActionMenuFileChattr, Label: "Chattr", Shortcut: 't'},
 				{Action: keymap.ActionFileRename, Label: "Rename", Shortcut: 'r'},
 				{Action: keymap.ActionMove, Label: "Move", Shortcut: 'M'},
+				{Action: keymap.ActionFileRsync, Label: "Rsync...", Shortcut: 'R'},
 				{Action: keymap.ActionFileFlatten, Label: "Flatten", Shortcut: 'F'},
 				{Action: keymap.ActionFileMkdir, Label: "Mkdir", Shortcut: 'm'},
 				{Action: keymap.ActionFileDelete, Label: "Delete", Shortcut: 'd'},
