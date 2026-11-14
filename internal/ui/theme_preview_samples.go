@@ -58,11 +58,21 @@ func drawThemeSampleMenuBar(screen tcell.Screen, x, y, width, maxY int, styles t
 	drawPulldownMenu(screen, Layout{Width: x + width, Menu: bar, Footer: Rect{Y: maxY}}, state, menus, styles)
 }
 
-// drawThemeSampleJobs draws one Jobs list row per job status, without the progress column.
+// drawThemeSampleQueueHeader draws the Queue column-header row as the focused (active) or
+// unfocused pane shows it.
+func drawThemeSampleQueueHeader(screen tcell.Screen, x, y, width int, styles theme.Theme, active bool) {
+	bg := auxPanelContentBG(styles, false)
+	primitive.Text(screen, x, y, width, jobsListHeader, auxPanelListHeaderStyle(styles, theme.PanelChrome{}, false, active, bg))
+}
+
+// drawThemeSampleJobs draws the focused Queue header, then one Jobs list row per job status,
+// without the progress column.
 func drawThemeSampleJobs(screen tcell.Screen, x, y, width, maxY int, styles theme.Theme) {
-	if width < themeSampleJobWidth {
+	if width < themeSampleJobWidth || y >= maxY {
 		return
 	}
+	drawThemeSampleQueueHeader(screen, x, y, width, styles, true)
+	y++
 	rowBase := styles.JobsRow.Background(auxPanelContentBG(styles, false)) // as drawJobsView
 	for i, status := range themeSampleJobStatuses {
 		if y+i >= maxY {
@@ -82,9 +92,14 @@ func drawThemeSampleJobs(screen tcell.Screen, x, y, width, maxY int, styles them
 	}
 }
 
-// drawThemeSampleProgress draws the progress bar of a running job, of a paused one (the inactive
-// palette) and of a completed one.
+// drawThemeSampleProgress draws the unfocused Queue header, then the progress bar of a running
+// job, of a paused one (the inactive palette) and of a completed one.
 func drawThemeSampleProgress(screen tcell.Screen, x, y, width, maxY int, styles theme.Theme) {
+	if y >= maxY {
+		return
+	}
+	drawThemeSampleQueueHeader(screen, x, y, width, styles, false)
+	y++
 	label := styles.PanelText.Background(auxPanelContentBG(styles, false))
 	bars := []struct {
 		label  string

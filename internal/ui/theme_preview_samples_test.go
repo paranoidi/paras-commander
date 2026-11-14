@@ -44,8 +44,11 @@ func TestThemeDialogAppPageRender(t *testing.T) {
 	text := strings.Join(lines, "\n")
 	t.Log("\n" + text)
 
-	if len(themeSampleJobStatuses) != dialog.ThemeAppJobRows {
-		t.Fatalf("%d sample job statuses, the pane reserves %d rows", len(themeSampleJobStatuses), dialog.ThemeAppJobRows)
+	if len(themeSampleJobStatuses)+1 != dialog.ThemeAppJobRows { // +1: the Queue header row
+		t.Fatalf("%d sample job statuses plus the header, the pane reserves %d rows", len(themeSampleJobStatuses), dialog.ThemeAppJobRows)
+	}
+	if n := strings.Count(text, strings.TrimSpace(jobsListHeader)); n != 2 {
+		t.Errorf("app page shows the Queue header %d times, want 2 (focused and unfocused)", n)
 	}
 	want := []string{"Example 1", "Example 2", "Entry 1", "Entry 2", "Active", "Inactive", "Completed", "100%", " 45%", "2m 10s", "48MB/s", "5m 40s"}
 	for _, status := range themeSampleJobStatuses {

@@ -14,8 +14,8 @@ import (
 // per job status and the progress bars.
 const (
 	ThemeAppMenuRows     = 5
-	ThemeAppJobRows      = 9
-	ThemeAppProgressRows = 3
+	ThemeAppJobRows      = 10
+	ThemeAppProgressRows = 4
 	// ThemePanelRows is the height of the file panel sample: the active panel (frame, header and every
 	// entry row), then ThemeInactivePanelRows of the same listing as the inactive panel.
 	ThemePanelRows         = 18 + ThemeInactivePanelRows
@@ -30,8 +30,8 @@ type ThemeSamplePainter func(screen tcell.Screen, x, y, width, maxY int, styles 
 // ThemeAppSamples are the samples of the app preview pages; a nil painter leaves its rows blank.
 type ThemeAppSamples struct {
 	MenuBar  ThemeSamplePainter // ThemeAppMenuRows rows: the bar, then its open pulldown
-	Jobs     ThemeSamplePainter // ThemeAppJobRows rows: one per job status
-	Progress ThemeSamplePainter // ThemeAppProgressRows rows: active, inactive and completed bars
+	Jobs     ThemeSamplePainter // ThemeAppJobRows rows: the focused Queue header, then one per job status
+	Progress ThemeSamplePainter // ThemeAppProgressRows rows: the unfocused Queue header, then active, inactive and completed bars
 	Panel    ThemeSamplePainter // ThemePanelRows rows: the active file panel, the inactive one below it
 }
 

@@ -173,6 +173,9 @@ func drawJobsView(screen tcell.Screen, layout Layout, v jobsViewRender, styles t
 	}
 }
 
+// jobsListHeader is the Queue column-header row text.
+var jobsListHeader = fmt.Sprintf("%-3s%-*s %-10s%-10s%-10sProgress", "", jobsListColTypeRunes, "Type", "Status", "ETA", "Speed")
+
 // formatRateLimitLabel renders the Queue panel border's rate-limit indicator: empty when
 // unlimited (0), otherwise the throughput string padded for the border (e.g. " 20MB/s ").
 // A free function, not a method on drawJobsListPanel, because that function's own
@@ -205,9 +208,8 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 		return
 	}
 
-	hdr := fmt.Sprintf("%-3s%-*s %-10s%-10s%-10sProgress", "", jobsListColTypeRunes, "Type", "Status", "ETA", "Speed")
-	headerStyle := auxPanelListHeaderStyle(layout.Chrome, chromeBlocked, bg)
-	primitive.Text(screen, contentX, rect.Y+1, contentW, hdr, headerStyle)
+	headerStyle := auxPanelListHeaderStyle(styles, layout.Chrome, chromeBlocked, active, bg)
+	primitive.Text(screen, contentX, rect.Y+1, contentW, jobsListHeader, headerStyle)
 
 	rows := state.JobsListRows(jobs)
 	n := len(rows)

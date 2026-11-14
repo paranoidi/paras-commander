@@ -396,6 +396,8 @@ after.error = { fg = "error", bold = true }
 
 [jobs]                       # jobs list row text
 row = { fg = "fg" }
+header = { fg = "fg_strong", bold = true }  # Queue column header row (Type, Status, ...), Queue pane focused
+header.inactive = { fg = "fg_strong", bold = true }  # the same row while another pane is focused
 row.hover = { fg = "fg_strong", bg = "surface" }  # queue row under the mouse pointer
 
 [jobs.progress]

@@ -165,11 +165,17 @@ type styledSegment struct {
 	Style tcell.Style
 }
 
-func auxPanelListHeaderStyle(chrome theme.PanelChrome, blocked bool, contentBG tcell.Color) tcell.Style {
+// auxPanelListHeaderStyle is the Queue column-header row style: jobs.header (or
+// jobs.header.inactive when the pane is not focused) on the panel background, or the blocked
+// header when the chrome is blocked.
+func auxPanelListHeaderStyle(styles theme.Theme, chrome theme.PanelChrome, blocked, active bool, contentBG tcell.Color) tcell.Style {
 	if blocked {
 		return chrome.Header
 	}
-	return chrome.Header.Background(contentBG)
+	if !active {
+		return styles.JobsHeaderInactive.Background(contentBG)
+	}
+	return styles.JobsHeader.Background(contentBG)
 }
 
 // auxPanelListRowStyle resolves a jobs/commands/messages list row's style: rowBase normally,

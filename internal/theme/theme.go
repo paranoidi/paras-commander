@@ -346,6 +346,10 @@ type Theme struct {
 	MessageSuccess tcell.Style
 
 	JobsRow tcell.Style
+	// JobsHeader / JobsHeaderInactive are the Queue list column-header row on the panel
+	// background while the Queue pane is focused / not (jobs.header, jobs.header.inactive).
+	JobsHeader         tcell.Style
+	JobsHeaderInactive tcell.Style
 	// JobsRowHover is the Jobs, Commands or Messages list row under the mouse pointer (not the
 	// cursor row; JobsRow is their row base): its background (and plain text foreground) under
 	// the row's own status colors (jobs.row.hover).
@@ -1244,6 +1248,8 @@ var styleKeys = append([]string{
 	"message.warn",
 	"message.error",
 	"jobs.row",
+	"jobs.header",
+	"jobs.header.inactive",
 	"jobs.progress.track",
 	"jobs.progress.fill",
 	"jobs.progress.label.on_fill",
@@ -1986,8 +1992,10 @@ func build(src source) (Theme, error) {
 		MessageSweep:   styles["message.sweep"],
 		MessageSuccess: styles["message.success"],
 
-		JobsRow:      styles["jobs.row"],
-		JobsRowHover: styles["jobs.row.hover"],
+		JobsRow:            styles["jobs.row"],
+		JobsHeader:         styles["jobs.header"],
+		JobsHeaderInactive: styles["jobs.header.inactive"],
+		JobsRowHover:       styles["jobs.row.hover"],
 
 		JobsProgressTrack:        styles["jobs.progress.track"],
 		JobsProgressFill:         styles["jobs.progress.fill"],
