@@ -2,6 +2,10 @@
 
 History, pins, latched sync, recursive find, bookmarks, path-picker rows, remote (SFTP) paths and the `fileindex://` scheme. See [panels.md](panels.md) for panel state and suffix marks, [preview.md](preview.md) for quick view, [keybindings.md](keybindings.md) for binding rules.
 
+## Navigate to
+
+- `nav.navigate-to` (browser view only; its default key is a printable rune, so it beats the quick filter, which only takes unbound printables, and dismisses an active one) opens `FileDialogNavigateTo` via `dialog.Handler.OpenNavigateToDialog` (`internal/apphandler/dialog/navigate_to.go`): the generic file-dialog spec with one `Path` field (`PathPicker`, `CompletionDirsOnly`) whose `Value` starts as `navigateToPrefill` (`/`, committed, not a pending prefill) with completion synced on open. OK / Enter runs `executeNavigateTo`: `pathpick.ResolveDestination` (tilde, panel-relative, URIs as given), then `Host.NavigatePanelToPath` on the active panel and close. The listing loads asynchronously, so a missing directory surfaces as the panel's load error after the dialog closed (same as the bookmark picker); only a parse error keeps the dialog open.
+
 ## Directory history
 
 - `App.navigatePanelToDirectory(panelID, path, selectedName)` centralizes `NavigateTo` with `panelViewportRows`; bookmarks (`activateBookmarkSelection`), and the history picker (`activateHistorySelection`) use it. `panel.open-dir-in-other`, `panel.open-dir-in-other-focus` and `panel.open-active-path-in-other` go through `App.openPathInInactivePanel`, which is a no-op when the inactive panel already shows the target path, so its cursor stays put.

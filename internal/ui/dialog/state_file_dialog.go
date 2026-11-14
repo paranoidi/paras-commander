@@ -33,6 +33,9 @@ const (
 	// FileDialogIndexInit asks whether to create the missing fileindex database at Message, or
 	// with IndexUpgrade whether to upgrade the outdated one there.
 	FileDialogIndexInit
+	// FileDialogNavigateTo asks for a directory path (Fields[0], directory completion) and
+	// navigates the active panel there.
+	FileDialogNavigateTo
 )
 
 // FileDialogHasDestinationField reports dialog types whose first text input (Fields[0]) is a

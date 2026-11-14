@@ -48,6 +48,7 @@ const (
 	ActionNavHome                = "nav.home"
 	ActionNavForward             = "nav.forward"
 	ActionNavBackward            = "nav.backward"
+	ActionNavNavigateTo          = "nav.navigate-to"
 	ActionPanelHistoryDialog     = "panel.history-dialog"
 	ActionPanelGitFilterMenu     = "panel.git-filter-menu"
 	ActionPanelFolderColorMenu   = "panel.folder-color-menu"
@@ -441,6 +442,7 @@ var KnownActions = map[string]struct{}{
 	ActionNavHome:                     {},
 	ActionNavForward:                  {},
 	ActionNavBackward:                 {},
+	ActionNavNavigateTo:               {},
 	ActionPanelHistoryDialog:          {},
 	ActionPanelGitFilterMenu:          {},
 	ActionPanelFolderColorMenu:        {},

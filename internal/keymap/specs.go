@@ -435,6 +435,15 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"home", "~", "cd"},
 		},
 		{
+			ID:           ActionNavNavigateTo,
+			Views:        HelpBrowser,
+			Title:        "Navigate to path",
+			Section:      "Navigation",
+			DefaultKeys:  []string{"/"},
+			PreferredKey: "/",
+			Keywords:     []string{"go to", "goto", "cd", "jump", "path", "location", "root"},
+		},
+		{
 			ID:          ActionNavForward,
 			Views:       HelpBrowser,
 			Title:       "Forward history",

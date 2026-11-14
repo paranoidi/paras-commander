@@ -1339,6 +1339,10 @@ func (a *App) dispatch(actionID string) bool {
 		a.clearTransientMessage()
 	case keymap.ActionBookmarkOpen:
 		a.dialogCtrl.OpenBookmarkDialog()
+	case keymap.ActionNavNavigateTo:
+		if a.model.ViewMode == ui.ViewBrowser {
+			a.dialogCtrl.OpenNavigateToDialog()
+		}
 	case keymap.ActionBookmarkAdd:
 		a.dialogCtrl.OpenAddBookmarkDialog()
 	case keymap.ActionRemoteSFTPLink:

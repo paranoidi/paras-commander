@@ -1,6 +1,10 @@
 # Navigation
 
-Besides typing paths and pressing Enter, Paras Commander has several ways to get back to places: directory history, pinned items, bookmarks, [jump to directory](#jump-to-directory), [Find](find-files.md) and a latched panel sync. All dialogs are fuzzy-filtered by typing.
+Besides typing paths and pressing Enter, Paras Commander has several ways to get back to places: [navigate to a path](#navigate-to-a-path), directory history, pinned items, bookmarks, [jump to directory](#jump-to-directory), [Find](find-files.md) and a latched panel sync. All dialogs are fuzzy-filtered by typing.
+
+## Navigate to a path
+
+`/` in the file list opens the **Navigate to** dialog instead of starting the quick filter. Its path field starts with `/` and has the usual directory [autocomplete](path-completion.md); `~` expands to your home directory and a relative path is taken from the panel's current directory. Enter (or OK) changes the active panel to that directory; Esc closes the dialog. If the directory does not exist, the panel stays where it was and an error is shown.
 
 ## Directory history
 
