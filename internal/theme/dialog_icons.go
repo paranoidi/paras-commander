@@ -16,6 +16,8 @@ const (
 	IconKeyDialogHistory           = "dialog.history"
 	IconKeyDialogDepth             = "dialog.depth"
 	IconKeyDialogCriteria          = "dialog.criteria"
+	IconKeyDialogCompletionCreate  = "dialog.completion.create_dir"
+	IconKeyDialogCompletionEnter   = "dialog.completion.enter"
 	IconKeyMessageSuccess          = "message.success"
 	IconKeyDialogButtonStart       = "dialog.button.start"
 	IconKeyDialogButtonEnd         = "dialog.button.end"
@@ -88,6 +90,24 @@ func (t Theme) IconDialogCriteria() string {
 		return "Criteria:"
 	}
 	return t.icon(IconKeyDialogCriteria)
+}
+
+// IconDialogCompletionCreate returns the prefix of the path completion dropdown's "Create
+// directory" row, or "" when UseNerdfontIcons is false (the icon is decoration only).
+func (t Theme) IconDialogCompletionCreate() string {
+	if !t.UseNerdfontIcons {
+		return ""
+	}
+	return t.icon(IconKeyDialogCompletionCreate)
+}
+
+// IconDialogCompletionEnter returns the suffix of the "Create directory" row saying that Enter
+// runs it. When UseNerdfontIcons is false, returns "(Enter)".
+func (t Theme) IconDialogCompletionEnter() string {
+	if !t.UseNerdfontIcons {
+		return "(Enter)"
+	}
+	return t.icon(IconKeyDialogCompletionEnter)
 }
 
 // DialogMissingIconForeground is the missing-path mark color: dialog.option.active on the

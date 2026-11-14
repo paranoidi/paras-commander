@@ -73,7 +73,9 @@ Accepting a directory appends a trailing `/`.
 A path that does not exist is drawn in the error color. The color is updated
 shortly after you stop typing; until then the field keeps its previous color,
 so it does not flicker while you type. When you end such a
-path with `/`, the dropdown opens with one row, **Create directory**. It
+path with `/`, the dropdown opens with one row, **Create directory**, drawn
+with a folder icon in front and an Enter icon after it (`(Enter)` when Nerd
+Font icons are off). It
 appears only after the `/`, not while you are still typing a name.
 **Enter** creates the directory, together with any missing parent
 directories. The text in the field stays the same and the error color
@@ -93,6 +95,7 @@ there are more than 5 candidates, a vertical scrollbar appears in the
 dropdown's own rightmost column (the panel's configured scrollbar style).
 Colors come from the `[dialog.completion]` theme section (`item`,
 `item.selected`, `match`, `match.selected`) in the active `themes/*.toml`
-file.
+file. The Create directory row's icons are `create_dir` and `enter` in
+`[icons.dialog.completion]`.
 
 See also [Navigation](navigation.md#bookmarks-and-the-path-picker) for the bookmark, history and pinned-directory picker available in the same fields.

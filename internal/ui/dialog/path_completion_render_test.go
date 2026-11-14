@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
@@ -114,5 +115,44 @@ func TestDrawPathCompletionDropdownWidthStaticWhileScrolling(t *testing.T) {
 	}
 	if a, b := boxRight(0), boxRight(1); a != b {
 		t.Fatalf("dropdown right edge moved while scrolling: %d at top, %d scrolled", a, b)
+	}
+}
+
+// dropdownRowText reads the painted cells of row y across width columns.
+func dropdownRowText(screen tcell.SimulationScreen, x, y, width int) string {
+	var out []rune
+	for col := x; col < x+width; col++ {
+		ch, _, _ := screen.Get(col, y)
+		out = append(out, []rune(ch)...)
+	}
+	return strings.TrimRight(string(out), " ")
+}
+
+func TestDrawPathCompletionDropdownCreateRowIcons(t *testing.T) {
+	for _, nerd := range []bool{true, false} {
+		screen := tcell.NewSimulationScreen("UTF-8")
+		if err := screen.Init(); err != nil {
+			t.Fatalf("Init: %v", err)
+		}
+		screen.SetSize(80, 24)
+		styles := theme.Default()
+		styles.UseNerdfontIcons = nerd
+
+		var c PathCompletion
+		c.SetCreate("/srv/lantern/", "/srv/lantern")
+		const textX, y = 10, 5
+		r := drawPathCompletionDropdown(screen, textX, y, 0, c, uiscrollbar.StyleThumb, styles)
+		got := strings.TrimSpace(dropdownRowText(screen, r.X, r.Y, r.Width))
+		want := "Create directory (Enter)"
+		if nerd {
+			want = styles.IconDialogCompletionCreate() + " Create directory " + styles.IconDialogCompletionEnter()
+			if styles.IconDialogCompletionCreate() == "" || styles.IconDialogCompletionEnter() == "" {
+				t.Fatal("default theme should define both completion icons")
+			}
+		}
+		if got != want {
+			t.Fatalf("nerd=%v: row = %q, want %q", nerd, got, want)
+		}
+		screen.Fini()
 	}
 }

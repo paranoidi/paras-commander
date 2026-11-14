@@ -113,6 +113,19 @@ func (c *PathCompletion) SetCreate(value, host string) {
 	}
 }
 
+// createDirRowLabel is the painted text of the "Create directory" row: the create icon, the
+// label and the Enter icon (Enter is the only key that runs it).
+func createDirRowLabel(styles theme.Theme) string {
+	label := PathCompletionCreateDirLabel
+	if icon := styles.IconDialogCompletionCreate(); icon != "" {
+		label = icon + " " + label
+	}
+	if icon := styles.IconDialogCompletionEnter(); icon != "" {
+		label += " " + icon
+	}
+	return label
+}
+
 // selectedCreate reports whether the selected row is the "Create directory" row.
 func (c *PathCompletion) selectedCreate() bool {
 	return c.Selected >= 0 && c.Selected < len(c.Items) && c.Items[c.Selected].Create
@@ -283,7 +296,13 @@ func drawPathCompletionDropdown(screen tcell.Screen, textX, y, scroll int, c Pat
 		scrollbarCol = 1
 	}
 	// Width covers every item, not just the visible window, so it stays fixed while scrolling.
-	width := c.maxNameW + sidePad + scrollbarCol
+	nameMaxW := c.maxNameW
+	for _, item := range c.Items {
+		if item.Create {
+			nameMaxW = max(nameMaxW, runewidth.StringWidth(createDirRowLabel(styles)))
+		}
+	}
+	width := nameMaxW + sidePad + scrollbarCol
 	if width > screenW {
 		width = screenW
 	}
@@ -326,6 +345,9 @@ func drawPathCompletionDropdown(screen tcell.Screen, textX, y, scroll int, c Pat
 		screen.SetContent(x, rowY, ' ', nil, rowStyle) // left padding cell
 
 		name := completionLabel(item)
+		if item.Create {
+			name = createDirRowLabel(styles) // no match ranges on this row
+		}
 		nameX := x + 1
 		nameW := width - sidePad - scrollbarCol
 		spans := make([]primitive.Span, 0, len(item.Ranges))

@@ -461,6 +461,10 @@ history = "\uf1da"       # prefix on History rows from the panel history
 depth = "\uef81"         # before the indexing depth in the find dialog title
 criteria = "\uf0b0"      # nf-fa-filter: before the find dialog's advanced-criteria summary
 
+[icons.dialog.completion]      # path completion dropdown (see docs/path-completion.md)
+create_dir = "\ueec7"         # prefix on the "Create directory" row
+enter = "\U000F17A5"          # suffix on that row: Enter creates the directory
+
 [icons.message]
 success = "\uf05d"       # fa-circle_check, prefix on success toasts
 
