@@ -34,4 +34,12 @@ type LeaderMenuState struct {
 	CopyGit bool // with LeaderMenuCopy: the "Relative to git root" submenu
 	Items   []LeaderMenuItem
 	Legend  []primitive.LegendItem // optional; drawn below the items, wrapped; clicks on it do nothing
+	Hover   LeaderMenuHover        // the entry under the mouse pointer (set by App each render)
+}
+
+// LeaderMenuHover is the leader menu entry under the mouse pointer, where a click would run it:
+// Action is its action index (as LeaderMenuActionAt reports). The zero value is no hover.
+type LeaderMenuHover struct {
+	Active bool
+	Action int
 }

@@ -341,6 +341,16 @@ func TestMouseLeaderMenuClickRunsEntry(t *testing.T) {
 	}
 }
 
+func TestMouseLeaderMenuRightClickCloses(t *testing.T) {
+	app := tallMouseTestApp(t)
+	app.openBuiltinLeaderMenu()
+	x, y := screenTextCell(t, app, "Sort dialog")
+	click(app, x+3, y, tcell.Button2)
+	if app.model.LeaderMenu.Open || app.model.SortDialog.Open {
+		t.Fatalf("leader open=%v sort dialog open=%v want both closed", app.model.LeaderMenu.Open, app.model.SortDialog.Open)
+	}
+}
+
 func TestMouseLeaderMenuOutsideClickCloses(t *testing.T) {
 	app := tallMouseTestApp(t)
 	app.openBuiltinLeaderMenu()
@@ -351,6 +361,80 @@ func TestMouseLeaderMenuOutsideClickCloses(t *testing.T) {
 	}
 	if app.model.Primary.Cursor != 0 {
 		t.Fatal("outside click must not reach the panel")
+	}
+}
+
+// footerGapX is a footer cell with no entry drawn on it, so only the right-click rule applies.
+func footerGapX(t *testing.T, a *App) (int, int) {
+	t.Helper()
+	a.render()
+	w, h := a.screen.Size()
+	lay := a.layoutForTerminalSize(w, h)
+	for x := lay.Footer.Width - 1; x >= 0; x-- {
+		if _, _, ok := ui.FooterKeyAt(lay, &a.model, x, lay.Footer.Y); !ok {
+			return x, lay.Footer.Y
+		}
+	}
+	t.Fatal("footer has no gap")
+	return 0, 0
+}
+
+func TestMouseFooterRightClickTogglesLeaderMenu(t *testing.T) {
+	app := tallMouseTestApp(t)
+	x, y := footerGapX(t, app)
+	click(app, x, y, tcell.Button2)
+	if !app.leaderMenuOpen(ui.LeaderMenuBuiltin) {
+		t.Fatal("right click on the footer should open the leader menu")
+	}
+	click(app, x, y, tcell.Button2)
+	if app.model.LeaderMenu.Open {
+		t.Fatal("second right click on the footer should close the leader menu")
+	}
+	// On an entry it opens the menu too, and does not press the entry's key.
+	fx, fy := screenTextCell(t, app, "Copy")
+	click(app, fx, fy, tcell.Button2)
+	if !app.leaderMenuOpen(ui.LeaderMenuBuiltin) || app.inputMode() != InputModeLeaderMenu {
+		t.Fatalf("right click on a footer entry: leader open=%v mode=%v", app.model.LeaderMenu.Open, app.inputMode())
+	}
+}
+
+func TestMouseFooterRightClickOpensViewLeaderMenu(t *testing.T) {
+	app := tallMouseTestApp(t)
+	app.openMessagesView()
+	x, y := footerGapX(t, app)
+	click(app, x, y, tcell.Button2)
+	if !app.leaderMenuOpen(ui.LeaderMenuBuiltin) || app.model.ViewMode != ui.ViewMessages {
+		t.Fatalf("leader open=%v view=%v want messages leader menu", app.model.LeaderMenu.Open, app.model.ViewMode)
+	}
+}
+
+func TestMouseFooterRightClickIgnoredInDialog(t *testing.T) {
+	app := tallMouseTestApp(t)
+	app.openSortDialog()
+	x, y := footerGapX(t, app)
+	click(app, x, y, tcell.Button2)
+	if app.model.LeaderMenu.Open || !app.model.SortDialog.Open {
+		t.Fatalf("leader open=%v sort dialog open=%v want closed/open", app.model.LeaderMenu.Open, app.model.SortDialog.Open)
+	}
+}
+
+func TestMouseLeaderMenuHoverHighlightsEntry(t *testing.T) {
+	app := tallMouseTestApp(t)
+	app.openBuiltinLeaderMenu()
+	x, y := screenTextCell(t, app, "Sort dialog")
+	if _, rendered := app.handleMouse(mouseEv(x+3, y, tcell.ButtonNone)); !rendered {
+		t.Fatal("moving onto an entry should render the hover")
+	}
+	hover := app.model.LeaderMenu.Hover
+	w, h := app.screen.Size()
+	want, _ := ui.LeaderMenuActionAt(app.layoutForTerminalSize(w, h), app.model.LeaderMenu, x+3, y)
+	if !hover.Active || hover.Action != want {
+		t.Fatalf("hover = %+v want action %d", hover, want)
+	}
+	px, py := cellOf(t, app, ui.PrimaryPanel, 1)
+	app.handleMouse(mouseEv(px, py, tcell.ButtonNone))
+	if app.model.LeaderMenu.Hover.Active {
+		t.Fatal("moving off the strip should clear the hover")
 	}
 }
 

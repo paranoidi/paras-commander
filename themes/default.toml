@@ -371,6 +371,7 @@ key = { fg = "accent", bold = true }
 arrow = { fg = "muted" }
 label = { fg = "fg" }
 disabled = { fg = "muted" }
+hover = { fg = "focus_fg", bg = "focus_bg" }  # entry under the mouse pointer (its click area)
 
 [dialog.help]
 section = { fg = "info", bold = true }

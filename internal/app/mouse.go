@@ -265,6 +265,20 @@ func (a *App) footerHover() ui.FooterHover {
 	return ui.FooterHoverAt(a.layoutForTerminalSize(w, h), &a.model, a.mouse.x, a.mouse.y)
 }
 
+// leaderMenuHover is the open leader menu entry under the last pointer position, where a click
+// would run it.
+func (a *App) leaderMenuHover() ui.LeaderMenuHover {
+	if !a.mouse.hovers() || a.inputMode() != InputModeLeaderMenu {
+		return ui.LeaderMenuHover{}
+	}
+	w, h := a.screen.Size()
+	action, _ := ui.LeaderMenuActionAt(a.layoutForTerminalSize(w, h), a.model.LeaderMenu, a.mouse.x, a.mouse.y)
+	if action < 0 {
+		return ui.LeaderMenuHover{}
+	}
+	return ui.LeaderMenuHover{Active: true, Action: action}
+}
+
 // auxListHit is the row hit-test of the open Jobs, Commands or Messages list (ok false in
 // other modes).
 func (a *App) auxListHit() (hit func(ui.Layout, *ui.Model, int, int) (int, bool), ok bool) {
@@ -347,19 +361,22 @@ func (a *App) panelRowHover() ui.PanelRowHover {
 
 // refreshPointerHovers sets the highlights that follow the last pointer position (dialog buttons
 // and list rows,
-// menu titles, the status commands, footer entries, file list rows, Jobs, Commands and Messages rows) and reports
+// menu titles, the status commands, footer entries, leader menu entries, file list rows, Jobs, Commands and Messages rows) and reports
 // whether one changed. render calls it, so they track the screen as it changes under a still
 // pointer; motion calls it and renders on a change.
 func (a *App) refreshPointerHovers() bool {
 	button, dialogRow := a.dialogHovers()
 	menuTitle, footer := a.menuBarHover(), a.footerHover()
 	status, row, listRow := a.statusCommandsHover(), a.panelRowHover(), a.auxListHover()
+	leader := a.leaderMenuHover()
 	prev := a.model.DialogButtonHover
 	changed := button.Active != prev.Active || button.ID != prev.ID || button.Rect != prev.Rect ||
 		menuTitle != a.model.MenuBarHover || footer != a.model.FooterHover ||
 		status != a.model.StatusCommandsHover || row != a.model.PanelRowHover ||
-		listRow != a.model.AuxListHover || dialogRow != a.model.DialogListHover
+		listRow != a.model.AuxListHover || dialogRow != a.model.DialogListHover ||
+		leader != a.model.LeaderMenu.Hover
 	a.model.DialogButtonHover, a.model.DialogListHover = button, dialogRow
+	a.model.LeaderMenu.Hover = leader
 	a.model.MenuBarHover, a.model.FooterHover = menuTitle, footer
 	a.model.StatusCommandsHover, a.model.PanelRowHover, a.model.AuxListHover = status, row, listRow
 	return changed
@@ -699,10 +716,22 @@ func (a *App) scrollInactivePanel(id, delta int) bool {
 	return true
 }
 
-// handleChromeMouse handles the footer, the menu bar and the open pulldown. handled is false when
+// handleChromeMouse handles the footer (a right click anywhere on it toggles the leader menu), the
+// menu bar and the open pulldown. handled is false when
 // the event belongs to whatever lies below them.
 func (a *App) handleChromeMouse(layout ui.Layout, x, y int, buttons, pressed tcell.ButtonMask) (handled, quit, rendered bool) {
 	left := pressed&tcell.Button1 != 0
+	if pressed&tcell.Button2 != 0 && layout.Footer.Contains(x, y) { // tcell: Button2 is the right button
+		if !a.footerOpensLeaderMenu() {
+			return true, false, false
+		}
+		if a.model.Menu.Open {
+			a.closeMenu()
+		}
+		a.toggleBuiltinLeaderMenu()
+		a.render()
+		return true, false, true
+	}
 	if fk, shift, ok := ui.FooterKeyAt(layout, &a.model, x, y); ok {
 		if !left {
 			return true, false, false
@@ -792,15 +821,27 @@ func (a *App) menuBarAcceptsMouse() bool {
 	return false
 }
 
+// footerOpensLeaderMenu reports whether a right click on the footer may toggle the leader menu:
+// in the browser and the views with their own leader menu, with a menu or leader strip open, but
+// not while a dialog, the quick filter or the preview has the keyboard.
+func (a *App) footerOpensLeaderMenu() bool {
+	switch a.inputMode() {
+	case InputModeNormal, InputModeMenu, InputModeLeaderMenu, InputModeJobsView, InputModeCommandsView, InputModeMessagesView, InputModeCompareView, InputModeDedupView, InputModeUniqueView:
+		return true
+	}
+	return false
+}
+
 // handleLeaderMenuMouse handles the open leader menu strip, which is modal like the pulldown: a
-// click on an entry runs it, a click elsewhere closes the menu as Esc does. The wheel is ignored.
+// left click on an entry runs it, a right click anywhere or a click outside the strip closes the
+// menu as Esc does. The wheel is ignored.
 func (a *App) handleLeaderMenuMouse(layout ui.Layout, x, y int, pressed tcell.ButtonMask) (handled, quit, rendered bool) {
 	if pressed&(tcell.Button1|tcell.Button2|tcell.Button3) == 0 {
 		return true, false, false
 	}
 	action, inside := ui.LeaderMenuActionAt(layout, a.model.LeaderMenu, x, y)
 	switch {
-	case !inside:
+	case !inside || pressed&tcell.Button2 != 0: // tcell: Button2 is the right button
 		a.closeLeaderMenu()
 	case action >= 0 && pressed&tcell.Button1 != 0:
 		if a.activateLeaderMenu(action) {

@@ -54,6 +54,7 @@ In the menu bar and the footer:
 | Left click on the status commands (top-left) | Opens the Status commands dialog. Closes an open menu first. |
 | Pointer over a footer entry | Highlights the entry. The part a click would press stands out in brighter text: the key and its main label, or the grey Shift word after it (`Quick` in `F3 ViewQuick`). |
 | Left click on a footer entry | Presses that entry's key: `F5 Copy` copies, `Esc Close` closes the open dialog. A click on the grey Shift word presses the Shift variant: `Ren` in `F6 MovRen` renames. |
+| Right click anywhere on the footer | Opens the leader menu, like `:` (in the jobs, commands, messages, compare and duplicates views, that view's own leader menu). A right click while it is open closes it. Not while a dialog is open. |
 
 In dialogs:
 
@@ -70,11 +71,11 @@ In dialogs:
 
 Clicks on the dialog frame, on text labels and outside the dialog do nothing. The help dialog's entry list, the command output body, the delete and mass rename previews do not take clicks yet.
 
-A key press hides every pointer highlight (rows, path segments, buttons, menu titles, status commands, footer entries) until the mouse moves again.
+A key press hides every pointer highlight (rows, path segments, buttons, menu titles, status commands, footer entries, leader menu entries) until the mouse moves again.
 
 Menu titles and the status commands take clicks in the file browser and in the jobs, commands, messages, compare and duplicates views, but not while a dialog is open. Footer entries take clicks everywhere the footer shows them, dialogs included.
 
-In the leader menu strip (and the user, copy-path, preview and git filter menus it hosts), a left click on an entry runs it, like its letter. A click outside the strip closes it.
+In the leader menu strip (and the user, copy-path, preview and git filter menus it hosts), the entry under the pointer is highlighted, and a left click on it runs it, like its letter. A right click anywhere, or any click outside the strip, closes it.
 
 In the jobs, commands, messages, compare and duplicates views, a left click on a list row selects that job, command, message, compare row or duplicates row (in the duplicates view it also focuses the main tree, the Copies pane or the browse panel under the pointer); the wheel over the list moves the selection. The row under the pointer is highlighted (a whole command or message, across its lines; in the compare view both columns of the row); a key press hides the highlight until the mouse moves again. The selection does not follow it, so moving across the list to the details or output does not switch what they show. In the messages view a click also copies the whole message to the clipboard and confirms it with a toast; a click on the second line of a wrapped message selects and copies the whole message.
 

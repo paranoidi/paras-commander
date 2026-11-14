@@ -337,6 +337,7 @@ type Theme struct {
 	LeaderMenuArrow    tcell.Style
 	LeaderMenuLabel    tcell.Style
 	LeaderMenuDisabled tcell.Style
+	LeaderMenuHover    tcell.Style
 
 	MessageInfo  tcell.Style
 	MessageWarn  tcell.Style
@@ -1245,6 +1246,7 @@ var styleKeys = append([]string{
 	"leader_menu.arrow",
 	"leader_menu.label",
 	"leader_menu.disabled",
+	"leader_menu.hover",
 	"message.info",
 	"message.warn",
 	"message.error",
@@ -1998,6 +2000,7 @@ func build(src source) (Theme, error) {
 		LeaderMenuArrow:    styles["leader_menu.arrow"],
 		LeaderMenuLabel:    styles["leader_menu.label"],
 		LeaderMenuDisabled: styles["leader_menu.disabled"],
+		LeaderMenuHover:    styles["leader_menu.hover"],
 
 		MessageInfo:    styles["message.info"],
 		MessageWarn:    styles["message.warn"],

@@ -567,3 +567,28 @@ func TestLeaderMenuActionAtIgnoresLegend(t *testing.T) {
 		t.Fatalf("legend click = %d %v, want -1 true", got, in)
 	}
 }
+
+func TestDrawLeaderMenuHoverPaintsCell(t *testing.T) {
+	layout := geom.Layout{Width: 80, Height: 24, Menu: geom.Rect{Height: 1}, Footer: geom.Rect{Y: 23, Height: 1}}
+	items := []LeaderMenuItem{{Label: "Harbor"}, {Label: "Meadow"}}
+	state := LeaderMenuState{Open: true, Items: items, Hover: LeaderMenuHover{Active: true, Action: 1}}
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatal(err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	styles := theme.Default()
+	DrawLeaderMenu(screen, layout, state, styles)
+	_, hoverBG, _ := styles.LeaderMenuHover.Decompose()
+	rect, visible, _, _ := leaderMenuPlacement(layout, state)
+	for _, cell := range leaderMenuCells(rect, visible, false) {
+		for x := cell.X; x < cell.X+cell.Width; x++ {
+			_, st, _ := screen.Get(x, cell.Y)
+			_, bg, _ := st.Decompose()
+			if hovered := cell.Action == 1; hovered != (bg == hoverBG) {
+				t.Fatalf("action %d cell x=%d bg=%v hover bg=%v", cell.Action, x, bg, hoverBG)
+			}
+		}
+	}
+}

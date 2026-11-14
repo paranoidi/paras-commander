@@ -583,7 +583,12 @@ func DrawLeaderMenu(screen tcell.Screen, layout geom.Layout, state LeaderMenuSta
 			directKey = ""
 		}
 		ks, ls := leaderMenuItemStyles(it, keyStyle, labelStyle, disabledStyle)
-		drawLeaderMenuCell(screen, cell.X, cell.Y, cell.Width, keys[cell.Item], arrow, it.Label, directKey, ks, arrowStyle, ls, surface)
+		as, cs := arrowStyle, surface
+		if state.Hover.Active && state.Hover.Action == cell.Action {
+			ks, as, ls, cs = leaderMenuHoverStyles(styles.LeaderMenuHover, it.Disabled, ks, as, ls)
+			primitive.Fill(screen, primitive.Rect{X: cell.X, Y: cell.Y, Width: cell.Width, Height: 1}, ' ', cs)
+		}
+		drawLeaderMenuCell(screen, cell.X, cell.Y, cell.Width, keys[cell.Item], arrow, it.Label, directKey, ks, as, ls, cs)
 	}
 	if len(legendLines) > 0 {
 		drawLeaderMenuLegend(screen, rect, leaderMenuContentRows(visibleItems), state.Legend, legendLines, labelStyle, surfBG)
@@ -616,6 +621,21 @@ func drawLeaderMenuLegend(screen tcell.Screen, rect geom.Rect, itemRows int, leg
 		}
 		y++
 	}
+}
+
+// leaderMenuHoverStyles puts the hovered entry's parts on the hover style: the label and the
+// cell fill take it whole, the key keeps its attributes (bold) and the arrow and a disabled row
+// keep their own foreground, all on the hover background.
+func leaderMenuHoverStyles(hover tcell.Style, disabled bool, key, arrow, label tcell.Style) (k, a, l, fill tcell.Style) {
+	_, hbg, _ := hover.Decompose()
+	_, _, keyAttrs := key.Decompose()
+	k = hover.Attributes(keyAttrs)
+	a = arrow.Background(hbg)
+	l = hover
+	if disabled {
+		k, l = key.Background(hbg), label.Background(hbg)
+	}
+	return k, a, l, hover
 }
 
 // leaderMenuItemStyles returns the key and label styles, dimmed for disabled rows.
