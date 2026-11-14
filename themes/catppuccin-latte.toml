@@ -27,7 +27,7 @@ header_bg = "#1e66f5"
 inactive_header_bg = "#acb0be"
 menu_bg = "#dce0e8"
 leader_bg = "#dce0e8"
-focus_bg = "#ccd0da"
+focus_bg = "#acb0be"
 button_bg = "#eff1f5"
 button_focus_bg = "#acb0be"
 file_cursor_bg = "#c9cdd8"
@@ -73,6 +73,10 @@ completed = { fg = "fg", bold = true }
 status = { fg = "fg" }     # status-command text at top-left of menu bar (status.toml)
 dropdown = { fg = "fg", bg = "menu_bg" }
 dropdown.accent = { fg = "accent"}
+dropdown.selected = { fg = "fg_strong", bg = "focus_bg", bold = true }
+
+[menu.bar]
+selected = { fg = "fg_strong", bg = "focus_bg", bold = true }
 
 [menu.progress]
 done = { fg = "fg" }
@@ -84,6 +88,9 @@ remove.gfx.1 = { fg = "fg" }
 warn = { fg = "fg", bg = "warning", bold = true }  # text reads better than base on yellow  # tuned
 error = { fg = "ink", bg = "danger", bold = true }
 success = { fg = "fg_strong", bg = "success" }
+
+[footer]
+hover = { fg = "fg_strong", bg = "focus_bg" }  # entry under the mouse pointer
 
 [panel.row]
 cursor.range = { fg = "bg", bg = "selected", icon = "bg" }  # light text on the amber range row  # tuned
@@ -135,6 +142,7 @@ potential = { fg = "fg" }
 [panel.active]
 row.cursor.selected = { fg = "selected", bg = "file_cursor_bg", bold = true, icon = "file_cursor_fg" }  # marked files: the same amber on the cursor row  # tuned
 row.cursor.unique = { fg = "fg_strong", bg = "success", icon = "ink" }
+title = { fg = "special", bold = true }  # pink (magenta): the active panel title (path, Queue, Details, Operations) stands out  # tuned
 usage.cursor = { fg = "ink", bg = "highlight_bg" }  # tuned
 usage.cursor.selected = { fg = "ink", bg = "highlight_bg", bold = true }
 
@@ -196,6 +204,10 @@ group = { fg = "fg", bold = true }
 [dialog.help]
 section = { fg = "fg_strong", bold = true }
 key     = { fg = "fg_strong", bold = true }
+
+[dialog.completion]
+item.selected = { fg = "fg_strong", bg = "focus_bg", bold = true }
+match.selected = { fg = "fg_strong", bg = "focus_bg", bold = true, underline = true }
 
 [tooltip]
 info = { fg = "ink" }       # foreground of the info icon ([icons.dialog] info) on the box

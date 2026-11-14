@@ -27,7 +27,7 @@ header_bg = "#8aadf4"
 inactive_header_bg = "#494d64"
 menu_bg = "#181926"
 leader_bg = "#181926"
-focus_bg = "#494d64"
+focus_bg = "#5b6078"
 button_bg = "#24273a"
 button_focus_bg = "#5b6078"
 file_cursor_bg = "#939ab7"
@@ -77,6 +77,7 @@ row.cursor.keep = { fg = "ink", bg = "file_cursor_bg", bold = true }
 [panel.active]
 header = { fg = "ink", bg = "header_bg", bold = true }
 row.cursor.selected = { fg = "selected", bg = "file_cursor_bg", bold = true, icon = "file_cursor_fg" }  # keep yellow marked files on the cursor row: repair would swap it for ink  # tuned
+title = { fg = "special", bold = true }  # pink (magenta): the active panel title (path, Queue, Details, Operations) stands out  # tuned
 usage.cursor = { fg = "ink", bg = "highlight_bg" }  # tuned
 usage.cursor.selected = { fg = "ink", bg = "highlight_bg", bold = true }
 
