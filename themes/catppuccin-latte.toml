@@ -200,6 +200,7 @@ selection_size = { fg = "fg_strong" }
 
 [leader_menu]
 group = { fg = "fg", bold = true }
+arrow = { fg = "faint" }  # overlay0: chord hints and arrows sit well below the labels  # tuned
 
 [dialog.help]
 section = { fg = "fg_strong", bold = true }

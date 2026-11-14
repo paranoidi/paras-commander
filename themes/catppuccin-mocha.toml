@@ -105,6 +105,9 @@ active_destructive.accent_alt = { fg = "accent_alt", bold = true }  # tuned
 [dialog.option]
 invalid = { fg = "fg" }
 
+[leader_menu]
+arrow = { fg = "info_columns" }  # surface2: chord hints and arrows sit well below the labels  # tuned
+
 [tooltip]
 info = { fg = "ink" }       # foreground of the info icon ([icons.dialog] info) on the box
 
