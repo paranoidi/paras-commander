@@ -14,11 +14,11 @@
   │ ( ) Jasper Theme     │ Active input with default value:                  │  
   │ ( ) Kestrel Theme    │ /home/user/demo.txt                               │  
   │ ( ) Lantern Theme    │                                                   │  
-  │ (*) Meadow Theme     │ [x] Selected                                      │  
-  │ ( ) Nectar Theme     │ [ ] Unselected                                    │  
-  │ ( ) Orchard Theme    │                                                   │  
-  │ ( ) Pebble Theme     │     [ Selected ]  [ Unselected ]  [ Delete ]      │  
-  │ ( ) Quartz Theme     │                                                   │  
+  │ (*) Meadow Theme     │ Path autocomplete:                                │  
+  │ ( ) Nectar Theme     │ /home/user/do                                     │  
+  │ ( ) Orchard Theme    │            documents/                             │  
+  │ ( ) Pebble Theme     │            downloads/                             │  
+  │ ( ) Quartz Theme     │            dotfiles/                              │  
   ├──────────────────────┴───────────────────────────────────────────────────┤  
   │                            [ OK ]  [ Cancel ]                            │  
   └──────────────────────────────────────────────────────────────────────────┘  
@@ -36,14 +36,11 @@ i fg=0x100000000 bg=0x100000007 attrs=0 ul=0 ulc=0x0
 j fg=0x100000004 bg=0x100000007 attrs=0 ul=0 ulc=0x0
 k fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 l fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-m fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-n fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
-o fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
+m fg=0x100000000 bg=0x100000006 attrs=1 ul=0 ulc=0x0
+n fg=0x100000000 bg=0x100000006 attrs=9 ul=1 ulc=0x0
+o fg=0x100000003 bg=0x0 attrs=1 ul=0 ulc=0x0
 p fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
-q fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
-r fg=0x100000007 bg=0x100000001 attrs=0 ul=0 ulc=0x0
-s fg=0x100000007 bg=0x100000001 attrs=1 ul=0 ulc=0x0
-t fg=0x100000005 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+q fg=0x100000005 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
@@ -60,12 +57,12 @@ aabbbbbbbbbbbbbbbbbbbbbbbbbijjjjiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiibbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbhhhhhhhhhhhhhhhhhhehhhhhhhhhhhhhhhhhhhhhhhhhhhhhhbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabkkkkklllllllllllllllbbbkkkkkcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbmbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabkkkkklllllllllllllllbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbffffffffffffeffffffffffffffffffffffffffffffffffffbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbmnnmmmmmmmmmbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbgoogggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbgoogggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbnnonnnnnnnnnbbppqpppppppppppbbrrsrrrrrrrbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbpptpppbbpptpppppppbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbppqpppbbppqpppppppbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

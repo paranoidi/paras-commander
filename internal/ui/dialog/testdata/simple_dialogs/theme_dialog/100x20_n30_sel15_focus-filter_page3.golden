@@ -14,7 +14,7 @@
      │ ( ) Meadow Theme     │ Active input with default value:                               │      
      │ ( ) Nectar Theme     │ /home/user/demo.txt                                            │      
      │ ( ) Orchard Theme    │                                                                │      
-     │ (*) Pebble Theme     │ [x] Selected                                                   │      
+     │ (*) Pebble Theme     │ Path autocomplete:                                             │      
      ├──────────────────────┴────────────────────────────────────────────────────────────────┤      
      │                                  [ OK ]  [ Cancel ]                                   │      
      └───────────────────────────────────────────────────────────────────────────────────────┘      
@@ -50,7 +50,7 @@ aaaaabbbbbbbbbbbbbbbbbbbbbbbbbijjjjiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiibbbbbbbb
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbhhhhhhhhhhhhhhhhhhehhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhbbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
-aaaaabkkkkklllllllllllllllbbbkkkkkcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
+aaaaabkkkkklllllllllllllllbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbmmnmmmbbmmnmmmmmmmbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa

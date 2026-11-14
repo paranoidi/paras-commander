@@ -4,10 +4,13 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/pathpick"
 	"github.com/paranoidi/paras-commander/internal/primitive"
+	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // Rows of the app preview page's samples (ThemeAppSamples): the menu bar and its pulldown, one row
@@ -229,9 +232,18 @@ func drawThemePreview(screen tcell.Screen, p dlg.Placement, pane draw.Rect, page
 }
 
 // themeInputPageRows is the rows of the input page: a blank row, four input demos of three rows,
-// two checkboxes, a blank row and two button rows (plain letters, then letters that need Alt)
-// with a blank row between them.
-const themeInputPageRows = 19
+// the path autocomplete demo (label, input, its three-row dropdown, a blank row), two checkboxes,
+// a blank row and two button rows (plain letters, then letters that need Alt) with a blank row
+// between them.
+const themeInputPageRows = 25
+
+// themeSampleCompletionItems are the path autocomplete demo's dropdown entries for the partial
+// segment "do".
+var themeSampleCompletionItems = []pathpick.Candidate{
+	{Name: "documents", IsDir: true, Ranges: []search.Range{{Start: 0, End: 2}}},
+	{Name: "downloads", IsDir: true, Ranges: []search.Range{{Start: 0, End: 2}}},
+	{Name: "dotfiles", IsDir: true, Ranges: []search.Range{{Start: 0, End: 2}}},
+}
 
 // paintThemeInputPage paints sample inputs (a tooltip under the active one), checkboxes and buttons.
 func paintThemeInputPage(c *themePreviewCtx) {
@@ -273,6 +285,24 @@ func paintThemeInputPage(c *themePreviewCtx) {
 	drawThemePreviewInputPair("Active input with default value:", FileDialogField{
 		Value: demoPath, Prefill: demoPath, PrefillPending: true, Cursor: cursorOnLastRune,
 	}, true)
+
+	// Path autocomplete: an active input whose dropdown is open over three entries, the first
+	// selected, as the transfer and file dialogs draw it.
+	completionPath := "/home/user/do"
+	completion := FileDialogField{Value: completionPath, Cursor: utf8.RuneCountInString(completionPath) - 1}
+	completion.Completion.Set(completionPath, len("/home/user/"), themeSampleCompletionItems)
+	completion.Completion.Open, completion.Completion.Selected = true, 0
+	if fits(previewY) {
+		primitive.Text(screen, previewLeft, previewY, previewWidth, " Path autocomplete:", labelStyle)
+	}
+	previewY++
+	if inputWidth > 0 && fits(previewY) {
+		drawInputField(screen, previewLeft+1, previewY, inputWidth, completion, true, styles)
+		if fits(previewY + len(themeSampleCompletionItems)) {
+			drawPathCompletionDropdown(screen, previewLeft+1, previewY+1, 0, completion.Completion, uiscrollbar.StyleNone, styles) // three items: no scrollbar
+		}
+	}
+	previewY += len(themeSampleCompletionItems) + 2 // input row, dropdown rows, blank row
 
 	if fits(previewY) {
 		draw.DrawDialogCheckbox(screen, previewLeft, previewY, "Selected", 'S', true, false, false, styles)
