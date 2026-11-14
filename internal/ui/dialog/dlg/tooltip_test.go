@@ -3,6 +3,7 @@ package dlg
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -136,5 +137,89 @@ func TestTooltipNewlineStartsLine(t *testing.T) {
 	second.Y++
 	if got := strings.TrimSpace(rowText(screen, second)); got != "Willow orchard." {
 		t.Fatalf("second line = %q", got)
+	}
+}
+
+func TestTooltipGate(t *testing.T) {
+	var g tooltipGate
+	const delay = 800 * time.Millisecond
+	t0 := time.Now()
+	k1 := tooltipKey{Rect{X: 1, Y: 1, Width: 40, Height: 10}, Rect{X: 3, Y: 3, Width: 20, Height: 1}, "lantern"}
+	k2 := tooltipKey{Rect{X: 1, Y: 1, Width: 40, Height: 10}, Rect{X: 3, Y: 5, Width: 20, Height: 1}, "lantern"}
+	woke := make(chan struct{}, 4)
+	wake := func() { woke <- struct{}{} }
+
+	if g.due(k1, t0, delay, wake) {
+		t.Fatal("shown at once")
+	}
+	if g.due(k1, t0.Add(delay-time.Millisecond), delay, wake) {
+		t.Fatal("shown before the delay")
+	}
+	if !g.due(k1, t0.Add(delay), delay, wake) {
+		t.Fatal("not shown after the delay")
+	}
+	if g.due(k2, t0.Add(delay+time.Second), delay, wake) {
+		t.Fatal("another widget inherited the wait")
+	}
+	if !g.due(k2, t0.Add(2*delay+time.Second), delay, wake) {
+		t.Fatal("other widget not shown after its own delay")
+	}
+	g.clear(Rect{X: 9, Y: 9, Width: 1, Height: 1}) // another dialog's frame: untouched
+	if !g.due(k2, t0.Add(4*delay), delay, wake) {
+		t.Fatal("clear of another frame reset the tooltip")
+	}
+	g.clear(k2.frame)
+	if g.due(k2, t0.Add(5*delay), delay, wake) {
+		t.Fatal("shown at once after a frame without tooltip")
+	}
+	if !g.due(k1, t0, 0, wake) {
+		t.Fatal("zero delay must show at once")
+	}
+}
+
+func TestTooltipGateWakesOnce(t *testing.T) {
+	var g tooltipGate
+	woke := make(chan struct{}, 4)
+	wake := func() { woke <- struct{}{} }
+	k := tooltipKey{text: "willow"}
+	now := time.Now()
+	g.due(k, now, 20*time.Millisecond, wake)
+	g.due(k, now, 20*time.Millisecond, wake) // redraw while pending: no second timer
+	select {
+	case <-woke:
+	case <-time.After(time.Second):
+		t.Fatal("no wake-up")
+	}
+	select {
+	case <-woke:
+		t.Fatal("more than one wake-up")
+	case <-time.After(60 * time.Millisecond):
+	}
+}
+
+func TestPaintTooltipForDelay(t *testing.T) {
+	spec := tooltipSpec(2)
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(80, 30)
+	styles := theme.Default()
+	styles.UseNerdfontIcons = false
+	styles.TooltipDelay = time.Hour
+	p, ok := Draw(screen, 80, 30, spec, "tip", styles)
+	if !ok {
+		t.Fatal("dialog does not fit")
+	}
+	if p.Tooltip != (Rect{}) {
+		t.Fatal("tooltip painted before the delay")
+	}
+	Draw(screen, 80, 30, spec, "top", styles) // focus left: state reset
+	theTooltipGate.mu.Lock()
+	pending := theTooltipGate.set
+	theTooltipGate.mu.Unlock()
+	if pending {
+		t.Fatal("gate kept state after a frame without tooltip")
 	}
 }

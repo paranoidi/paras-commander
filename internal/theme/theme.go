@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/gdamore/tcell/v2"
@@ -397,6 +398,9 @@ type Theme struct {
 	// HideTooltips is set at runtime from !config.UI.Tooltips; when true, dialogs draw no
 	// tooltips.
 	HideTooltips bool
+	// TooltipDelay is how long a widget holds focus before its tooltip appears, set at runtime from
+	// config.DefaultTooltipDelayMS; zero shows tooltips at once.
+	TooltipDelay time.Duration
 
 	FooterKey        tcell.Style
 	FooterLabel      tcell.Style

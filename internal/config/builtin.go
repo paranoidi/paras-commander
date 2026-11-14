@@ -414,6 +414,8 @@ const (
 	// DefaultTooltips is the built-in [ui].tooltips value: dialogs show the focused widget's
 	// tooltip (the find dialog's advanced fields explain their syntax).
 	DefaultTooltips = true
+	// DefaultTooltipDelayMS is how long a dialog widget must hold focus before its tooltip appears.
+	DefaultTooltipDelayMS = 800
 	// MouseDoubleClickMS is the largest gap between two left presses on the same row that still
 	// counts as a double click.
 	MouseDoubleClickMS = 400

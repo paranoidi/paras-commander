@@ -1336,6 +1336,10 @@ func (a *App) handleEarlyInterruptPayload(data any) (eventOutcome, bool) {
 	if out, ok := a.handleIndexOverlayPayload(data); ok {
 		return out, true
 	}
+	if _, ok := data.(dlg.TooltipWakePayload); ok { // a pending dialog tooltip is due
+		a.render()
+		return eventOutcome{didRender: true}, true
+	}
 	if _, ok := data.(dirWatchWakePayload); ok {
 		a.handleDirWatchWake()
 		return eventOutcome{}, true
@@ -1494,6 +1498,7 @@ func (a *App) handlePreviewInterruptPayload(data any) (eventOutcome, bool) {
 func (a *App) setStyles(t theme.Theme) {
 	t.UseNerdfontIcons = a.config.UI.UseNerdfontIcons
 	t.HideTooltips = !a.config.UI.Tooltips
+	t.TooltipDelay = config.DefaultTooltipDelayMS * time.Millisecond
 	a.styles = t
 	// The theme's bg role is the base background of every cell without its own (frameScreen).
 	bg, _ := t.ResolveColor("bg") // a zero Theme has no roles: ColorDefault, the terminal's own

@@ -1,6 +1,7 @@
 package dlg
 
 import (
+	"time"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -574,10 +575,10 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 	if len(spec.Buttons) > 0 {
 		drawButtonStrip(screen, spec, p, focus, borderStyle, styles)
 	}
-	if found && !cur.isButton() && !styles.HideTooltips {
-		if it := widgetAt(spec, cur); it.Tooltip != "" {
-			p.Tooltip = drawTooltip(screen, p, it, styles)
-		}
+	if found && !cur.isButton() && !styles.HideTooltips && widgetAt(spec, cur).Tooltip != "" {
+		p.Tooltip = drawTooltip(screen, p, widgetAt(spec, cur), styles)
+	} else {
+		theTooltipGate.clear(p.Rect) // no tooltip this frame: focusing one again waits again
 	}
 	return p, true
 }
@@ -613,8 +614,13 @@ func drawTooltip(screen tcell.Screen, p Placement, it Item, styles theme.Theme) 
 // PaintTooltipFor paints a tooltip box for the widget at widget inside p's frame, above the content
 // bottom, its left edge on the widget's (shifted left only as far as it needs to fit): on the row
 // below the widget, else (no room down to the content bottom) ending on the row above it. It returns
-// the box's rect; a box that fits nowhere is not drawn (empty rect).
+// the box's rect; a box that fits nowhere is not drawn (empty rect). It is also the tooltip delay
+// gate: nothing is painted (empty rect) until the same tooltip has been asked for across redraws
+// for styles.TooltipDelay, when a wake-up redraw is posted to screen.
 func PaintTooltipFor(screen tcell.Screen, p Placement, widget Rect, text string, styles theme.Theme) Rect {
+	if !theTooltipGate.due(tooltipKey{p.Rect, widget, text}, time.Now(), styles.TooltipDelay, wakeScreen(screen)) {
+		return Rect{}
+	}
 	left, right := p.Rect.X+1, p.Rect.X+p.Rect.Width-1 // inside the borders
 	top, bottom := p.Rect.Y+1, p.ContentBottom
 	lines, w := draw.TooltipLines(text, right-left, styles)
