@@ -290,3 +290,24 @@ func TestDetailStaticLinesOmitWarnings(t *testing.T) {
 		}
 	}
 }
+
+func TestJobsMessagesWrappedScrollKeepsSelectionVisible(t *testing.T) {
+	t.Parallel()
+	long := strings.Repeat("orchard meadow lantern ", 6) // wraps to several lines at width 20
+	warns := []string{"quill", long, long, "ember"}
+	rect := Rect{Width: 24, Height: 8} // text width 20, 6 content rows
+	if got := JobsMessagesWrappedScroll(warns, rect, 0, 0); got != 0 {
+		t.Fatalf("top selection scroll = %d", got)
+	}
+	got := JobsMessagesWrappedScroll(warns, rect, 0, 3)
+	used := 0
+	for i := got; i <= 3; i++ {
+		used += len(jobsMessageLines(warns[i], 20))
+	}
+	if got > 3 || (used > 6 && got != 3) {
+		t.Fatalf("scroll %d leaves selection off screen (%d lines)", got, used)
+	}
+	if got := JobsMessagesWrappedScroll(warns, rect, 3, 1); got != 1 {
+		t.Fatalf("selection above scroll: got %d, want 1", got)
+	}
+}

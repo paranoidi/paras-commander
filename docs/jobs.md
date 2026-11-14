@@ -58,7 +58,7 @@ total `(estimated)` until the exact size is counted (see
 | `+` / `-` / `C-u` | Raise, lower or clear the transfer rate limit (Queue panel focused) |
 | `Tab` | Cycle the panels |
 | `C-Space` | Move the Operations panel between the right column and full width at the bottom |
-| `Enter` | Maximize the focused Operations panel with wrapped lines; `Esc`, `Enter` or `Left` restore it |
+| `Enter` | Maximize the focused Operations or Messages panel with wrapped lines; `Esc`, `Enter` or `Left` restore it |
 | `Left` | Back to the file view |
 
 The footer lists only the actions that apply to the selected job: Pause on a
@@ -224,7 +224,8 @@ had to be dereferenced, or fileindex scan problems), a **Messages (N)** panel
 lists them between Details and Operations. It is at most 8 rows tall and
 has a cursor line that moves with the arrow, `PgUp`/`PgDn` and `Home`/`End`
 keys while focused. **Jobs -> Copy message** copies the
-selected message's full text to the clipboard.
+selected message's full text to the clipboard. `Enter` maximizes the panel
+with every message word-wrapped; `Esc`, `Enter` or `Left` restore it.
 
 With the Details panel focused, `+` and `-` shorten or lengthen the transfer
 graph's column time (the tickrate, and so how fast the Speed column reacts)

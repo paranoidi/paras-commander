@@ -2251,10 +2251,10 @@ func DefaultActionSpecs() []ActionSpec {
 		{
 			ID:          ActionJobsMaximizePane,
 			Views:       HelpJobs,
-			Title:       "Maximize Errors/Succeeded pane",
+			Title:       "Maximize Operations or Messages pane",
 			Section:     "Jobs",
 			DefaultKeys: nil, // overlay: DefaultJobsOverlayKeys
-			Keywords:    []string{"fullscreen", "wrap", "errors", "succeeded", "zoom"},
+			Keywords:    []string{"fullscreen", "wrap", "operations", "messages", "warnings", "zoom"},
 		},
 		{
 			ID:          ActionJobsClearFinished,

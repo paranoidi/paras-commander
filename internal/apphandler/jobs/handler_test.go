@@ -1281,3 +1281,39 @@ func TestSelectedJobActionsFollowJobState(t *testing.T) {
 		}
 	}
 }
+
+func TestJobsViewEnterMaximizesMessagesPane(t *testing.T) {
+	t.Parallel()
+	h, model, _ := newMaximizeTestHandler(t)
+	long := strings.Repeat("orchard meadow lantern thistle ", 20)
+	warns := []string{"quill one", long, "ember three", long, "harbor five", "willow six"}
+	model.JobsList[0].Warnings = warns
+	order, _ := h.jobsPaneLayout()
+	fp := slices.Index(order, ui.JobsPaneMessages)
+	if fp < 0 {
+		t.Fatalf("no Messages pane in order %v", order)
+	}
+	model.JobsView.FocusPane = fp
+	key := func(k tcell.Key) { h.HandleJobsViewKey(tcell.NewEventKey(k, 0, tcell.ModNone)) }
+	key(tcell.KeyEnter)
+	if !model.JobsView.Maximized {
+		t.Fatal("Enter on Messages pane did not maximize")
+	}
+	key(tcell.KeyEnd)
+	if got := model.JobsView.MessagesSelected; got != len(warns)-1 {
+		t.Fatalf("End selected %d", got)
+	}
+	width, height := h.screen.Size()
+	rect := ui.JobsMaximizedRect(h.host.LayoutForTerminalSize(width, height))
+	if st := model.JobsView; st.MessagesScroll != ui.JobsMessagesWrappedScroll(warns, rect, st.MessagesScroll, st.MessagesSelected) {
+		t.Fatalf("scroll %d does not keep the selected message visible", st.MessagesScroll)
+	}
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyRune, 'q', tcell.ModNone))
+	if !model.JobsView.Maximized || model.JobsView.OpsFilter.Query != "" {
+		t.Fatal("a rune in the maximized Messages pane must be swallowed")
+	}
+	key(tcell.KeyEsc)
+	if model.JobsView.Maximized || model.ViewMode != ui.ViewJobs {
+		t.Fatal("Esc did not restore the Messages pane")
+	}
+}

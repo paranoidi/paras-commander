@@ -244,7 +244,7 @@ func (h *Handler) TryDispatch(actionID string) bool {
 		if h.model.ViewMode != ui.ViewJobs {
 			return true
 		}
-		if h.operationsFocused() {
+		if h.operationsFocused() || h.messagesFocused() {
 			h.model.JobsView.Maximized = true
 			return true
 		}
@@ -679,14 +679,15 @@ func (h *Handler) clampJobsFocusPane() {
 	if h.model.JobsView.FocusPane > maxPane {
 		h.model.JobsView.FocusPane = maxPane
 	}
-	if h.model.JobsView.Maximized && !h.operationsFocused() {
+	if h.model.JobsView.Maximized && !h.operationsFocused() && !h.messagesFocused() {
 		h.model.JobsView.Maximized = false
 	}
 }
 
-// handleJobsMaximizedKey handles keys while the Operations pane is maximized: Esc, Enter and
-// Left restore the layout, printable runes type into the fuzzy filter, Up/Down/PgUp/PgDn/Home/End
-// scroll by row, the rest is swallowed.
+// handleJobsMaximizedKey handles keys while the Operations or Messages pane is maximized: Esc,
+// Enter and Left restore the layout, printable runes type into the Operations fuzzy filter,
+// Up/Down/PgUp/PgDn/Home/End scroll Operations by row or move the Messages cursor, the rest is
+// swallowed.
 func (h *Handler) handleJobsMaximizedKey(event *tcell.EventKey) {
 	if event.Key() == tcell.KeyLeft && event.Modifiers() != tcell.ModNone {
 		return // modified arrows are other commands (history, expand), not "restore"
@@ -694,15 +695,28 @@ func (h *Handler) handleJobsMaximizedKey(event *tcell.EventKey) {
 	switch event.Key() {
 	case tcell.KeyEsc, tcell.KeyEnter, tcell.KeyLeft:
 		h.model.JobsView.Maximized = false
+		if h.messagesFocused() {
+			// Bring the cursor back inside the split pane's shorter window.
+			_, rects := h.jobsPaneLayout()
+			h.moveMessagesCursor(tcell.KeyNUL, len(h.selectedJobEntry().Warnings), ui.JobsPanelContentRows(rects[ui.JobsPaneMessages]))
+		}
 		return
 	case tcell.KeyRune:
-		if plainRune(event) {
+		if plainRune(event) && h.operationsFocused() {
 			h.typeOperationsRune(event.Rune())
 		}
 		return
 	}
 	width, height := h.screen.Size()
-	h.scrollOperations(event.Key(), ui.JobsPanelContentRows(ui.JobsMaximizedRect(h.host.LayoutForTerminalSize(width, height))))
+	rect := ui.JobsMaximizedRect(h.host.LayoutForTerminalSize(width, height))
+	if h.messagesFocused() {
+		warnings := h.selectedJobEntry().Warnings
+		h.moveMessagesCursor(event.Key(), len(warnings), 0)
+		st := &h.model.JobsView
+		st.MessagesScroll = ui.JobsMessagesWrappedScroll(warnings, rect, st.MessagesScroll, st.MessagesSelected)
+		return
+	}
+	h.scrollOperations(event.Key(), ui.JobsPanelContentRows(rect))
 }
 
 // ScrollKey reports whether event, a key the jobs view just handled, only moves its Queue

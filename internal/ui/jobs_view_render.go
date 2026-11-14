@@ -113,13 +113,13 @@ func JobsViewLayout(layout Layout, opsBottom bool, sel JobEntry, now time.Time, 
 }
 
 // jobsMaximizedPane returns the pane drawn full screen over the whole jobs view: the focused
-// Operations pane while maximized. ok is false when the normal split is drawn.
+// Operations or Messages pane while maximized. ok is false when the normal split is drawn.
 func jobsMaximizedPane(state JobsViewState, sel JobEntry, rects JobsViewRects) (pane JobsPane, ok bool) {
 	if !state.Maximized {
 		return JobsPaneList, false
 	}
 	pane = focusedJobsPane(state, JobsPaneOrder(JobEntryShowsConflictPanel(sel), rects.Messages.Height > 0, rects.Operations.Height > 0))
-	return pane, pane == JobsPaneOperations
+	return pane, pane == JobsPaneOperations || pane == JobsPaneMessages
 }
 
 // jobsViewRender carries the jobs view model fields drawJobsView reads.
@@ -150,8 +150,12 @@ func drawJobsView(screen tcell.Screen, layout Layout, v jobsViewRender, styles t
 		sourceLabel = jobSourceLabels(sel.Sources)[src]
 	}
 	rects := JobsViewLayout(layout, v.OpsBottom, sel, now, v.ThroughputChartEnabled)
-	if _, ok := jobsMaximizedPane(state, sel, rects); ok {
-		drawJobsOperationsPanel(screen, JobsMaximizedRect(layout), state, win, sourceLabel, styles, chromeBlocked, true, true, v.OpsNewestLast)
+	if pane, ok := jobsMaximizedPane(state, sel, rects); ok {
+		if pane == JobsPaneMessages {
+			drawJobsMessagesPanel(screen, JobsMaximizedRect(layout), state.MessagesScroll, state.MessagesSelected, sel.Warnings, styles, chromeBlocked, true, true)
+		} else {
+			drawJobsOperationsPanel(screen, JobsMaximizedRect(layout), state, win, sourceLabel, styles, chromeBlocked, true, true, v.OpsNewestLast)
+		}
 		return
 	}
 	drawJobsListPanel(screen, rects.List, state, jobs, styles, now, chromeBlocked, v.RateLimitBPS, v.ListHover)
@@ -162,7 +166,7 @@ func drawJobsView(screen tcell.Screen, layout Layout, v jobsViewRender, styles t
 	}
 	drawJobsDetailPanel(screen, rects.Detail, state, jobs, styles, now, chromeBlocked, focused == JobsPaneDetail, v.UserHomeDir, v.ThroughputChartEnabled)
 	if rects.Messages.Height > 0 {
-		drawJobsMessagesPanel(screen, rects.Messages, state.MessagesScroll, state.MessagesSelected, sel.Warnings, styles, chromeBlocked, focused == JobsPaneMessages)
+		drawJobsMessagesPanel(screen, rects.Messages, state.MessagesScroll, state.MessagesSelected, sel.Warnings, styles, chromeBlocked, focused == JobsPaneMessages, false)
 	}
 	if rects.Operations.Height > 0 {
 		drawJobsOperationsPanel(screen, rects.Operations, state, win, sourceLabel, styles, chromeBlocked, focused == JobsPaneOperations, false, v.OpsNewestLast)
@@ -392,24 +396,74 @@ func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jo
 	}
 }
 
-// drawJobsMessagesPanel draws the job's warnings, one truncated line each, scrolled by scroll.
-func drawJobsMessagesPanel(screen tcell.Screen, rect Rect, scroll, selected int, warnings []string, styles theme.Theme, chromeBlocked, focused bool) {
+// drawJobsMessagesPanel draws the job's warnings from index scroll: one middle-truncated line
+// each, or with wrap (maximized pane) every warning word-wrapped, the selected one highlighted on
+// all its lines.
+func drawJobsMessagesPanel(screen tcell.Screen, rect Rect, scroll, selected int, warnings []string, styles theme.Theme, chromeBlocked, focused, wrap bool) {
 	layout := drawAuxPanelChrome(screen, rect, fmt.Sprintf(" Messages (%d) ", len(warnings)), "", focused, chromeBlocked, false, styles)
 	body := auxPanelBodyText(styles, chromeBlocked, layout.ContentBG)
 	if !chromeBlocked {
 		body = styles.JobsDetailText.Background(layout.ContentBG)
 	}
-	textW := max(1, rect.Width-4)
+	textW := jobsMessagesTextWidth(rect)
 	contentH := rect.Height - 2
-	scroll = max(0, min(scroll, len(warnings)-contentH))
-	for i := 0; i < contentH && i+scroll < len(warnings); i++ {
-		style := body
-		if focused && i+scroll == selected {
-			style = auxPanelListRowStyle(styles, body, true, chromeBlocked, true)
-			paintAuxPanelRowMargins(screen, rect, rect.X+2, textW, rect.Y+1+i, style)
-		}
-		primitive.Text(screen, rect.X+2, rect.Y+1+i, textW, primitive.TruncateMiddle(warnings[i+scroll], textW), style)
+	if wrap {
+		scroll = JobsMessagesWrappedScroll(warnings, rect, scroll, selected)
+	} else {
+		scroll = max(0, min(scroll, len(warnings)-contentH))
 	}
+	y := 0
+	for i := scroll; i < len(warnings) && y < contentH; i++ {
+		lines := []string{primitive.TruncateMiddle(warnings[i], textW)}
+		if wrap {
+			lines = jobsMessageLines(warnings[i], textW)
+		}
+		style := body
+		if focused && i == selected {
+			style = auxPanelListRowStyle(styles, body, true, chromeBlocked, true)
+		}
+		for _, line := range lines {
+			if y >= contentH {
+				break
+			}
+			if style != body {
+				paintAuxPanelRowMargins(screen, rect, rect.X+2, textW, rect.Y+1+y, style)
+			}
+			primitive.Text(screen, rect.X+2, rect.Y+1+y, textW, line, style)
+			y++
+		}
+	}
+}
+
+// jobsMessagesTextWidth is the text width inside a Messages pane frame.
+func jobsMessagesTextWidth(rect Rect) int { return max(1, rect.Width-4) }
+
+// jobsMessageLines is one warning word-wrapped to textW (at least one line).
+func jobsMessageLines(warning string, textW int) []string {
+	if lines := WrapTextLines(warning, textW); len(lines) > 0 {
+		return lines
+	}
+	return []string{""}
+}
+
+// JobsMessagesWrappedScroll returns the first warning drawn in a word-wrapping (maximized)
+// Messages pane framed by rect: scroll clamped so the selected warning's lines are visible.
+func JobsMessagesWrappedScroll(warnings []string, rect Rect, scroll, selected int) int {
+	if len(warnings) == 0 {
+		return 0
+	}
+	selected = max(0, min(selected, len(warnings)-1))
+	scroll = max(0, min(scroll, selected))
+	textW, contentH := jobsMessagesTextWidth(rect), rect.Height-2
+	used := 0
+	for i := scroll; i <= selected; i++ {
+		used += len(jobsMessageLines(warnings[i], textW))
+	}
+	for scroll < selected && used > contentH {
+		used -= len(jobsMessageLines(warnings[scroll], textW))
+		scroll++
+	}
+	return scroll
 }
 
 // isJobsDetailPlotLine reports whether a Details line is a throughput chart row (holds braille dots).

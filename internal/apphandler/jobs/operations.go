@@ -237,7 +237,7 @@ func opsWindowPending(win ui.JobsOpsWindow) bool {
 func (h *Handler) opsContentRows() int {
 	width, height := h.screen.Size()
 	layout := h.host.LayoutForTerminalSize(width, height)
-	if h.model.JobsView.Maximized {
+	if h.model.JobsView.Maximized && h.operationsFocused() {
 		return ui.JobsPanelContentRows(ui.JobsMaximizedRect(layout))
 	}
 	_, rects := h.jobsPaneLayout()
