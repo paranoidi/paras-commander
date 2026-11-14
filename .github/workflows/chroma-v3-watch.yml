@@ -1,0 +1,36 @@
+name: chroma-v3-watch
+
+# Opens an issue once chroma publishes a v3 version newer than v3.0.0-alpha.5,
+# the first that can contain the lazy lexer/style init (#1354, #1356): ~17 ms
+# off startup. Dependabot can't propose it (v2 -> v3 changes the module path).
+# ponytail: delete this workflow once pc imports chroma/v3.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Open issue when a new chroma v3 version exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TITLE: "Upgrade to chroma v3 (faster startup)"
+        run: |
+          new=$(curl -fsS https://proxy.golang.org/github.com/alecthomas/chroma/v3/@v/list \
+            | grep -vxE 'v3\.0\.0-alpha\.[1-5]' | sort -V | tr '\n' ' ')
+          [ -n "$new" ] || { echo "no new chroma v3 version"; exit 0; }
+          if gh issue list --state all --search "in:title \"$TITLE\"" --json number --jq '.[].number' | grep -q .; then
+            echo "issue already exists"; exit 0
+          fi
+          gh issue create --label enhancement --title "$TITLE" --body "New chroma v3 version(s): $new
+
+          Check that the release includes alecthomas/chroma#1354 (lazy styles) and #1356 (lexer registry from generated metadata). Together they cut chroma's package init from ~17 ms to ~0.7 ms, which is a third of the time pc takes to show a file from the command line.
+
+          Then migrate the imports from \`github.com/alecthomas/chroma/v2\` to \`/v3\` and delete \`.github/workflows/chroma-v3-watch.yml\`."
