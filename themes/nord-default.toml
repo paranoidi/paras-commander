@@ -92,7 +92,8 @@ row.cursor.keep = { fg = "fg", bg = "file_cursor_bg", bold = true }
 full_dir_hidden = { fg = "fg" }
 
 [panel.active]
-usage.cursor.selected = { fg = "ink", bg = "highlight_bg", bold = true }
+usage.cursor = { fg = "file_cursor_fg", bg = "surface" }  # tuned
+usage.cursor.selected = { fg = "selected", bg = "surface", bold = true }  # tuned
 
 [panel.inactive]
 frame = { fg = "inactive_frame" }  # keep the dim frame: repair would brighten it  # tuned

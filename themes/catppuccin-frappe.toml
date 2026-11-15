@@ -70,6 +70,10 @@ error = { fg = "ink", bg = "danger", bold = true }
 [panel.row]
 info = { fg = "info_columns" }  # keep the dark columns: repair would brighten them  # tuned
 
+[panel.usage]
+normal = { fg = "fg", bg = "file_cursor_dim", icon.file = "faint", icon.folder_open = "faint", icon.folder_mount = "faint", icon.folder_excluded = "faint", icon.fileindex = "faint", icon.git = "faint", icon.suffix = "faint" }  # tuned
+selected = { fg = "selected", bg = "file_cursor_dim", icon.file = "faint", icon.folder_open = "faint", icon.folder_mount = "faint", icon.folder_excluded = "faint", icon.fileindex = "faint", icon.git = "faint", icon.suffix = "faint" }  # tuned
+
 [panel.dedup]
 row.cursor.all_marked = { fg = "ink", bg = "file_cursor_bg", bold = true }
 row.cursor.keep = { fg = "ink", bg = "file_cursor_bg", bold = true }
