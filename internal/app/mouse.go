@@ -233,12 +233,11 @@ func (a *App) dialogHovers() (dlg.ButtonHover, dlg.Rect) {
 }
 
 // menuBarHover is the menu title under the last pointer position, where a click would open it.
-func (a *App) menuBarHover() ui.MenuHover {
+func (a *App) menuBarHover(layout ui.Layout) ui.MenuHover {
 	if !a.mouse.hovers() || !a.menuBarAcceptsMouse() {
 		return ui.MenuHover{}
 	}
-	w, h := a.screen.Size()
-	index, ok := ui.MenuBarMenuAt(a.layoutForTerminalSize(w, h), &a.model, a.mouse.x, a.mouse.y)
+	index, ok := ui.MenuBarMenuAt(layout, &a.model, a.mouse.x, a.mouse.y)
 	return ui.MenuHover{Active: ok, Index: index}
 }
 
@@ -257,22 +256,20 @@ func (a *App) selectPulldownItemUnderPointer(layout ui.Layout, x, y int) bool {
 }
 
 // footerHover is the footer entry under the last pointer position, where a click would press it.
-func (a *App) footerHover() ui.FooterHover {
+func (a *App) footerHover(layout ui.Layout) ui.FooterHover {
 	if !a.mouse.hovers() {
 		return ui.FooterHover{}
 	}
-	w, h := a.screen.Size()
-	return ui.FooterHoverAt(a.layoutForTerminalSize(w, h), &a.model, a.mouse.x, a.mouse.y)
+	return ui.FooterHoverAt(layout, &a.model, a.mouse.x, a.mouse.y)
 }
 
 // leaderMenuHover is the open leader menu entry under the last pointer position, where a click
 // would run it.
-func (a *App) leaderMenuHover() ui.LeaderMenuHover {
+func (a *App) leaderMenuHover(layout ui.Layout) ui.LeaderMenuHover {
 	if !a.mouse.hovers() || a.inputMode() != InputModeLeaderMenu {
 		return ui.LeaderMenuHover{}
 	}
-	w, h := a.screen.Size()
-	action, _ := ui.LeaderMenuActionAt(a.layoutForTerminalSize(w, h), a.model.LeaderMenu, a.mouse.x, a.mouse.y)
+	action, _ := ui.LeaderMenuActionAt(layout, a.model.LeaderMenu, a.mouse.x, a.mouse.y)
 	if action < 0 {
 		return ui.LeaderMenuHover{}
 	}
@@ -299,15 +296,13 @@ func (a *App) auxListHit() (hit func(ui.Layout, *ui.Model, int, int) (int, bool)
 // position: a job or source row, a command entry, a whole message. It only highlights: the
 // selection stays put, so crossing the list on the way to the Details, Conflict or output panes
 // does not switch what they show. A key press hides it until the pointer reports again.
-func (a *App) auxListHover() ui.ListRowHover {
+func (a *App) auxListHover(layout ui.Layout) ui.ListRowHover {
 	hit, ok := a.auxListHit()
 	dedup := a.inputMode() == InputModeDedupView
 	unique := a.inputMode() == InputModeUniqueView
 	if (!ok && !dedup && !unique) || !a.mouse.hovers() || a.mouseGoesToDialog() {
 		return ui.ListRowHover{}
 	}
-	w, h := a.screen.Size()
-	layout := a.layoutForTerminalSize(w, h)
 	if unique {
 		row, ok := ui.UniqueListEntryAt(layout, &a.model, a.mouse.x, a.mouse.y)
 		return ui.ListRowHover{Active: ok, Row: row}
@@ -322,22 +317,19 @@ func (a *App) auxListHover() ui.ListRowHover {
 
 // statusCommandsHover reports whether the last pointer position is on the status-command area,
 // where a click would open the Status commands dialog.
-func (a *App) statusCommandsHover() bool {
+func (a *App) statusCommandsHover(layout ui.Layout) bool {
 	if !a.mouse.hovers() || !a.menuBarAcceptsMouse() {
 		return false
 	}
-	w, h := a.screen.Size()
-	return ui.StatusCommandsAt(a.layoutForTerminalSize(w, h), &a.model, a.mouse.x, a.mouse.y)
+	return ui.StatusCommandsAt(layout, &a.model, a.mouse.x, a.mouse.y)
 }
 
 // panelRowHover is the browser panel entry under the last pointer position (mouseHit), in
 // normal mode only, hidden after a key press until the pointer reports again.
-func (a *App) panelRowHover() ui.PanelRowHover {
+func (a *App) panelRowHover(layout ui.Layout) ui.PanelRowHover {
 	if !a.mouse.hovers() {
 		return ui.PanelRowHover{}
 	}
-	w, h := a.screen.Size()
-	layout := a.layoutForTerminalSize(w, h)
 	if layout.TooSmall {
 		return ui.PanelRowHover{}
 	}
@@ -363,12 +355,14 @@ func (a *App) panelRowHover() ui.PanelRowHover {
 // and list rows,
 // menu titles, the status commands, footer entries, leader menu entries, file list rows, Jobs, Commands and Messages rows) and reports
 // whether one changed. render calls it, so they track the screen as it changes under a still
-// pointer; motion calls it and renders on a change.
-func (a *App) refreshPointerHovers() bool {
+// pointer; motion calls it and renders on a change. layout is the current screen layout, computed
+// once by the caller for every hit test; it is only read while the pointer hovers, so a caller may
+// pass the zero Layout otherwise.
+func (a *App) refreshPointerHovers(layout ui.Layout) bool {
 	button, dialogRow := a.dialogHovers()
-	menuTitle, footer := a.menuBarHover(), a.footerHover()
-	status, row, listRow := a.statusCommandsHover(), a.panelRowHover(), a.auxListHover()
-	leader := a.leaderMenuHover()
+	menuTitle, footer := a.menuBarHover(layout), a.footerHover(layout)
+	status, row, listRow := a.statusCommandsHover(layout), a.panelRowHover(layout), a.auxListHover(layout)
+	leader := a.leaderMenuHover(layout)
 	prev := a.model.DialogButtonHover
 	changed := button.Active != prev.Active || button.ID != prev.ID || button.Rect != prev.Rect ||
 		menuTitle != a.model.MenuBarHover || footer != a.model.FooterHover ||
@@ -559,7 +553,7 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 		}
 		// Each one updates its own state, so all of them run before deciding to render.
 		moved := a.selectPulldownItemUnderPointer(layout, x, y)
-		hovers := a.refreshPointerHovers()
+		hovers := a.refreshPointerHovers(layout)
 		if title := a.updatePanelTitleHover(layout, x, y); moved || hovers || title {
 			a.render()
 			return false, true

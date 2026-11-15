@@ -347,10 +347,14 @@ func (a *App) render() {
 	if a.model.FileDialog.Open && a.model.FileDialog.DialogType == dialog.FileDialogMassRename && a.model.FileDialog.MassRenamePhase == dialog.MassRenamePhaseMain {
 		a.dialogCtrl.RecomputeMassRenamePreview()
 	}
+	var hoverLayout ui.Layout // the hover hit tests read it only while the pointer hovers
+	if a.mouse.hovers() {
+		hoverLayout = a.layoutForTerminalSize(w, h)
+	}
+	a.refreshPointerHovers(hoverLayout)
 	// Copy a.model under commandsMu: passing it by value into ui.Render otherwise reads
 	// every field (including CarouselFilePreview/FilePreview/FullscreenFilePreview, which
 	// background preview goroutines mutate under this same lock) without synchronization.
-	a.refreshPointerHovers()
 	a.commandsMu.RLock()
 	modelSnapshot := a.model
 	a.commandsMu.RUnlock()
