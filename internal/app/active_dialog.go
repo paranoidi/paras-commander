@@ -96,8 +96,9 @@ func (a *App) activeDialog(event *tcell.EventKey) (activeDialog, bool) {
 		return found(fits(a.sftpConnectView), &m.SFTPConnectDialog.Focus, noQuit(a.applySFTPConnectEvent),
 			dialogButtons{OK: a.executeSFTPConnectDialog, Cancel: a.closeSFTPConnectDialog})
 	case InputModeFilterDialog:
-		return found(fits(a.dialogCtrl.FilterDialogView), &m.FilterDialog.Focus, noQuit(a.dialogCtrl.ApplyFilterDialogEvent),
-			dialogButtons{OK: a.dialogCtrl.FilterDialogOK, Cancel: a.dialogCtrl.CloseFilterDialog})
+		s := a.dialogCtrl.FilterDialogScreen()
+		return found(fits(func() dlg.Spec { return s.Spec }), s.Focus, noQuit(a.dialogCtrl.ApplyFilterDialogEvent),
+			dialogButtons{OK: a.dialogCtrl.FilterDialogOK, Cancel: a.dialogCtrl.FilterDialogCancel})
 	case InputModeFindDialog:
 		return found(fits(a.findCtrl.DialogSpec), &m.FindDialog.Focus, noQuit(a.findCtrl.ApplyDialogEvent),
 			dialogButtons{OK: a.findCtrl.ActivateDialogOK, Cancel: a.findCtrl.CloseDialog})

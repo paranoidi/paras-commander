@@ -320,7 +320,7 @@ func (h *Handler) confirmSavePrompt() {
 }
 
 // focusedPromptField is the save prompt's focused input (Name when the focus is on neither).
-func (h *Handler) focusedPromptField() (dlg.ID, *dialog.ColumnsPromptField) {
+func (h *Handler) focusedPromptField() (dlg.ID, *dialog.PromptField) {
 	st := &h.model.ColumnsDialog
 	if st.Focus == dialog.ColumnsSaveDescInput {
 		return dialog.ColumnsSaveDescInput, &st.SaveDesc

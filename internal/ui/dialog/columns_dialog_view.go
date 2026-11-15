@@ -35,8 +35,8 @@ type ColumnsProfilePicker struct {
 	ListScroll  int
 }
 
-// ColumnsPromptField is one text input of the save prompt.
-type ColumnsPromptField struct {
+// PromptField is one text input of a save prompt (Columns and Filter dialogs).
+type PromptField struct {
 	Value  string
 	Cursor int
 	Scroll int
@@ -64,8 +64,8 @@ type ColumnsDialogState struct {
 	// DefaultProfile is the startup profile, marked in the pickers.
 	DefaultProfile string
 	Picker         ColumnsProfilePicker
-	SaveName       ColumnsPromptField
-	SaveDesc       ColumnsPromptField
+	SaveName       PromptField
+	SaveDesc       PromptField
 }
 
 // ColumnsFileID is the widget ID of the checkbox of file column i (panel.Columns order).
@@ -87,8 +87,10 @@ const (
 )
 
 const (
-	columnsPromptWidth = 56
-	columnsPickerWidth = 70
+	// savedPromptWidth and savedPickerWidth size the save prompt and the picker of saved column
+	// profiles and saved filters.
+	savedPromptWidth = 56
+	savedPickerWidth = 70
 	columnsMinWidth    = 28
 	// columnsScreenMargin is the cells a dialog leaves free on the screen (draw.ClampCenteredDialogRect).
 	columnsScreenMargin     = 4
@@ -243,7 +245,7 @@ func columnsPickerView(s ColumnsDialogState, screenH int) dlg.Spec {
 		title = "Overwrite profile"
 	}
 	pk := s.Picker
-	return pickerSpec(title, columnsPickerWidth, screenH, s.SearchIcon, len(pk.Items),
+	return pickerSpec(title, savedPickerWidth, screenH, s.SearchIcon, len(pk.Items),
 		func(i int) string { return ColumnsProfileLine(pk.Items[i], s.DefaultProfile) },
 		pk.Ranked, pk.MatchRanges, pk.Query, pk.QueryCursor, pk.QueryScroll, pk.Selected, pk.ListScroll)
 }
@@ -264,16 +266,21 @@ func ColumnsProfileLine(p columnprofile.Profile, defaultProfile string) string {
 }
 
 func columnsSaveView(s ColumnsDialogState) dlg.Spec {
-	input := func(id dlg.ID, f ColumnsPromptField) dlg.Item {
+	return savePromptSpec("Save profile", ColumnsSaveNameInput, s.SaveName, ColumnsSaveDescInput, s.SaveDesc)
+}
+
+// savePromptSpec is a save prompt: Name and Description inputs, OK / Cancel.
+func savePromptSpec(title string, nameID dlg.ID, name PromptField, descID dlg.ID, desc PromptField) dlg.Spec {
+	input := func(id dlg.ID, f PromptField) dlg.Item {
 		return dlg.Item{ID: id, Kind: dlg.KindInput, Value: f.Value, Cursor: f.Cursor, Scroll: f.Scroll}
 	}
 	return dlg.Spec{
-		Title: "Save profile", Width: columnsPromptWidth, MinWidth: 28,
+		Title: title, Width: savedPromptWidth, MinWidth: columnsMinWidth,
 		Groups: []dlg.Group{{Columns: [][]dlg.Item{{
 			{Kind: dlg.KindLabel, Label: "Name:"},
-			input(ColumnsSaveNameInput, s.SaveName),
+			input(nameID, name),
 			{Kind: dlg.KindLabel, Label: "Description:"},
-			input(ColumnsSaveDescInput, s.SaveDesc),
+			input(descID, desc),
 		}}}},
 		Buttons: dlg.OKCancelButtons(),
 	}

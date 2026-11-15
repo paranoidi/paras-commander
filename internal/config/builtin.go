@@ -481,6 +481,9 @@ const (
 	DefaultMassRenamePatternsFileName = "patterns.toml"
 	// DefaultColumnProfilesFileName is the basename of the saved column profiles file.
 	DefaultColumnProfilesFileName = "column-profiles.toml"
+	// DefaultFilterPatternsFileName is the basename of the saved Filter dialog patterns file
+	// under the config directory when [filter].file is empty.
+	DefaultFilterPatternsFileName = "filters.toml"
 
 	// DefaultFileIndexDatabase is [fileindex].database: empty uses fileindex's config.ini path.
 	DefaultFileIndexDatabase = ""

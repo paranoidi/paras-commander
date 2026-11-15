@@ -24,6 +24,7 @@ import (
 	previewctrl "github.com/paranoidi/paras-commander/internal/apphandler/preview"
 	uniquefilesctrl "github.com/paranoidi/paras-commander/internal/apphandler/uniquefiles"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
+	"github.com/paranoidi/paras-commander/internal/filterpattern"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/fschange"
 	"github.com/paranoidi/paras-commander/internal/keymap"
@@ -95,6 +96,9 @@ type Deps struct {
 	// KeysRunForEachDialog is the [dialog.run_for_each] keymap overlay, consulted while the
 	// main run-for-each dialog is open (command-history chord).
 	KeysRunForEachDialog *keymap.Map
+	// KeysFilterDialog is the [dialog.filter] keymap overlay, consulted while the Filter dialog
+	// is open (save/load/history/delete pattern chords).
+	KeysFilterDialog *keymap.Map
 
 	// ConfigDir is the resolved config directory, used to locate patterns.toml when
 	// Config().MassRename.File is empty (mirrors apphandler/meta.Deps.ConfigDir).
@@ -171,6 +175,7 @@ type Handler struct {
 	keysFindDialog       *keymap.Map
 	keysMassRenameDialog *keymap.Map
 	keysRunForEachDialog *keymap.Map
+	keysFilterDialog     *keymap.Map
 	configDir            string
 	jobs                 *jobsctrl.Handler
 	commands             *commandsctrl.Handler
@@ -226,6 +231,14 @@ type Handler struct {
 	// selectMassRenamePatternByName).
 	massRenamePatternName string
 
+	// filterHistory is the in-memory, session-only list of recently applied Filter dialog
+	// patterns (most recent first, deduplicated, capped at maxFilterHistory).
+	filterHistory []filterpattern.Pattern
+
+	// filterPatternName is the name of the saved filter last loaded, saved or overwritten this
+	// session; the load and overwrite pickers open on it.
+	filterPatternName string
+
 	// pathPickerValidate / transferDestValidate debounce the path-picker filter's and the
 	// transfer/flatten destination field's "does this path exist" background check; each Arm
 	// snapshots the typed query and posts a PathPickerValidatePayload / TransferDestValidatePayload
@@ -278,6 +291,7 @@ func New(d Deps) *Handler {
 		keysFindDialog:       d.KeysFindDialog,
 		keysMassRenameDialog: d.KeysMassRenameDialog,
 		keysRunForEachDialog: d.KeysRunForEachDialog,
+		keysFilterDialog:     d.KeysFilterDialog,
 		configDir:            d.ConfigDir,
 		jobs:                 d.Jobs,
 		commands:             d.Commands,

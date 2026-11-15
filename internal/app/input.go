@@ -310,6 +310,31 @@ func (a *App) columnsDialogFooterKeys() []menu.FunctionKey {
 	return out
 }
 
+// filterDialogFooterKeys is the footer of the Filter dialog's screen on top. KeyLabel only: a
+// footer click replays the binding, so a rebound chord still works.
+func (a *App) filterDialogFooterKeys() []menu.FunctionKey {
+	if !a.model.FilterDialog.Open {
+		return nil
+	}
+	var out []menu.FunctionKey
+	add := func(action, hint string) {
+		if lbl := a.keys.FilterDialog.MenuBindingLabel(action); lbl != "" {
+			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: hint})
+		}
+	}
+	switch phase := a.dialogCtrl.FilterDialogPhase(); {
+	case phase == dialog.FilterPhaseMain:
+		add(keymap.ActionFilterLoadPattern, "Load")
+		add(keymap.ActionFilterHistory, "History")
+		add(keymap.ActionFilterSavePattern, "Save")
+	case phase == dialog.FilterPhaseSavePrompt:
+		add(keymap.ActionFilterSavePattern, "Overwrite")
+	case a.dialogCtrl.FilterDeletePatternEligible():
+		add(keymap.ActionFilterDeletePattern, "Delete")
+	}
+	return out
+}
+
 // pathPickerColumnsFooterKeys builds footer hints for the PathPicker / ColumnsDialog overlay branch.
 func (a *App) pathPickerColumnsFooterKeys() []menu.FunctionKey {
 	rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
@@ -342,6 +367,9 @@ func (a *App) primaryModalFooterKeys() []menu.FunctionKey {
 	}
 	if a.model.PreviewSettingsDialog.Open {
 		rest = append([]menu.FunctionKey{{Key: tcell.KeyF5, KeyLabel: "F5", Hint: "Auto detect"}}, rest...)
+	}
+	if hints := a.filterDialogFooterKeys(); len(hints) > 0 {
+		rest = append(hints, rest...)
 	}
 	if hints := a.dialogCtrl.FlattenDialogOverlayFooterKeys(a.keys.FlattenDialog); len(hints) > 0 {
 		rest = append(hints, rest...)

@@ -6,7 +6,8 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
-// DrawFilterDialog renders the panel Filter modal from its widget spec (see FilterDialogView).
+// DrawFilterDialog renders the panel Filter modal, or its picker / save prompt (Screen).
 func DrawFilterDialog(screen tcell.Screen, layout Layout, state FilterDialogState, styles theme.Theme) {
-	dlg.Draw(screen, layout.Width, layout.Height, FilterDialogView(state, layout, styles), state.Focus, styles)
+	s := state.Screen(layout, styles)
+	dlg.Draw(screen, layout.Width, layout.Height, s.Spec, *s.Focus, styles)
 }

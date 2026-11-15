@@ -87,9 +87,6 @@ func (h *Handler) FlattenDialogCancel() {
 	h.CloseFlattenDialog()
 }
 
-// FilterDialogOK applies the Filter dialog (pattern row first).
-func (h *Handler) FilterDialogOK() { h.confirmFilterDialogFromInput() }
-
 // PathPickerOK activates the selected path picker item.
 func (h *Handler) PathPickerOK() { h.activatePathPickerSelection() }
 

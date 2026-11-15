@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/gdamore/tcell/v2"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -231,8 +230,11 @@ func (h *Handler) tryRejectFilterDialogOK() bool {
 func (h *Handler) executeFilterDialog() {
 	fd := &h.model.FilterDialog
 	spec := h.filterSpec()
-	if fd.Target != dialog.FilterTargetPanel && !spec.Empty() && h.tryRejectFilterDialogOK() {
-		return
+	if !spec.Empty() {
+		if h.tryRejectFilterDialogOK() {
+			return
+		}
+		h.recordFilterHistory()
 	}
 	switch fd.Target {
 	case dialog.FilterTargetCompare:
@@ -247,9 +249,6 @@ func (h *Handler) executeFilterDialog() {
 	if spec.Empty() {
 		p.SetEntryFilter(nil)
 		h.CloseFilterDialog()
-		return
-	}
-	if h.tryRejectFilterDialogOK() {
 		return
 	}
 	var metaFn func() panel.GroupSelectMeta
@@ -290,20 +289,7 @@ func (h *Handler) confirmFilterDialogFromInput() {
 	h.executeFilterDialog()
 }
 
-// HandleFilterDialogKey routes a key event for the open Filter dialog. Returns whether the app
-// should quit (always false here). The engine owns focus and the mnemonics; the pattern input's
-// text editing runs when the engine declines a key.
-func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) bool {
-	HandlePatternDialogKey(h.FilterPatternKeys(), event)
-	return false
-}
-
-// ApplyFilterDialogEvent acts on a widget event of the open Filter dialog (a mouse click).
-func (h *Handler) ApplyFilterDialogEvent(ev dlg.Event) {
-	ApplyPatternDialogEvent(h.FilterPatternKeys(), ev)
-}
-
-// FilterPatternKeys binds the open Filter dialog to the shared pattern dialog handling.
+// FilterPatternKeys binds the Filter dialog's main screen to the shared pattern dialog handling.
 func (h *Handler) FilterPatternKeys() PatternKeys {
 	fd := &h.model.FilterDialog
 	return PatternKeys{

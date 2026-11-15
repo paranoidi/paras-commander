@@ -21,7 +21,8 @@ pc --config-stub
 
 This writes a `config.toml` containing every key at its current built-in
 default, plus `keybindings.toml`, `menu.toml`, `meta.toml`, `pools.toml`,
-`status.toml` and `patterns.toml` (the built-in example mass-rename patterns). Existing files are
+`status.toml`, `patterns.toml` (the built-in example mass-rename patterns), and empty
+`column-profiles.toml` and `filters.toml`. Existing files are
 left unchanged. It's the fastest way to get a copy of every available key, correctly
 named and up to date with the installed binary — treat it as more
 authoritative than any example in this document if the two ever disagree.
@@ -60,6 +61,7 @@ These live alongside `config.toml` in the same config directory but are
 | `pools.toml` | Worker pool definitions. | `[pools].file` |
 | `patterns.toml` | Saved mass-rename find/replace patterns. | `[mass_rename].file` |
 | `column-profiles.toml` | Saved [column profiles](columns.md). | `[columns].file` |
+| `filters.toml` | Saved [Filter dialog patterns](panel-filter.md#saved-patterns-and-history). | `[filter].file` |
 | `status.toml` | Menu-bar [status commands](status-commands.md) and which are shown. See [`status.toml`](#statustoml). | — |
 | `themes/*.toml` | Color themes. | top-level `theme` key |
 
@@ -247,6 +249,7 @@ Panel quick-filter behavior.
 | `syntax` | string | `"subset-fzf"` | Quick-filter query syntax. Currently only `"subset-fzf"` is supported. |
 | `cycle_matches` | string | `"visual"` | How Up/Down move among quick-filter matches: `"visual"` (panel row order) or `"ranked"` (best fuzzy match first). |
 | `case_insensitive` | bool | `true` | Match panel quick-filter and find queries case-insensitively. |
+| `file` | string | `""` | Path of the saved [Filter dialog patterns](panel-filter.md#saved-patterns-and-history) file. Empty uses `filters.toml` in the config directory. |
 
 ### `[filter.types]`
 

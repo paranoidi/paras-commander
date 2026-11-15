@@ -217,7 +217,7 @@ func TestColumnsDialogGoldenRender(t *testing.T) {
 	cases = append(cases, simpleGolden{"80x24_load_picker", 80, 24, func(s tcell.Screen, l Layout) {
 		DrawColumnsDialog(s, l, picker, asciiDialogStyles())
 	}})
-	prompt := ColumnsDialogState{Open: true, Phase: ColumnsPhaseSavePrompt, SaveName: ColumnsPromptField{Value: "orchard", Cursor: 7}}
+	prompt := ColumnsDialogState{Open: true, Phase: ColumnsPhaseSavePrompt, SaveName: PromptField{Value: "orchard", Cursor: 7}}
 	cases = append(cases, simpleGolden{"80x24_save_prompt", 80, 24, func(s tcell.Screen, l Layout) {
 		DrawColumnsDialog(s, l, prompt, asciiDialogStyles())
 	}})

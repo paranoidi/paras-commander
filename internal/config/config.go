@@ -579,6 +579,9 @@ type FilterConfig struct {
 	CaseInsensitive bool `toml:"case_insensitive"`
 	// Types holds the regexps behind the panel Filter dialog's file-type checkboxes.
 	Types FilterTypesConfig `toml:"types"`
+	// File is an absolute path to the saved Filter dialog patterns file. Empty uses
+	// filepath.Join(configDir, DefaultFilterPatternsFileName) after paths are resolved.
+	File string `toml:"file"`
 }
 
 // FilterTypesConfig is `[filter.types]`: one basename regexp per Filter dialog type checkbox.

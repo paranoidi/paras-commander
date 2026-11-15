@@ -32,6 +32,10 @@ A built-in column a panel can show beside each name (size, modified, owner, ...)
 **Column profile**:
 A named set of file and meta columns a panel can apply; built-in or saved in `column-profiles.toml`.
 
+**Saved filter**:
+A named Filter dialog configuration (pattern, mode, file types, options) kept in `filters.toml`; unnamed entries of the session-only filter history have the same shape.
+_Avoid_: filter preset, filter profile
+
 **Meta column**:
 An extra listing column whose values come from a user-configured per-entry command.
 _Avoid_: custom column

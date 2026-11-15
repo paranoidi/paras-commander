@@ -1358,6 +1358,34 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: nil, // overlay: DefaultColumnsDialogOverlayKeys
 			Keywords:    []string{"column", "profile", "default", "startup"},
 		},
+		{
+			ID:          ActionFilterLoadPattern,
+			Title:       "Load filter pattern",
+			Section:     "View",
+			DefaultKeys: nil, // overlay: DefaultFilterDialogOverlayKeys
+			Keywords:    []string{"filter", "pattern", "load", "saved"},
+		},
+		{
+			ID:          ActionFilterSavePattern,
+			Title:       "Save filter pattern",
+			Section:     "View",
+			DefaultKeys: nil, // overlay: DefaultFilterDialogOverlayKeys
+			Keywords:    []string{"filter", "pattern", "save", "overwrite"},
+		},
+		{
+			ID:          ActionFilterHistory,
+			Title:       "Filter pattern history",
+			Section:     "View",
+			DefaultKeys: nil, // overlay: DefaultFilterDialogOverlayKeys
+			Keywords:    []string{"filter", "pattern", "history", "recent"},
+		},
+		{
+			ID:          ActionFilterDeletePattern,
+			Title:       "Delete filter pattern",
+			Section:     "View",
+			DefaultKeys: nil, // overlay: DefaultFilterDialogOverlayKeys
+			Keywords:    []string{"filter", "pattern", "delete", "remove"},
+		},
 
 		{
 			ID:           ActionThemeToggleAutoReload,
