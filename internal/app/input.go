@@ -310,27 +310,27 @@ func (a *App) columnsDialogFooterKeys() []menu.FunctionKey {
 	return out
 }
 
-// filterDialogFooterKeys is the footer of the Filter dialog's screen on top. KeyLabel only: a
-// footer click replays the binding, so a rebound chord still works.
-func (a *App) filterDialogFooterKeys() []menu.FunctionKey {
-	if !a.model.FilterDialog.Open {
+// patternDialogFooterKeys is the saved-pattern footer of the open Filter or Select group dialog's
+// screen on top. KeyLabel only: a footer click replays the binding, so a rebound chord still works.
+func (a *App) patternDialogFooterKeys() []menu.FunctionKey {
+	if !a.model.FilterDialog.Open && !a.model.GroupSelect.Open {
 		return nil
 	}
 	var out []menu.FunctionKey
 	add := func(action, hint string) {
-		if lbl := a.keys.FilterDialog.MenuBindingLabel(action); lbl != "" {
+		if lbl := a.keys.PatternDialog.MenuBindingLabel(action); lbl != "" {
 			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: hint})
 		}
 	}
-	switch phase := a.dialogCtrl.FilterDialogPhase(); {
-	case phase == dialog.FilterPhaseMain:
-		add(keymap.ActionFilterLoadPattern, "Load")
-		add(keymap.ActionFilterHistory, "History")
-		add(keymap.ActionFilterSavePattern, "Save")
-	case phase == dialog.FilterPhaseSavePrompt:
-		add(keymap.ActionFilterSavePattern, "Overwrite")
-	case a.dialogCtrl.FilterDeletePatternEligible():
-		add(keymap.ActionFilterDeletePattern, "Delete")
+	switch phase := a.dialogCtrl.PatternDialogPhase(); {
+	case phase == dialog.PatternPhaseMain:
+		add(keymap.ActionPatternLoad, "Load")
+		add(keymap.ActionPatternHistory, "History")
+		add(keymap.ActionPatternSave, "Save")
+	case phase == dialog.PatternPhaseSavePrompt:
+		add(keymap.ActionPatternSave, "Overwrite")
+	case a.dialogCtrl.PatternDeletePatternEligible():
+		add(keymap.ActionPatternDelete, "Delete")
 	}
 	return out
 }
@@ -368,7 +368,7 @@ func (a *App) primaryModalFooterKeys() []menu.FunctionKey {
 	if a.model.PreviewSettingsDialog.Open {
 		rest = append([]menu.FunctionKey{{Key: tcell.KeyF5, KeyLabel: "F5", Hint: "Auto detect"}}, rest...)
 	}
-	if hints := a.filterDialogFooterKeys(); len(hints) > 0 {
+	if hints := a.patternDialogFooterKeys(); len(hints) > 0 {
 		rest = append(hints, rest...)
 	}
 	if hints := a.dialogCtrl.FlattenDialogOverlayFooterKeys(a.keys.FlattenDialog); len(hints) > 0 {

@@ -96,9 +96,9 @@ type Deps struct {
 	// KeysRunForEachDialog is the [dialog.run_for_each] keymap overlay, consulted while the
 	// main run-for-each dialog is open (command-history chord).
 	KeysRunForEachDialog *keymap.Map
-	// KeysFilterDialog is the [dialog.filter] keymap overlay, consulted while the Filter dialog
+	// KeysPatternDialog is the [dialog.pattern] keymap overlay, consulted while the Filter dialog
 	// is open (save/load/history/delete pattern chords).
-	KeysFilterDialog *keymap.Map
+	KeysPatternDialog *keymap.Map
 
 	// ConfigDir is the resolved config directory, used to locate patterns.toml when
 	// Config().MassRename.File is empty (mirrors apphandler/meta.Deps.ConfigDir).
@@ -175,7 +175,7 @@ type Handler struct {
 	keysFindDialog       *keymap.Map
 	keysMassRenameDialog *keymap.Map
 	keysRunForEachDialog *keymap.Map
-	keysFilterDialog     *keymap.Map
+	keysPatternDialog    *keymap.Map
 	configDir            string
 	jobs                 *jobsctrl.Handler
 	commands             *commandsctrl.Handler
@@ -231,13 +231,15 @@ type Handler struct {
 	// selectMassRenamePatternByName).
 	massRenamePatternName string
 
-	// filterHistory is the in-memory, session-only list of recently applied Filter dialog
-	// patterns (most recent first, deduplicated, capped at maxFilterHistory).
-	filterHistory []filterpattern.Pattern
+	// filterHistory and groupSelectHistory are the in-memory, session-only lists of recently
+	// applied Filter and Select group patterns (most recent first, deduplicated, capped at
+	// maxPatternHistory).
+	filterHistory      []filterpattern.Pattern
+	groupSelectHistory []filterpattern.Pattern
 
-	// filterPatternName is the name of the saved filter last loaded, saved or overwritten this
-	// session; the load and overwrite pickers open on it.
-	filterPatternName string
+	// savedPatternName is the name of the saved pattern last loaded, saved or overwritten this
+	// session in either dialog; the load and overwrite pickers open on it.
+	savedPatternName string
 
 	// pathPickerValidate / transferDestValidate debounce the path-picker filter's and the
 	// transfer/flatten destination field's "does this path exist" background check; each Arm
@@ -291,7 +293,7 @@ func New(d Deps) *Handler {
 		keysFindDialog:       d.KeysFindDialog,
 		keysMassRenameDialog: d.KeysMassRenameDialog,
 		keysRunForEachDialog: d.KeysRunForEachDialog,
-		keysFilterDialog:     d.KeysFilterDialog,
+		keysPatternDialog:    d.KeysPatternDialog,
 		configDir:            d.ConfigDir,
 		jobs:                 d.Jobs,
 		commands:             d.Commands,

@@ -25,6 +25,8 @@ The pattern opens prefilled with the extension of the file under the cursor (e.g
 
 A live count beside the Pattern label shows how many files and folders the pattern would newly select (or unselect). The input turns red when the pattern is invalid or matches nothing. With "Directories only" the type checkboxes are disabled. An empty pattern with types checked selects every entry of those types; an empty pattern and no types selects nothing. The dialog also works inside Find results (with "Match full path"), in the [Find duplicates](find-duplicates.md) results (marking duplicates, also with "Match full path") and on the paths detected in a user-menu output dialog.
 
+Patterns can be saved and loaded (`F5` / `F2`) and recalled from the session history (`F3`), sharing the saved list with the Filter dialog. See [Saved patterns and history](panel-filter.md#saved-patterns-and-history).
+
 ## Selected strip
 
 When selected paths lie outside the current directory, a Selected strip lists them under (or beside) the panel with paths relative to the common root. A bottom-border label shows `N item(s) (size)`; sizes of selected directories are computed in the background (see [Disk usage](disk-usage.md)), and an icon on the strip's border marks a selection that spans several locations.

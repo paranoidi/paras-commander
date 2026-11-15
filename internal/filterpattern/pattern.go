@@ -1,5 +1,5 @@
-// Package filterpattern holds the Filter dialog's saved patterns: a pattern with its mode, file
-// types and options, kept in filters.toml.
+// Package filterpattern holds the saved patterns of the Filter and Select group dialogs: a pattern
+// with its mode, file types and options, kept in filters.toml.
 package filterpattern
 
 import (
@@ -35,9 +35,12 @@ type Pattern struct {
 	FilesOnly     bool     `toml:"files_only"`
 	DirsOnly      bool     `toml:"dirs_only"`
 	CaseSensitive bool     `toml:"case_sensitive"`
-	Invert        bool     `toml:"invert"`
-	IncludeMeta   bool     `toml:"include_meta"`
-	OnlyMeta      bool     `toml:"only_meta"`
+	// Invert is a Filter dialog option; Select group ignores it.
+	Invert bool `toml:"invert"`
+	// FullPath is a Select group option (where it shows Match full path); Filter ignores it.
+	FullPath    bool `toml:"full_path"`
+	IncludeMeta bool `toml:"include_meta"`
+	OnlyMeta    bool `toml:"only_meta"`
 }
 
 // Equal reports whether p and o hold the same name, description, pattern and options.
@@ -47,13 +50,13 @@ func (p Pattern) Equal(o Pattern) bool {
 
 // patternScalars is Pattern without its slice, so it compares with ==.
 type patternScalars struct {
-	name, description, pattern, mode                                  string
-	filesOnly, dirsOnly, caseSensitive, invert, includeMeta, onlyMeta bool
+	name, description, pattern, mode                                            string
+	filesOnly, dirsOnly, caseSensitive, invert, fullPath, includeMeta, onlyMeta bool
 }
 
 func (p Pattern) scalars() patternScalars {
 	return patternScalars{p.Name, p.Description, p.Pattern, p.Mode,
-		p.FilesOnly, p.DirsOnly, p.CaseSensitive, p.Invert, p.IncludeMeta, p.OnlyMeta}
+		p.FilesOnly, p.DirsOnly, p.CaseSensitive, p.Invert, p.FullPath, p.IncludeMeta, p.OnlyMeta}
 }
 
 type patternsFile struct {

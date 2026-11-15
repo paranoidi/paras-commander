@@ -91,7 +91,7 @@ const (
 	// profiles and saved filters.
 	savedPromptWidth = 56
 	savedPickerWidth = 70
-	columnsMinWidth    = 28
+	columnsMinWidth  = 28
 	// columnsScreenMargin is the cells a dialog leaves free on the screen (draw.ClampCenteredDialogRect).
 	columnsScreenMargin     = 4
 	columnsMetaSectionLabel = "Meta"

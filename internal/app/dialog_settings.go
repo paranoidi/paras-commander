@@ -738,6 +738,7 @@ func (a *App) executeGroupSelect() {
 	if a.tryRejectGroupSelectOK() {
 		return
 	}
+	a.dialogCtrl.RecordGroupSelectHistory()
 	context := gs.Context
 	if context == "" {
 		context = "panel"
@@ -798,10 +799,22 @@ func (a *App) confirmGroupSelectFromInput() {
 	a.executeGroupSelect()
 }
 
-// handleGroupSelectKey routes a key for the open group select dialog. The engine owns focus and
-// the mnemonics; the pattern input's text editing runs when the engine declines a key.
+// handleGroupSelectKey routes a key for the open group select dialog's screen: the saved-pattern
+// chords and sub-screens first (dialogctrl), then on the main screen the engine owns focus and the
+// mnemonics, and the pattern input's text editing runs when the engine declines a key.
 func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
-	dialogctrl.HandlePatternDialogKey(a.groupSelectPatternKeys(), event)
+	a.dialogCtrl.HandleGroupSelectKey(a.groupSelectHooks(), event)
+}
+
+// groupSelectHooks is the group select dialog's main-screen handling, for the shared
+// saved-pattern handling to fall back on.
+func (a *App) groupSelectHooks() dialogctrl.GroupSelectHooks {
+	return dialogctrl.GroupSelectHooks{
+		Key:   func(ev *tcell.EventKey) { dialogctrl.HandlePatternDialogKey(a.groupSelectPatternKeys(), ev) },
+		Event: func(ev dlg.Event) { dialogctrl.ApplyPatternDialogEvent(a.groupSelectPatternKeys(), ev) },
+		OK:    a.confirmGroupSelectFromInput,
+		Close: a.closeGroupSelect,
+	}
 }
 
 // groupSelectPatternKeys binds the open group select dialog to the shared pattern dialog handling.

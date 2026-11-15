@@ -123,17 +123,9 @@ type FilterDialogState struct {
 	// Target is what the dialog filters: the active panel, Compare rows or dedup groups.
 	Target FilterTarget
 	// Focus is the focused widget of the main screen: PatternInput, a radio, checkbox, dlg.OK or
-	// dlg.Cancel (see the Pattern* IDs in pattern_dialog_view.go). It is kept while a sub-screen is
-	// on top, so returning lands where the user was.
+	// dlg.Cancel (see the Pattern* IDs in pattern_dialog_view.go).
 	Focus dlg.ID
-
-	// Phase is the screen on top (see Screen); ScreenFocus is the focused widget of a picker or the
-	// save prompt, empty for its first.
-	Phase       FilterPhase
-	ScreenFocus dlg.ID
-	Picker      FilterPatternPicker
-	SaveName    PromptField
-	SaveDesc    PromptField
+	SavedPatternScreens
 
 	// Live match-count preview shown right-aligned on the Pattern row, recomputed on every state
 	// change. PreviewShow is false while the pattern is empty or fails to compile.

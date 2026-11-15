@@ -1359,32 +1359,32 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"column", "profile", "default", "startup"},
 		},
 		{
-			ID:          ActionFilterLoadPattern,
-			Title:       "Load filter pattern",
+			ID:          ActionPatternLoad,
+			Title:       "Load saved filter / select pattern",
 			Section:     "View",
-			DefaultKeys: nil, // overlay: DefaultFilterDialogOverlayKeys
-			Keywords:    []string{"filter", "pattern", "load", "saved"},
+			DefaultKeys: nil, // overlay: DefaultPatternDialogOverlayKeys
+			Keywords:    []string{"filter", "select", "group", "pattern", "load", "saved"},
 		},
 		{
-			ID:          ActionFilterSavePattern,
-			Title:       "Save filter pattern",
+			ID:          ActionPatternSave,
+			Title:       "Save filter / select pattern",
 			Section:     "View",
-			DefaultKeys: nil, // overlay: DefaultFilterDialogOverlayKeys
-			Keywords:    []string{"filter", "pattern", "save", "overwrite"},
+			DefaultKeys: nil, // overlay: DefaultPatternDialogOverlayKeys
+			Keywords:    []string{"filter", "select", "group", "pattern", "save", "overwrite"},
 		},
 		{
-			ID:          ActionFilterHistory,
-			Title:       "Filter pattern history",
+			ID:          ActionPatternHistory,
+			Title:       "Filter / select pattern history",
 			Section:     "View",
-			DefaultKeys: nil, // overlay: DefaultFilterDialogOverlayKeys
-			Keywords:    []string{"filter", "pattern", "history", "recent"},
+			DefaultKeys: nil, // overlay: DefaultPatternDialogOverlayKeys
+			Keywords:    []string{"filter", "select", "group", "pattern", "history", "recent"},
 		},
 		{
-			ID:          ActionFilterDeletePattern,
-			Title:       "Delete filter pattern",
+			ID:          ActionPatternDelete,
+			Title:       "Delete saved filter / select pattern",
 			Section:     "View",
-			DefaultKeys: nil, // overlay: DefaultFilterDialogOverlayKeys
-			Keywords:    []string{"filter", "pattern", "delete", "remove"},
+			DefaultKeys: nil, // overlay: DefaultPatternDialogOverlayKeys
+			Keywords:    []string{"filter", "select", "group", "pattern", "delete", "remove"},
 		},
 
 		{

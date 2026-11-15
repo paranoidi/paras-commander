@@ -61,7 +61,7 @@ These live alongside `config.toml` in the same config directory but are
 | `pools.toml` | Worker pool definitions. | `[pools].file` |
 | `patterns.toml` | Saved mass-rename find/replace patterns. | `[mass_rename].file` |
 | `column-profiles.toml` | Saved [column profiles](columns.md). | `[columns].file` |
-| `filters.toml` | Saved [Filter dialog patterns](panel-filter.md#saved-patterns-and-history). | `[filter].file` |
+| `filters.toml` | Saved [Filter and Select group patterns](panel-filter.md#saved-patterns-and-history). | `[filter].file` |
 | `status.toml` | Menu-bar [status commands](status-commands.md) and which are shown. See [`status.toml`](#statustoml). | — |
 | `themes/*.toml` | Color themes. | top-level `theme` key |
 
@@ -249,7 +249,7 @@ Panel quick-filter behavior.
 | `syntax` | string | `"subset-fzf"` | Quick-filter query syntax. Currently only `"subset-fzf"` is supported. |
 | `cycle_matches` | string | `"visual"` | How Up/Down move among quick-filter matches: `"visual"` (panel row order) or `"ranked"` (best fuzzy match first). |
 | `case_insensitive` | bool | `true` | Match panel quick-filter and find queries case-insensitively. |
-| `file` | string | `""` | Path of the saved [Filter dialog patterns](panel-filter.md#saved-patterns-and-history) file. Empty uses `filters.toml` in the config directory. |
+| `file` | string | `""` | Path of the saved [Filter and Select group patterns](panel-filter.md#saved-patterns-and-history) file. Empty uses `filters.toml` in the config directory. |
 
 ### `[filter.types]`
 

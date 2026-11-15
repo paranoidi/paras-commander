@@ -125,10 +125,10 @@ const (
 	ActionColumnsLoadProfile          = "panel.columns.load-profile"    // bound via [dialog.columns], not [main]
 	ActionColumnsDeleteProfile        = "panel.columns.delete-profile"  // bound via [dialog.columns], not [main]
 	ActionColumnsDefaultProfile       = "panel.columns.default-profile" // bound via [dialog.columns], not [main]
-	ActionFilterLoadPattern           = "panel.filter.load-pattern"     // bound via [dialog.filter], not [main]
-	ActionFilterSavePattern           = "panel.filter.save-pattern"     // bound via [dialog.filter], not [main]
-	ActionFilterHistory               = "panel.filter.history"          // bound via [dialog.filter], not [main]
-	ActionFilterDeletePattern         = "panel.filter.delete-pattern"   // bound via [dialog.filter], not [main]
+	ActionPatternLoad                 = "panel.pattern.load"            // bound via [dialog.pattern], not [main]
+	ActionPatternSave                 = "panel.pattern.save"            // bound via [dialog.pattern], not [main]
+	ActionPatternHistory              = "panel.pattern.history"         // bound via [dialog.pattern], not [main]
+	ActionPatternDelete               = "panel.pattern.delete"          // bound via [dialog.pattern], not [main]
 	ActionThemePrevPreview            = "theme.prev-preview"            // bound via [dialog.theme], not [main]
 	ActionThemeNextPreview            = "theme.next-preview"            // bound via [dialog.theme], not [main]
 	ActionThemeToggleAutoReload       = "theme.toggle-auto-reload"      // bound via [dialog.theme], not [main]
@@ -520,10 +520,10 @@ var KnownActions = map[string]struct{}{
 	ActionColumnsLoadProfile:          {},
 	ActionColumnsDeleteProfile:        {},
 	ActionColumnsDefaultProfile:       {},
-	ActionFilterLoadPattern:           {},
-	ActionFilterSavePattern:           {},
-	ActionFilterHistory:               {},
-	ActionFilterDeletePattern:         {},
+	ActionPatternLoad:                 {},
+	ActionPatternSave:                 {},
+	ActionPatternHistory:              {},
+	ActionPatternDelete:               {},
 	ActionThemePrevPreview:            {},
 	ActionThemeNextPreview:            {},
 	ActionThemeToggleAutoReload:       {},

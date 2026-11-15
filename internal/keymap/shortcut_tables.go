@@ -19,7 +19,7 @@ const (
 	DialogHistoryShortcutsTable       = "dialog.history"
 	DialogColumnsShortcutsTable       = "dialog.columns"
 	DialogThemeShortcutsTable         = "dialog.theme"
-	DialogFilterShortcutsTable        = "dialog.filter"
+	DialogPatternShortcutsTable       = "dialog.pattern"
 	DialogPinShortcutsTable           = "dialog.pin"
 	DialogCommandOutputShortcutsTable = "dialog.command_output"
 	DialogHelpShortcutsTable          = "dialog.help"
@@ -46,7 +46,7 @@ var dialogShortcutSubtables = map[string]struct{}{
 	"history":        {},
 	"columns":        {},
 	"theme":          {},
-	"filter":         {},
+	"pattern":        {},
 	"flatten":        {},
 	"transfer":       {},
 	"run_for_each":   {},
@@ -74,7 +74,7 @@ func AllShortcutTablePaths() []string {
 		DialogHistoryShortcutsTable,
 		DialogColumnsShortcutsTable,
 		DialogThemeShortcutsTable,
-		DialogFilterShortcutsTable,
+		DialogPatternShortcutsTable,
 		DialogFlattenShortcutsTable,
 		DialogTransferShortcutsTable,
 		DialogRunForEachShortcutsTable,

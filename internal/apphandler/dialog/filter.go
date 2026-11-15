@@ -234,7 +234,7 @@ func (h *Handler) executeFilterDialog() {
 		if h.tryRejectFilterDialogOK() {
 			return
 		}
-		h.recordFilterHistory()
+		recordPatternHistory(h.filterSavedBinding())
 	}
 	switch fd.Target {
 	case dialog.FilterTargetCompare:

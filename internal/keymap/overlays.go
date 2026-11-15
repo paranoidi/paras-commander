@@ -41,7 +41,7 @@ var overlayRegistry = []OverlaySpec{
 	{TableName: FilePreviewSearchShortcutsTable, Defaults: DefaultFilePreviewSearchOverlayKeys, Allowed: AllowedInFilePreviewSearchOverlay},
 	{TableName: UniqueShortcutsTable, Defaults: DefaultUniqueOverlayKeys, Allowed: AllowedInUniqueOverlay},
 	{TableName: DialogThemeShortcutsTable, Defaults: DefaultThemeDialogOverlayKeys, Allowed: AllowedInThemeDialogOverlay},
-	{TableName: DialogFilterShortcutsTable, Defaults: DefaultFilterDialogOverlayKeys, Allowed: AllowedInFilterDialogOverlay},
+	{TableName: DialogPatternShortcutsTable, Defaults: DefaultPatternDialogOverlayKeys, Allowed: AllowedInPatternDialogOverlay},
 }
 
 // OverlayTableNames returns all overlay TOML table names in registry order.

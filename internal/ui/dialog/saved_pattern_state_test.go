@@ -50,7 +50,7 @@ func TestFilterLoadPatternDropsHiddenOptions(t *testing.T) {
 	}
 }
 
-func TestFilterPatternLine(t *testing.T) {
+func TestSavedPatternLine(t *testing.T) {
 	for _, c := range []struct {
 		p    filterpattern.Pattern
 		want string
@@ -60,8 +60,34 @@ func TestFilterPatternLine(t *testing.T) {
 		{filterpattern.Pattern{Pattern: "*.log", Mode: "shell", Types: []string{"videos"}, Invert: true}, "shell: *.log · Videos · invert"},
 		{filterpattern.Pattern{Types: []string{"videos"}, DirsOnly: true}, "directories only"},
 	} {
-		if got := FilterPatternLine(c.p); got != c.want {
-			t.Errorf("FilterPatternLine(%+v) = %q, want %q", c.p, got, c.want)
+		if got := SavedPatternLine(c.p); got != c.want {
+			t.Errorf("SavedPatternLine(%+v) = %q, want %q", c.p, got, c.want)
 		}
+	}
+}
+
+func TestGroupSelectSavedPatternRoundTrip(t *testing.T) {
+	st := GroupSelectState{Context: "find", Text: "meadow/", PatternMode: panel.GroupPatternShell, DirsOnly: true, FullPath: true}
+	p := st.SavedPattern("otter", "")
+	if !p.FullPath || p.Invert || !p.DirsOnly || p.Mode != filterpattern.ModeShell {
+		t.Fatalf("SavedPattern = %+v", p)
+	}
+	panelCtx := GroupSelectState{Context: "panel"}
+	panelCtx.LoadPattern(filterpattern.Pattern{Pattern: "x", FullPath: true, Invert: true, FilesOnly: true})
+	if panelCtx.FullPath || !panelCtx.FilesOnly {
+		t.Fatalf("panel context: FullPath %v FilesOnly %v, want no full path (not shown), files only kept", panelCtx.FullPath, panelCtx.FilesOnly)
+	}
+	if got := (GroupSelectState{Context: "panel", FullPath: true}).SavedPattern("", ""); got.FullPath {
+		t.Fatal("a hidden Match full path must not be saved")
+	}
+	findCtx := GroupSelectState{Context: "find"}
+	findCtx.LoadPattern(p)
+	if !findCtx.FullPath || !findCtx.DirsOnly || findCtx.Text != "meadow/" {
+		t.Fatalf("find context load = %+v", findCtx)
+	}
+	filter := FilterDialogState{}
+	filter.LoadPattern(filterpattern.Pattern{Invert: true, FullPath: true})
+	if !filter.Invert {
+		t.Fatal("Filter keeps Invert")
 	}
 }

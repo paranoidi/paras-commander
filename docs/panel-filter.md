@@ -30,16 +30,20 @@ The panel border shows the active filter, for example `Filter: not report Videos
 
 ## Saved patterns and history
 
-A pattern together with its mode, file types and options can be saved and reused. In the Filter dialog:
+A pattern together with its mode, file types and options can be saved and reused, in the Filter dialog and in the Select and Unselect group dialogs:
 
 - `F5` saves it: enter a name and an optional description. Saving under an existing name replaces that pattern. `F5` again in the name prompt lists the saved patterns to overwrite; the overwritten pattern keeps its description unless you typed a new one.
 - `F2` lists the saved patterns; type to narrow the list. `Enter` fills the dialog from the selected pattern, then OK applies it.
-- `F3` lists the filters applied this session, most recent first. They are kept until pc exits.
+- `F3` lists the patterns applied this session in that dialog, most recent first. Filter and Select group keep separate lists, which last until pc exits.
 - `F8` in either list deletes the selected entry.
 
-The lists open on the pattern you last loaded or saved. Loading in the Compare or Find duplicates view ignores Files only, Directories only and the meta options, which those views do not have; in a directory without meta columns the meta options are ignored too.
+Both dialogs share one list of saved patterns, so a pattern saved in Filter can be loaded in Select group and the other way round. The lists open on the pattern you last loaded or saved. A loaded pattern keeps only the options the dialog shows:
 
-Saved patterns live in `filters.toml` in the config directory ([`[filter] file`](config.md#filter)). The keys can be rebound under `[dialog.filter]` in `keybindings.toml`. Select group has no saved patterns.
+- Invert applies in Filter only, Match full path in Select group only (where that checkbox is shown).
+- In the Compare and Find duplicates views, Filter ignores Files only, Directories only and the meta options.
+- Without meta columns, the meta options are ignored.
+
+Saved patterns live in `filters.toml` in the config directory ([`[filter] file`](config.md#filter)). The keys can be rebound under `[dialog.pattern]` in `keybindings.toml`.
 
 ## Compare view
 

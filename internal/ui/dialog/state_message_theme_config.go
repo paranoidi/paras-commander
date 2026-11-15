@@ -163,9 +163,10 @@ type GroupSelectState struct {
 	// Types are the checked file-type presets (indexed FilterTypeVideos..): OR-joined and AND-ed
 	// with the pattern; matched against the entry basename only.
 	Types [FilterTypeCount]bool
-	// Focus is the focused widget: PatternInput, a radio, checkbox, dlg.OK or dlg.Cancel (see the
-	// Pattern* IDs in pattern_dialog_view.go).
+	// Focus is the focused widget of the main screen: PatternInput, a radio, checkbox, dlg.OK or
+	// dlg.Cancel (see the Pattern* IDs in pattern_dialog_view.go).
 	Focus dlg.ID
+	SavedPatternScreens
 
 	// Live result preview shown right-aligned on the Pattern row, recomputed on every state
 	// change. PreviewShow is false while the pattern is empty or fails to compile.

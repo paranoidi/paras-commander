@@ -141,27 +141,27 @@ func TestFilterGoldenRender(t *testing.T) {
 	add(70, 24, "scrolled", "pattern")
 	add(80, 12, "typed", "pattern")
 
-	picker := FilterDialogState{Open: true, Phase: FilterPhaseLoadPicker, Picker: FilterPatternPicker{
+	picker := FilterDialogState{Open: true, SavedPatternScreens: SavedPatternScreens{Phase: PatternPhaseLoadPicker, Picker: SavedPatternPicker{
 		Items: []filterpattern.Pattern{
 			{Name: "harbor", Description: "willow clips", Pattern: "*.mkv", Mode: filterpattern.ModeShell},
 			{Name: "lantern", Pattern: "^meadow", Mode: filterpattern.ModeRegex},
 		},
 		Ranked: []int{0, 1}, MatchRanges: make([][]search.Range, 2), Selected: 1,
-	}}
+	}}}
 	cases = append(cases, simpleGolden{"80x24_load_picker", 80, 24, func(s tcell.Screen, l Layout) {
 		DrawFilterDialog(s, l, picker, asciiDialogStyles())
 	}})
-	history := FilterDialogState{Open: true, Phase: FilterPhaseHistoryPicker, Picker: FilterPatternPicker{
+	history := FilterDialogState{Open: true, SavedPatternScreens: SavedPatternScreens{Phase: PatternPhaseHistoryPicker, Picker: SavedPatternPicker{
 		Items: []filterpattern.Pattern{
 			{Pattern: "*.pebble", Mode: filterpattern.ModeShell, Types: []string{"videos", "audio"}, Invert: true},
 			{Mode: filterpattern.ModeSimple, Types: []string{"documents"}, FilesOnly: true},
 		},
 		Ranked: []int{0, 1}, MatchRanges: make([][]search.Range, 2),
-	}}
+	}}}
 	cases = append(cases, simpleGolden{"80x24_history_picker", 80, 24, func(s tcell.Screen, l Layout) {
 		DrawFilterDialog(s, l, history, asciiDialogStyles())
 	}})
-	prompt := FilterDialogState{Open: true, Phase: FilterPhaseSavePrompt, SaveName: PromptField{Value: "orchard", Cursor: 7}}
+	prompt := FilterDialogState{Open: true, SavedPatternScreens: SavedPatternScreens{Phase: PatternPhaseSavePrompt, SaveName: PromptField{Value: "orchard", Cursor: 7}}}
 	cases = append(cases, simpleGolden{"80x24_save_prompt", 80, 24, func(s tcell.Screen, l Layout) {
 		DrawFilterDialog(s, l, prompt, asciiDialogStyles())
 	}})

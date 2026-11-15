@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	sftpb "github.com/paranoidi/paras-commander/internal/fsbackend/sftp"
 	"github.com/paranoidi/paras-commander/internal/ops"
@@ -71,9 +70,11 @@ func (a *App) activeDialog(event *tcell.EventKey) (activeDialog, bool) {
 			Cancel: func() { a.finishArchivePassword(false) },
 		})
 	case InputModeGroupSelect:
-		return found(fits(a.groupSelectView), &m.GroupSelect.Focus, noQuit(func(ev dlg.Event) {
-			dialogctrl.ApplyPatternDialogEvent(a.groupSelectPatternKeys(), ev)
-		}), dialogButtons{OK: a.confirmGroupSelectFromInput, Cancel: a.closeGroupSelect})
+		s := a.dialogCtrl.GroupSelectScreen()
+		hooks := a.groupSelectHooks()
+		return found(fits(func() dlg.Spec { return s.Spec }), s.Focus, noQuit(func(ev dlg.Event) {
+			a.dialogCtrl.ApplyGroupSelectEvent(hooks, ev)
+		}), dialogButtons{OK: func() { a.dialogCtrl.GroupSelectOK(hooks) }, Cancel: func() { a.dialogCtrl.GroupSelectCancel(hooks) }})
 	case InputModeCommandOutputDialog:
 		ok, cancel, esc := a.commandsCtrl.OutputDialogButtons()
 		return found(func() (dlg.Spec, bool) {

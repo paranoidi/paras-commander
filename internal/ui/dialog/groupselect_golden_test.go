@@ -6,7 +6,9 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/filterpattern"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/search"
 )
 
 // Render goldens for the Select / Unselect group dialog (harness: simple_dialog_golden_test.go).
@@ -123,5 +125,20 @@ func TestGroupSelectGoldenRender(t *testing.T) {
 	add(34, 25, "meta", "ok")
 	add(70, 24, "scrolled", "pattern")
 	add(80, 12, "typed", "pattern")
+
+	picker := GroupSelectState{Open: true, Mode: "select", SavedPatternScreens: SavedPatternScreens{Phase: PatternPhaseLoadPicker, Picker: SavedPatternPicker{
+		Items: []filterpattern.Pattern{
+			{Name: "harbor", Description: "willow clips", Pattern: "*.mkv", Mode: filterpattern.ModeShell},
+			{Name: "lantern", Pattern: "meadow/", Mode: filterpattern.ModeSimple, FullPath: true},
+		},
+		Ranked: []int{0, 1}, MatchRanges: make([][]search.Range, 2),
+	}}}
+	cases = append(cases, simpleGolden{"80x24_load_picker", 80, 24, func(s tcell.Screen, l Layout) {
+		DrawGroupSelectDialog(s, l, picker, asciiDialogStyles())
+	}})
+	prompt := GroupSelectState{Open: true, Mode: "unselect", SavedPatternScreens: SavedPatternScreens{Phase: PatternPhaseSavePrompt, SaveName: PromptField{Value: "orchard", Cursor: 7}}}
+	cases = append(cases, simpleGolden{"80x24_save_prompt", 80, 24, func(s tcell.Screen, l Layout) {
+		DrawGroupSelectDialog(s, l, prompt, asciiDialogStyles())
+	}})
 	runSimpleGoldens(t, "group_select", cases)
 }

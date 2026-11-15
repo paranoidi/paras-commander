@@ -368,7 +368,7 @@ func (a *App) effectiveKeyStringsForView(actionID string, defaults []string, vm 
 	if od := keymap.DefaultColumnsDialogOverlayKeys()[actionID]; len(od) > 0 {
 		add(od)
 	}
-	if od := keymap.DefaultFilterDialogOverlayKeys()[actionID]; len(od) > 0 {
+	if od := keymap.DefaultPatternDialogOverlayKeys()[actionID]; len(od) > 0 {
 		add(od)
 	}
 	if od := keymap.DefaultThemeDialogOverlayKeys()[actionID]; len(od) > 0 {
