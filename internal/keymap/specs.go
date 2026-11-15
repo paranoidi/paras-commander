@@ -605,6 +605,15 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"inactive", "split", "cd", "cwd", "other panel"},
 		},
 		{
+			ID:           ActionPanelOpenParentInOther,
+			Views:        HelpBrowser,
+			Title:        "Open parent directory in other panel",
+			Section:      "Navigation",
+			DefaultKeys:  []string{"S-up"},
+			PreferredKey: "S-up",
+			Keywords:     []string{"inactive", "split", "cd", "parent", "up", "other panel"},
+		},
+		{
 			ID:           ActionPanelToggleSync,
 			Views:        HelpBrowser,
 			Title:        "Toggle panel sync",

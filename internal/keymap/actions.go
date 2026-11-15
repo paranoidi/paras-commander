@@ -117,6 +117,7 @@ const (
 	ActionPanelOpenDirInOther         = "panel.open-dir-in-other"
 	ActionPanelOpenDirInOtherFocus    = "panel.open-dir-in-other-focus"
 	ActionPanelOpenActivePathInOther  = "panel.open-active-path-in-other"
+	ActionPanelOpenParentInOther      = "panel.open-parent-in-other"
 	ActionPanelToggleSync             = "panel.toggle-sync"
 	ActionPanelColumns                = "panel.columns"
 	ActionPanelMetaEdit               = "panel.meta-edit"
@@ -507,6 +508,7 @@ var KnownActions = map[string]struct{}{
 	ActionPanelOpenDirInOther:         {},
 	ActionPanelOpenDirInOtherFocus:    {},
 	ActionPanelOpenActivePathInOther:  {},
+	ActionPanelOpenParentInOther:      {},
 	ActionPanelToggleSync:             {},
 	ActionPanelColumns:                {},
 	ActionPanelMetaEdit:               {},

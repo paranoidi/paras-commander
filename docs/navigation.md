@@ -30,7 +30,7 @@ Pins last for the session and are not saved to disk. In the pin dialog Enter ope
 
 `M-y` makes the active panel the driver: moving the cursor onto a directory shows that directory in the other panel. The status line shows ` Sync -> ` or ` <- Sync `. Only one panel drives; pressing `M-y` on the other panel moves the role. Following does not touch the other panel's history. Cursor on a file does nothing.
 
-Sync turns itself off when you use "open directory in other panel" (`M-o`), "open directory in other panel and focus" (`C-M-o`), or "open current path in other panel" (`M-i`), when you enable quick view, and when you hide the inactive panel.
+Sync turns itself off when you use "open directory in other panel" (`M-o`), "open directory in other panel and focus" (`C-M-o`), "open current path in other panel" (`M-i`), or "open parent directory in other panel" (`S-↑`), when you enable quick view, and when you hide the inactive panel.
 
 ## Bookmarks and the path picker
 
@@ -57,6 +57,7 @@ Enter changes the panel to the highlighted directory. `S-←` / `S-→` point th
 - [SFTP](sftp.md) (`M-r`): remote hosts.
 - `M-o` / `M-i`: open the highlighted directory, or the current path, in the other panel.
 - `C-M-o`: open the highlighted directory in the other panel and move focus to it.
+- `S-↑`: open the parent directory in the other panel, with the cursor on the current directory.
 
 ## Options
 

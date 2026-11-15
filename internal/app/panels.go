@@ -422,7 +422,7 @@ func (a *App) navigatePanelToDirectory(panelID int, dirPath, selectedName string
 
 // openPathInInactivePanel navigates the inactive panel to dirPath. When that panel already
 // shows dirPath it is left untouched so its cursor (preselected row) does not move.
-func (a *App) openPathInInactivePanel(dirPath string) error {
+func (a *App) openPathInInactivePanel(dirPath, selectedName string) error {
 	loc, err := pathloc.Parse(dirPath)
 	if err != nil {
 		return err
@@ -432,7 +432,7 @@ func (a *App) openPathInInactivePanel(dirPath string) error {
 	if p.Path.Equal(loc) {
 		return nil
 	}
-	return p.NavigateToPath(loc, "", a.panelViewportRows(id))
+	return p.NavigateToPath(loc, selectedName, a.panelViewportRows(id))
 }
 
 // navigatePanelToAncestor loads the directory depth levels above panelID's path, with the cursor
@@ -828,7 +828,7 @@ func (a *App) tryDispatchNavigation(actionID string) (handled, quit bool) {
 		if !ok || !entry.ResolvesToDir() {
 			break
 		}
-		if err := a.openPathInInactivePanel(entry.Path); err != nil {
+		if err := a.openPathInInactivePanel(entry.Path, ""); err != nil {
 			a.setErrorMessage("Open in other panel failed", err)
 			break
 		}
@@ -844,8 +844,21 @@ func (a *App) tryDispatchNavigation(actionID string) (handled, quit bool) {
 		if a.model.ViewMode != ui.ViewBrowser {
 			break
 		}
-		if err := a.openPathInInactivePanel(activePanel.PathString()); err != nil {
+		if err := a.openPathInInactivePanel(activePanel.PathString(), ""); err != nil {
 			a.setErrorMessage("Open current path in other panel failed", err)
+			break
+		}
+		if a.disableSyncFollowIfEnabled() {
+			a.setTransientMessage("Open in other panel — sync disabled", ui.MessageUrgencyWarn)
+		}
+	case keymap.ActionPanelOpenParentInOther:
+		cur := activePanel.Path
+		parent := cur.Parent()
+		if a.model.ViewMode != ui.ViewBrowser || cur.IsZero() || parent.IsZero() || parent.Equal(cur) {
+			break
+		}
+		if err := a.openPathInInactivePanel(parent.String(), cur.Base()); err != nil {
+			a.setErrorMessage("Open parent in other panel failed", err)
 			break
 		}
 		if a.disableSyncFollowIfEnabled() {

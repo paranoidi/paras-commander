@@ -644,3 +644,28 @@ func TestParentCentersWhenSelectedStripShrinksAfterChdir(t *testing.T) {
 			staleVR, beforeScroll, left.ScrollOffset, left.Cursor, vr)
 	}
 }
+
+func TestOpenParentInOtherPanelSelectsActiveDir(t *testing.T) {
+	root := t.TempDir()
+	for _, name := range []string{"lantern", "meadow", "orchard"} {
+		if err := os.MkdirAll(filepath.Join(root, name), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	navigatePanelIntoDir(t, app, screen, ui.SecondaryPanel, "lantern")
+	navigatePanelIntoDir(t, app, screen, ui.PrimaryPanel, "meadow")
+	app.model.ActivePanel = ui.PrimaryPanel
+	app.dispatch(keymap.ActionPanelOpenParentInOther)
+	applyNextInterruptEvent(t, app, screen)
+
+	right := app.panelByID(ui.SecondaryPanel)
+	if got, want := filepath.Clean(right.Path.String()), filepath.Clean(root); got != want {
+		t.Fatalf("right panel path = %q want parent %q", got, want)
+	}
+	if entry, ok := right.CurrentEntry(); !ok || entry.Name != "meadow" {
+		t.Fatalf("right cursor entry = %+v ok=%v, want meadow", entry, ok)
+	}
+}
