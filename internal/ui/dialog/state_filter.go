@@ -34,6 +34,10 @@ const (
 	PatternMnemonicOnlyMeta    = 'N'
 	PatternMnemonicInvert      = 'I'
 	PatternMnemonicFullPath    = 'H'
+	// PatternMnemonicClear is the Filter dialog's "Clear filter" button. It is left out of
+	// PatternAltIsMnemonic: Alt+F stays forward-word in the pattern input while the button is
+	// hidden (no active filter) and in Select group, which has no such button.
+	PatternMnemonicClear = 'F'
 )
 
 // PatternAltIsMnemonic reports whether r (any case) is an Alt mnemonic of the Filter or Select
@@ -122,6 +126,9 @@ type FilterDialogState struct {
 	Invert bool
 	// Target is what the dialog filters: the active panel, Compare rows or dedup groups.
 	Target FilterTarget
+	// FilterActive is whether the target had a filter at open (any panel entry filter, or the
+	// Compare / dedup name filter); it shows the "Clear filter" button.
+	FilterActive bool
 	// Focus is the focused widget of the main screen: PatternInput, a radio, checkbox, dlg.OK or
 	// dlg.Cancel (see the Pattern* IDs in pattern_dialog_view.go).
 	Focus dlg.ID

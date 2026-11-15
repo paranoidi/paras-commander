@@ -13,7 +13,7 @@ func FilterDialogView(s FilterDialogState, layout Layout, styles theme.Theme) dl
 	return patternSpec(patternView{
 		Title: "Filter", LayoutWidth: layout.Width,
 		Mode: s.PatternMode, Types: s.Types, FilesOnly: s.FilesOnly, DirsOnly: s.DirsOnly, CaseSensitive: s.CaseSensitive,
-		ShowFilesDirs: FilterShowsFilesDirs(s), ShowInvert: true, Invert: s.Invert,
+		ShowFilesDirs: FilterShowsFilesDirs(s), ShowInvert: true, Invert: s.Invert, ShowClear: s.FilterActive,
 		MetaCount: s.MetaColumnCount, IncludeMeta: s.IncludeMetaColumns, OnlyMeta: s.OnlyMetaColumns,
 		Text: s.Text, Cursor: s.TextCursor, Scroll: s.TextScroll, Placeholder: s.PrefillPending,
 		Invalid: filterPatternInvalid(s), Hint: hint,

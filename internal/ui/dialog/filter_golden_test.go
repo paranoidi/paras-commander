@@ -95,6 +95,10 @@ func filterGoldenState(t *testing.T, variant, focus string) FilterDialogState {
 		st.MetaColumnCount = 2
 		st.IncludeMetaColumns, st.OnlyMetaColumns = true, true
 		st.Types[FilterTypeAudio] = true
+	case "active":
+		typed("*.mp4")
+		st.FilterActive = true
+		st.PreviewShow, st.PreviewFiles = true, 3
 	case "compare":
 		st.Target = FilterTargetCompare
 		typed("*.txt")
@@ -126,6 +130,7 @@ func TestFilterGoldenRender(t *testing.T) {
 		}
 	}
 	add(80, 24, "options", "invert")
+	add(80, 24, "active", "pattern")
 	add(80, 24, "options", "videos")
 	add(80, 24, "dirs-only", "videos")
 	add(80, 24, "dirs-only", "dirsonly")

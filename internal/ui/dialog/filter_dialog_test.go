@@ -117,6 +117,37 @@ func TestFilterFocusGrid(t *testing.T) {
 	}
 }
 
+// Clear is shown only while the target has a filter, after Cancel, with its Alt letter.
+func TestFilterClearButtonWhileFilterActive(t *testing.T) {
+	layout := Layout{Width: 80, Height: 24}
+	button := func(spec dlg.Spec) (dlg.Button, bool) {
+		for _, b := range spec.Buttons {
+			if b.ID == PatternClearButton {
+				return b, true
+			}
+		}
+		return dlg.Button{}, false
+	}
+	if _, ok := button(FilterDialogView(FilterDialogState{}, layout, theme.Default())); ok {
+		t.Fatal("Clear must be hidden without an active filter")
+	}
+	spec := FilterDialogView(FilterDialogState{FilterActive: true}, layout, theme.Default())
+	if b, ok := button(spec); !ok || b.Mnemonic != PatternMnemonicClear {
+		t.Fatalf("Clear button = %+v %v, want shown with mnemonic %q", b, ok, PatternMnemonicClear)
+	}
+	if got := patternStep(spec, dlg.Cancel, tcell.KeyRight); got != PatternClearButton {
+		t.Fatalf("Cancel right = %q, want Clear", got)
+	}
+	focus := PatternInput
+	ev, ok := dlg.HandleKey(spec, &focus, tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt))
+	if !ok || ev.ID != PatternClearButton {
+		t.Fatalf("Alt+F = %+v %v, want the Clear button", ev, ok)
+	}
+	if PatternAltIsMnemonic('f') {
+		t.Fatal("Alt+F must stay forward-word in the pattern input while Clear is hidden")
+	}
+}
+
 func TestFilterCompareHidesFilesDirs(t *testing.T) {
 	layout := Layout{Width: 80, Height: 24}
 	st := FilterDialogState{PatternMode: panel.GroupPatternShell, Target: FilterTargetCompare}

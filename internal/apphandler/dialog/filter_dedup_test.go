@@ -54,6 +54,10 @@ func TestFilterDialogDedupTarget(t *testing.T) {
 	}
 
 	h.OpenFilterDialog()
+	if model.FilterDialog.Text != "*.jpg" {
+		t.Fatalf("reopen text %q, want the active group filter", model.FilterDialog.Text)
+	}
+	model.FilterDialog.Text = ""
 	h.executeFilterDialog()
 	if model.DedupView.GroupFilter != nil || model.DedupView.NameFilterLabel != "" {
 		t.Fatal("empty OK should clear the group filter")

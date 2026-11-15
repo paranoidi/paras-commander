@@ -5,6 +5,7 @@ import (
 	"path"
 
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
+	"github.com/paranoidi/paras-commander/internal/filterpattern"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
@@ -13,8 +14,9 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
-// OpenFilterDialog opens the Filter modal with a ghost "*.ext" pattern from the cursor row (empty
-// when it has none; never from a filter already active on the panel). The target is the active panel, or the Compare / Find
+// OpenFilterDialog opens the Filter modal. With a filter from this dialog still active on the
+// target it opens with that filter's settings; otherwise with a ghost "*.ext" pattern from the
+// cursor row (empty when it has none). The target is the active panel, or the Compare / Find
 // duplicates rows when that view is showing.
 func (h *Handler) OpenFilterDialog() {
 	metaCount := len(h.model.MetaResults[h.model.ActivePanel])
@@ -31,10 +33,15 @@ func (h *Handler) OpenFilterDialog() {
 	h.model.FilterDialog = dialog.FilterDialogState{
 		Open:               true,
 		Target:             target,
+		FilterActive:       h.targetHasFilter(target),
 		PatternMode:        panel.GroupPatternSimple,
 		MetaColumnCount:    metaCount,
 		IncludeMetaColumns: metaCount > 0,
 		Focus:              dialog.PatternInput,
+	}
+	if p, ok := h.activeFilterPattern(target); ok {
+		h.filterSavedBinding().load(p)
+		return
 	}
 	if name, isDir, ok := h.host.FilterCursorEntry(target); ok {
 		if ghost := dialog.GhostExtPattern(name, isDir); ghost != "" {
@@ -143,7 +150,7 @@ func (h *Handler) dedupMatchCount(spec panel.FilterSpec) (int, error) {
 // clears the filter.
 func (h *Handler) executeDedupFilterDialog(spec panel.FilterSpec) {
 	if spec.Empty() {
-		h.dedup.SetGroupFilter(nil, "")
+		h.removeTargetFilter()
 		h.CloseFilterDialog()
 		return
 	}
@@ -154,6 +161,7 @@ func (h *Handler) executeDedupFilterDialog(spec panel.FilterSpec) {
 	}
 	n, _ := h.dedupMatchCount(spec)
 	h.dedup.SetGroupFilter(fn, spec.Label())
+	h.dedupFilter = h.model.FilterDialog.SavedPattern("", "")
 	h.CloseFilterDialog()
 	if n == 0 {
 		h.host.SetTransientMessage("No matches", ui.MessageUrgencyWarn)
@@ -167,7 +175,7 @@ func (h *Handler) executeDedupFilterDialog(spec panel.FilterSpec) {
 func (h *Handler) executeCompareFilterDialog(spec panel.FilterSpec) {
 	v := &h.model.CompareView
 	if spec.Empty() {
-		v.NameFilter, v.NameFilterLabel = nil, ""
+		h.removeTargetFilter()
 		h.CloseFilterDialog()
 		return
 	}
@@ -179,6 +187,7 @@ func (h *Handler) executeCompareFilterDialog(spec panel.FilterSpec) {
 	n, _ := h.compareMatchCount(spec)
 	v.NameFilter, v.NameFilterLabel = compareNameMatcher(match), spec.Label()
 	v.Selected, v.ListScroll = 0, 0
+	h.compareFilter = h.model.FilterDialog.SavedPattern("", "")
 	h.CloseFilterDialog()
 	if n == 0 {
 		h.host.SetTransientMessage("No matches", ui.MessageUrgencyWarn)
@@ -225,7 +234,7 @@ func (h *Handler) tryRejectFilterDialogOK() bool {
 }
 
 // executeFilterDialog applies the Filter dialog's OK action. An empty pattern clears the
-// active filter (there is no separate "Clear filter" button); a non-empty pattern installs a
+// active filter (like the "Clear filter" button); a non-empty pattern installs a
 // panel.PatternFilter, replacing whatever filter (e.g. a git-status filter) was active before.
 func (h *Handler) executeFilterDialog() {
 	fd := &h.model.FilterDialog
@@ -247,7 +256,7 @@ func (h *Handler) executeFilterDialog() {
 	p := h.host.ActivePanel()
 	panelID := h.model.ActivePanel
 	if spec.Empty() {
-		p.SetEntryFilter(nil)
+		h.removeTargetFilter()
 		h.CloseFilterDialog()
 		return
 	}
@@ -268,6 +277,7 @@ func (h *Handler) executeFilterDialog() {
 	meta := ui.MetaMatchData(h.model.MetaResults[panelID], fd.IncludeMetaColumns, fd.OnlyMetaColumns)
 	files, dirs, _ := p.CountPatternMatches(spec, meta)
 	p.SetEntryFilter(filter)
+	h.rememberPanelFilter(panelID, filter)
 	h.CloseFilterDialog()
 	if files == 0 && dirs == 0 {
 		h.host.SetTransientMessage("No matches", ui.MessageUrgencyWarn)
@@ -297,11 +307,68 @@ func (h *Handler) FilterPatternKeys() PatternKeys {
 		Text: &fd.Text, Cursor: &fd.TextCursor, Scroll: &fd.TextScroll, QueryWidth: h.filterDialogQueryWidth,
 		Keys: h.keysDialogInput, OnEdit: h.updateFilterDialogPreview,
 		PrefillPending: &fd.PrefillPending,
-		Confirm:        h.confirmFilterDialogFromInput, Cancel: h.CloseFilterDialog,
+		Confirm:        h.confirmFilterDialogFromInput, Cancel: h.CloseFilterDialog, Clear: h.ClearFilterDialog,
 		Apply: func(ev dlg.Event) {
 			if fd.Apply(ev) {
 				h.updateFilterDialogPreview()
 			}
 		},
 	}
+}
+
+// rememberPanelFilter records the dialog's settings as those of filter, just installed on the
+// panel panelID, so reopening the dialog while it is still active restores them.
+func (h *Handler) rememberPanelFilter(panelID int, filter *panel.EntryFilter) {
+	if h.panelFilters == nil {
+		h.panelFilters = map[int]appliedPanelFilter{}
+	}
+	h.panelFilters[panelID] = appliedPanelFilter{filter: filter, pattern: h.model.FilterDialog.SavedPattern("", "")}
+}
+
+// activeFilterPattern returns the settings of the filter this dialog applied to target, while that
+// filter is still active (not cleared, reset by a rescan or replaced, e.g. by a git filter).
+func (h *Handler) activeFilterPattern(target dialog.FilterTarget) (filterpattern.Pattern, bool) {
+	switch target {
+	case dialog.FilterTargetCompare:
+		return h.compareFilter, h.model.CompareView.NameFilter != nil
+	case dialog.FilterTargetDedup:
+		return h.dedupFilter, h.model.DedupView.GroupFilter != nil
+	}
+	applied, ok := h.panelFilters[h.model.ActivePanel]
+	if !ok || applied.filter == nil || h.host.ActivePanel().ActiveEntryFilter != applied.filter {
+		return filterpattern.Pattern{}, false
+	}
+	return applied.pattern, true
+}
+
+// targetHasFilter reports whether target has a filter the Clear button would remove.
+func (h *Handler) targetHasFilter(target dialog.FilterTarget) bool {
+	switch target {
+	case dialog.FilterTargetCompare:
+		return h.model.CompareView.NameFilter != nil
+	case dialog.FilterTargetDedup:
+		return h.model.DedupView.GroupFilter != nil
+	}
+	return h.host.ActivePanel().ActiveEntryFilter != nil
+}
+
+// removeTargetFilter removes every filter of the dialog's target: the panel's entry filter
+// (whichever kind), or the Compare / Find duplicates name filter.
+func (h *Handler) removeTargetFilter() {
+	switch h.model.FilterDialog.Target {
+	case dialog.FilterTargetCompare:
+		v := &h.model.CompareView
+		v.NameFilter, v.NameFilterLabel = nil, ""
+	case dialog.FilterTargetDedup:
+		h.dedup.SetGroupFilter(nil, "")
+	default:
+		h.host.ActivePanel().SetEntryFilter(nil)
+	}
+}
+
+// ClearFilterDialog is the Clear button: it removes the target's filter and closes the dialog.
+func (h *Handler) ClearFilterDialog() {
+	h.removeTargetFilter()
+	h.CloseFilterDialog()
+	h.host.SetTransientMessage("Filter cleared", ui.MessageUrgencyInfo)
 }

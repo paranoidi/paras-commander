@@ -62,18 +62,19 @@ func TestFilterDialogMAltFOpensAndNarrows(t *testing.T) {
 		t.Fatalf("ActiveEntryFilter = %+v, want label %q", p.ActiveEntryFilter, "Filter: walnut*")
 	}
 
-	// Empty pattern + OK clears the active filter.
+	// Reopening shows the active filter's settings; the Clear button removes it.
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt)); quit {
 		t.Fatal("M-f handleKey quit = true")
 	}
-	if !app.model.FilterDialog.Open {
-		t.Fatal("expected Filter dialog open")
+	if !app.model.FilterDialog.Open || app.model.FilterDialog.Text != "walnut*" || app.model.FilterDialog.PrefillPending {
+		t.Fatalf("reopened dialog = %+v, want the active filter's pattern", app.model.FilterDialog)
 	}
+	app.model.FilterDialog.Focus = dialog.PatternClearButton
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone)); quit {
 		t.Fatal("Enter handleKey quit = true")
 	}
 	if app.model.FilterDialog.Open {
-		t.Fatal("expected Filter dialog closed after empty-pattern OK")
+		t.Fatal("expected Filter dialog closed after Clear")
 	}
 	if app.activePanel().ActiveEntryFilter != nil {
 		t.Fatalf("expected filter cleared, got %+v", app.activePanel().ActiveEntryFilter)

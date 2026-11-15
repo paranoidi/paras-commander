@@ -1,8 +1,10 @@
 # Panel filter
 
-M-f (leader `F`, rebindable in `keybindings.toml`) opens the Filter dialog, which narrows the active panel to matching entries. To mark entries instead of hiding the rest, use [Select group](selections.md#select-and-unselect-group). OK with an empty pattern and no type checked clears the filter.
+M-f (leader `F`, rebindable in `keybindings.toml`) opens the Filter dialog, which narrows the active panel to matching entries. To mark entries instead of hiding the rest, use [Select group](selections.md#select-and-unselect-group).
 
-The pattern opens prefilled with the extension of the file under the cursor (e.g. `*.stl`), shown dimmed: Enter uses it, typing replaces it, editing keys keep it. Directories and files without an extension open empty. In Compare and Find duplicates the cursor row is used the same way.
+The buttons are OK and Cancel, plus **Clear filter** (M-f) while a filter is active. Clear filter removes the filter and closes the dialog; in a panel it removes whatever filter is active, including a git status filter. OK with an empty pattern and no type checked also clears it.
+
+While a filter set with this dialog is active, reopening the dialog shows that filter's settings (pattern, mode, types and options), ready to adjust. Otherwise the pattern opens prefilled with the extension of the file under the cursor (e.g. `*.stl`), shown dimmed: Enter uses it, typing replaces it, editing keys keep it. Directories and files without an extension open empty. In Compare and Find duplicates the cursor row is used the same way. Each panel, Compare and Find duplicates remember their own filter.
 
 ## Pattern
 
@@ -24,7 +26,7 @@ An entry is shown when it matches the checked types **and** the pattern; an empt
 
 ## Keys
 
-Alt+letter toggles the underlined option: Simple / auto shell L, Shell patterns S, Regular expression R, Videos V, Pictures P, Archives A, Audio U, Documents T, Files only Y, Directories only D, Invert I, Case sensitive E, Include meta M, Only meta N. Tab jumps between the mode radios, type checkboxes, pattern, options and buttons.
+Alt+letter toggles the underlined option: Simple / auto shell L, Shell patterns S, Regular expression R, Videos V, Pictures P, Archives A, Audio U, Documents T, Files only Y, Directories only D, Invert I, Case sensitive E, Include meta M, Only meta N; Alt+F presses Clear filter when it is shown (otherwise it moves a word forward in the pattern). Tab jumps between the mode radios, type checkboxes, pattern, options and buttons.
 
 The panel border shows the active filter, for example `Filter: not report Videos, Audio`. A live count of matches is shown beside the Pattern label.
 
@@ -47,11 +49,11 @@ Saved patterns live in `filters.toml` in the config directory ([`[filter] file`]
 
 ## Compare view
 
-In the Compare panels view M-f (leader letter `f`) opens the same dialog and filters the result rows by file name (the basename of the row's path). It stacks with the category filter (F3) and the empty-file toggle, and merge (F5) only sees the rows that remain. Rows are always files, so the meta and Files only / Directories only options are not shown. The border shows the pattern after the category, for example `All · Filter: *.jpg`. OK with an empty pattern, or S-F3 (reset filter), clears it.
+In the Compare panels view M-f (leader letter `f`) opens the same dialog and filters the result rows by file name (the basename of the row's path). It stacks with the category filter (F3) and the empty-file toggle, and merge (F5) only sees the rows that remain. Rows are always files, so the meta and Files only / Directories only options are not shown. The border shows the pattern after the category, for example `All · Filter: *.jpg`. Clear filter, OK with an empty pattern, or S-F3 (reset filter) removes it; the category filter stays.
 
 ## Find duplicates view
 
-In the Find duplicates results view M-f (leader letter `f`) opens the same dialog and filters whole duplicate groups: a group is shown when any of its copies has a file name that matches (types and pattern), and Invert shows the groups where no copy matches. A shown group keeps all its copies, in both the groups tree and the directory tree. Rows are always files, so the meta and Files only / Directories only options are not shown. The border shows the pattern, for example `View: Dirs · Filter: *.jpg`. OK with an empty pattern clears it, and a rescan resets it.
+In the Find duplicates results view M-f (leader letter `f`) opens the same dialog and filters whole duplicate groups: a group is shown when any of its copies has a file name that matches (types and pattern), and Invert shows the groups where no copy matches. A shown group keeps all its copies, in both the groups tree and the directory tree. Rows are always files, so the meta and Files only / Directories only options are not shown. The border shows the pattern, for example `View: Dirs · Filter: *.jpg`. Clear filter or OK with an empty pattern removes it, and a rescan resets it.
 
 Marks on files in groups the filter hides are kept and still counted: deleting acts on every marked file, shown or not.
 

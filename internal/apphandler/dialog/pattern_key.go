@@ -21,6 +21,7 @@ type PatternKeys struct {
 	Confirm        func()      // OK, Enter in the pattern input or on a checkbox
 	Cancel         func()
 	Apply          func(dlg.Event) // a radio or checkbox activation
+	Clear          func()          // the Clear button (Filter only); nil: the dialog has none
 	// PrefillPending, when non-nil and true, marks Text as a suggested default: the first plain
 	// printable rune replaces it, any other edit or a caret click commits it. Nil: no prefill.
 	PrefillPending *bool
@@ -62,6 +63,10 @@ func ApplyPatternDialogEvent(p PatternKeys, ev dlg.Event) {
 	case ev.ID == dlg.Cancel:
 		p.Cancel()
 	case ev.ID == "":
+	case ev.ID == dialog.PatternClearButton:
+		if p.Clear != nil {
+			p.Clear()
+		}
 	case ev.Enter && !dialog.PatternIsRadio(ev.ID):
 		p.Confirm() // Enter on a checkbox confirms; Space or a click toggles it
 	default:

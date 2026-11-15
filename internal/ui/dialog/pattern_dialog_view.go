@@ -25,6 +25,8 @@ const (
 	PatternFullPath    = dlg.ID("opt:full-path")
 	PatternIncludeMeta = dlg.ID("opt:include-meta")
 	PatternOnlyMeta    = dlg.ID("opt:only-meta")
+	// PatternClearButton is the Filter dialog's Clear button (removes the active filter).
+	PatternClearButton = dlg.ID("clear")
 
 	patternTypePrefix = "type:"
 )
@@ -67,6 +69,7 @@ type patternView struct {
 	CaseSensitive bool
 	ShowFilesDirs bool
 	ShowInvert    bool // Filter only
+	ShowClear     bool // Filter only, while the target has a filter: a "Clear filter" button after OK / Cancel
 	Invert        bool
 	ShowFullPath  bool // Select group in the find and output contexts only
 	FullPath      bool
@@ -245,11 +248,18 @@ func patternSpec(v patternView) dlg.Spec {
 			{Columns: [][]dlg.Item{pattern}},
 			{Columns: [][]dlg.Item{options}},
 		},
-		Buttons: []dlg.Button{
-			dlg.OKButton,
-			dlg.CancelButton,
-		},
+		Buttons: patternButtons(v.ShowClear),
 	}
+}
+
+// patternButtons is the button strip: OK / Cancel, plus "Clear filter" when the Filter dialog's target
+// has a filter to clear.
+func patternButtons(clear bool) []dlg.Button {
+	buttons := dlg.OKCancelButtons()
+	if clear {
+		buttons = append(buttons, dlg.Button{ID: PatternClearButton, Label: "Clear filter", Mnemonic: PatternMnemonicClear})
+	}
+	return buttons
 }
 
 // patternToggles are the fields the Filter and Select group dialogs share, as pointers into the
