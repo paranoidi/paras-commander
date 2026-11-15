@@ -27,3 +27,10 @@ type FlattenJobRequest struct {
 	Recursive   bool
 	RemoveEmpty bool
 }
+
+// UnflattenJobRequest enqueues an unflatten job: each source file moves into a sibling directory
+// named after its stem. Dir is the panel directory the sources were picked in.
+type UnflattenJobRequest struct {
+	Sources []string
+	Dir     string
+}

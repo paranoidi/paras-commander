@@ -170,7 +170,7 @@ In an index view:
   do not touch the disk. The rename dialog says so.
 - **Delete** removes the entry, or a directory and everything under it, from
   the index only: files on disk stay. The delete dialog says so.
-- **New directories, symlinks, copies into the index, flatten, extracting
+- **New directories, symlinks, copies into the index, flatten, unflatten, extracting
   into the index, and moves out of it** are refused: the index is read-only
   for new content, and a flatten there would reach only the files it lists.
 - **Edit**, **run** (Enter on an executable), **drop to shell**, **send paths

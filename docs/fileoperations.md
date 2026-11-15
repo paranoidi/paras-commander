@@ -139,6 +139,7 @@ rebindable in `keybindings.toml`.
 | Symlink | `C-l` | File -> Symlink |
 | Hard link | unbound | File -> Link |
 | Flatten | `C-z` | File -> Flatten |
+| Unflatten | `C-M-z` | File -> Unflatten |
 | Extract archive | `C-x` | File -> Extract |
 | Rsync | unbound | File -> Rsync..., Esc menu `S` |
 
@@ -241,6 +242,28 @@ immediate children) and **remove empty directories** afterwards (defaults
 `flatten_recursive`, `flatten_remove_empty_dirs`). Files that already exist
 at the destination go through the normal conflict prompt. Progress shows a
 count of moved items without a total.
+
+### Unflatten
+
+The reverse of flatten: each selected file (or the file under the cursor)
+moves into a new directory next to it, named after the file without its
+extension. There is no dialog; the job is queued right away.
+
+```
+orchard.jpg      ->  orchard/orchard.jpg
+orchard.txt      ->  orchard/orchard.txt
+harbor.tar.gz    ->  harbor.tar/harbor.tar.gz
+```
+
+- Only the last extension is removed, so files sharing a name before it end
+  up in the same directory.
+- The selection must contain files only. A directory anywhere in it, or a
+  file without an extension (`README`, `.bashrc`), shows an error and nothing
+  is moved.
+- An existing directory with the target name is reused; a file with the same
+  name inside it goes through the normal conflict prompt. If the target name is
+  taken by something that is not a directory, the job fails naming it.
+- Not available on `fileindex://` panels, and not undoable.
 
 ### Permission denied
 

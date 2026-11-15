@@ -12,9 +12,10 @@ import (
 // Refusals of operations a fileindex:// panel (browse mode: the index only, ADR 0027) cannot do.
 // The apphandler packages show them; this is their only definition.
 const (
-	IndexReadOnlyRefusal = "The fileindex is read-only: files cannot be added to it"
-	IndexMoveOutRefusal  = "Moving out of the fileindex is not supported: copy instead"
-	FlattenIndexRefusal  = "Flatten is not available on fileindex:// paths"
+	IndexReadOnlyRefusal  = "The fileindex is read-only: files cannot be added to it"
+	IndexMoveOutRefusal   = "Moving out of the fileindex is not supported: copy instead"
+	FlattenIndexRefusal   = "Flatten is not available on fileindex:// paths"
+	UnflattenIndexRefusal = "Unflatten is not available on fileindex:// paths"
 )
 
 // OnDisk returns the file:// path a fileindex:// loc names when that path exists on disk (it is

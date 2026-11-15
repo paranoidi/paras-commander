@@ -743,7 +743,7 @@ func (a *App) tryDispatchSelectedStrip(actionID string) bool {
 	case keymap.ActionPanelToggleSync:
 		return false
 	case keymap.ActionAppLeaderMenu, keymap.ActionPanelSelectParentDirs, keymap.ActionPanelOpenSelectedRoot,
-		keymap.ActionFileDelete, keymap.ActionFileFlatten, keymap.ActionFileRunForEach:
+		keymap.ActionFileDelete, keymap.ActionFileFlatten, keymap.ActionFileUnflatten, keymap.ActionFileRunForEach:
 		// Handled by dispatch(); they act on the panel selection, which is non-empty here.
 		return false
 	case keymap.ActionPanelViMotionToggle:

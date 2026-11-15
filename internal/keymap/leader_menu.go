@@ -97,6 +97,7 @@ var leaderMenuGroupActions = map[string][]string{
 		ActionFileRunForEach,
 		ActionFileExtract,
 		ActionFileFlatten,
+		ActionFileUnflatten,
 	},
 	LeaderMenuGroupNavigation: {
 		ActionPanelJumpDialog,
@@ -177,7 +178,7 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 				ActionPanelOpenSelectedRoot,
 				ActionPanelClearSelection,
 			},
-			LeaderMenuGroupFile: {ActionCopy, ActionMove, ActionFileDelete, ActionFileFlatten, ActionFileRunForEach},
+			LeaderMenuGroupFile: {ActionCopy, ActionMove, ActionFileDelete, ActionFileFlatten, ActionFileUnflatten, ActionFileRunForEach},
 			LeaderMenuGroupApp:  {ActionAppShowHelp, ActionAppQuit},
 		},
 		column: map[string]int{

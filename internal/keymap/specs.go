@@ -2089,6 +2089,16 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"flatten", "hoist", "directory"},
 			LeaderKey:    "z",
 		},
+		{
+			ID:           ActionFileUnflatten,
+			Views:        HelpBrowser,
+			Title:        "Unflatten files",
+			Section:      "Tools",
+			DefaultKeys:  []string{"C-M-z"},
+			PreferredKey: "C-M-z",
+			Keywords:     []string{"unflatten", "wrap", "folder", "directory", "stem"},
+			LeaderKey:    "Z",
+		},
 
 		// ── Commands ──
 		{

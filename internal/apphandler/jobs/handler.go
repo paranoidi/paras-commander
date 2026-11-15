@@ -1668,6 +1668,29 @@ func (h *Handler) AddFlattenJob(req FlattenJobRequest) {
 	h.commitJob(job)
 }
 
+// AddUnflattenJob enqueues an unflatten job (see ops.ExecuteUnflatten).
+func (h *Handler) AddUnflattenJob(req UnflattenJobRequest) {
+	srcLocs, err := pathloc.ParseAll(req.Sources)
+	if err != nil {
+		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
+		return
+	}
+	dirLoc, err := pathloc.Parse(req.Dir)
+	if err != nil {
+		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
+		return
+	}
+	h.commitJob(&jobs.Job{
+		ID:          jobs.NewJobID(),
+		Type:        jobs.TypeUnflatten,
+		Status:      jobs.StatusQueued,
+		Sources:     srcLocs,
+		Destination: dirLoc,
+		DestIsDir:   true,
+		TotalFiles:  len(srcLocs),
+	})
+}
+
 func (h *Handler) AffectVisible() bool             { return h.affectVisible }
 func (h *Handler) LastBatchMenuBarStripOnly() bool { return h.lastBatchMenuBarStripOnly }
 func (h *Handler) ListStale() bool                 { return h.listStale }

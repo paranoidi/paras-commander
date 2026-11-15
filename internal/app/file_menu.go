@@ -10,6 +10,7 @@ func (a *App) dispatchFileMenuItem(item menu.Item) {
 	case keymap.ActionFileExtract,
 		keymap.ActionFileRsync,
 		keymap.ActionFileFlatten,
+		keymap.ActionFileUnflatten,
 		keymap.ActionFileDelete,
 		keymap.ActionFileMkdir,
 		keymap.ActionFileRename,

@@ -36,7 +36,7 @@ func jobRowSuffix(absPath string, jobMarks []JobPathMark, th theme.Theme, indexS
 		s.JobQueuedIcon = th.IconFilelistQueued()
 	}
 	switch jobs.Type(m.Type) {
-	case jobs.TypeMove, jobs.TypeFlatten:
+	case jobs.TypeMove, jobs.TypeFlatten, jobs.TypeUnflatten:
 		switch {
 		case m.Removing: // the copy is done and the source is being deleted now
 			s.JobOpIcon, s.JobOpStyle = th.IconFilelistMoveRemoving(), th.PanelRowMarkJobRemoving

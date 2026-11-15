@@ -247,6 +247,7 @@ const (
 	ActionFileQuickViewPreviewPageDown = "file.quick-view.preview-page-down"
 	ActionFileEdit                     = "file.edit"
 	ActionFileFlatten                  = "file.flatten"
+	ActionFileUnflatten                = "file.unflatten"
 
 	// Copy/Move
 	ActionCopy          = "file.copy"
@@ -620,6 +621,7 @@ var KnownActions = map[string]struct{}{
 	ActionFileQuickViewPreviewPageDown: {},
 	ActionFileEdit:                     {},
 	ActionFileFlatten:                  {},
+	ActionFileUnflatten:                {},
 
 	ActionCopy:          {},
 	ActionFileDuplicate: {},

@@ -20,8 +20,10 @@ const (
 	TypeCopy    Type = "copy"
 	TypeMove    Type = "move"
 	TypeFlatten Type = "flatten"
-	TypeDelete  Type = "delete"
-	TypeExtract Type = "extract"
+	// TypeUnflatten moves each source file into a sibling directory named after its stem.
+	TypeUnflatten Type = "unflatten"
+	TypeDelete    Type = "delete"
+	TypeExtract   Type = "extract"
 	// TypeRename is a finished rename or mass rename recorded for the jobs view; it never runs.
 	TypeRename Type = "rename"
 	// TypeUndo reverses the journal of another job (UndoOf).
@@ -39,7 +41,7 @@ type CanceledCount int
 const (
 	CanceledKnown       CanceledCount = iota
 	CanceledUnknown                   // no finished file count: a copy canceled mid-scan, any move
-	CanceledUnsupported               // flatten: its plan has no per-item total
+	CanceledUnsupported               // flatten, unflatten: no per-item log to count against
 )
 
 // CanceledItems is how many items a canceled job of type t left undone, from its Job.TotalFiles,
@@ -472,7 +474,7 @@ func (j *Job) RetryClone() *Job {
 }
 
 // holdsTransferLease reports whether the job must serialize on the single transfer lease.
-// Copy/move/flatten/extract/undo always take the lease. A delete takes it only when its source
+// Copy/move/flatten/unflatten/extract/undo always take the lease. A delete takes it only when its source
 // roots overlap other (an active transfer's sources or destination). other may be nil. A job that
 // runs a Task never does: it serializes on its own Task.Lease.
 // ponytail: global lease; becomes a per-device lane key when device queues land

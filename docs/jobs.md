@@ -1,6 +1,6 @@
 # Jobs
 
-Copy, move, flatten, extract, rsync and delete operations run as background jobs, so
+Copy, move, flatten, unflatten, extract, rsync and delete operations run as background jobs, so
 the file manager stays usable while they work. The menu bar shows a compact
 summary: an icon with a count for each job state, a progress bar for the
 running job and, to its left, a pill with the current transfer speed while a
@@ -167,7 +167,7 @@ example `120 done, 380 canceled`. Like the other counts it counts files, not
 folders, so it can differ from the `Progress:` line, whose item count includes
 folders. It shows `canceled: incomplete scan` when the files were never fully
 counted (a copy canceled while still counting, and moves, which don't count
-their files), and `canceled: unsupported` for flattens.
+their files), and `canceled: unsupported` for flattens and unflattens.
 
 Filter the list while the panel is focused:
 
@@ -264,7 +264,7 @@ queue.
   deleted its source with Delete source) cannot be undone; its Details panel shows
   `Undo: irreversible (overwrote files)`. A canceled or failed copy can undo
   the part it did write.
-- Not undoable: flatten, delete, extract, and a cross-device move that kept
+- Not undoable: flatten, unflatten, delete, extract, and a cross-device move that kept
   both files under a new name. Jobs are not kept across restarts, so neither
   is their undo.
 
@@ -296,7 +296,7 @@ name, in this order:
    conflict.
 2. **Clock** — shown only while the job is still queued and has not started.
 3. **Operation icon** — a red *move* glyph on the source rows of moves (and
-   flatten; destination rows show none), a red *delete* glyph for deletes.
+   flatten and unflatten; destination rows show none), a red *delete* glyph for deletes.
    Copies and extracts show none.
 
 Source rows keep their listing entries for the whole job (queued move/delete

@@ -67,6 +67,8 @@ func (h *Handler) TryDispatchFileOps(actionID string) bool {
 		h.OpenRsyncDialog(activePanel)
 	case keymap.ActionFileFlatten:
 		h.OpenFlattenDialog()
+	case keymap.ActionFileUnflatten:
+		h.RunUnflatten()
 	case keymap.ActionCopy:
 		h.ActivateCopyAction()
 	case keymap.ActionFileDuplicate:

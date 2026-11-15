@@ -708,6 +708,14 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 		doneFiles, doneBytes, err = ops.ExecuteUndo(tc.ctx, job.Undo, tc.opts, tc.progress)
 	case jobs.TypeFlatten:
 		doneFiles, doneBytes, err = ops.ExecuteFlatten(tc.ctx, job.Sources, job.Destination, job.FlattenRecursive, job.FlattenRemoveEmpty, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
+	case jobs.TypeUnflatten:
+		tc.emit(jobs.Event{
+			Type:       jobs.EventPlanTotals,
+			JobID:      job.ID,
+			Status:     jobs.StatusRunning,
+			TotalFiles: len(job.Sources),
+		})
+		doneFiles, doneBytes, err = ops.ExecuteUnflatten(tc.ctx, job.Sources, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
 	case jobs.TypeDelete:
 		tc.emit(jobs.Event{
 			Type:       jobs.EventPlanTotals,

@@ -131,7 +131,7 @@ func jobTypeMarkPriority(t string) int {
 		return 4
 	case jobs.TypeExtract:
 		return 3
-	case jobs.TypeMove, jobs.TypeFlatten:
+	case jobs.TypeMove, jobs.TypeFlatten, jobs.TypeUnflatten:
 		return 2
 	case jobs.TypeCopy, jobs.TypeRsync:
 		return 1
@@ -253,7 +253,7 @@ func PanelTouchedByJobs(panelPath string, jobMarks []JobPathMark) bool {
 // removesSources reports whether a job of this type takes its sources off the disk.
 func (j JobPathMark) removesSources() bool {
 	switch jobs.Type(j.Type) {
-	case jobs.TypeMove, jobs.TypeFlatten, jobs.TypeDelete:
+	case jobs.TypeMove, jobs.TypeFlatten, jobs.TypeUnflatten, jobs.TypeDelete:
 		return true
 	}
 	return false
