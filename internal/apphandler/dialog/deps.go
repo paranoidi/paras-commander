@@ -29,7 +29,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/fschange"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ops"
-	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/sched"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -160,13 +159,6 @@ type pendingPanelFocus struct {
 	snapCursorPath string
 }
 
-// appliedPanelFilter is a panel entry filter installed by the Filter dialog and the dialog
-// settings that built it.
-type appliedPanelFilter struct {
-	filter  *panel.EntryFilter
-	pattern filterpattern.Pattern
-}
-
 // Handler owns the file-operation dialog family: opening dialogs, dispatching their keys, and
 // executing the underlying file operation.
 type Handler struct {
@@ -248,10 +240,9 @@ type Handler struct {
 	// savedPatternName is the name of the saved pattern last loaded, saved or overwritten this
 	// session in either dialog; the load and overwrite pickers open on it.
 	savedPatternName string
-	// panelFilters (by panel ID), compareFilter and dedupFilter are the settings of the filter
-	// the Filter dialog last applied to each target; reopening restores them while that filter
-	// is still active (activeFilterPattern).
-	panelFilters  map[int]appliedPanelFilter
+	// compareFilter and dedupFilter are the settings of the filter the Filter dialog last applied
+	// to Compare / Find duplicates; reopening restores them while that filter is still active
+	// (activeFilterPattern). A panel filter carries its settings in EntryFilter.Source.
 	compareFilter filterpattern.Pattern
 	dedupFilter   filterpattern.Pattern
 

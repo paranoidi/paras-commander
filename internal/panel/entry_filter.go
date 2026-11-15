@@ -13,6 +13,9 @@ type EntryFilter struct {
 	// the filter is set and after every listing load; when it returns false the filter clears
 	// itself instead of leaving the panel showing zero entries.
 	Applicable func(s *State) bool
+	// Source is opaque data the filter's creator attaches to recognise its own filter later (the
+	// Filter dialog stores the settings that built it); nil for other filters.
+	Source any
 }
 
 // SetEntryFilter installs f (nil clears filtering) and rebuilds the visible-entry index.

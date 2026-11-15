@@ -276,8 +276,8 @@ func (h *Handler) executeFilterDialog() {
 	}
 	meta := ui.MetaMatchData(h.model.MetaResults[panelID], fd.IncludeMetaColumns, fd.OnlyMetaColumns)
 	files, dirs, _ := p.CountPatternMatches(spec, meta)
+	filter.Source = fd.SavedPattern("", "")
 	p.SetEntryFilter(filter)
-	h.rememberPanelFilter(panelID, filter)
 	h.CloseFilterDialog()
 	if files == 0 && dirs == 0 {
 		h.host.SetTransientMessage("No matches", ui.MessageUrgencyWarn)
@@ -316,29 +316,21 @@ func (h *Handler) FilterPatternKeys() PatternKeys {
 	}
 }
 
-// rememberPanelFilter records the dialog's settings as those of filter, just installed on the
-// panel panelID, so reopening the dialog while it is still active restores them.
-func (h *Handler) rememberPanelFilter(panelID int, filter *panel.EntryFilter) {
-	if h.panelFilters == nil {
-		h.panelFilters = map[int]appliedPanelFilter{}
-	}
-	h.panelFilters[panelID] = appliedPanelFilter{filter: filter, pattern: h.model.FilterDialog.SavedPattern("", "")}
-}
-
 // activeFilterPattern returns the settings of the filter this dialog applied to target, while that
 // filter is still active (not cleared, reset by a rescan or replaced, e.g. by a git filter).
 func (h *Handler) activeFilterPattern(target dialog.FilterTarget) (filterpattern.Pattern, bool) {
 	switch target {
 	case dialog.FilterTargetCompare:
-		return h.compareFilter, h.model.CompareView.NameFilter != nil
+		return h.compareFilter, h.targetHasFilter(target)
 	case dialog.FilterTargetDedup:
-		return h.dedupFilter, h.model.DedupView.GroupFilter != nil
+		return h.dedupFilter, h.targetHasFilter(target)
 	}
-	applied, ok := h.panelFilters[h.model.ActivePanel]
-	if !ok || applied.filter == nil || h.host.ActivePanel().ActiveEntryFilter != applied.filter {
+	f := h.host.ActivePanel().ActiveEntryFilter
+	if f == nil {
 		return filterpattern.Pattern{}, false
 	}
-	return applied.pattern, true
+	p, ok := f.Source.(filterpattern.Pattern)
+	return p, ok
 }
 
 // targetHasFilter reports whether target has a filter the Clear button would remove.
