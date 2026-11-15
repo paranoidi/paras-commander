@@ -420,19 +420,21 @@ func (a *App) navigatePanelToDirectory(panelID int, dirPath, selectedName string
 	return p.NavigateToPath(loc, selectedName, vr)
 }
 
-// openPathInInactivePanel navigates the inactive panel to dirPath. When that panel already
-// shows dirPath it is left untouched so its cursor (preselected row) does not move.
-func (a *App) openPathInInactivePanel(dirPath, selectedName string) error {
-	loc, err := pathloc.Parse(dirPath)
-	if err != nil {
-		return err
-	}
+// openPathInInactivePanel navigates the inactive panel to loc with the cursor on selectedName,
+// reporting a failure under errTitle and turning latched sync off. When that panel already shows
+// loc it is left untouched so its cursor (preselected row) does not move. ok is false on failure.
+func (a *App) openPathInInactivePanel(loc pathloc.Path, selectedName, errTitle string) (ok bool) {
 	id := a.inactivePanelID()
-	p := a.panelByID(id)
-	if p.Path.Equal(loc) {
-		return nil
+	if p := a.panelByID(id); !p.Path.Equal(loc) {
+		if err := p.NavigateToPath(loc, selectedName, a.panelViewportRows(id)); err != nil {
+			a.setErrorMessage(errTitle, err)
+			return false
+		}
 	}
-	return p.NavigateToPath(loc, selectedName, a.panelViewportRows(id))
+	if a.disableSyncFollowIfEnabled() {
+		a.setTransientMessage("Open in other panel — sync disabled", ui.MessageUrgencyWarn)
+	}
+	return true
 }
 
 // navigatePanelToAncestor loads the directory depth levels above panelID's path, with the cursor
@@ -828,12 +830,13 @@ func (a *App) tryDispatchNavigation(actionID string) (handled, quit bool) {
 		if !ok || !entry.ResolvesToDir() {
 			break
 		}
-		if err := a.openPathInInactivePanel(entry.Path, ""); err != nil {
+		loc, err := pathloc.Parse(entry.Path)
+		if err != nil {
 			a.setErrorMessage("Open in other panel failed", err)
 			break
 		}
-		if a.disableSyncFollowIfEnabled() {
-			a.setTransientMessage("Open in other panel — sync disabled", ui.MessageUrgencyWarn)
+		if !a.openPathInInactivePanel(loc, "", "Open in other panel failed") {
+			break
 		}
 		if actionID == keymap.ActionPanelOpenDirInOtherFocus {
 			a.switchPanel()
@@ -844,26 +847,14 @@ func (a *App) tryDispatchNavigation(actionID string) (handled, quit bool) {
 		if a.model.ViewMode != ui.ViewBrowser {
 			break
 		}
-		if err := a.openPathInInactivePanel(activePanel.PathString(), ""); err != nil {
-			a.setErrorMessage("Open current path in other panel failed", err)
-			break
-		}
-		if a.disableSyncFollowIfEnabled() {
-			a.setTransientMessage("Open in other panel — sync disabled", ui.MessageUrgencyWarn)
-		}
+		a.openPathInInactivePanel(activePanel.Path, "", "Open current path in other panel failed")
 	case keymap.ActionPanelOpenParentInOther:
 		cur := activePanel.Path
 		parent := cur.Parent()
 		if a.model.ViewMode != ui.ViewBrowser || cur.IsZero() || parent.IsZero() || parent.Equal(cur) {
 			break
 		}
-		if err := a.openPathInInactivePanel(parent.String(), cur.Base()); err != nil {
-			a.setErrorMessage("Open parent in other panel failed", err)
-			break
-		}
-		if a.disableSyncFollowIfEnabled() {
-			a.setTransientMessage("Open in other panel — sync disabled", ui.MessageUrgencyWarn)
-		}
+		a.openPathInInactivePanel(parent, cur.Base(), "Open parent in other panel failed")
 	case keymap.ActionNavParent:
 		if err := activePanel.Parent(viewportRows); err != nil {
 			a.setErrorMessage("Parent failed", err)

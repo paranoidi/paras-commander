@@ -822,14 +822,16 @@ func (a *App) menuBarAcceptsMouse() bool {
 }
 
 // footerOpensLeaderMenu reports whether a right click on the footer may toggle the leader menu:
-// in the browser and the views with their own leader menu, with a menu or leader strip open, but
-// not while a dialog, the quick filter or the preview has the keyboard.
+// where the menu bar accepts the mouse and with the leader strip open, but not while the quick
+// filter has the keyboard.
 func (a *App) footerOpensLeaderMenu() bool {
 	switch a.inputMode() {
-	case InputModeNormal, InputModeMenu, InputModeLeaderMenu, InputModeJobsView, InputModeCommandsView, InputModeMessagesView, InputModeCompareView, InputModeDedupView, InputModeUniqueView:
+	case InputModeLeaderMenu:
 		return true
+	case InputModeFilter:
+		return false
 	}
-	return false
+	return a.menuBarAcceptsMouse()
 }
 
 // handleLeaderMenuMouse handles the open leader menu strip, which is modal like the pulldown: a
