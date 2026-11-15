@@ -133,7 +133,7 @@ rebindable in `keybindings.toml`.
 | Move | `F6`, `C-t`, `C-m` (`C-m` only in terminals that tell it apart from Enter, such as kitty, WezTerm, foot or xterm) | File -> Move |
 | Rename | `S-F6`, `C-r` | File -> Rename |
 | Duplicate | `S-F5` | Esc menu `p` |
-| Mkdir | `F7` | File -> Mkdir |
+| Mkdir | `F7`, `C-n`, `C-M-m` (`C-M-m` only in terminals that tell it apart from Alt+Enter, such as kitty, WezTerm, foot or xterm) | File -> Mkdir |
 | Mkdir and open | `S-F7` | Esc menu `o` |
 | Delete | `F8`, `Delete` | File -> Delete |
 | Symlink | `C-l` | File -> Symlink |

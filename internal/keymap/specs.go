@@ -1764,7 +1764,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Views:        HelpBrowser,
 			Title:        "Create directory",
 			Section:      "File",
-			DefaultKeys:  []string{"F7", "C-M-m"},
+			DefaultKeys:  []string{"F7", "C-M-m", "C-n"},
 			PreferredKey: "F7",
 			Keywords:     []string{"mkdir", "folder"},
 			LeaderKey:    "M",
