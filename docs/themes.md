@@ -1,6 +1,6 @@
 # Themes
 
-Colors, text styles and status glyphs come from a TOML theme file. One theme ships inside the binary (`default`); you can add your own and switch between them at runtime. Syntax highlighting in file previews is a separate system, covered at the end.
+Colors, text styles and status glyphs come from a TOML theme file. Several themes ship inside the binary (`default`, the four Catppuccin flavours `catppuccin-latte`, `catppuccin-frappe`, `catppuccin-macchiato` and `catppuccin-mocha`, `nord-default` and `nordic-default`); you can add your own and switch between them at runtime. Syntax highlighting in file previews is a separate system, covered at the end.
 
 ## Selecting a theme
 

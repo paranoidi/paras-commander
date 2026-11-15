@@ -2,6 +2,7 @@ package theme
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -910,5 +911,21 @@ func TestEveryEmbeddedThemeLoads(t *testing.T) {
 		if _, err := parse(data); err != nil {
 			t.Errorf("%s: %v", e.Name(), err)
 		}
+	}
+}
+
+// TestBuiltInThemesListEveryEmbeddedTheme guards release installs (no themes dir on disk): every
+// embedded themes/*.toml must be selectable, default first.
+func TestBuiltInThemesListEveryEmbeddedTheme(t *testing.T) {
+	files, err := fs.Glob(themes.Files, "*.toml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	choices, err := BuiltInThemes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(choices) != len(files) || choices[0].Name != defaultName {
+		t.Fatalf("BuiltInThemes = %d themes (first %q), want %d embedded with default first", len(choices), choices[0].Name, len(files))
 	}
 }

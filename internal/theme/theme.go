@@ -2,6 +2,7 @@ package theme
 
 import (
 	"fmt"
+	"io/fs"
 	"maps"
 	"os"
 	"path/filepath"
@@ -1302,9 +1303,21 @@ var styleSectionRoots = []string{"menu", "panel", "dialog", "jobs", "message", "
 
 var styleSectionRootSet = makeStyleKeySet(styleSectionRoots)
 
-var builtInThemeOrder = []string{
-	defaultName,
-}
+// builtInThemeOrder lists every embedded theme (file stem == declared name): default first, the
+// rest sorted. Derived from the embed so a new themes/*.toml ships without registration.
+var builtInThemeOrder = func() []string {
+	files, err := fs.Glob(themes.Files, "*.toml")
+	if err != nil {
+		panic(err)
+	}
+	order := []string{defaultName}
+	for _, f := range files {
+		if name := strings.TrimSuffix(f, ".toml"); name != defaultName {
+			order = append(order, name)
+		}
+	}
+	return order
+}()
 
 var builtInThemeLabels = map[string]string{
 	defaultName: "Default",
