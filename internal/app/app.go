@@ -390,8 +390,9 @@ type App struct {
 	dirLoadIndicatorTimer [2]*time.Timer
 	dirLoadIndicatorEpoch [2]uint64
 
-	// lastScreenContentHash is the FNV hash of the logical buffer after the last successful Show
-	// when ScreenRenderHashCache is enabled (see emitScreenAfterFullRender).
+	// lastScreenContentHash is the FNV hash of the logical buffer after the last full-render Show
+	// when ScreenRenderHashCache is enabled (see emitScreenAfterFullRender); zero after a partial
+	// paint, which forces the next full render to Show.
 	lastScreenContentHash uint64
 	// runLoopActive is set by Run; nav paint coalescing (shouldDeferNavPaint) only applies inside it.
 	runLoopActive bool
@@ -1133,23 +1134,7 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 		out.didRender = true
 	case spinnerTickPayload:
 		out.pollDiskUsageAfter = false
-		if a.menuBarSpinnerBusy() {
-			a.model.SpinPhase++
-			w, h := a.screen.Size()
-			if ui.DrawMenuBarSpinnerOnly(a.screen, a.layoutForTerminalSize(w, h), a.model, a.styles) {
-				a.emitScreenAfterPartialPaint()
-			}
-			out.didRender = true
-		}
-		if a.config.Jobs.ProgressLightbar && a.model.MenuBarJobs.HasProgress &&
-			a.model.SpinPhase%menuBarLightbarTicksPerFrame == 0 {
-			a.lightbarHead++
-			if _, exited := a.paintMenuBarJobsStripOnly(); exited {
-				a.lightbarHead = 0
-				a.paintMenuBarJobsStripOnly()
-			}
-			out.didRender = true
-		}
+		out.didRender = a.handleSpinnerTick()
 	case idleSortPayload:
 		a.applyIdleSortPayload(d)
 		a.render()
@@ -1317,6 +1302,34 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 		}
 	}
 	return out
+}
+
+// handleSpinnerTick advances the menu-bar spinner and the jobs light bar, painting each
+// partially and Showing at most once. It reports whether it drew anything.
+func (a *App) handleSpinnerTick() (rendered bool) {
+	painted := false // at most one Show per tick
+	if a.menuBarSpinnerBusy() {
+		a.model.SpinPhase++
+		w, h := a.screen.Size()
+		painted = ui.DrawMenuBarSpinnerOnly(a.screen, a.layoutForTerminalSize(w, h), a.model, a.styles)
+		rendered = true
+	}
+	if a.config.Jobs.ProgressLightbar && a.model.MenuBarJobs.HasProgress &&
+		a.model.SpinPhase%menuBarLightbarTicksPerFrame == 0 {
+		a.lightbarHead++
+		p, exited := a.drawMenuBarJobsStripOnly()
+		if exited {
+			a.lightbarHead = 0
+			again, _ := a.drawMenuBarJobsStripOnly()
+			p = p || again
+		}
+		painted = painted || p
+		rendered = true
+	}
+	if painted {
+		a.emitScreenAfterPartialPaint()
+	}
+	return rendered
 }
 
 // handleEarlyInterruptPayload dispatches the interrupt payload types handled ahead of

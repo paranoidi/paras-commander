@@ -1115,27 +1115,23 @@ func (h *Handler) progressUIWakeDebounce() time.Duration {
 	return time.Duration(h.config.Jobs.ProgressUIWakeDebounceMS) * time.Millisecond
 }
 
-// onJobEmitted wakes PollEvent so the main loop can drain jobs.Events().
-// Progress emits use [jobs].progress_ui_wake_debounce_ms so the menu-bar strip can update
-// without blocking the event loop; other event types wake immediately.
+// OnJobEmitted wakes PollEvent so the main loop can drain jobs.Events().
+// Progress emits are throttled by [jobs].progress_ui_wake_debounce_ms: the first one arms a timer
+// and later ones within the window ride on it, so a steady stream still wakes the UI once per
+// window. Other event types wake immediately.
 func (h *Handler) OnJobEmitted(ev jobs.Event) {
 	if ev.Type == jobs.EventProgress {
-		h.armJobsWakeDebounced()
+		h.armJobsWakeThrottled()
 		return
 	}
 	h.postJobsWakeImmediate()
 }
 
-func (h *Handler) armJobsWakeDebounced() {
+func (h *Handler) armJobsWakeThrottled() {
 	h.wakeMu.Lock()
 	defer h.wakeMu.Unlock()
 	if h.wakeTimer != nil {
-		if !h.wakeTimer.Stop() {
-			select {
-			case <-h.wakeTimer.C:
-			default:
-			}
-		}
+		return
 	}
 	h.wakeTimer = time.AfterFunc(h.progressUIWakeDebounce(), func() {
 		h.wakeMu.Lock()

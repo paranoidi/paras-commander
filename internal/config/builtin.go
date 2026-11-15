@@ -127,16 +127,11 @@ const (
 	RefreshIntervalMinMS = 200
 	RefreshIntervalMaxMS = 60_000
 
-	DefaultWorkerProgressMinBytes      = 512 * 1024
 	DefaultWorkerProgressMinIntervalMS = 200
 
 	// Jobs timing clamps applied in Config.Validate (milliseconds).
 	JobsProgressTimingMinMS = 50
 	JobsProgressTimingMaxMS = 5000
-
-	// WorkerProgressMinBytes clamp bounds in Config.Validate.
-	WorkerProgressMinBytesMin = 64 * 1024
-	WorkerProgressMinBytesMax = 64 * 1024 * 1024
 
 	// DefaultFindQueryDebounceMS waits after the last keystroke in the find dialog query field
 	// before re-ranking the indexed entries. Zero ranks on every keystroke (no debounce).

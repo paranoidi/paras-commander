@@ -480,7 +480,6 @@ func buildTransferOptions(job *jobs.Job, opsCfg config.OperationsConfig, jobsCfg
 		}
 	}
 	throttle := ops.ProgressEmitThrottle{
-		MinBytes:    int64(jobsCfg.WorkerProgressMinBytes),
 		MinInterval: time.Duration(jobsCfg.WorkerProgressMinIntervalMS) * time.Millisecond,
 	}
 	return opts, throttle

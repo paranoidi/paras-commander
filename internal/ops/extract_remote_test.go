@@ -401,7 +401,7 @@ func (l *transferLog) assertRemoteOnly(t *testing.T) {
 func TestExtractRemoteTransferProgress(t *testing.T) {
 	tc := archive.ProbeToolchain()
 	scratchTmp(t)
-	throttle := ProgressEmitThrottle{MinBytes: 1, MinInterval: time.Millisecond}
+	throttle := ProgressEmitThrottle{MinInterval: time.Millisecond}
 
 	t.Run("download", func(t *testing.T) {
 		mem := newMemRemote("/quarry")

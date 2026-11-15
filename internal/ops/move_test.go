@@ -322,8 +322,8 @@ func TestMoveMixedDeviceRenamesOneCopiesOther(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ExecuteMove: %v", err)
 	}
-	if done < 2 || last != done {
-		t.Fatalf("done = %d, last progress = %d; want done >= 2 and equal", done, last)
+	if done < 2 || last > done { // progress is time-throttled: the last sample may lag the final tally
+		t.Fatalf("done = %d, last progress = %d; want done >= 2 and last <= done", done, last)
 	}
 	for _, p := range []string{srcSame, srcCross} {
 		if _, err := os.Stat(p); !os.IsNotExist(err) {

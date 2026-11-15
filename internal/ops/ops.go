@@ -20,14 +20,10 @@ import (
 
 // ProgressEmitThrottle limits how often transfer progress callbacks fire during file copies.
 type ProgressEmitThrottle struct {
-	MinBytes    int64
 	MinInterval time.Duration
 }
 
 func effectiveProgressThrottle(t ProgressEmitThrottle) ProgressEmitThrottle {
-	if t.MinBytes <= 0 {
-		t.MinBytes = int64(config.DefaultWorkerProgressMinBytes)
-	}
 	if t.MinInterval <= 0 {
 		t.MinInterval = time.Duration(config.DefaultWorkerProgressMinIntervalMS) * time.Millisecond
 	}
