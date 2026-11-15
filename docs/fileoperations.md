@@ -130,7 +130,7 @@ rebindable in `keybindings.toml`.
 | Operation | Key | Menu |
 |---|---|---|
 | Copy | `F5`, `C-c` | File -> Copy |
-| Move | `F6` | File -> Move |
+| Move | `F6`, `C-t`, `C-m` (`C-m` only in terminals that tell it apart from Enter, such as kitty, WezTerm, foot or xterm) | File -> Move |
 | Rename | `S-F6`, `C-r` | File -> Rename |
 | Duplicate | `S-F5` | Esc menu `p` |
 | Mkdir | `F7` | File -> Mkdir |

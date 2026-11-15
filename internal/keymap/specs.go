@@ -2074,7 +2074,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Views:        HelpBrowser | HelpUnique,
 			Title:        "Move",
 			Section:      "File",
-			DefaultKeys:  []string{"F6", "C-m"},
+			DefaultKeys:  []string{"F6", "C-m", "C-t"},
 			PreferredKey: "F6",
 			Keywords:     []string{"move"},
 			LeaderKey:    "m",
