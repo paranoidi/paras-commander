@@ -234,6 +234,7 @@ type copyRunState struct {
 	processed       int // non-directory plan items gone through (Options.OnItemsProcessed)
 	doneBytes       int64
 	bytesSinceEmit  int64
+	filesDirty      bool // doneFiles changed since the last emit
 	lastEmit        time.Time
 	lastMetaEmit    time.Time // mkdir/symlink progress (no byte deltas): throttle by MinInterval only
 	transferredOut  []pathloc.Path
@@ -264,20 +265,21 @@ func (s *copyRunState) recordTransferred(src pathloc.Path) {
 	s.transferredOut = append(s.transferredOut, src)
 }
 
-func (s *copyRunState) emitProgress(srcPath, dstPath string, force bool) {
-	if s.progress == nil {
+// emitProgress reports the running tally, by time only: the first sample goes out at once, later
+// ones at most once per th.MinInterval, and only when bytes or the file count moved since the
+// last emit. The exact final tally is the caller's job.
+func (s *copyRunState) emitProgress(srcPath, dstPath string) {
+	if s.progress == nil || (s.bytesSinceEmit == 0 && !s.filesDirty) {
 		return
 	}
 	now := time.Now()
-	sinceEmit := time.Duration(0)
-	if !s.lastEmit.IsZero() {
-		sinceEmit = now.Sub(s.lastEmit)
+	if !s.lastEmit.IsZero() && now.Sub(s.lastEmit) < s.th.MinInterval {
+		return
 	}
-	if force || s.bytesSinceEmit >= s.th.MinBytes || (s.bytesSinceEmit > 0 && !s.lastEmit.IsZero() && sinceEmit >= s.th.MinInterval) {
-		s.progress(srcPath, dstPath, s.doneFiles, s.doneBytes)
-		s.bytesSinceEmit = 0
-		s.lastEmit = now
-	}
+	s.progress(srcPath, dstPath, s.doneFiles, s.doneBytes)
+	s.bytesSinceEmit = 0
+	s.filesDirty = false
+	s.lastEmit = now
 }
 
 func (s *copyRunState) emitMetaProgress(srcPath, dstPath string) {
@@ -418,7 +420,7 @@ func copyRegularItem(ctx context.Context, item PlanItem, opts Options, resolver 
 			}
 			state.doneBytes += delta
 			state.bytesSinceEmit += delta
-			state.emitProgress(srcStr, dstStr, false)
+			state.emitProgress(srcStr, dstStr)
 		})
 	} else {
 		res, err = copyFileTransfer(ctx, item.Src, item.Dst, opts, resolver, copyBuf, func(delta int64) {
@@ -427,7 +429,7 @@ func copyRegularItem(ctx context.Context, item PlanItem, opts Options, resolver 
 			}
 			state.doneBytes += delta
 			state.bytesSinceEmit += delta
-			state.emitProgress(srcStr, dstStr, false)
+			state.emitProgress(srcStr, dstStr)
 		})
 	}
 	if err != nil {
@@ -449,7 +451,8 @@ func copyRegularItem(ctx context.Context, item PlanItem, opts Options, resolver 
 	}
 
 	state.doneFiles++
-	state.emitProgress(srcStr, dstStr, true)
+	state.filesDirty = true
+	state.emitProgress(srcStr, dstStr)
 	return nil
 }
 

@@ -837,7 +837,7 @@ func TestCopyGranularProgressMultipleEmits(t *testing.T) {
 		t.Fatalf("write source: %v", err)
 	}
 	opts := Options{PreservePermissions: false, PreserveTimestamps: false, CopyBufferKiB: 4}
-	throttle := ProgressEmitThrottle{MinBytes: 1, MinInterval: time.Nanosecond}
+	throttle := ProgressEmitThrottle{MinInterval: time.Nanosecond}
 	var progressCalls int
 	var lastBytes int64 = -1
 	progress := func(_, _ string, _ int, bytes int64) {

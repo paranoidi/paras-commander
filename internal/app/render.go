@@ -386,8 +386,9 @@ func (a *App) emitScreenAfterFullRender() {
 	a.emitImageAfterShow()
 }
 
-// emitScreenAfterPartialPaint runs after targeted SetContent calls (e.g. menu-bar spinner) so
-// the hash cache stays aligned with what the terminal displays.
+// emitScreenAfterPartialPaint runs after targeted SetContent calls (e.g. menu-bar spinner).
+// It does not rehash the screen: with ScreenRenderHashCache on it zeroes lastScreenContentHash
+// instead, so the next full render always Shows and re-syncs the cache.
 // A nil image plan (typical for partial paints) leaves the locked region alone.
 func (a *App) emitScreenAfterPartialPaint() {
 	if plan := previewpanel.TakeFrameImage(); plan != nil {
@@ -399,7 +400,7 @@ func (a *App) emitScreenAfterPartialPaint() {
 	a.screen.Show()
 	a.emitImageAfterShow()
 	if a.config.UI.ScreenRenderHashCache {
-		a.lastScreenContentHash = ui.HashScreenLogical(a.screen)
+		a.lastScreenContentHash = 0
 		a.lastFlushedCursor = a.pendingCursor
 	}
 }
@@ -469,6 +470,15 @@ func devMoveBarDemoStrip(elapsed time.Duration) ui.MenuBarJobsStrip {
 // Returns painted (whether the gap was repainted) and lightbarExited (see ui.DrawMenuBarJobsGap) —
 // the spinner tick handler uses the latter to reset the light bar's frame counter.
 func (a *App) paintMenuBarJobsStripOnly() (painted, lightbarExited bool) {
+	painted, lightbarExited = a.drawMenuBarJobsStripOnly()
+	if painted {
+		a.emitScreenAfterPartialPaint()
+	}
+	return painted, lightbarExited
+}
+
+// drawMenuBarJobsStripOnly is paintMenuBarJobsStripOnly without the Show: the caller emits.
+func (a *App) drawMenuBarJobsStripOnly() (painted, lightbarExited bool) {
 	if !a.model.MenuBarLayoutReserved() {
 		return false, false
 	}
@@ -483,7 +493,6 @@ func (a *App) paintMenuBarJobsStripOnly() (painted, lightbarExited bool) {
 	if !painted {
 		return false, false
 	}
-	a.emitScreenAfterPartialPaint()
 	return true, lightbarExited
 }
 

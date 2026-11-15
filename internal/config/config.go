@@ -599,8 +599,6 @@ type JobsConfig struct {
 	ProgressUIWakeDebounceMS int `toml:"progress_ui_wake_debounce_ms"`
 	// BlockerDialogNextDebounceMS is the delay before auto-opening the next quick blocker dialog after an answer (0 = immediate).
 	BlockerDialogNextDebounceMS int `toml:"blocker_dialog_next_debounce_ms"`
-	// WorkerProgressMinBytes is the minimum bytes copied between worker EventProgress emits.
-	WorkerProgressMinBytes int `toml:"worker_progress_min_bytes"`
 	// WorkerProgressMinIntervalMS is the minimum milliseconds between worker EventProgress emits when copying.
 	WorkerProgressMinIntervalMS int `toml:"worker_progress_min_interval_ms"`
 	// ThroughputChartWindowSec is the wall-time span shown by the jobs details throughput chart (20–120).
@@ -802,7 +800,6 @@ func Default() Config {
 			AutoshowOnStart:             false,
 			ProgressUIWakeDebounceMS:    DefaultProgressUIWakeDebounceMS,
 			BlockerDialogNextDebounceMS: DefaultBlockerDialogNextDebounceMS,
-			WorkerProgressMinBytes:      DefaultWorkerProgressMinBytes,
 			WorkerProgressMinIntervalMS: DefaultWorkerProgressMinIntervalMS,
 			ThroughputChartWindowSec:    DefaultThroughputChartWindowSec,
 			ThroughputChartColumnMS:     DefaultThroughputChartColumnMS,
@@ -1414,17 +1411,6 @@ func (c *Config) validateJobs(builtin *Config) {
 	}
 	if c.Jobs.BlockerDialogNextDebounceMS > BlockerDialogNextDebounceMaxMS {
 		c.Jobs.BlockerDialogNextDebounceMS = BlockerDialogNextDebounceMaxMS
-	}
-	const workerProgressBytesMin = WorkerProgressMinBytesMin
-	const workerProgressBytesMax = WorkerProgressMinBytesMax
-	if c.Jobs.WorkerProgressMinBytes <= 0 {
-		c.Jobs.WorkerProgressMinBytes = builtin.Jobs.WorkerProgressMinBytes
-	}
-	if c.Jobs.WorkerProgressMinBytes < workerProgressBytesMin {
-		c.Jobs.WorkerProgressMinBytes = workerProgressBytesMin
-	}
-	if c.Jobs.WorkerProgressMinBytes > workerProgressBytesMax {
-		c.Jobs.WorkerProgressMinBytes = workerProgressBytesMax
 	}
 }
 

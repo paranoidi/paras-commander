@@ -154,24 +154,16 @@ func TestValidateClampsNegativeDiskSpaceCheckMinFileBytes(t *testing.T) {
 
 func TestValidateClampsJobsWorkerProgress(t *testing.T) {
 	cfg := Default()
-	cfg.Jobs.WorkerProgressMinBytes = 100
 	cfg.Jobs.WorkerProgressMinIntervalMS = 10
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.Jobs.WorkerProgressMinBytes != 64*1024 {
-		t.Fatalf("WorkerProgressMinBytes = %d, want %d", cfg.Jobs.WorkerProgressMinBytes, 64*1024)
-	}
 	if cfg.Jobs.WorkerProgressMinIntervalMS != 50 {
 		t.Fatalf("WorkerProgressMinIntervalMS = %d, want 50", cfg.Jobs.WorkerProgressMinIntervalMS)
 	}
-	cfg.Jobs.WorkerProgressMinBytes = 128 * 1024 * 1024
 	cfg.Jobs.WorkerProgressMinIntervalMS = 999999
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
-	}
-	if cfg.Jobs.WorkerProgressMinBytes != 64*1024*1024 {
-		t.Fatalf("WorkerProgressMinBytes = %d, want max 64MiB", cfg.Jobs.WorkerProgressMinBytes)
 	}
 	if cfg.Jobs.WorkerProgressMinIntervalMS != 5000 {
 		t.Fatalf("WorkerProgressMinIntervalMS = %d, want 5000", cfg.Jobs.WorkerProgressMinIntervalMS)

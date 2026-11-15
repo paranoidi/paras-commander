@@ -274,7 +274,7 @@ func (m *transferMeter) add(path string, delta int64) {
 	if m.fn == nil {
 		return
 	}
-	if m.sinceEmit >= m.th.MinBytes || (m.sinceEmit > 0 && !m.lastEmit.IsZero() && time.Since(m.lastEmit) >= m.th.MinInterval) {
+	if m.sinceEmit > 0 && (m.lastEmit.IsZero() || time.Since(m.lastEmit) >= m.th.MinInterval) {
 		m.flush(path)
 	}
 }

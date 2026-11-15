@@ -40,8 +40,8 @@ func TestMoveFallbackMixedSourcesFake(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ExecuteMove: %v", err)
 	}
-	if done != 5 || last != done { // 1 renamed + 4 copied entries (2 dirs, 2 files)
-		t.Fatalf("done = %d, last = %d; want 5", done, last)
+	if done != 5 || last > done { // progress is time-throttled: the last sample may lag the final tally // 1 renamed + 4 copied entries (2 dirs, 2 files)
+		t.Fatalf("done = %d, last = %d; want 5 and last <= done", done, last)
 	}
 	for p, want := range map[string]string{"lantern/quill.txt": "q", "lantern/ember/raven.txt": "r", "meadow/tulip.txt": "t"} {
 		if got := readFileContent(t, filepath.Join(dst, p)); got != want {
