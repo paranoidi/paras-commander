@@ -842,3 +842,36 @@ func TestSizeColumnPendingMarkerWaitsForSizePendingDue(t *testing.T) {
 		}
 	}
 }
+
+// TestDirectorySizeShownWithoutDiskUsageView pins that a directory's cached size (e.g. from a
+// selection-size scan) paints in the size column even when the disk-usage bars are off, like the
+// panel list does.
+func TestDirectorySizeShownWithoutDiskUsageView(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	const width, height = 80, 10
+	screen.SetSize(width, height)
+	styles := theme.Default()
+	const dirPath = "/vol/walnut"
+	frame := geom.Rect{X: 0, Y: 0, Width: width, Height: height}
+	DrawBody(screen, BodyParams{
+		Frame:               frame,
+		Center:              panel.State{Path: pathloc.MustParse("/vol"), Entries: []localfs.Entry{{Name: "walnut", Path: dirPath, Type: localfs.EntryDirectory}}},
+		Styles:              styles,
+		FileListActive:      true,
+		HeaderStyle:         styles.PanelActiveHeader,
+		HeaderCarouselStyle: styles.PanelActiveHeaderCarousel,
+		SurfaceStyle:        styles.PanelActiveSurface,
+		Layout:              DefaultLayout(),
+		DiskUsage:           DiskUsage{Source: fakeDiskUsageSource{sizes: map[string]int64{dirPath: 5 << 20}}},
+	})
+	col := SplitColumns(frame, false, DefaultLayout(), [3]int{})[1]
+	want := strings.TrimSpace(panellist.FormatByteSizeCompact(5<<20, panellist.SizeCells))
+	if got := rowText(screen, col.X, col.Y, col.Width); !strings.Contains(got, want) {
+		t.Fatalf("row %q missing directory size %q", got, want)
+	}
+}

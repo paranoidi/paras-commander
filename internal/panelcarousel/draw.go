@@ -249,10 +249,8 @@ func drawCarouselColumn(cp carouselColumnParams) {
 		}
 		rowSuffix := panellist.NewRowSuffix(jobSuffix, newFileTier, renameMark, subtree)
 		rowSuffix.RangeAnchor = c.Active && p.Center.RangeAnchor != "" && entry.Path == p.Center.RangeAnchor
-		var diskSrc DiskUsageSource
-		if p.DiskUsage.Active {
-			diskSrc = p.DiskUsage.Source
-		}
+		// Size cells read the cache whether or not usage bars are on, like the panel list.
+		diskSrc := p.DiskUsage.Source
 		sizePending := diskSrc != nil && entry.Type == localfs.EntryDirectory && diskSrc.SizePendingDue(entry.Path, p.DiskUsage.PanelID)
 		text := formatBriefRow(entry, col.Width, p.ShowIcons, showSize, rowSuffix, p.Styles, diskSrc, reserve, metaW, metaText, sizePending)
 		var spans []primitive.Span
