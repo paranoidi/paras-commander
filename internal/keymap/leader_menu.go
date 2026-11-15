@@ -10,11 +10,11 @@ const (
 	LeaderMenuGroupFile       = "File"
 	LeaderMenuGroupSelection  = "Selection"
 	LeaderMenuGroupView       = "View"
+	LeaderMenuGroupMenu       = "Menu"
 	LeaderMenuGroupTools      = "Tools"
 	LeaderMenuGroupNavigation = "Navigation"
 	LeaderMenuGroupAddMark    = "Add mark"
 	LeaderMenuGroupDisplay    = "Display"
-	LeaderMenuGroupMenu       = "Menu"
 	LeaderMenuGroupApp        = "App"
 )
 
@@ -35,7 +35,7 @@ const (
 )
 
 // leaderMenuGroupColumn assigns each group to a macro column
-// (0=File, 1=Selection+View, 2=Navigation+Tools, 3=Add mark+Display+Menu+App).
+// (0=File, 1=Selection+View+Menu, 2=Navigation+Tools, 3=Add mark+Display+App).
 var leaderMenuGroupColumn = map[string]int{
 	LeaderMenuGroupFile:       0,
 	LeaderMenuGroupSelection:  1,
@@ -44,7 +44,7 @@ var leaderMenuGroupColumn = map[string]int{
 	LeaderMenuGroupTools:      2,
 	LeaderMenuGroupAddMark:    3,
 	LeaderMenuGroupDisplay:    3,
-	LeaderMenuGroupMenu:       3,
+	LeaderMenuGroupMenu:       1,
 	LeaderMenuGroupApp:        3,
 }
 
@@ -52,11 +52,11 @@ var leaderMenuGroupOrder = []string{
 	LeaderMenuGroupFile,
 	LeaderMenuGroupSelection,
 	LeaderMenuGroupView,
+	LeaderMenuGroupMenu,
 	LeaderMenuGroupNavigation,
 	LeaderMenuGroupTools,
 	LeaderMenuGroupAddMark,
 	LeaderMenuGroupDisplay,
-	LeaderMenuGroupMenu,
 	LeaderMenuGroupApp,
 }
 
