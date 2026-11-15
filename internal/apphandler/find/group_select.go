@@ -21,8 +21,7 @@ const (
 type GroupSelectRequest struct {
 	Mode          GroupSelectMode
 	Pattern       string
-	FilesOnly     bool
-	DirsOnly      bool
+	Scope         panel.PatternScope // only entries of the kinds it targets match
 	CaseSensitive bool
 	FullPath      bool
 	PatternMode   panel.GroupPatternMode

@@ -19,8 +19,8 @@ func TestLoadMissingFileHoldsNone(t *testing.T) {
 func TestUpsertRemoveRoundTrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "sub", "filters.toml")
 	lantern := Pattern{Name: "lantern", Description: "harbor clips", Pattern: `^meadow.*`, Mode: ModeRegex,
-		Types: []string{"videos", "audio"}, FilesOnly: true, CaseSensitive: true, Invert: true}
-	orchard := Pattern{Name: "orchard", Pattern: "*.pebble", Mode: ModeShell, DirsOnly: true, IncludeMeta: true, OnlyMeta: true}
+		Types: []string{"videos", "audio"}, Scope: ScopeBoth, CaseSensitive: true, Invert: true}
+	orchard := Pattern{Name: "orchard", Pattern: "*.pebble", Mode: ModeShell, Scope: ScopeDirs, IncludeMeta: true, OnlyMeta: true}
 	for _, p := range []Pattern{lantern, orchard} {
 		if err := Upsert(path, p); err != nil {
 			t.Fatal(err)

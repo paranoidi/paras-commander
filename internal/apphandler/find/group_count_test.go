@@ -28,7 +28,7 @@ func TestMatchingFindPathsFullPathMatchesDirComponent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if paths, _ := matchingFindPaths(st, nil, false, false, basenameMatch); len(paths) != 0 {
+	if paths, _ := matchingFindPaths(st, nil, panel.ScopeBoth, basenameMatch); len(paths) != 0 {
 		t.Fatalf("basename match should not see the dir component, got %v", paths)
 	}
 
@@ -36,7 +36,7 @@ func TestMatchingFindPathsFullPathMatchesDirComponent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	paths, isDir := matchingFindPaths(st, nil, false, false, fullPathMatch)
+	paths, isDir := matchingFindPaths(st, nil, panel.ScopeBoth, fullPathMatch)
 	want := filepath.Clean("/root/src/main.go")
 	if len(paths) != 1 || paths[0] != want {
 		t.Fatalf("full-path match = %v, want [%s]", paths, want)
@@ -313,7 +313,7 @@ func TestFindGroupSelectTypesOnlyCountAndApply(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	paths, _ := matchingFindPaths(st, nil, false, false, match)
+	paths, _ := matchingFindPaths(st, nil, panel.ScopeBoth, match)
 	if len(paths) != 2 {
 		t.Fatalf("types-only match = %v, want the two .mkv files", paths)
 	}
@@ -323,7 +323,7 @@ func TestFindGroupSelectTypesOnlyCountAndApply(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if paths, _ = matchingFindPaths(st, nil, false, false, match); len(paths) != 1 {
+	if paths, _ = matchingFindPaths(st, nil, panel.ScopeBoth, match); len(paths) != 1 {
 		t.Fatalf("types AND pattern = %v, want 1", paths)
 	}
 }

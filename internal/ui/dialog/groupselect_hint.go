@@ -1,6 +1,6 @@
 package dialog
 
-// GroupSelectShowsFullPath reports whether the "Match full path" checkbox is shown. Find,
+// GroupSelectShowsFullPath reports whether the "Match whole path" checkbox is shown. Find,
 // output and Find duplicates contexts only — panel entries all share one directory, so it
 // would be meaningless there.
 func GroupSelectShowsFullPath(state GroupSelectState) bool {

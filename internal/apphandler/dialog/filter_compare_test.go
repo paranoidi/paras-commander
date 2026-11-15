@@ -55,24 +55,24 @@ func TestFilterDialogCompareTarget(t *testing.T) {
 	}
 }
 
-func TestFilterDialogDirsOnlyDisablesTypes(t *testing.T) {
+func TestFilterDialogScopeDirsDisablesTypes(t *testing.T) {
 	t.Parallel()
 	model := &ui.Model{}
 	h := New(Deps{Host: &identityTestHost{model: model, cfg: config.Default()}, Model: model})
 	fd := &model.FilterDialog
-	fd.DirsOnly = true
+	fd.Scope = panel.ScopeDirs
 	fd.Types[0] = true
 	if fd.Apply(dlg.Event{ID: dialog.PatternTypeID(1)}) || fd.Types[1] {
-		t.Fatal("type toggle must be a no-op with Directories only")
+		t.Fatal("type toggle must be a no-op with the Dirs scope")
 	}
 	if spec := h.filterSpec(); spec.Types != nil || spec.TypeLabel != "" {
 		t.Fatalf("spec types = %v %q, want ignored", spec.Types, spec.TypeLabel)
 	}
-	if !fd.Apply(dlg.Event{ID: dialog.PatternFilesOnly}) || !fd.FilesOnly || fd.DirsOnly {
-		t.Fatal("Files only radio must switch away from Directories only")
+	if !fd.Apply(dlg.Event{ID: dialog.PatternScopeFiles}) || fd.Scope != panel.ScopeFiles {
+		t.Fatal("Files radio must switch the scope away from Dirs")
 	}
 	if spec := h.filterSpec(); spec.Types == nil {
-		t.Fatal("checked type must apply again once Directories only is off")
+		t.Fatal("checked type must apply again once the scope is not Dirs")
 	}
 }
 
@@ -89,7 +89,7 @@ func TestFilterDialogReopenRestoresActiveFilterAndClear(t *testing.T) {
 
 	h.OpenFilterDialog()
 	fd := &model.FilterDialog
-	fd.Text, fd.PatternMode, fd.Invert, fd.DirsOnly = "lantern", panel.GroupPatternRegex, true, true
+	fd.Text, fd.PatternMode, fd.Invert, fd.Scope = "lantern", panel.GroupPatternRegex, true, panel.ScopeDirs
 	fd.Types[dialog.FilterTypeAudio] = true
 	h.executeFilterDialog()
 	if model.Primary.ActiveEntryFilter == nil {
@@ -98,7 +98,7 @@ func TestFilterDialogReopenRestoresActiveFilterAndClear(t *testing.T) {
 
 	h.OpenFilterDialog()
 	if fd.Text != "lantern" || fd.TextCursor != len("lantern") || fd.PrefillPending || fd.PatternMode != panel.GroupPatternRegex ||
-		!fd.Invert || !fd.DirsOnly || !fd.Types[dialog.FilterTypeAudio] || fd.Focus != dialog.PatternInput {
+		!fd.Invert || fd.Scope != panel.ScopeDirs || !fd.Types[dialog.FilterTypeAudio] || fd.Focus != dialog.PatternInput {
 		t.Fatalf("reopened state = %+v, want the applied settings", *fd)
 	}
 

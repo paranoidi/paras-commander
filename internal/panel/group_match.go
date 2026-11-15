@@ -63,7 +63,7 @@ func NewGroupMatcher(pattern string, mode GroupPatternMode, caseSensitive bool) 
 }
 
 // NewGroupMatcherFullPath is like NewGroupMatcher but matches the full path instead of a
-// basename (find dialog "Match full path" option). filepath.Match's '*' doesn't cross '/',
+// basename (find dialog "Match whole path" option). filepath.Match's '*' doesn't cross '/',
 // which would make full-path shell patterns like "*src*" useless, so in shell mode '/' is
 // swapped for a NUL byte (never legal in a path) in both the compiled pattern and the matched
 // value, letting '*' span directory separators.

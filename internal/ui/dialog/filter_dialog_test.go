@@ -10,13 +10,13 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
-func TestDrawFilterDialogTypeColumnsBesideRadios(t *testing.T) {
+func TestDrawFilterDialogGrid(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatal(err)
 	}
 	defer screen.Fini()
-	const w, h = 62, 24
+	const w, h = 80, 24
 	screen.SetSize(w, h)
 	DrawFilterDialog(screen, Layout{Width: w, Height: h}, FilterDialogState{Open: true, PatternMode: panel.GroupPatternShell, Focus: PatternInput}, theme.Default())
 
@@ -41,15 +41,30 @@ func TestDrawFilterDialogTypeColumnsBesideRadios(t *testing.T) {
 		t.Fatalf("no row contains %q:\n%s", sub, strings.Join(rows, "\n"))
 		return -1
 	}
+	// The three modes share one row; the types take three columns under them, and the scope
+	// radios the same three columns.
 	simple := rows[find("Simple / auto shell")]
-	if !strings.Contains(simple, "Videos") || !strings.Contains(simple, "Audio") {
-		t.Fatalf("simple row %q missing Videos/Audio", simple)
+	if !strings.Contains(simple, "Shell patterns") || !strings.Contains(simple, "Regular expression") {
+		t.Fatalf("mode row %q missing a mode", simple)
 	}
-	if y := find("Shell patterns"); !strings.Contains(rows[y], "Pictures") || !strings.Contains(rows[y], "Documents") {
-		t.Fatalf("shell row %q missing Pictures/Documents", rows[y])
+	videos := rows[find("Videos")]
+	if !strings.Contains(videos, "Pictures") || !strings.Contains(videos, "Archives") {
+		t.Fatalf("first type row %q missing Pictures/Archives", videos)
 	}
-	if y := find("Regular expression"); !strings.Contains(rows[y], "Archives") {
-		t.Fatalf("regex row %q missing Archives", rows[y])
+	if y := find("Audio"); !strings.Contains(rows[y], "Documents") {
+		t.Fatalf("second type row %q missing Documents", rows[y])
+	}
+	files := rows[find("Files")]
+	col := func(row, label string) int { return len([]rune(row[:strings.Index(row, label)])) }
+	for _, c := range [][2]string{{"Shell patterns", "Pictures"}, {"Regular expression", "Archives"}} {
+		if col(simple, c[0]) != col(videos, c[1]) {
+			t.Errorf("%s and %s are not in one column:\n%s\n%s", c[0], c[1], simple, videos)
+		}
+	}
+	for _, c := range [][2]string{{"Pictures", "Dirs"}, {"Archives", "Both"}} {
+		if col(videos, c[0]) != col(files, c[1]) {
+			t.Errorf("%s and %s are not in one column:\n%s\n%s", c[0], c[1], videos, files)
+		}
 	}
 	// Right margin: the char before the right border is blank on the widest row.
 	trimmed := strings.TrimRight(simple, " ")
@@ -77,6 +92,7 @@ func TestFilterFocusGrid(t *testing.T) {
 		return FilterDialogView(FilterDialogState{PatternMode: mode, MetaColumnCount: meta}, Layout{Width: 80, Height: 24}, theme.Default())
 	}
 	videos, audio, archives, documents := PatternTypeID(FilterTypeVideos), PatternTypeID(FilterTypeAudio), PatternTypeID(FilterTypeArchives), PatternTypeID(FilterTypeDocuments)
+	pictures := PatternTypeID(FilterTypePictures)
 	steps := []struct {
 		name  string
 		focus dlg.ID
@@ -85,26 +101,28 @@ func TestFilterFocusGrid(t *testing.T) {
 		meta  int
 		want  dlg.ID
 	}{
-		{"radio right to type", PatternSimpleRadio, tcell.KeyRight, shell, 0, videos},
-		{"type right to audio col", videos, tcell.KeyRight, shell, 0, audio},
-		{"type left back to radio", videos, tcell.KeyLeft, shell, 0, PatternSimpleRadio},
-		{"down keeps type column", videos, tcell.KeyDown, shell, 0, PatternTypeID(FilterTypePictures)},
-		{"down from empty cell falls left", documents, tcell.KeyDown, shell, 0, archives},
-		{"down from archives to pattern", archives, tcell.KeyDown, shell, 0, PatternInput},
-		{"up from pattern to regex radio", PatternInput, tcell.KeyUp, shell, 0, PatternRegexRadio},
-		{"dirs down to case", PatternDirsOnly, tcell.KeyDown, shell, 0, PatternCase},
-		{"dirs down to case in regex", PatternDirsOnly, tcell.KeyDown, regex, 0, PatternCase},
+		{"radio right to next radio", PatternSimpleRadio, tcell.KeyRight, shell, 0, PatternShellRadio},
+		{"radio down to types", PatternSimpleRadio, tcell.KeyDown, shell, 0, videos},
+		{"type right to next col", videos, tcell.KeyRight, shell, 0, pictures},
+		{"type left back to first col", pictures, tcell.KeyLeft, shell, 0, videos},
+		{"types up to radios", videos, tcell.KeyUp, shell, 0, PatternSimpleRadio},
+		{"down keeps type column", videos, tcell.KeyDown, shell, 0, audio},
+		{"down from empty cell falls left", archives, tcell.KeyDown, shell, 0, documents},
+		{"down from last type row to pattern", audio, tcell.KeyDown, shell, 0, PatternInput},
+		{"up from pattern to audio", PatternInput, tcell.KeyUp, shell, 0, audio},
+		{"dirs down to case", PatternScopeDirs, tcell.KeyDown, shell, 0, PatternCase},
+		{"dirs down to case in regex", PatternScopeDirs, tcell.KeyDown, regex, 0, PatternCase},
 		{"invert right to case", PatternInvert, tcell.KeyRight, shell, 0, PatternCase},
 		{"invert right to case in regex", PatternInvert, tcell.KeyRight, regex, 0, PatternCase},
 		{"invert down to OK", PatternInvert, tcell.KeyDown, regex, 0, dlg.OK},
 		{"case down to meta", PatternCase, tcell.KeyDown, shell, 2, PatternOnlyMeta},
 		{"OK up to the last row, the cell drawn above it", dlg.OK, tcell.KeyUp, shell, 0, PatternCase},
-		{"OK up to meta row", dlg.OK, tcell.KeyUp, shell, 2, PatternIncludeMeta},
+		{"OK up to meta row, the cell drawn above it", dlg.OK, tcell.KeyUp, shell, 2, PatternOnlyMeta},
 		{"OK right to Cancel", dlg.OK, tcell.KeyRight, shell, 0, dlg.Cancel},
-		{"first row up nothing", videos, tcell.KeyUp, shell, 0, videos},
+		{"first row up nothing", PatternSimpleRadio, tcell.KeyUp, shell, 0, PatternSimpleRadio},
 		{"tab radios to types", PatternRegexRadio, tcell.KeyTab, shell, 0, videos},
 		{"tab types to pattern", documents, tcell.KeyTab, shell, 0, PatternInput},
-		{"tab pattern to options", PatternInput, tcell.KeyTab, shell, 0, PatternFilesOnly},
+		{"tab pattern to options", PatternInput, tcell.KeyTab, shell, 0, PatternScopeFiles},
 		{"tab options to buttons", PatternInvert, tcell.KeyTab, shell, 0, dlg.OK},
 		{"tab buttons wraps", dlg.Cancel, tcell.KeyTab, shell, 0, PatternSimpleRadio},
 		{"backtab pattern to types", PatternInput, tcell.KeyBacktab, shell, 0, videos},
@@ -171,13 +189,13 @@ func TestFilterCompareHidesFilesDirs(t *testing.T) {
 }
 
 // TestFilterDisabledTypes: the type checkboxes cannot be focused, toggled, reached by their
-// mnemonics or clicked while Directories only is on.
+// mnemonics or clicked while the scope is Dirs.
 func TestFilterDisabledTypes(t *testing.T) {
 	layout := Layout{Width: 80, Height: 24}
-	st := FilterDialogState{PatternMode: panel.GroupPatternShell, DirsOnly: true}
+	st := FilterDialogState{PatternMode: panel.GroupPatternShell, Scope: panel.ScopeDirs}
 	spec := FilterDialogView(st, layout, theme.Default())
-	if got := patternStep(spec, PatternShellRadio, tcell.KeyRight); got != PatternShellRadio {
-		t.Errorf("Right from a radio over disabled types = %q, want to stay", got)
+	if got := patternStep(spec, PatternSimpleRadio, tcell.KeyDown); got != PatternInput {
+		t.Errorf("Down from the radios over disabled types = %q, want the pattern", got)
 	}
 	if got := patternStep(spec, PatternShellRadio, tcell.KeyTab); got != PatternInput {
 		t.Errorf("Tab from the radios = %q, want the pattern (types are skipped)", got)

@@ -23,6 +23,13 @@ const (
 	ModeRegex  = "regex"
 )
 
+// Pattern scopes as stored in filters.toml: which entries the pattern applies to.
+const (
+	ScopeFiles = "files"
+	ScopeDirs  = "dirs"
+	ScopeBoth  = "both"
+)
+
 // Pattern is one saved Filter dialog configuration. History entries have no Name.
 type Pattern struct {
 	Name        string `toml:"name"`
@@ -31,13 +38,13 @@ type Pattern struct {
 	// Mode is ModeSimple, ModeShell or ModeRegex.
 	Mode string `toml:"mode"`
 	// Types are the checked file types, lowercase ("videos", "pictures", ...).
-	Types         []string `toml:"types"`
-	FilesOnly     bool     `toml:"files_only"`
-	DirsOnly      bool     `toml:"dirs_only"`
-	CaseSensitive bool     `toml:"case_sensitive"`
+	Types []string `toml:"types"`
+	// Scope is ScopeFiles, ScopeDirs or ScopeBoth; empty or unknown loads as ScopeFiles.
+	Scope         string `toml:"scope"`
+	CaseSensitive bool   `toml:"case_sensitive"`
 	// Invert is a Filter dialog option; Select group ignores it.
 	Invert bool `toml:"invert"`
-	// FullPath is a Select group option (where it shows Match full path); Filter ignores it.
+	// FullPath is a Select group option (where it shows Match whole path); Filter ignores it.
 	FullPath    bool `toml:"full_path"`
 	IncludeMeta bool `toml:"include_meta"`
 	OnlyMeta    bool `toml:"only_meta"`
@@ -50,13 +57,13 @@ func (p Pattern) Equal(o Pattern) bool {
 
 // patternScalars is Pattern without its slice, so it compares with ==.
 type patternScalars struct {
-	name, description, pattern, mode                                            string
-	filesOnly, dirsOnly, caseSensitive, invert, fullPath, includeMeta, onlyMeta bool
+	name, description, pattern, mode, scope                string
+	caseSensitive, invert, fullPath, includeMeta, onlyMeta bool
 }
 
 func (p Pattern) scalars() patternScalars {
-	return patternScalars{p.Name, p.Description, p.Pattern, p.Mode,
-		p.FilesOnly, p.DirsOnly, p.CaseSensitive, p.Invert, p.FullPath, p.IncludeMeta, p.OnlyMeta}
+	return patternScalars{p.Name, p.Description, p.Pattern, p.Mode, p.Scope,
+		p.CaseSensitive, p.Invert, p.FullPath, p.IncludeMeta, p.OnlyMeta}
 }
 
 type patternsFile struct {

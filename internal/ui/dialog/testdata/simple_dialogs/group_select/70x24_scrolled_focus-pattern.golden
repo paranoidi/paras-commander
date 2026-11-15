@@ -4,20 +4,20 @@
                                                                       
                                                                       
                                                                       
-     ┌────────────────────── Select group ──────────────────────┐     
-     │ ( ) Simple / auto shell  [ ] Videos     [ ] Audio        │     
-     │ (*) Shell patterns       [ ] Pictures   [ ] Documents    │     
-     │ ( ) Regular expression   [ ] Archives                    │     
-     ├──────────────────────────────────────────────────────────┤     
-     │ Pattern:                                             1  │     
-     │ ◀adow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-  │     
-     │                                                          │     
-     │ [ ] Files only           [ ] Directories only            │     
-     │ [ ] Case sensitive                                       │     
-     ├──────────────────────────────────────────────────────────┤     
-     │                    [ OK ]  [ Cancel ]                    │     
-     └──────────────────────────────────────────────────────────┘     
-                                                                      
+  ┌───────────────────────── Select group ─────────────────────────┐  
+  │ ( ) Simple / auto shell  (*) Shell patterns  ( ) Regular expr… │  
+  ├────────────────────────────────────────────────────────────────┤  
+  │ [ ] Videos               [ ] Pictures        [ ] Archives      │  
+  │ [ ] Audio                [ ] Documents                         │  
+  │                                                                │  
+  │ Pattern:                                                   1  │  
+  │ ◀dow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-  │  
+  │                                                                │  
+  │ (*) Files                ( ) Dirs            ( ) Both          │  
+  │ [ ] Case sensitive                                             │  
+  ├────────────────────────────────────────────────────────────────┤  
+  │                       [ OK ]  [ Cancel ]                       │  
+  └────────────────────────────────────────────────────────────────┘  
                                                                       
                                                                       
                                                                       
@@ -39,20 +39,20 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbccccccccccccccbbbbbbbbbbbbbbbbbbbbbbbaaaaa
-aaaaabbbbbbbbbbdbbbbbbbbbbbbbbbbbbbbdbbbbbbbbbbbbbbbdbbbbbbbbbbbbaaaaa
-aaaaabeeeeedbbbbbbbbbbbbbbbbbbbbbbbbdbbbbbbbbbbbbbbbbbbbbbdbbbbbbaaaaa
-aaaaabbbbbbdbbbbbbbbbbbbbbbbbbbbbbbbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
-aaaaabbfffffffffffffffffffffffffffffffffffffffffffffffffffffffgbbaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
-aaaaabbbbbbbbbbbbbbbdbbbbbbbbbbbbbbbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
-aaaaabbbbbbbbbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbhhihhhbbhhihhhhhhhbbbbbbbbbbbbbbbbbbbbbaaaaa
-aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbdbbbbbbbbbbbbbbbeeeeedbbbbbbbbbbbbbbbbbbbdbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbdbbbbbbbbbbbbbbbbbbbbbbbbdbbbbbbbbbbbbbbbbbbbdbbbbbbbbbbbbbbaa
+aabbbbbbbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffgbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabeeeeebdbbbbbbbbbbbbbbbbbbbbbbbdbbbbbbbbbbbbbbbbbbbbbbdbbbbbbbbbbbaa
+aabbbbbbbbbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbhhihhhbbhhihhhhhhhbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

@@ -564,7 +564,7 @@ func groupMatches(results []dialog.IndexFindResult, req findctrl.GroupSelectRequ
 	}
 	var out []dialog.IndexFindResult
 	for _, r := range results {
-		if (req.FilesOnly && r.IsDir) || (req.DirsOnly && !r.IsDir) || !match(r.Path) {
+		if !req.Scope.Targets(r.IsDir) || !match(r.Path) {
 			continue
 		}
 		out = append(out, r)

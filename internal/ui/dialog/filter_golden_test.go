@@ -23,7 +23,7 @@ func patternGoldenFocus(t *testing.T, name string) dlg.ID {
 	t.Helper()
 	ids := map[string]dlg.ID{
 		"shell": PatternShellRadio, "regex": PatternRegexRadio, "simple": PatternSimpleRadio,
-		"pattern": PatternInput, "filesonly": PatternFilesOnly, "dirsonly": PatternDirsOnly, "invert": PatternInvert,
+		"pattern": PatternInput, "scopefiles": PatternScopeFiles, "scopedirs": PatternScopeDirs, "scopeboth": PatternScopeBoth, "invert": PatternInvert,
 		"case": PatternCase, "fullpath": PatternFullPath, "includemeta": PatternIncludeMeta, "onlymeta": PatternOnlyMeta,
 		"ok": dlg.OK, "cancel": dlg.Cancel,
 	}
@@ -78,13 +78,13 @@ func filterGoldenState(t *testing.T, variant, focus string) FilterDialogState {
 	case "options":
 		typed("*.zip")
 		st.Types[FilterTypeVideos], st.Types[FilterTypeArchives] = true, true
-		st.Invert, st.CaseSensitive, st.FilesOnly = true, true, true
+		st.Invert, st.CaseSensitive, st.Scope = true, true, panel.ScopeBoth
 		st.PatternMode = panel.GroupPatternRegex
 		st.PreviewShow, st.PreviewFiles, st.PreviewFolders = true, 9, 1
-	case "dirs-only":
+	case "scope-dirs":
 		typed("anchor")
 		st.Types[FilterTypePictures], st.Types[FilterTypeDocuments] = true, true
-		st.DirsOnly = true
+		st.Scope = panel.ScopeDirs
 		st.PreviewShow, st.PreviewFolders = true, 4
 	case "meta":
 		st.MetaColumnCount = 2
@@ -124,7 +124,7 @@ func TestFilterGoldenRender(t *testing.T) {
 	for _, pos := range []string{"pattern", "includemeta", "ok"} {
 		add(80, 25, "meta", pos)
 	}
-	for _, v := range []string{"typed", "many", "zero", "bad-regex", "bad-shell", "scrolled", "options", "dirs-only", "files-only-preview"} {
+	for _, v := range []string{"typed", "many", "zero", "bad-regex", "bad-shell", "scrolled", "options", "scope-dirs", "files-only-preview"} {
 		for _, pos := range []string{"pattern", "ok"} {
 			add(80, 24, v, pos)
 		}
@@ -132,9 +132,10 @@ func TestFilterGoldenRender(t *testing.T) {
 	add(80, 24, "options", "invert")
 	add(80, 24, "active", "pattern")
 	add(80, 24, "options", "videos")
-	add(80, 24, "dirs-only", "videos")
-	add(80, 24, "dirs-only", "dirsonly")
-	add(80, 24, "dirs-only", "filesonly")
+	add(80, 24, "scope-dirs", "videos")
+	add(80, 24, "scope-dirs", "scopedirs")
+	add(80, 24, "scope-dirs", "scopefiles")
+	add(80, 24, "options", "scopeboth")
 	add(80, 25, "meta-only", "onlymeta")
 	add(80, 25, "meta-only", "audio")
 	for _, pos := range []string{"pattern", "ok"} {
@@ -159,7 +160,7 @@ func TestFilterGoldenRender(t *testing.T) {
 	history := FilterDialogState{Open: true, SavedPatternScreens: SavedPatternScreens{Phase: PatternPhaseHistoryPicker, Picker: SavedPatternPicker{
 		Items: []filterpattern.Pattern{
 			{Pattern: "*.pebble", Mode: filterpattern.ModeShell, Types: []string{"videos", "audio"}, Invert: true},
-			{Mode: filterpattern.ModeSimple, Types: []string{"documents"}, FilesOnly: true},
+			{Mode: filterpattern.ModeSimple, Types: []string{"documents"}, Scope: filterpattern.ScopeBoth},
 		},
 		Ranked: []int{0, 1}, MatchRanges: make([][]search.Range, 2),
 	}}}

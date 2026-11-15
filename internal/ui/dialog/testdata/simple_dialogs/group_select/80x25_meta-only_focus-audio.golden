@@ -4,21 +4,21 @@
                                                                                 
                                                                                 
                                                                                 
-          ┌────────────────────── Select group ──────────────────────┐          
-          │ ( ) Simple / auto shell  [ ] Videos     [x] Audio        │          
-          │ (*) Shell patterns       [ ] Pictures   [ ] Documents    │          
-          │ ( ) Regular expression   [ ] Archives                    │          
-          ├──────────────────────────────────────────────────────────┤          
-          │ Pattern:                                                 │          
-          │                                                          │          
-          │                                                          │          
-          │ [ ] Files only           [ ] Directories only            │          
-          │ [ ] Case sensitive                                       │          
-          │ [x] Include meta columns [x] Only meta columns           │          
-          ├──────────────────────────────────────────────────────────┤          
-          │                    [ OK ]  [ Cancel ]                    │          
-          └──────────────────────────────────────────────────────────┘          
-                                                                                
+    ┌─────────────────────────── Select group ────────────────────────────┐     
+    │ ( ) Simple / auto shell  (*) Shell patterns  ( ) Regular expression │     
+    ├─────────────────────────────────────────────────────────────────────┤     
+    │ [ ] Videos               [ ] Pictures        [ ] Archives           │     
+    │ [x] Audio                [ ] Documents                              │     
+    │                                                                     │     
+    │ Pattern:                                                            │     
+    │                                                                     │     
+    │                                                                     │     
+    │ (*) Files                ( ) Dirs            ( ) Both               │     
+    │ [ ] Case sensitive                                                  │     
+    │ [x] Include meta columns [x] Only meta columns                      │     
+    ├─────────────────────────────────────────────────────────────────────┤     
+    │                         [ OK ]  [ Cancel ]                          │     
+    └─────────────────────────────────────────────────────────────────────┘     
                                                                                 
                                                                                 
                                                                                 
@@ -39,21 +39,21 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbccccccccccccccbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbdddddeceeebbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabdddddcbbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbcbbbbbbaaaaaaaaaa
-aaaaaaaaaabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabbffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbaaaaaaaaaa
-aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabdddddbbbbbbbbcbbbbbbbbbbbdddddbcbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbgghgggbbgghgggggggbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
+aaaabbbbbbbbbbcbbbbbbbbbbbbbbbdddddcbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbaaaaa
+aaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
+aaaabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbaaaaa
+aaaabdddddeceeebbbbbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
+aaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
+aaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
+aaaabbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbaaaaa
+aaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
+aaaabdddddbcbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbaaaaa
+aaaabbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
+aaaabdddddbbbbbbbbcbbbbbbbbbbbdddddbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
+aaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
+aaaabbbbbbbbbbbbbbbbbbbbbbbbbbgghgggbbgghgggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
+aaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

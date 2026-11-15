@@ -4,20 +4,20 @@
                                                                                 
                                                                                 
                                                                                 
-          ┌───────────────────────── Filter ─────────────────────────┐          
-          │ (*) Simple / auto shell  [ ] Videos     [ ] Audio        │          
-          │ ( ) Shell patterns       [ ] Pictures   [ ] Documents    │          
-          │ ( ) Regular expression   [ ] Archives                    │          
-          ├──────────────────────────────────────────────────────────┤          
-          │ Pattern:                                             7  │          
-          │ willow                                                   │          
-          │                                                          │          
-          │ [ ] Files only           [ ] Directories only            │          
-          │ [ ] Invert               [ ] Case sensitive              │          
-          ├──────────────────────────────────────────────────────────┤          
-          │                    [ OK ]  [ Cancel ]                    │          
-          └──────────────────────────────────────────────────────────┘          
-                                                                                
+    ┌────────────────────────────── Filter ───────────────────────────────┐     
+    │ (*) Simple / auto shell  ( ) Shell patterns  ( ) Regular expression │     
+    ├─────────────────────────────────────────────────────────────────────┤     
+    │ [ ] Videos               [ ] Pictures        [ ] Archives           │     
+    │ [ ] Audio                [ ] Documents                              │     
+    │                                                                     │     
+    │ Pattern:                                                        7  │     
+    │ willow                                                              │     
+    │                                                                     │     
+    │ (*) Files                ( ) Dirs            ( ) Both               │     
+    │ [ ] Exclude matches      [ ] Case sensitive                         │     
+    ├─────────────────────────────────────────────────────────────────────┤     
+    │                         [ OK ]  [ Cancel ]                          │     
+    └─────────────────────────────────────────────────────────────────────┘     
                                                                                 
                                                                                 
                                                                                 
@@ -39,20 +39,20 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabdddddbbbbebbbbbbbbbbbbbbbbbbbbebbbbbbbbbbbbbbbebbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabbbbbbebbbbbbbbbbbbbbbbbbbbbbbbebbbbbbbbbbbbbbbbbbbbbebbbbbbaaaaaaaaaa
-aaaaaaaaaabbbbbbebbbbbbbbbbbbbbbbbbbbbbbbebbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabbffffffgfffffffffffffffffffffffffffffffffffffffffffffffffbbaaaaaaaaaa
-aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabbbbbbbbbbbbbbbebbbbbbbbbbbbbbbebbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabbbbbbebbbbbbbbbbbbbbbbbbbbbbbbbbbebbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbhhihhhbbhhihhhhhhhbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
+aaaabdddddbbbbebbbbbbbbbbbbbbbbbbbbebbbbbbbbbbbbbbbbbbbebbbbbbbbbbbbbbbbbbbaaaaa
+aaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
+aaaabbbbbbebbbbbbbbbbbbbbbbbbbbbbbbebbbbbbbbbbbbbbbbbbbebbbbbbbbbbbbbbbbbbbaaaaa
+aaaabbbbbbbebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
+aaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
+aaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
+aaaabbffffffgffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbaaaaa
+aaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
+aaaabdddddbebbbbbbbbbbbbbbbbbbbbbbbebbbbbbbbbbbbbbbbbbbbbbebbbbbbbbbbbbbbbbaaaaa
+aaaabbbbbbbebbbbbbbbbbbbbbbbbbbbbbbbbbebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
+aaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
+aaaabbbbbbbbbbbbbbbbbbbbbbbbbbhhihhhbbhhihhhhhhhbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
+aaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

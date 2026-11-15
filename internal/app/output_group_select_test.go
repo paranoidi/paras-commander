@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
@@ -54,15 +55,20 @@ func TestOutputGroupSelect(t *testing.T) {
 		press(tcell.KeyRune, r)
 	}
 	app.updateGroupSelectPreview()
+	if !gs.PreviewShow || gs.PreviewFiles != 2 || gs.PreviewFolders != 0 {
+		t.Fatalf("files preview = %d files %d dirs show=%v", gs.PreviewFiles, gs.PreviewFolders, gs.PreviewShow)
+	}
+	gs.Scope = panel.ScopeBoth
+	app.updateGroupSelectPreview()
 	if !gs.PreviewShow || gs.PreviewFiles != 2 || gs.PreviewFolders != 1 {
 		t.Fatalf("preview = %d files %d dirs show=%v", gs.PreviewFiles, gs.PreviewFolders, gs.PreviewShow)
 	}
-	gs.DirsOnly = true
+	gs.Scope = panel.ScopeDirs
 	app.updateGroupSelectPreview()
 	if gs.PreviewFiles != 0 || gs.PreviewFolders != 1 {
 		t.Fatalf("dirs-only preview = %d/%d", gs.PreviewFiles, gs.PreviewFolders)
 	}
-	gs.DirsOnly = false
+	gs.Scope = panel.ScopeBoth
 	press(tcell.KeyEnter, 0)
 	if gs.Open || !app.model.CommandOutputDialog.Open {
 		t.Fatal("group select should close back to the output dialog")

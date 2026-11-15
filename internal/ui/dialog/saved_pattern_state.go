@@ -114,7 +114,7 @@ func SavedPatternLine(p filterpattern.Pattern) string {
 	if p.Pattern != "" {
 		parts = append(parts, p.Mode+": "+p.Pattern)
 	}
-	if label := filterTypeLabels(p.DirsOnly, FilterTypesFromNames(p.Types)); label != "" {
+	if label := filterTypeLabels(patternScopeFromName(p.Scope), FilterTypesFromNames(p.Types)); label != "" {
 		parts = append(parts, label)
 	}
 	var flags []string
@@ -122,8 +122,8 @@ func SavedPatternLine(p filterpattern.Pattern) string {
 		on    bool
 		label string
 	}{
-		{p.FilesOnly, "files only"}, {p.DirsOnly, "directories only"}, {p.Invert, "invert"},
-		{p.CaseSensitive, "case sensitive"}, {p.FullPath, "full path"}, {p.OnlyMeta, "only meta"},
+		{p.Scope == filterpattern.ScopeDirs, "dirs"}, {p.Scope == filterpattern.ScopeBoth, "files and dirs"}, {p.Invert, "exclude matches"},
+		{p.CaseSensitive, "case sensitive"}, {p.FullPath, "whole path"}, {p.OnlyMeta, "only meta"},
 	} {
 		if f.on {
 			flags = append(flags, f.label)
@@ -136,8 +136,8 @@ func SavedPatternLine(p filterpattern.Pattern) string {
 }
 
 // filterTypeLabels returns the comma-joined labels of the checked types that apply.
-func filterTypeLabels(dirsOnly bool, types [FilterTypeCount]bool) string {
-	if PatternTypesDisabled(dirsOnly) {
+func filterTypeLabels(scope panel.PatternScope, types [FilterTypeCount]bool) string {
+	if PatternTypesDisabled(scope) {
 		return ""
 	}
 	var labels []string
@@ -172,6 +172,29 @@ func FilterTypesFromNames(names []string) [FilterTypeCount]bool {
 	return types
 }
 
+func patternScopeName(s panel.PatternScope) string {
+	switch s {
+	case panel.ScopeDirs:
+		return filterpattern.ScopeDirs
+	case panel.ScopeBoth:
+		return filterpattern.ScopeBoth
+	default:
+		return filterpattern.ScopeFiles
+	}
+}
+
+// patternScopeFromName maps a filters.toml scope to the dialog's; unknown or empty is Files.
+func patternScopeFromName(s string) panel.PatternScope {
+	switch s {
+	case filterpattern.ScopeDirs:
+		return panel.ScopeDirs
+	case filterpattern.ScopeBoth:
+		return panel.ScopeBoth
+	default:
+		return panel.ScopeFiles
+	}
+}
+
 func patternModeName(m panel.GroupPatternMode) string {
 	switch m {
 	case panel.GroupPatternShell:
@@ -203,22 +226,22 @@ type patternFields struct {
 	PrefillPending *bool
 	Toggles        patternToggles
 	MetaCount      int
-	ShowFilesDirs  bool
+	ShowScope      bool
 	ShowFullPath   bool
 }
 
 // saved returns the pattern and options as a saved pattern named name. Options the dialog does
 // not show are stored as the dialog opens with them: Include meta on (it is on whenever there are
-// meta columns), the rest off.
+// meta columns), scope Files, the rest off.
 func (f patternFields) saved(name, description string) filterpattern.Pattern {
 	t := f.Toggles
 	p := filterpattern.Pattern{
 		Name: name, Description: description, Pattern: *f.Text, Mode: patternModeName(*t.Mode),
 		Types: FilterTypesToNames(*t.Types), CaseSensitive: *t.Case,
-		IncludeMeta: *t.IncludeMeta, OnlyMeta: *t.OnlyMeta,
+		IncludeMeta: *t.IncludeMeta, OnlyMeta: *t.OnlyMeta, Scope: filterpattern.ScopeFiles,
 	}
-	if f.ShowFilesDirs {
-		p.FilesOnly, p.DirsOnly = *t.FilesOnly, *t.DirsOnly
+	if f.ShowScope {
+		p.Scope = patternScopeName(*t.Scope)
 	}
 	if t.Invert != nil {
 		p.Invert = *t.Invert
@@ -242,10 +265,9 @@ func (f patternFields) load(p filterpattern.Pattern) {
 	*t.Mode = patternModeFromName(p.Mode)
 	*t.Types = FilterTypesFromNames(p.Types)
 	*t.Case = p.CaseSensitive
-	*t.FilesOnly, *t.DirsOnly = false, false
-	if f.ShowFilesDirs {
-		*t.FilesOnly = p.FilesOnly
-		*t.DirsOnly = p.DirsOnly && !p.FilesOnly
+	*t.Scope = panel.ScopeFiles
+	if f.ShowScope {
+		*t.Scope = patternScopeFromName(p.Scope)
 	}
 	if t.Invert != nil {
 		*t.Invert = p.Invert
@@ -263,14 +285,14 @@ func (f patternFields) load(p filterpattern.Pattern) {
 func (s *FilterDialogState) patternFields() patternFields {
 	return patternFields{
 		Text: &s.Text, Cursor: &s.TextCursor, Scroll: &s.TextScroll, PrefillPending: &s.PrefillPending,
-		Toggles: s.toggles(), MetaCount: s.MetaColumnCount, ShowFilesDirs: FilterShowsFilesDirs(*s),
+		Toggles: s.toggles(), MetaCount: s.MetaColumnCount, ShowScope: FilterShowsScope(*s),
 	}
 }
 
 func (s *GroupSelectState) patternFields() patternFields {
 	return patternFields{
 		Text: &s.Text, Cursor: &s.TextCursor, Scroll: &s.TextScroll, PrefillPending: &s.PrefillPending,
-		Toggles: s.toggles(), MetaCount: s.MetaColumnCount, ShowFilesDirs: true, ShowFullPath: GroupSelectShowsFullPath(*s),
+		Toggles: s.toggles(), MetaCount: s.MetaColumnCount, ShowScope: true, ShowFullPath: GroupSelectShowsFullPath(*s),
 	}
 }
 
@@ -279,8 +301,8 @@ func (s FilterDialogState) SavedPattern(name, description string) filterpattern.
 	return s.patternFields().saved(name, description)
 }
 
-// LoadPattern fills the Filter dialog from p: no Files only / Directories only outside the panel,
-// no meta matching without meta columns, no Match full path.
+// LoadPattern fills the Filter dialog from p: scope Files outside the panel,
+// no meta matching without meta columns, no Match whole path.
 func (s *FilterDialogState) LoadPattern(p filterpattern.Pattern) { s.patternFields().load(p) }
 
 // SavedPattern returns the Select group dialog's pattern and options as a saved pattern named name.
@@ -288,7 +310,7 @@ func (s GroupSelectState) SavedPattern(name, description string) filterpattern.P
 	return s.patternFields().saved(name, description)
 }
 
-// LoadPattern fills the Select group dialog from p: no Invert, Match full path only where it is
+// LoadPattern fills the Select group dialog from p: no Invert, Match whole path only where it is
 // shown, no meta matching without meta columns.
 func (s *GroupSelectState) LoadPattern(p filterpattern.Pattern) { s.patternFields().load(p) }
 

@@ -19,11 +19,13 @@ Selecting a directory and one of its descendants cannot both stay selected: addi
 
 ## Select and unselect group
 
-The dialog has the same mode radios and type checkboxes as the [panel Filter](panel-filter.md): Simple / auto shell (the default: substring, or a shell pattern once it contains `*` or `?`), Shell patterns, Regular expression; Videos, Pictures, Archives, Audio, Documents (from `[filter.types]`); Files only, Directories only; Case sensitive. Option letters match Filter. Matching is on the file name. There is no Invert.
+The dialog has the same mode radios and type checkboxes as the [panel Filter](panel-filter.md): Simple / auto shell (the default: substring, or a shell pattern once it contains `*` or `?`), Shell patterns, Regular expression; Videos, Pictures, Archives, Audio, Documents (from `[filter.types]`); Files, Dirs, Both; Case sensitive. Option letters match Filter. Matching is on the file name. There is no Invert.
+
+The Files, Dirs and Both options decide what can be selected: Files (the default) selects only files, so `*` marks every file and leaves the directories alone; Dirs selects only directories; Both selects either.
 
 The pattern opens prefilled with the extension of the file under the cursor (e.g. `*.stl`), shown dimmed: Enter uses it, typing replaces it, editing keys keep it. Directories and files without an extension open empty.
 
-A live count beside the Pattern label shows how many files and folders the pattern would newly select (or unselect). The input turns red when the pattern is invalid or matches nothing. With "Directories only" the type checkboxes are disabled. An empty pattern with types checked selects every entry of those types; an empty pattern and no types selects nothing. The dialog also works inside Find results (with "Match full path"), in the [Find duplicates](find-duplicates.md) results (marking duplicates, also with "Match full path") and on the paths detected in a user-menu output dialog.
+A live count beside the Pattern label shows how many files and folders the pattern would newly select (or unselect). The input turns red when the pattern is invalid or matches nothing. With Dirs the type checkboxes are disabled. An empty pattern with types checked selects every entry of those types; an empty pattern and no types selects nothing. The dialog also works inside Find results (with "Match whole path"), in the [Find duplicates](find-duplicates.md) results (marking duplicates, also with "Match whole path") and on the paths detected in a user-menu output dialog.
 
 Patterns can be saved and loaded (`F5` / `F2`) and recalled from the session history (`F3`), sharing the saved list with the Filter dialog. See [Saved patterns and history](panel-filter.md#saved-patterns-and-history).
 

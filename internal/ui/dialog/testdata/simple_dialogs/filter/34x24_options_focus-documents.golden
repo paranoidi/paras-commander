@@ -6,18 +6,18 @@
                                   
   ┌────────── Filter ──────────┐  
   │ ( ) Simple / auto shell    │  
-  │ ( ) Shell patterns         │  
-  │ (*) Regular expression     │  
   ├────────────────────────────┤  
+  │ [x] Videos                 │  
+  │ [ ] Audio                  │  
+  │                            │  
   │ Pattern:           9  1  │  
   │ *.zip                      │  
   │ error parsing regexp: mis… │  
-  │ [x] Files only             │  
-  │ [x] Invert                 │  
+  │ ( ) Files                  │  
+  │ [x] Exclude matches        │  
   ├────────────────────────────┤  
   │     [ OK ]  [ Cancel ]     │  
   └────────────────────────────┘  
-                                  
                                   
                                   
                                   
@@ -40,18 +40,18 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aabbbbbbbbbbbccccccccbbbbbbbbbbbaa
 aabbbbbbbbbbcbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabdddddcbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbcbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
 aabbffffffffffffffffffffffffffbbaa
-aabdddddbbbbbbbbbcbbbbbbbbbbbbbbaa
-aabdddddcbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbcbbbbbbbbbbbbbbbbbbbbbbaa
+aabdddddbcbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbgghgggbbgghgggggggbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

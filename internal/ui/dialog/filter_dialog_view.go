@@ -11,9 +11,9 @@ import (
 func FilterDialogView(s FilterDialogState, layout Layout, styles theme.Theme) dlg.Spec {
 	hint := filterPatternHintText(s)
 	return patternSpec(patternView{
-		Title: "Filter", LayoutWidth: layout.Width,
-		Mode: s.PatternMode, Types: s.Types, FilesOnly: s.FilesOnly, DirsOnly: s.DirsOnly, CaseSensitive: s.CaseSensitive,
-		ShowFilesDirs: FilterShowsFilesDirs(s), ShowInvert: true, Invert: s.Invert, ShowClear: s.FilterActive,
+		Title: "Filter", LayoutWidth: layout.Width, MarkerWidth: dlg.MarkerWidth(styles),
+		Mode: s.PatternMode, Types: s.Types, Scope: s.Scope, CaseSensitive: s.CaseSensitive,
+		ShowScope: FilterShowsScope(s), ShowInvert: true, Invert: s.Invert, ShowClear: s.FilterActive,
 		MetaCount: s.MetaColumnCount, IncludeMeta: s.IncludeMetaColumns, OnlyMeta: s.OnlyMetaColumns,
 		Text: s.Text, Cursor: s.TextCursor, Scroll: s.TextScroll, Placeholder: s.PrefillPending,
 		Invalid: filterPatternInvalid(s), Hint: hint,
@@ -24,7 +24,7 @@ func FilterDialogView(s FilterDialogState, layout Layout, styles theme.Theme) dl
 // toggles exposes the shared option fields to patternToggles.
 func (s *FilterDialogState) toggles() patternToggles {
 	return patternToggles{
-		Mode: &s.PatternMode, Types: &s.Types, FilesOnly: &s.FilesOnly, DirsOnly: &s.DirsOnly, Case: &s.CaseSensitive,
+		Mode: &s.PatternMode, Types: &s.Types, Scope: &s.Scope, Case: &s.CaseSensitive,
 		Invert: &s.Invert, IncludeMeta: &s.IncludeMetaColumns, OnlyMeta: &s.OnlyMetaColumns,
 	}
 }

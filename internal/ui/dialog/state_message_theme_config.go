@@ -152,9 +152,9 @@ type GroupSelectState struct {
 	Context            string // "" or "panel" (default), "find", "index-find", "output", "dedup"
 	PatternMode        panel.GroupPatternMode
 	PatternCompileHint string
-	FilesOnly          bool
-	DirsOnly           bool
-	CaseSensitive      bool
+	// Scope is which entries the pattern applies to (the Files / Dirs / Both radios).
+	Scope         panel.PatternScope
+	CaseSensitive bool
 	// FullPath matches the full path instead of the basename; see GroupSelectShowsFullPath.
 	FullPath           bool
 	MetaColumnCount    int  // number of visible meta columns; 0 hides the meta checkboxes

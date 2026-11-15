@@ -27,13 +27,14 @@ const (
 	PatternMnemonicShell       = 'S'
 	PatternMnemonicRegex       = 'R'
 	PatternMnemonicSimple      = 'L'
-	PatternMnemonicFilesOnly   = 'Y'
-	PatternMnemonicDirsOnly    = 'D'
+	PatternMnemonicScopeFiles  = 'I'
+	PatternMnemonicScopeDirs   = 'D'
+	PatternMnemonicScopeBoth   = 'H'
 	PatternMnemonicCase        = 'E'
 	PatternMnemonicIncludeMeta = 'M'
 	PatternMnemonicOnlyMeta    = 'N'
-	PatternMnemonicInvert      = 'I'
-	PatternMnemonicFullPath    = 'H'
+	PatternMnemonicInvert      = 'X'
+	PatternMnemonicFullPath    = 'W'
 	// PatternMnemonicClear is the Filter dialog's "Clear filter" button. It is left out of
 	// PatternAltIsMnemonic: Alt+F stays forward-word in the pattern input while the button is
 	// hidden (no active filter) and in Select group, which has no such button.
@@ -45,8 +46,8 @@ const (
 func PatternAltIsMnemonic(r rune) bool {
 	r = unicode.ToUpper(r)
 	switch r {
-	case PatternMnemonicShell, PatternMnemonicRegex, PatternMnemonicSimple, PatternMnemonicFilesOnly,
-		PatternMnemonicDirsOnly, PatternMnemonicCase, PatternMnemonicIncludeMeta, PatternMnemonicOnlyMeta,
+	case PatternMnemonicShell, PatternMnemonicRegex, PatternMnemonicSimple,
+		PatternMnemonicScopeFiles, PatternMnemonicScopeDirs, PatternMnemonicScopeBoth, PatternMnemonicCase, PatternMnemonicIncludeMeta, PatternMnemonicOnlyMeta,
 		PatternMnemonicInvert, PatternMnemonicFullPath:
 		return true
 	}
@@ -60,17 +61,17 @@ var (
 )
 
 // PatternTypesDisabled reports whether the file-type checkboxes render disabled (and ignore
-// toggles and matching) in the Filter and Select group dialogs: a directories-only pattern
-// can never match a file.
-func PatternTypesDisabled(dirsOnly bool) bool { return dirsOnly }
+// toggles and matching) in the Filter and Select group dialogs: a Dirs-scoped pattern can never
+// match a file.
+func PatternTypesDisabled(scope panel.PatternScope) bool { return scope == panel.ScopeDirs }
 
 // FilterTypesRegexp OR-joins the [filter.types] regexps of the checked presets into one regexp
 // and returns it with a comma-joined label of the checked names. It is the single builder for
 // the Filter and Select group dialogs. Returns (nil, "") when nothing is checked; the config
 // is validated, so a compile failure also drops the restriction. Types are ignored (nil, "")
-// while PatternTypesDisabled(dirsOnly).
-func FilterTypesRegexp(dirsOnly bool, checked [FilterTypeCount]bool, t config.FilterTypesConfig) (*regexp.Regexp, string) {
-	if PatternTypesDisabled(dirsOnly) {
+// while PatternTypesDisabled(scope).
+func FilterTypesRegexp(scope panel.PatternScope, checked [FilterTypeCount]bool, t config.FilterTypesConfig) (*regexp.Regexp, string) {
+	if PatternTypesDisabled(scope) {
 		return nil, ""
 	}
 	rx := [FilterTypeCount]string{t.Videos, t.Pictures, t.Archives, t.Audio, t.Documents}
@@ -113,9 +114,9 @@ type FilterDialogState struct {
 	// row (see GhostExtPattern): drawn as a placeholder until typed over or edited.
 	PrefillPending bool
 	PatternMode    panel.GroupPatternMode
-	FilesOnly      bool // mutually exclusive with DirsOnly
-	DirsOnly       bool
-	CaseSensitive  bool
+	// Scope is which entries the pattern applies to (the Files / Dirs / Both radios).
+	Scope         panel.PatternScope
+	CaseSensitive bool
 	// MetaColumnCount is the active panel's meta column count at dialog-open time; 0 hides the
 	// meta checkbox row entirely.
 	MetaColumnCount    int

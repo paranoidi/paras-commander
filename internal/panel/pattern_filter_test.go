@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"sort"
 	"testing"
 
@@ -127,38 +128,29 @@ func TestPatternFilterRefreshPicksUpLiveProviderData(t *testing.T) {
 	}
 }
 
-func TestEntryFilterKeepsDirectories(t *testing.T) {
+func TestPatternFilterScope(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.Mkdir(filepath.Join(dir, "harbor"), 0o755); err != nil {
-		t.Fatal(err)
+	for _, name := range []string{"harbor", "meadow"} {
+		if err := os.Mkdir(filepath.Join(dir, name), 0o755); err != nil {
+			t.Fatal(err)
+		}
 	}
 	for _, name := range []string{"match.go", "other.txt"} {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte("x"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
-	pattern := func(pat string, dirsOnly bool) *EntryFilter {
-		f, err := PatternFilter(FilterSpec{Pattern: pat, Mode: GroupPatternShell, DirsOnly: dirsOnly}, nil)
-		if err != nil {
-			t.Fatalf("PatternFilter() error = %v", err)
-		}
-		return f
-	}
 	tests := []struct {
-		name   string
-		filter *EntryFilter
-		want   []string
+		name string
+		spec FilterSpec
+		want []string
 	}{
-		{"pattern hides non-matching dir", pattern("*.go", false), []string{"match.go"}},
-		{"pattern matches dir", pattern("harb*", false), []string{"harbor"}},
-		{"dirs only filters dirs", pattern("harb*", true), []string{"harbor"}},
-		{"files only hides dirs", func() *EntryFilter {
-			f, err := PatternFilter(FilterSpec{Pattern: "*", Mode: GroupPatternShell, FilesOnly: true}, nil)
-			if err != nil {
-				t.Fatalf("PatternFilter() error = %v", err)
-			}
-			return f
-		}(), []string{"match.go", "other.txt"}},
+		{"files keeps every dir", FilterSpec{Pattern: "*.go"}, []string{"harbor", "match.go", "meadow"}},
+		{"files invert keeps every dir", FilterSpec{Pattern: "*.go", Invert: true}, []string{"harbor", "meadow", "other.txt"}},
+		{"dirs hides files", FilterSpec{Pattern: "harb*", Scope: ScopeDirs}, []string{"harbor"}},
+		{"dirs invert hides files", FilterSpec{Pattern: "harb*", Scope: ScopeDirs, Invert: true}, []string{"meadow"}},
+		{"both filters dirs like files", FilterSpec{Pattern: "*.go", Scope: ScopeBoth}, []string{"match.go"}},
+		{"both matches a dir", FilterSpec{Pattern: "harb*", Scope: ScopeBoth}, []string{"harbor"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -166,17 +158,68 @@ func TestEntryFilterKeepsDirectories(t *testing.T) {
 			if err != nil {
 				t.Fatalf("New() error = %v", err)
 			}
-			state.SetEntryFilter(tt.filter)
-			var got []string
-			for i := 0; i < state.VisibleEntryCount(); i++ {
-				if e, _, ok := state.VisibleEntry(i); ok && e.Name != ".." {
-					got = append(got, e.Name)
-				}
+			tt.spec.Mode = GroupPatternShell
+			f, err := PatternFilter(tt.spec, nil)
+			if err != nil {
+				t.Fatalf("PatternFilter() error = %v", err)
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Fatalf("visible = %v, want %v", got, tt.want)
+			state.SetEntryFilter(f)
+			got := visibleNames(&state)
+			sort.Strings(got)
+			want := append([]string(nil), tt.want...)
+			if hasParentEntry(&state) {
+				want = append(want, "..")
+			}
+			sort.Strings(want)
+			if !reflect.DeepEqual(got, want) {
+				t.Fatalf("visible = %v, want %v", got, want)
 			}
 		})
+	}
+}
+
+// hasParentEntry reports whether the unfiltered listing has a ".." row (kept by every pattern
+// filter).
+func hasParentEntry(s *State) bool {
+	return slices.ContainsFunc(s.Entries, func(e localfs.Entry) bool { return e.Name == ".." })
+}
+
+func TestFilterSpecMatchScope(t *testing.T) {
+	file := localfs.Entry{Name: "harbor.go", Type: localfs.EntryFile}
+	dir := localfs.Entry{Name: "harbor.go", Type: localfs.EntryDirectory}
+	for _, tt := range []struct {
+		scope             PatternScope
+		wantFile, wantDir bool
+	}{
+		{ScopeFiles, true, false},
+		{ScopeDirs, false, true},
+		{ScopeBoth, true, true},
+	} {
+		match, err := FilterSpec{Pattern: "*.go", Mode: GroupPatternShell, Scope: tt.scope}.MatchFunc()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := match(file, GroupSelectMeta{}); got != tt.wantFile {
+			t.Errorf("scope %d file match = %v, want %v", tt.scope, got, tt.wantFile)
+		}
+		if got := match(dir, GroupSelectMeta{}); got != tt.wantDir {
+			t.Errorf("scope %d dir match = %v, want %v", tt.scope, got, tt.wantDir)
+		}
+	}
+}
+
+func TestFilterSpecLabelNamesNonDefaultScope(t *testing.T) {
+	for _, tt := range []struct {
+		spec FilterSpec
+		want string
+	}{
+		{FilterSpec{Pattern: "*.go"}, "Filter: *.go"},
+		{FilterSpec{Pattern: "2024*", Scope: ScopeDirs}, "Filter: dirs 2024*"},
+		{FilterSpec{Pattern: "*.go", Scope: ScopeBoth, Invert: true}, "Filter: all not *.go"},
+	} {
+		if got := tt.spec.Label(); got != tt.want {
+			t.Errorf("Label() = %q, want %q", got, tt.want)
+		}
 	}
 }
 
@@ -252,14 +295,16 @@ func setupTypeFilterState(t *testing.T) State {
 func TestPatternFilterTypes(t *testing.T) {
 	types := regexp.MustCompile(`(?i)\.(mkv|jpg)$`)
 	cases := []struct {
-		name string
-		spec FilterSpec
-		want []string
+		name  string
+		spec  FilterSpec
+		want  []string // visible besides ".."
+		count int      // CountPatternMatches: entries the pattern matches, in scope
 	}{
-		{"types only hides dirs", FilterSpec{Types: types}, []string{"lantern.jpg", "sesame.MKV", "thicket.mkv"}},
-		{"types and pattern", FilterSpec{Types: types, Pattern: "thicket", Mode: GroupPatternSimple}, []string{"thicket.mkv"}},
-		{"invert", FilterSpec{Types: types, Invert: true}, []string{"meadow", "thicket.txt"}},
-		{"invert files only", FilterSpec{Types: types, Invert: true, FilesOnly: true}, []string{"thicket.txt"}},
+		{"types keeps dirs", FilterSpec{Types: types}, []string{"lantern.jpg", "meadow", "sesame.MKV", "thicket.mkv"}, 3},
+		{"types and pattern", FilterSpec{Types: types, Pattern: "thicket", Mode: GroupPatternSimple}, []string{"meadow", "thicket.mkv"}, 1},
+		{"invert", FilterSpec{Types: types, Invert: true}, []string{"meadow", "thicket.txt"}, 1},
+		{"types both hides dirs", FilterSpec{Types: types, Scope: ScopeBoth}, []string{"lantern.jpg", "sesame.MKV", "thicket.mkv"}, 3},
+		{"invert both", FilterSpec{Types: types, Invert: true, Scope: ScopeBoth}, []string{"meadow", "thicket.txt"}, 2},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -269,7 +314,7 @@ func TestPatternFilterTypes(t *testing.T) {
 				t.Fatal(err)
 			}
 			state.SetEntryFilter(f)
-			got := visibleNames(&state)
+			got := slices.DeleteFunc(visibleNames(&state), func(n string) bool { return n == ".." })
 			sort.Strings(got)
 			want := append([]string(nil), tc.want...)
 			sort.Strings(want)
@@ -280,8 +325,8 @@ func TestPatternFilterTypes(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if files+dirs != len(tc.want) {
-				t.Fatalf("CountPatternMatches = %d files %d dirs, want %d entries", files, dirs, len(tc.want))
+			if files+dirs != tc.count {
+				t.Fatalf("CountPatternMatches = %d files %d dirs, want %d entries", files, dirs, tc.count)
 			}
 		})
 	}
@@ -337,13 +382,22 @@ func TestPatternFilterTreeKeepsAncestorsOfMatches(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	f, err := PatternFilter(FilterSpec{Pattern: "*.go", Mode: GroupPatternShell}, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	state.SetEntryFilter(f)
-	want := []string{"meadow", "thicket", "lantern.go"}
-	if got := visibleNames(&state); !reflect.DeepEqual(got, want) {
-		t.Fatalf("visible = %v, want %v", got, want)
+	for _, tt := range []struct {
+		scope PatternScope
+		want  []string
+	}{
+		// Both: a match keeps its ancestors, other directories hide.
+		{ScopeBoth, []string{"meadow", "thicket", "lantern.go"}},
+		// Files: every directory stays, expanded ones keep their rows even with no match inside.
+		{ScopeFiles, []string{"harbor", "meadow", "thicket", "lantern.go"}},
+	} {
+		f, err := PatternFilter(FilterSpec{Pattern: "*.go", Mode: GroupPatternShell, Scope: tt.scope}, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		state.SetEntryFilter(f)
+		if got := visibleNames(&state); !reflect.DeepEqual(got, tt.want) {
+			t.Fatalf("scope %d: visible = %v, want %v", tt.scope, got, tt.want)
+		}
 	}
 }

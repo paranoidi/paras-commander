@@ -7,8 +7,8 @@ import (
 	"github.com/paranoidi/paras-commander/internal/filterpattern"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	uidialog "github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 func newFilterPatternTestHandler(t *testing.T) (*Handler, *fakeMassRenamePatternHost) {
@@ -63,7 +63,7 @@ func TestFilterSaveAndLoadPattern(t *testing.T) {
 	}
 	saved := loadFilters(t, h)
 	want := filterpattern.Pattern{Name: "lantern", Pattern: "*.pebble", Mode: filterpattern.ModeShell,
-		Types: []string{"videos"}, Invert: true, IncludeMeta: true}
+		Types: []string{"videos"}, Scope: filterpattern.ScopeFiles, Invert: true, IncludeMeta: true}
 	if len(saved) != 1 || !saved[0].Equal(want) {
 		t.Fatalf("saved = %+v, want %+v", saved, want)
 	}

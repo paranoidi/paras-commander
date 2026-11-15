@@ -6,7 +6,7 @@ import (
 )
 
 // GroupSelectView is the Select / Unselect group dialog's widget spec; the layout and the shared
-// body come from patternSpec (the Filter dialog's twin, FilterDialogView). Match full path is
+// body come from patternSpec (the Filter dialog's twin, FilterDialogView). Match whole path is
 // shown in the find and output contexts only, Invert never.
 func GroupSelectView(s GroupSelectState, layout Layout, styles theme.Theme) dlg.Spec {
 	title := "Unselect group"
@@ -14,9 +14,9 @@ func GroupSelectView(s GroupSelectState, layout Layout, styles theme.Theme) dlg.
 		title = "Select group"
 	}
 	return patternSpec(patternView{
-		Title: title, LayoutWidth: layout.Width,
-		Mode: s.PatternMode, Types: s.Types, FilesOnly: s.FilesOnly, DirsOnly: s.DirsOnly, CaseSensitive: s.CaseSensitive,
-		ShowFilesDirs: true, ShowFullPath: GroupSelectShowsFullPath(s), FullPath: s.FullPath,
+		Title: title, LayoutWidth: layout.Width, MarkerWidth: dlg.MarkerWidth(styles),
+		Mode: s.PatternMode, Types: s.Types, Scope: s.Scope, CaseSensitive: s.CaseSensitive,
+		ShowScope: true, ShowFullPath: GroupSelectShowsFullPath(s), FullPath: s.FullPath,
 		MetaCount: s.MetaColumnCount, IncludeMeta: s.IncludeMetaColumns, OnlyMeta: s.OnlyMetaColumns,
 		Text: s.Text, Cursor: s.TextCursor, Scroll: s.TextScroll, Placeholder: s.PrefillPending,
 		Invalid: groupSelectPatternInvalid(s), Hint: groupSelectPatternHintText(s),
@@ -27,7 +27,7 @@ func GroupSelectView(s GroupSelectState, layout Layout, styles theme.Theme) dlg.
 // toggles exposes the shared option fields to patternToggles.
 func (s *GroupSelectState) toggles() patternToggles {
 	return patternToggles{
-		Mode: &s.PatternMode, Types: &s.Types, FilesOnly: &s.FilesOnly, DirsOnly: &s.DirsOnly, Case: &s.CaseSensitive,
+		Mode: &s.PatternMode, Types: &s.Types, Scope: &s.Scope, Case: &s.CaseSensitive,
 		FullPath: &s.FullPath, IncludeMeta: &s.IncludeMetaColumns, OnlyMeta: &s.OnlyMetaColumns,
 	}
 }

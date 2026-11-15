@@ -2,6 +2,7 @@ package find
 
 import (
 	"context"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"path/filepath"
 	"time"
 
@@ -32,8 +33,7 @@ type groupCountAccum struct {
 	marked bool
 
 	match      func(path string) bool
-	filesOnly  bool
-	dirsOnly   bool
+	scope      panel.PatternScope
 	matchState bool // marks[path] == matchState is the "marked" filter (StartGroupCount's marked)
 
 	files      int
@@ -47,14 +47,13 @@ type groupCountAccum struct {
 // read off-thread; MarkedPaths is a live, mutated map and is only safe to read because
 // StopGroupCount fully waits for any in-flight count before a caller may mutate it.
 type groupCountSnapshot struct {
-	entries   []dialog.FindEntry
-	indices   []int // nil means "all of entries[:len(entries)]" (unfiltered query)
-	rootPath  string
-	marks     map[string]bool
-	filesOnly bool
-	dirsOnly  bool
-	matched   bool // count entries whose marked state equals matched
-	match     func(path string) bool
+	entries  []dialog.FindEntry
+	indices  []int // nil means "all of entries[:len(entries)]" (unfiltered query)
+	rootPath string
+	marks    map[string]bool
+	scope    panel.PatternScope
+	matched  bool // count entries whose marked state equals matched
+	match    func(path string) bool
 }
 
 // StartGroupCount (re)computes the group-select dialog's live match count off the main thread,
@@ -83,20 +82,18 @@ func (h *Handler) StartGroupCount(req GroupSelectRequest, marked bool) {
 		return
 	}
 	h.groupCountAcc.match = match
-	h.groupCountAcc.filesOnly = req.FilesOnly
-	h.groupCountAcc.dirsOnly = req.DirsOnly
+	h.groupCountAcc.scope = req.Scope
 	h.groupCountAcc.matchState = marked
 
 	indices, covered := h.findResultIndicesCovered(st)
 	snap := groupCountSnapshot{
-		entries:   st.Entries,
-		indices:   indices,
-		rootPath:  st.RootPath,
-		marks:     st.MarkedPaths,
-		filesOnly: req.FilesOnly,
-		dirsOnly:  req.DirsOnly,
-		matched:   marked,
-		match:     match,
+		entries:  st.Entries,
+		indices:  indices,
+		rootPath: st.RootPath,
+		marks:    st.MarkedPaths,
+		scope:    req.Scope,
+		matched:  marked,
+		match:    match,
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -182,14 +179,13 @@ func (h *Handler) ExtendGroupCount() (files, dirs int, changed bool) {
 		return acc.files, acc.dirs, false
 	}
 	snap := groupCountSnapshot{
-		entries:   st.Entries,
-		indices:   deltaGroupCountIndices(indices, acc.watermark, covered),
-		rootPath:  st.RootPath,
-		marks:     st.MarkedPaths,
-		filesOnly: acc.filesOnly,
-		dirsOnly:  acc.dirsOnly,
-		matched:   acc.matchState,
-		match:     acc.match,
+		entries:  st.Entries,
+		indices:  deltaGroupCountIndices(indices, acc.watermark, covered),
+		rootPath: st.RootPath,
+		marks:    st.MarkedPaths,
+		scope:    acc.scope,
+		matched:  acc.matchState,
+		match:    acc.match,
 	}
 	newFiles, newDirs, _ := countGroupMatchesSnapshot(context.Background(), snap)
 	acc.files += newFiles
@@ -242,10 +238,7 @@ func countGroupMatchesSnapshot(ctx context.Context, snap groupCountSnapshot) (fi
 			continue
 		}
 		ent := snap.entries[idx]
-		if snap.filesOnly && ent.IsDir {
-			continue
-		}
-		if snap.dirsOnly && !ent.IsDir {
+		if !snap.scope.Targets(ent.IsDir) {
 			continue
 		}
 		path := filepath.Clean(ent.AbsPath(snap.rootPath))

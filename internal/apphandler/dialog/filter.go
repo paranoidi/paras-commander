@@ -196,14 +196,17 @@ func (h *Handler) executeCompareFilterDialog(spec panel.FilterSpec) {
 	h.host.SetTransientMessage(fmt.Sprintf("Filtered: %d files", n), ui.MessageUrgencyInfo)
 }
 
-// filterSpec builds the panel.FilterSpec for the dialog's current state.
+// filterSpec builds the panel.FilterSpec for the dialog's current state. Where the scope row is
+// hidden (Compare / dedup rows are all files) the scope is Files.
 func (h *Handler) filterSpec() panel.FilterSpec {
 	fd := &h.model.FilterDialog
 	spec := panel.FilterSpec{
-		Pattern: fd.Text, Mode: fd.PatternMode, CaseSensitive: fd.CaseSensitive,
-		FilesOnly: fd.FilesOnly, DirsOnly: fd.DirsOnly, Invert: fd.Invert,
+		Pattern: fd.Text, Mode: fd.PatternMode, CaseSensitive: fd.CaseSensitive, Invert: fd.Invert,
 	}
-	spec.Types, spec.TypeLabel = dialog.FilterTypesRegexp(fd.DirsOnly, fd.Types, h.host.Config().Filter.Types)
+	if dialog.FilterShowsScope(*fd) {
+		spec.Scope = fd.Scope
+	}
+	spec.Types, spec.TypeLabel = dialog.FilterTypesRegexp(spec.Scope, fd.Types, h.host.Config().Filter.Types)
 	return spec
 }
 

@@ -56,13 +56,13 @@ func groupSelectGoldenState(t *testing.T, variant, focus string) GroupSelectStat
 	case "options":
 		typed("*.zip")
 		st.Types[FilterTypeVideos], st.Types[FilterTypeArchives] = true, true
-		st.CaseSensitive, st.FilesOnly = true, true
+		st.CaseSensitive, st.Scope = true, panel.ScopeBoth
 		st.PatternMode = panel.GroupPatternRegex
 		st.PreviewShow, st.PreviewFiles, st.PreviewFolders = true, 9, 1
-	case "dirs-only":
+	case "scope-dirs":
 		typed("anchor")
 		st.Types[FilterTypePictures], st.Types[FilterTypeDocuments] = true, true
-		st.DirsOnly = true
+		st.Scope = panel.ScopeDirs
 		st.PreviewShow, st.PreviewFolders = true, 4
 	case "find":
 		st.Context = "find"
@@ -109,15 +109,15 @@ func TestGroupSelectGoldenRender(t *testing.T) {
 	for _, pos := range []string{"pattern", "fullpath", "ok"} {
 		add(80, 24, "find", pos)
 	}
-	for _, v := range []string{"typed", "unselect", "many", "zero", "bad-regex", "compile-hint", "scrolled", "options", "dirs-only", "output", "find-empty"} {
+	for _, v := range []string{"typed", "unselect", "many", "zero", "bad-regex", "compile-hint", "scrolled", "options", "scope-dirs", "output", "find-empty"} {
 		for _, pos := range []string{"pattern", "ok"} {
 			add(80, 24, v, pos)
 		}
 	}
 	add(80, 24, "options", "case")
 	add(80, 24, "options", "videos")
-	add(80, 24, "dirs-only", "videos")
-	add(80, 24, "dirs-only", "dirsonly")
+	add(80, 24, "scope-dirs", "videos")
+	add(80, 24, "scope-dirs", "scopedirs")
 	add(80, 25, "meta-only", "onlymeta")
 	add(80, 25, "meta-only", "audio")
 	add(34, 24, "typed", "pattern")

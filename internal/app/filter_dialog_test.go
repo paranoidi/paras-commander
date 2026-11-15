@@ -147,14 +147,27 @@ func TestFilterDialogOnlyMetaColumnsMatchesMetaValue(t *testing.T) {
 	}
 }
 
-func TestFilterDialogAltYTogglesFilesOnlyAltLSelectsSimple(t *testing.T) {
+func TestFilterDialogScopeLettersAltLSelectsSimple(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, t.TempDir())
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt))
 	fd := &app.model.FilterDialog
+	if fd.Scope != panel.ScopeFiles {
+		t.Fatalf("scope at open = %v, want Files", fd.Scope)
+	}
+	for _, step := range []struct {
+		key  rune
+		want panel.PatternScope
+	}{{'d', panel.ScopeDirs}, {'h', panel.ScopeBoth}, {'i', panel.ScopeFiles}} {
+		app.handleKey(tcell.NewEventKey(tcell.KeyRune, step.key, tcell.ModAlt))
+		if fd.Scope != step.want {
+			t.Fatalf("Alt+%c scope = %v, want %v", step.key, fd.Scope, step.want)
+		}
+	}
+	// Alt+Y is not a pattern dialog letter: the scope stays.
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'y', tcell.ModAlt))
-	if !fd.FilesOnly {
-		t.Fatal("Alt+Y should toggle Files only")
+	if fd.Scope != panel.ScopeFiles {
+		t.Fatalf("Alt+Y scope = %v, want Files unchanged", fd.Scope)
 	}
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'l', tcell.ModAlt))
 	if fd.PatternMode != panel.GroupPatternSimple {

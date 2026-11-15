@@ -16,19 +16,25 @@ Videos, Pictures, Archives, Audio and Documents are checkboxes beside the mode r
 
 ## Combining
 
-An entry is shown when it matches the checked types **and** the pattern; an empty pattern means types only. Directories are filtered the same way as files, except that in tree view a matching entry keeps its parent folders visible.
+An entry matches when it matches the checked types **and** the pattern; an empty pattern means types only.
 
-"Files only" and "Directories only" are checkboxes: checking one unchecks the other. While "Directories only" is selected, the type checkboxes are shown disabled: they cannot be focused or toggled and the checked types are ignored. They keep their state and apply again when "Directories only" is cleared.
+The Files, Dirs and Both options (the row under the pattern) pick which entries the pattern filters:
 
-## Invert
+- **Files** (the default): only files are filtered. Every directory stays visible, so you can keep browsing with a filter such as `*.go` and see just the Go files in each directory. In tree view, expanded directories stay listed even when nothing inside them matches.
+- **Dirs**: only directories are filtered and every file is hidden. Use it to find a folder by name. The type checkboxes are shown disabled: they cannot be focused or toggled and the checked types are ignored. They keep their state and apply again when you switch away from Dirs.
+- **Both**: files and directories are filtered alike. In tree view a matching entry keeps its parent folders visible.
 
-"Invert" shows the entries that do not match. Files only / Directories only still apply afterwards, so Invert plus Files only lists the files that do not match.
+The `..` entry is never hidden.
+
+## Exclude matches
+
+"Exclude matches" shows the entries that do not match, among the entries Files / Dirs / Both select: with Files, excluding `*.go` lists every directory and the files that are not Go files.
 
 ## Keys
 
-Alt+letter toggles the underlined option: Simple / auto shell L, Shell patterns S, Regular expression R, Videos V, Pictures P, Archives A, Audio U, Documents T, Files only Y, Directories only D, Invert I, Case sensitive E, Include meta M, Only meta N; Alt+F presses Clear filter when it is shown (otherwise it moves a word forward in the pattern). Tab jumps between the mode radios, type checkboxes, pattern, options and buttons.
+Alt+letter toggles the underlined option: Simple / auto shell L, Shell patterns S, Regular expression R, Videos V, Pictures P, Archives A, Audio U, Documents T, Files I, Dirs D, Both H, Exclude matches X, Case sensitive E, Include meta M, Only meta N; Alt+F presses Clear filter when it is shown (otherwise it moves a word forward in the pattern). Tab jumps between the mode radios, type checkboxes, pattern, options and buttons.
 
-The panel border shows the active filter, for example `Filter: not report Videos, Audio`. A live count of matches is shown beside the Pattern label.
+The panel border shows the active filter, for example `Filter: not report Videos, Audio`. A scope other than Files is named first: `Filter: dirs 2024*` for Dirs, `Filter: all *.go` for Both. A live count of matches is shown beside the Pattern label.
 
 ## Saved patterns and history
 
@@ -41,22 +47,22 @@ A pattern together with its mode, file types and options can be saved and reused
 
 Both dialogs share one list of saved patterns, so a pattern saved in Filter can be loaded in Select group and the other way round. The lists open on the pattern you last loaded or saved. A loaded pattern keeps only the options the dialog shows:
 
-- Invert applies in Filter only, Match full path in Select group only (where that checkbox is shown).
-- In the Compare and Find duplicates views, Filter ignores Files only, Directories only and the meta options.
+- Exclude matches applies in Filter only, Match whole path in Select group only (where that checkbox is shown).
+- In the Compare and Find duplicates views, Filter ignores Files / Dirs / Both and the meta options.
 - Without meta columns, the meta options are ignored.
 
 Saved patterns live in `filters.toml` in the config directory ([`[filter] file`](config.md#filter)). The keys can be rebound under `[dialog.pattern]` in `keybindings.toml`.
 
 ## Compare view
 
-In the Compare panels view M-f (leader letter `f`) opens the same dialog and filters the result rows by file name (the basename of the row's path). It stacks with the category filter (F3) and the empty-file toggle, and merge (F5) only sees the rows that remain. Rows are always files, so the meta and Files only / Directories only options are not shown. The border shows the pattern after the category, for example `All · Filter: *.jpg`. Clear filter, OK with an empty pattern, or S-F3 (reset filter) removes it; the category filter stays.
+In the Compare panels view M-f (leader letter `f`) opens the same dialog and filters the result rows by file name (the basename of the row's path). It stacks with the category filter (F3) and the empty-file toggle, and merge (F5) only sees the rows that remain. Rows are always files, so the meta and Files / Dirs / Both options are not shown. The border shows the pattern after the category, for example `All · Filter: *.jpg`. Clear filter, OK with an empty pattern, or S-F3 (reset filter) removes it; the category filter stays.
 
 ## Find duplicates view
 
-In the Find duplicates results view M-f (leader letter `f`) opens the same dialog and filters whole duplicate groups: a group is shown when any of its copies has a file name that matches (types and pattern), and Invert shows the groups where no copy matches. A shown group keeps all its copies, in both the groups tree and the directory tree. Rows are always files, so the meta and Files only / Directories only options are not shown. The border shows the pattern, for example `View: Dirs · Filter: *.jpg`. Clear filter or OK with an empty pattern removes it, and a rescan resets it.
+In the Find duplicates results view M-f (leader letter `f`) opens the same dialog and filters whole duplicate groups: a group is shown when any of its copies has a file name that matches (types and pattern), and Exclude matches shows the groups where no copy matches. A shown group keeps all its copies, in both the groups tree and the directory tree. Rows are always files, so the meta and Files / Dirs / Both options are not shown. The border shows the pattern, for example `View: Dirs · Filter: *.jpg`. Clear filter or OK with an empty pattern removes it, and a rescan resets it.
 
 Marks on files in groups the filter hides are kept and still counted: deleting acts on every marked file, shown or not.
 
 ## Select group
 
-The Select group (see [Selections](selections.md#select-and-unselect-group)) (`+`) and Unselect group (`-`) dialogs, in the panel, in Find results and in Find duplicates results, have the same mode radios and the same Videos, Pictures, Archives, Audio and Documents checkboxes (same `[filter.types]` config), and every option shared with Filter uses the same Alt letter. Checked types are OR-ed and AND-ed with the pattern; an empty pattern with types checked selects every entry of those types, and an empty pattern with no types selects nothing. Types always match the file name, even with "Match full path". As in Filter, "Directories only" disables the type checkboxes and ignores the types. There is no Invert. Match full path (Find results, Find duplicates results and the command output dialog) is M-h. In a finished user-menu output dialog the same dialogs act on the paths detected in the output (see the user menu section of [config.md](config.md)).
+The Select group (see [Selections](selections.md#select-and-unselect-group)) (`+`) and Unselect group (`-`) dialogs, in the panel, in Find results and in Find duplicates results, have the same mode radios and the same Videos, Pictures, Archives, Audio and Documents checkboxes (same `[filter.types]` config), and every option shared with Filter uses the same Alt letter. Checked types are OR-ed and AND-ed with the pattern; an empty pattern with types checked selects every entry of those types, and an empty pattern with no types selects nothing. Types always match the file name, even with "Match whole path". They have the same Files / Dirs / Both row: Files (the default) selects only files, Dirs only directories, Both either; as in Filter, Dirs disables the type checkboxes and ignores the types. There is no Exclude matches. Match whole path (Find results, Find duplicates results and the command output dialog) is M-w. In a finished user-menu output dialog the same dialogs act on the paths detected in the output (see the user menu section of [config.md](config.md)).

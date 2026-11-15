@@ -18,8 +18,9 @@ const (
 	PatternRegexRadio  = dlg.ID("mode:regex")
 	PatternSimpleRadio = dlg.ID("mode:simple")
 	PatternInput       = dlg.ID("pattern")
-	PatternFilesOnly   = dlg.ID("opt:files-only")
-	PatternDirsOnly    = dlg.ID("opt:dirs-only")
+	PatternScopeFiles  = dlg.ID("scope:files")
+	PatternScopeDirs   = dlg.ID("scope:dirs")
+	PatternScopeBoth   = dlg.ID("scope:both")
 	PatternInvert      = dlg.ID("opt:invert")
 	PatternCase        = dlg.ID("opt:case")
 	PatternFullPath    = dlg.ID("opt:full-path")
@@ -40,17 +41,46 @@ func patternTypeIndex(id dlg.ID) (int, bool) {
 	return i, ok && i >= 0 && i < FilterTypeCount
 }
 
-// PatternIsRadio reports whether id is one of the pattern mode radios (Enter selects a radio but
-// confirms the dialog from any other widget).
+// PatternIsRadio reports whether id is one of the pattern mode or scope radios (Enter selects a
+// radio but confirms the dialog from any other widget).
 func PatternIsRadio(id dlg.ID) bool {
-	return id == PatternShellRadio || id == PatternRegexRadio || id == PatternSimpleRadio
+	switch id {
+	case PatternShellRadio, PatternRegexRadio, PatternSimpleRadio, PatternScopeFiles, PatternScopeDirs, PatternScopeBoth:
+		return true
+	}
+	return false
+}
+
+// patternScopeRadios are the scope radios (Files / Dirs / Both) in display order.
+var patternScopeRadios = [...]struct {
+	id       dlg.ID
+	label    string
+	mnemonic rune
+	scope    panel.PatternScope
+}{
+	{PatternScopeFiles, "Files", PatternMnemonicScopeFiles, panel.ScopeFiles},
+	{PatternScopeDirs, "Dirs", PatternMnemonicScopeDirs, panel.ScopeDirs},
+	{PatternScopeBoth, "Both", PatternMnemonicScopeBoth, panel.ScopeBoth},
+}
+
+// patternDialogWidth is the frame width of the Filter and Select group dialogs for a marker
+// markerW cells wide (dlg.MarkerWidth; 0 = the ASCII marker): the grid's first two columns, the
+// Regular expression radio and the frame (border, padding and a one-cell right margin). It is 65
+// with the default theme's icons.
+func patternDialogWidth(markerW int) int {
+	if markerW <= 0 {
+		markerW = draw.DialogOptionWidth("")
+	}
+	cols := patternColumns(markerW)
+	const frame = 3
+	return cols[0] + cols[1] + markerW + utf8.RuneCountInString(patternModeLabels[2]) + frame
 }
 
 // patternDialogFrameWidth is the frame width of the Filter and Select group dialogs on a screen
-// layoutWidth wide: PatternDialogWidth, kept two cells off each side of the screen, and never
-// narrower than the 30 cells the pattern input needs to be usable.
-func patternDialogFrameWidth(layoutWidth int) int {
-	return max(min(PatternDialogWidth, layoutWidth-4), patternDialogMinWidth)
+// layoutWidth wide: patternDialogWidth for the marker markerW cells wide, kept two cells off
+// each side of the screen, and never narrower than the 30 cells the pattern input needs.
+func patternDialogFrameWidth(layoutWidth, markerW int) int {
+	return max(min(patternDialogWidth(markerW), layoutWidth-4), patternDialogMinWidth)
 }
 
 const patternDialogMinWidth = 30
@@ -61,13 +91,15 @@ const patternDialogMinWidth = 30
 type patternView struct {
 	Title       string
 	LayoutWidth int
+	// MarkerWidth is the theme's radio / checkbox marker width (dlg.MarkerWidth) the layout is
+	// measured with; 0 measures the ASCII marker.
+	MarkerWidth int
 
 	Mode          panel.GroupPatternMode
 	Types         [FilterTypeCount]bool
-	FilesOnly     bool
-	DirsOnly      bool
+	Scope         panel.PatternScope
 	CaseSensitive bool
-	ShowFilesDirs bool
+	ShowScope     bool
 	ShowInvert    bool // Filter only
 	ShowClear     bool // Filter only, while the target has a filter: a "Clear filter" button after OK / Cancel
 	Invert        bool
@@ -157,51 +189,44 @@ func patternInvalid(text, hint string, previewShow bool, files, folders int) boo
 // patternModeLabels are the mode radio labels in display order (Simple, Shell, Regex).
 var patternModeLabels = [...]string{"Simple / auto shell", "Shell patterns", "Regular expression"}
 
-// patternSpec builds the widget spec of the Filter and Select group dialogs. Radios and type
-// checkboxes share rows (the checkbox columns line up under the widest radio label), each option
-// row puts its second checkbox under the first type column, and the pattern row carries its live
-// preview at the right. The type checkboxes are disabled while Directories only is on.
+// patternSpec builds the widget spec of the Filter and Select group dialogs on one three-column
+// grid (patternColumns): the mode radios on one row, a separator, the type checkboxes in three
+// columns and a blank row, the Pattern row with its live preview at the right, the input and its
+// hint row, then the scope radios and the option rows. The type checkboxes are disabled while the
+// scope is Dirs.
 func patternSpec(v patternView) dlg.Spec {
-	// Column boxes derive from the widest labels so the checkboxes line up on every row. The radio
-	// box pads its widest label by one cell (the type cell adds a leading space), which keeps the
-	// second option column over OK so Down from Match full path reaches OK, not Cancel.
-	radioBox := 0
-	for _, l := range patternModeLabels {
-		radioBox = max(radioBox, utf8.RuneCountInString(draw.RadioText(l, false))+1)
+	cols := patternColumns(v.MarkerWidth)
+	radio := func(id dlg.ID, label string, mnemonic rune, mode panel.GroupPatternMode, col int) dlg.Item {
+		return dlg.Item{ID: id, Kind: dlg.KindRadio, Label: label, Mnemonic: mnemonic, On: v.Mode == mode, Width: cols[col]}
 	}
-	typeBox := utf8.RuneCountInString(" "+draw.CheckboxText("Pictures", false)) + 2
-	radio := func(id dlg.ID, label string, mnemonic rune, mode panel.GroupPatternMode) dlg.Item {
-		return dlg.Item{ID: id, Kind: dlg.KindRadio, Label: label, Mnemonic: mnemonic, On: v.Mode == mode, Width: radioBox}
-	}
+	// check is a checkbox in the grid's first column (the second ends its row).
 	check := func(id dlg.ID, label string, mnemonic rune, on bool) dlg.Item {
-		return dlg.Item{ID: id, Kind: dlg.KindCheckbox, Label: label, Mnemonic: mnemonic, On: on, Width: radioBox}
+		return dlg.Item{ID: id, Kind: dlg.KindCheckbox, Label: label, Mnemonic: mnemonic, On: on, Width: cols[0]}
 	}
-	radios := []dlg.Item{
-		radio(PatternSimpleRadio, patternModeLabels[0], PatternMnemonicSimple, panel.GroupPatternSimple),
-		radio(PatternShellRadio, patternModeLabels[1], PatternMnemonicShell, panel.GroupPatternShell),
-		radio(PatternRegexRadio, patternModeLabels[2], PatternMnemonicRegex, panel.GroupPatternRegex),
+	// Radios and type checkboxes are separate Tab stops (Seg).
+	head := []dlg.Item{
+		{Kind: dlg.KindRow, Cells: []dlg.Item{
+			radio(PatternSimpleRadio, patternModeLabels[0], PatternMnemonicSimple, panel.GroupPatternSimple, 0),
+			radio(PatternShellRadio, patternModeLabels[1], PatternMnemonicShell, panel.GroupPatternShell, 1),
+			radio(PatternRegexRadio, patternModeLabels[2], PatternMnemonicRegex, panel.GroupPatternRegex, 2),
+		}},
+		{Kind: dlg.KindSeparator},
 	}
-	// Head: a radio per row with the type checkboxes in two columns to its right. Radios and
-	// checkboxes are separate Tab stops (Seg).
-	var head []dlg.Item
-	for i, r := range radios {
-		cells := []dlg.Item{r}
-		for t := i; t < FilterTypeCount; t += 3 {
-			cell := dlg.Item{
+	const typeCols = 3
+	for start := 0; start < FilterTypeCount; start += typeCols {
+		var cells []dlg.Item
+		for t := start; t < min(start+typeCols, FilterTypeCount); t++ {
+			cells = append(cells, dlg.Item{
 				ID: PatternTypeID(t), Kind: dlg.KindCheckbox, Label: FilterTypeLabels[t], Mnemonic: FilterTypeMnemonics[t],
-				On: v.Types[t], Disabled: PatternTypesDisabled(v.DirsOnly), Seg: 1,
-			}
-			if t < 3 {
-				cell.Width = typeBox // the first column; the second ends the row
-			}
-			cells = append(cells, cell)
+				On: v.Types[t], Disabled: PatternTypesDisabled(v.Scope), Seg: 1, Width: cols[t-start],
+			})
 		}
 		head = append(head, dlg.Item{Kind: dlg.KindRow, Cells: cells})
 	}
-	head = append(head, dlg.Item{Kind: dlg.KindSeparator})
+	head = append(head, dlg.Item{Kind: dlg.KindLabel}) // a blank row before the Pattern label
 
 	// The live preview takes the rest of the Pattern row when it fits clear of the label.
-	frameW := patternDialogFrameWidth(v.LayoutWidth)
+	frameW := patternDialogFrameWidth(v.LayoutWidth, v.MarkerWidth)
 	preview := v.Preview
 	if utf8.RuneCountInString(preview) >= frameW-4-len("Pattern:") {
 		preview = ""
@@ -222,17 +247,22 @@ func patternSpec(v patternView) dlg.Spec {
 
 	var options []dlg.Item
 	row := func(cells ...dlg.Item) { options = append(options, dlg.Item{Kind: dlg.KindRow, Cells: cells}) }
-	if v.ShowFilesDirs {
-		row(check(PatternFilesOnly, "Files only", PatternMnemonicFilesOnly, v.FilesOnly),
-			dlg.Item{ID: PatternDirsOnly, Kind: dlg.KindCheckbox, Label: "Directories only", Mnemonic: PatternMnemonicDirsOnly, On: v.DirsOnly})
+	if v.ShowScope {
+		var cells []dlg.Item
+		for i, r := range patternScopeRadios {
+			cells = append(cells, dlg.Item{
+				ID: r.id, Kind: dlg.KindRadio, Label: r.label, Mnemonic: r.mnemonic, On: v.Scope == r.scope, Width: cols[i],
+			})
+		}
+		row(cells...)
 	}
 	caseBox := dlg.Item{ID: PatternCase, Kind: dlg.KindCheckbox, Label: "Case sensitive", Mnemonic: PatternMnemonicCase, On: v.CaseSensitive}
 	switch {
 	case v.ShowInvert:
-		row(check(PatternInvert, "Invert", PatternMnemonicInvert, v.Invert), caseBox)
+		row(check(PatternInvert, "Exclude matches", PatternMnemonicInvert, v.Invert), caseBox)
 	case v.ShowFullPath:
 		row(check(PatternCase, "Case sensitive", PatternMnemonicCase, v.CaseSensitive),
-			dlg.Item{ID: PatternFullPath, Kind: dlg.KindCheckbox, Label: "Match full path", Mnemonic: PatternMnemonicFullPath, On: v.FullPath})
+			dlg.Item{ID: PatternFullPath, Kind: dlg.KindCheckbox, Label: "Match whole path", Mnemonic: PatternMnemonicFullPath, On: v.FullPath})
 	default:
 		row(check(PatternCase, "Case sensitive", PatternMnemonicCase, v.CaseSensitive))
 	}
@@ -242,7 +272,7 @@ func patternSpec(v patternView) dlg.Spec {
 	}
 
 	return dlg.Spec{
-		Title: v.Title, Width: PatternDialogWidth, MinWidth: patternDialogMinWidth,
+		Title: v.Title, Width: patternDialogWidth(v.MarkerWidth), MarkerWidth: v.MarkerWidth, MinWidth: patternDialogMinWidth,
 		Groups: []dlg.Group{
 			{Columns: [][]dlg.Item{head}},
 			{Columns: [][]dlg.Item{pattern}},
@@ -250,6 +280,29 @@ func patternSpec(v patternView) dlg.Spec {
 		},
 		Buttons: patternButtons(v.ShowClear),
 	}
+}
+
+// patternColumns are the pattern dialogs' grid column boxes for a marker markerW cells wide
+// (0 = the ASCII marker): each of the first two fits its widest boxed cell plus a one-cell gap,
+// the third takes the rest of the row. Only rows with a third cell size the second column (the
+// option rows' second cells end their row).
+func patternColumns(markerW int) [3]int {
+	if markerW <= 0 {
+		markerW = draw.DialogOptionWidth("")
+	}
+	columns := [2][]string{
+		// "Include meta columns" may fill its box: the next cell's marker still opens with a space.
+		{patternModeLabels[0], FilterTypeLabels[FilterTypeVideos], FilterTypeLabels[FilterTypeAudio], "Files",
+			"Exclude matches", "Case sensitive"},
+		{patternModeLabels[1], FilterTypeLabels[FilterTypePictures], FilterTypeLabels[FilterTypeDocuments], "Dirs"},
+	}
+	var widths [3]int
+	for i, labels := range columns {
+		for _, l := range labels {
+			widths[i] = max(widths[i], markerW+utf8.RuneCountInString(l)+1)
+		}
+	}
+	return widths
 }
 
 // patternButtons is the button strip: OK / Cancel, plus "Clear filter" when the Filter dialog's target
@@ -267,12 +320,13 @@ func patternButtons(clear bool) []dlg.Button {
 type patternToggles struct {
 	Mode                                    *panel.GroupPatternMode
 	Types                                   *[FilterTypeCount]bool
-	FilesOnly, DirsOnly, Case               *bool
+	Scope                                   *panel.PatternScope
+	Case                                    *bool
 	Invert, FullPath, IncludeMeta, OnlyMeta *bool
 }
 
 // apply folds the activation of widget id into the state: a radio selects its mode, a checkbox
-// toggles (Files only / Directories only exclude each other, Only meta implies Include meta, and
+// toggles (Only meta implies Include meta, and
 // dropping Include meta drops Only meta). It reports whether the state changed.
 func (t patternToggles) apply(id dlg.ID) bool {
 	flip := func(p *bool) bool {
@@ -289,16 +343,12 @@ func (t patternToggles) apply(id dlg.ID) bool {
 		*t.Mode = panel.GroupPatternRegex
 	case PatternSimpleRadio:
 		*t.Mode = panel.GroupPatternSimple
-	case PatternFilesOnly:
-		*t.FilesOnly = !*t.FilesOnly
-		if *t.FilesOnly {
-			*t.DirsOnly = false
-		}
-	case PatternDirsOnly:
-		*t.DirsOnly = !*t.DirsOnly
-		if *t.DirsOnly {
-			*t.FilesOnly = false
-		}
+	case PatternScopeFiles:
+		*t.Scope = panel.ScopeFiles
+	case PatternScopeDirs:
+		*t.Scope = panel.ScopeDirs
+	case PatternScopeBoth:
+		*t.Scope = panel.ScopeBoth
 	case PatternInvert:
 		return flip(t.Invert)
 	case PatternCase:
@@ -317,7 +367,7 @@ func (t patternToggles) apply(id dlg.ID) bool {
 		}
 	default:
 		i, ok := patternTypeIndex(id)
-		if !ok || PatternTypesDisabled(*t.DirsOnly) {
+		if !ok || PatternTypesDisabled(*t.Scope) {
 			return false
 		}
 		t.Types[i] = !t.Types[i]

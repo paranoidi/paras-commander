@@ -46,7 +46,7 @@ func seedPatternFixtures(t *testing.T, dir string) {
 func patternKeyFocusName(id dlg.ID) string {
 	names := map[dlg.ID]string{
 		dialog.PatternShellRadio: "shell", dialog.PatternRegexRadio: "regex", dialog.PatternSimpleRadio: "simple",
-		dialog.PatternInput: "pattern", dialog.PatternFilesOnly: "filesonly", dialog.PatternDirsOnly: "dirsonly",
+		dialog.PatternInput: "pattern", dialog.PatternScopeFiles: "scopefiles", dialog.PatternScopeDirs: "scopedirs", dialog.PatternScopeBoth: "scopeboth",
 		dialog.PatternInvert: "invert", dialog.PatternCase: "case", dialog.PatternFullPath: "fullpath",
 		dialog.PatternIncludeMeta: "includemeta", dialog.PatternOnlyMeta: "onlymeta", dlg.OK: "ok", dlg.Cancel: "cancel",
 	}
@@ -69,8 +69,8 @@ func filterKeyState(app *App) string {
 			types = append(types, strings.ToLower(dialog.FilterTypeLabels[i]))
 		}
 	}
-	return fmt.Sprintf("focus=%s text=%q cursor=%d scroll=%d mode=%d files=%v dirs=%v invert=%v case=%v meta=%v/%v types=%v preview=%v/%d/%d",
-		patternKeyFocusName(st.Focus), st.Text, st.TextCursor, st.TextScroll, st.PatternMode, st.FilesOnly, st.DirsOnly, st.Invert,
+	return fmt.Sprintf("focus=%s text=%q cursor=%d scroll=%d mode=%d scope=%d invert=%v case=%v meta=%v/%v types=%v preview=%v/%d/%d",
+		patternKeyFocusName(st.Focus), st.Text, st.TextCursor, st.TextScroll, st.PatternMode, st.Scope, st.Invert,
 		st.CaseSensitive, st.IncludeMetaColumns, st.OnlyMetaColumns, types, st.PreviewShow, st.PreviewFiles, st.PreviewFolders)
 }
 
@@ -161,7 +161,7 @@ func TestFilterDialogKeyScripts(t *testing.T) {
 		{"preview-files-only", typeTokens("*") + " Alt+y"},
 		{"preview-types", "Alt+v Alt+u"},
 		{"preview-types-with-pattern", typeTokens("w") + " Alt+v"},
-		{"preview-invert", typeTokens("*.mp4") + " Alt+i"},
+		{"preview-invert", typeTokens("*.mp4") + " Alt+x"},
 		{"preview-case", typeTokens("WILLOW") + " Alt+l Alt+e"},
 		{"preview-simple", typeTokens("notes") + " Alt+l"},
 		{"preview-regex", typeTokens("^w.*txt$") + " Alt+r"},
@@ -169,22 +169,22 @@ func TestFilterDialogKeyScripts(t *testing.T) {
 		{"preview-shell-bad", typeTokens("[") + " Alt+s"},
 		{"preview-after-backspace", typeTokens("zzz") + " Backspace Backspace Backspace"},
 		// Mnemonics.
-		{"alt-mnemonics-in-pattern", "Alt+s Alt+r Alt+l Alt+y Alt+d Alt+y Alt+i Alt+e Alt+v Alt+p Alt+a Alt+u Alt+t"},
-		{"alt-mnemonics-upper", "Alt+S Alt+R Alt+L Alt+Y Alt+D Alt+I Alt+E Alt+V Alt+P"},
+		{"alt-mnemonics-in-pattern", "Alt+s Alt+r Alt+l Alt+y Alt+d Alt+y Alt+x Alt+e Alt+v Alt+p Alt+a Alt+u Alt+t"},
+		{"alt-mnemonics-upper", "Alt+S Alt+R Alt+L Alt+Y Alt+D Alt+X Alt+E Alt+V Alt+P"},
 		{"alt-radios-from-checkbox", "Down Alt+r Alt+l Alt+s"},
 		{"alt-radios-from-button", "Down Down Down Alt+r"},
 		{"alt-radios-from-type", "Up Up Up Right Alt+l"},
-		{"alt-checkbox-from-radio", "Up Up Up Alt+e Alt+i"},
+		{"alt-checkbox-from-radio", "Up Up Up Alt+e Alt+x"},
 		{"alt-type-from-other-row", "Down Alt+v Alt+t"},
 		{"alt-checkbox-from-button", "Down Down Down Alt+e"},
-		{"alt-checkbox-from-type", "Up Up Up Right Alt+i"},
-		{"alt-unknown-in-pattern", "a Alt+x Alt+q Alt+g b"},
+		{"alt-checkbox-from-type", "Up Up Up Right Alt+x"},
+		{"alt-unknown-in-pattern", "a Alt+z Alt+q Alt+g b"},
 		{"alt-meta-without-meta", "Alt+m Alt+n"},
 		{"alt-dirs-only-disables-types", "Alt+v Alt+d Alt+v Alt+d Alt+v"},
 		{"alt-dirs-only-then-nav-types", "Alt+v Alt+d Up Up Up Right Down Down Right Left Left"},
 		{"alt-dirs-only-then-space-type", "Alt+d Up Up Up Right Space Down Space"},
 		{"alt-dirs-only-focus-type-then-toggle", "Up Up Up Right Alt+d"},
-		{"alt-files-only-excludes-dirs-only", "Alt+y Alt+d Alt+y Alt+y"},
+		{"alt-scope-letters", "Alt+h Alt+d Alt+i Alt+H Alt+I"},
 		{"alt-dirs-only-from-options", "Down Alt+d Alt+y"},
 	}
 	runKeyGoldenScripts(t, filterKeyDialog("filter", 0), scripts)

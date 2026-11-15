@@ -24,34 +24,34 @@ func TestGroupSelectDialogHeight(t *testing.T) {
 	}
 
 	base := GroupSelectState{PatternMode: panel.GroupPatternShell}
-	if got := height(base); got != 13 {
-		t.Fatalf("base height = %d, want 13", got)
+	if got := height(base); got != 14 {
+		t.Fatalf("base height = %d, want 14", got)
 	}
 
 	withPreview := base
 	withPreview.PreviewShow = true
 	withPreview.PreviewFiles = 2
-	if got := height(withPreview); got != 13 {
-		t.Fatalf("preview height = %d, want 13", got)
+	if got := height(withPreview); got != 14 {
+		t.Fatalf("preview height = %d, want 14", got)
 	}
 
 	withMeta := base
 	withMeta.MetaColumnCount = 3
-	if got := height(withMeta); got != 14 {
-		t.Fatalf("meta height = %d, want 14", got)
+	if got := height(withMeta); got != 15 {
+		t.Fatalf("meta height = %d, want 15", got)
 	}
 
 	withHint := base
 	withHint.Text = "["
 	withHint.PatternMode = panel.GroupPatternRegex
-	if got := height(withHint); got != 13 {
-		t.Fatalf("hint height = %d, want 13 (reserved row; no grow)", got)
+	if got := height(withHint); got != 14 {
+		t.Fatalf("hint height = %d, want 14 (reserved row; no grow)", got)
 	}
 
 	withHintAndMeta := withHint
 	withHintAndMeta.MetaColumnCount = 3
-	if got := height(withHintAndMeta); got != 14 {
-		t.Fatalf("hint+meta height = %d, want 14", got)
+	if got := height(withHintAndMeta); got != 15 {
+		t.Fatalf("hint+meta height = %d, want 15", got)
 	}
 }
 
@@ -67,15 +67,15 @@ func TestGroupSelectFocusCheckboxGrid(t *testing.T) {
 		key  tcell.Key
 		want dlg.ID
 	}{
-		{"down from files to case", plain, PatternFilesOnly, tcell.KeyDown, PatternCase},
-		{"right from files to dirs", plain, PatternFilesOnly, tcell.KeyRight, PatternDirsOnly},
-		{"left from dirs to files", plain, PatternDirsOnly, tcell.KeyLeft, PatternFilesOnly},
-		{"up from case to files", plain, PatternCase, tcell.KeyUp, PatternFilesOnly},
-		{"down from dirs falls back to case without full path", plain, PatternDirsOnly, tcell.KeyDown, PatternCase},
+		{"down from files to case", plain, PatternScopeFiles, tcell.KeyDown, PatternCase},
+		{"right from files to dirs", plain, PatternScopeFiles, tcell.KeyRight, PatternScopeDirs},
+		{"left from dirs to files", plain, PatternScopeDirs, tcell.KeyLeft, PatternScopeFiles},
+		{"up from case to files", plain, PatternCase, tcell.KeyUp, PatternScopeFiles},
+		{"down from dirs falls back to case without full path", plain, PatternScopeDirs, tcell.KeyDown, PatternCase},
 		{"right from case does nothing when full path hidden", plain, PatternCase, tcell.KeyRight, PatternCase},
 		{"down from case goes to include meta when present", meta, PatternCase, tcell.KeyDown, PatternIncludeMeta},
 		{"down from include meta goes to ok", meta, PatternIncludeMeta, tcell.KeyDown, dlg.OK},
-		{"up from ok goes to include meta when present", meta, dlg.OK, tcell.KeyUp, PatternIncludeMeta},
+		{"up from ok goes to only meta, drawn above it", meta, dlg.OK, tcell.KeyUp, PatternOnlyMeta},
 	}
 	for _, tc := range cases {
 		if got := patternStep(tc.spec, tc.from, tc.key); got != tc.want {
@@ -94,10 +94,10 @@ func TestGroupSelectFocusFullPath(t *testing.T) {
 		key  tcell.Key
 		want dlg.ID
 	}{
-		{"down from dirs goes to full path when shown", PatternDirsOnly, tcell.KeyDown, PatternFullPath},
+		{"down from dirs goes to full path when shown", PatternScopeDirs, tcell.KeyDown, PatternFullPath},
 		{"right from case goes to full path when shown", PatternCase, tcell.KeyRight, PatternFullPath},
 		{"left from full path goes to case", PatternFullPath, tcell.KeyLeft, PatternCase},
-		{"up from full path goes to dirs", PatternFullPath, tcell.KeyUp, PatternDirsOnly},
+		{"up from full path goes to dirs", PatternFullPath, tcell.KeyUp, PatternScopeDirs},
 		{"down from full path goes to ok", PatternFullPath, tcell.KeyDown, dlg.OK},
 		{"up from ok goes to the full path checkbox drawn above it", dlg.OK, tcell.KeyUp, PatternFullPath},
 		{"up from cancel goes to full path when shown", dlg.Cancel, tcell.KeyUp, PatternFullPath},
@@ -119,11 +119,12 @@ func TestGroupSelectFocusTypes(t *testing.T) {
 		key  tcell.Key
 		want dlg.ID
 	}{
-		{"right from simple radio enters types", PatternSimpleRadio, tcell.KeyRight, first},
-		{"down within first type column", first, tcell.KeyDown, PatternTypeID(1)},
-		{"right to second type column", first, tcell.KeyRight, PatternTypeID(3)},
-		{"down from pattern is files only", PatternInput, tcell.KeyDown, PatternFilesOnly},
-		{"up from pattern is regex radio", PatternInput, tcell.KeyUp, PatternRegexRadio},
+		{"right from simple radio is shell radio", PatternSimpleRadio, tcell.KeyRight, PatternShellRadio},
+		{"down from simple radio enters types", PatternSimpleRadio, tcell.KeyDown, first},
+		{"down within first type column", first, tcell.KeyDown, PatternTypeID(3)},
+		{"right to second type column", first, tcell.KeyRight, PatternTypeID(1)},
+		{"down from pattern is files only", PatternInput, tcell.KeyDown, PatternScopeFiles},
+		{"up from pattern is the second type row", PatternInput, tcell.KeyUp, PatternTypeID(3)},
 		{"tab from radios is first type", PatternRegexRadio, tcell.KeyTab, first},
 		{"tab from types is pattern", PatternTypeID(2), tcell.KeyTab, PatternInput},
 		{"backtab from pattern is first type", PatternInput, tcell.KeyBacktab, first},

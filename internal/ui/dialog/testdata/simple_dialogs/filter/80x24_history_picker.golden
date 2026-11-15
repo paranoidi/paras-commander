@@ -5,8 +5,8 @@
      ┌────────────────────────── Filter history ──────────────────────────┐     
      │ /                                                                  │     
      ├────────────────────────────────────────────────────────────────────┤     
-     │ shell: *.pebble · Videos, Audio · invert                           │     
-     │ Documents · files only                                             │     
+     │ shell: *.pebble · Videos, Audio · exclude matches                  │     
+     │ Documents · files and dirs                                         │     
      │                                                                    │     
      │                                                                    │     
      │                                                                    │     

@@ -131,7 +131,7 @@ func TestGroupSelectPlainTypingDoesNotTriggerShortcuts(t *testing.T) {
 	if got := app.model.GroupSelect.Text; got != "focus" {
 		t.Fatalf("pattern = %q, want focus", got)
 	}
-	if app.model.GroupSelect.FilesOnly || app.model.GroupSelect.CaseSensitive || app.model.GroupSelect.PatternMode != panel.GroupPatternSimple {
+	if app.model.GroupSelect.Scope != panel.ScopeFiles || app.model.GroupSelect.CaseSensitive || app.model.GroupSelect.PatternMode != panel.GroupPatternSimple {
 		t.Fatalf("checkbox/mode state changed unexpectedly: %+v", app.model.GroupSelect)
 	}
 
@@ -140,14 +140,14 @@ func TestGroupSelectPlainTypingDoesNotTriggerShortcuts(t *testing.T) {
 		t.Fatalf("pattern after shifted letter = %q, want focusF", got)
 	}
 
-	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'y', tcell.ModAlt))
-	if !app.model.GroupSelect.FilesOnly || app.model.GroupSelect.Focus != dialog.PatternInput {
-		t.Fatalf("Alt+Y should toggle Files only and keep pattern focus; got FilesOnly=%v focus=%q",
-			app.model.GroupSelect.FilesOnly, app.model.GroupSelect.Focus)
+	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModAlt))
+	if app.model.GroupSelect.Scope != panel.ScopeBoth || app.model.GroupSelect.Focus != dialog.PatternInput {
+		t.Fatalf("Alt+H should pick the Both scope and keep pattern focus; got Scope=%v focus=%q",
+			app.model.GroupSelect.Scope, app.model.GroupSelect.Focus)
 	}
 	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModNone))
 	if got := app.model.GroupSelect.Text; got != "focusFx" {
-		t.Fatalf("pattern after Alt+Y then typing = %q, want focusFx", got)
+		t.Fatalf("pattern after Alt+H then typing = %q, want focusFx", got)
 	}
 }
 
@@ -203,8 +203,8 @@ func TestGroupSelectCheckboxFocusNavigation(t *testing.T) {
 
 	gs := &app.model.GroupSelect
 	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone)) // pattern -> files
-	if gs.Focus != dialog.PatternFilesOnly {
-		t.Fatalf("after Down from pattern: focus = %q, want files only", gs.Focus)
+	if gs.Focus != dialog.PatternScopeFiles {
+		t.Fatalf("after Down from pattern: focus = %q, want files scope", gs.Focus)
 	}
 
 	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone)) // files -> case
@@ -213,13 +213,13 @@ func TestGroupSelectCheckboxFocusNavigation(t *testing.T) {
 	}
 
 	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone)) // case -> files
-	if gs.Focus != dialog.PatternFilesOnly {
-		t.Fatalf("after Up from case: focus = %q, want files only", gs.Focus)
+	if gs.Focus != dialog.PatternScopeFiles {
+		t.Fatalf("after Up from case: focus = %q, want files scope", gs.Focus)
 	}
 
 	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone)) // files -> dirs
-	if gs.Focus != dialog.PatternDirsOnly {
-		t.Fatalf("after Right from files: focus = %q, want directories only", gs.Focus)
+	if gs.Focus != dialog.PatternScopeDirs {
+		t.Fatalf("after Right from files: focus = %q, want dirs scope", gs.Focus)
 	}
 }
 
@@ -492,29 +492,29 @@ func TestGroupSelectTypeMnemonicKeepsPatternFocus(t *testing.T) {
 		t.Fatal("a checked type with an empty pattern is not empty")
 	}
 	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModAlt))
-	if !gs.DirsOnly {
-		t.Fatal("Alt+D should toggle Directories only")
+	if gs.Scope != panel.ScopeDirs {
+		t.Fatal("Alt+D should select the Dirs scope")
 	}
 	if !app.groupSelectEmpty() {
-		t.Fatal("types are ignored with Directories only, so the empty pattern is empty")
+		t.Fatal("types are ignored with the Dirs scope, so the empty pattern is empty")
 	}
 }
 
-func TestGroupSelectDirsOnlyDisablesTypes(t *testing.T) {
+func TestGroupSelectScopeDirsDisablesTypes(t *testing.T) {
 	app := newApp(t, newScreen(t, 80, 24), t.TempDir())
-	gs := &dialog.GroupSelectState{DirsOnly: true, Text: "*"}
+	gs := &dialog.GroupSelectState{Scope: panel.ScopeDirs, Text: "*"}
 	gs.Types[0] = true
 	if gs.Apply(dlg.Event{ID: dialog.PatternTypeID(1)}) || gs.Types[1] {
-		t.Fatal("type toggle must be a no-op with Directories only")
+		t.Fatal("type toggle must be a no-op with the Dirs scope")
 	}
 	if spec := app.groupSelectSpec(gs); spec.Types != nil || spec.TypeLabel != "" {
 		t.Fatalf("spec types = %v %q, want ignored", spec.Types, spec.TypeLabel)
 	}
-	if !gs.Apply(dlg.Event{ID: dialog.PatternFilesOnly}) || !gs.FilesOnly || gs.DirsOnly {
-		t.Fatal("Files only radio must switch away from Directories only")
+	if !gs.Apply(dlg.Event{ID: dialog.PatternScopeFiles}) || gs.Scope != panel.ScopeFiles {
+		t.Fatal("Files radio must switch the scope away from Dirs")
 	}
 	if spec := app.groupSelectSpec(gs); spec.Types == nil {
-		t.Fatal("checked type must apply again once Directories only is off")
+		t.Fatal("checked type must apply again once the scope is not Dirs")
 	}
 }
 

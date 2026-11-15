@@ -1,6 +1,7 @@
 package find
 
 import (
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"os"
 	"slices"
 	"strings"
@@ -83,7 +84,7 @@ func (h *Handler) parseAdvanced(st *dialog.FindDialogState) (findcrit.Criteria, 
 	if err == nil && uid >= 0 {
 		c.Owner, c.HasOwner = uint32(uid), true
 	}
-	c.Types, _ = dialog.FilterTypesRegexp(false, a.Types, h.config.Filter.Types)
+	c.Types, _ = dialog.FilterTypesRegexp(panel.ScopeFiles, a.Types, h.config.Filter.Types)
 	excl, err := findcrit.ParseExcludes(a.Fields[dialog.FindAdvExclude].Value)
 	a.Fields[dialog.FindAdvExclude].Invalid = err != nil
 	return c, excl

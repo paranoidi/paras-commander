@@ -375,8 +375,7 @@ func (a *App) openGroupSelect(mode string, context string) {
 		Mode:               mode,
 		Context:            context,
 		PatternMode:        panel.GroupPatternSimple,
-		FilesOnly:          false,
-		DirsOnly:           false,
+		Scope:              panel.ScopeFiles,
 		CaseSensitive:      false,
 		FullPath:           false,
 		MetaColumnCount:    metaCount,
@@ -477,8 +476,7 @@ type groupSelectPreviewKey struct {
 	Text          string
 	Mode          string
 	PatternMode   panel.GroupPatternMode
-	FilesOnly     bool
-	DirsOnly      bool
+	Scope         panel.PatternScope
 	CaseSensitive bool
 	FullPath      bool
 	Types         [dialog.FilterTypeCount]bool
@@ -495,9 +493,9 @@ func (a *App) groupSelectMeta(gs *dialog.GroupSelectState) panel.GroupSelectMeta
 func (a *App) groupSelectSpec(gs *dialog.GroupSelectState) panel.FilterSpec {
 	spec := panel.FilterSpec{
 		Pattern: gs.Text, Mode: gs.PatternMode, CaseSensitive: gs.CaseSensitive,
-		FilesOnly: gs.FilesOnly, DirsOnly: gs.DirsOnly,
+		Scope: gs.Scope,
 	}
-	spec.Types, spec.TypeLabel = dialog.FilterTypesRegexp(gs.DirsOnly, gs.Types, a.config.Filter.Types)
+	spec.Types, spec.TypeLabel = dialog.FilterTypesRegexp(gs.Scope, gs.Types, a.config.Filter.Types)
 	return spec
 }
 
@@ -507,8 +505,7 @@ func (a *App) groupSelectRequest(gs *dialog.GroupSelectState) findctrl.GroupSele
 	return findctrl.GroupSelectRequest{
 		Mode:          findctrl.GroupSelectMode(gs.Mode),
 		Pattern:       gs.Text,
-		FilesOnly:     gs.FilesOnly,
-		DirsOnly:      gs.DirsOnly,
+		Scope:         gs.Scope,
 		CaseSensitive: gs.CaseSensitive,
 		FullPath:      gs.FullPath,
 		PatternMode:   gs.PatternMode,
@@ -576,8 +573,7 @@ func (a *App) updateGroupSelectPreview() {
 			Text:          gs.Text,
 			Mode:          gs.Mode,
 			PatternMode:   gs.PatternMode,
-			FilesOnly:     gs.FilesOnly,
-			DirsOnly:      gs.DirsOnly,
+			Scope:         gs.Scope,
 			CaseSensitive: gs.CaseSensitive,
 			FullPath:      gs.FullPath,
 			Types:         gs.Types,
@@ -619,7 +615,7 @@ func (a *App) outputGroupMatches(gs *dialog.GroupSelectState) ([]dialog.OutputPa
 	selectMode := req.Mode == findctrl.GroupSelectModeSelect
 	var out []dialog.OutputPathMatch
 	for _, m := range a.model.CommandOutputDialog.UniquePaths() {
-		if (gs.DirsOnly && !m.IsDir) || (gs.FilesOnly && m.IsDir) ||
+		if !gs.Scope.Targets(m.IsDir) ||
 			p.IsSelectedPath(m.Path) == selectMode || !match(m.Path) {
 			continue
 		}
@@ -629,9 +625,9 @@ func (a *App) outputGroupMatches(gs *dialog.GroupSelectState) ([]dialog.OutputPa
 }
 
 // dedupGroupMatcher is the dedup-context predicate on a file's absolute path. Dedup rows to
-// (un)mark are all files, so Directories only matches nothing.
+// (un)mark are all files, so the Dirs scope matches nothing.
 func (a *App) dedupGroupMatcher(gs *dialog.GroupSelectState) (func(string) bool, error) {
-	if gs.DirsOnly {
+	if !gs.Scope.Targets(false) {
 		return func(string) bool { return false }, nil
 	}
 	return findctrl.NewPathMatcher(a.groupSelectRequest(gs))

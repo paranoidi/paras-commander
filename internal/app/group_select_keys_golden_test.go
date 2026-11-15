@@ -22,8 +22,8 @@ func groupSelectKeyState(app *App) string {
 			types = append(types, strings.ToLower(dialog.FilterTypeLabels[i]))
 		}
 	}
-	return fmt.Sprintf("focus=%s text=%q cursor=%d scroll=%d mode=%d files=%v dirs=%v case=%v fullpath=%v meta=%v/%v types=%v preview=%v/%d/%d",
-		patternKeyFocusName(st.Focus), st.Text, st.TextCursor, st.TextScroll, st.PatternMode, st.FilesOnly, st.DirsOnly,
+	return fmt.Sprintf("focus=%s text=%q cursor=%d scroll=%d mode=%d scope=%d case=%v fullpath=%v meta=%v/%v types=%v preview=%v/%d/%d",
+		patternKeyFocusName(st.Focus), st.Text, st.TextCursor, st.TextScroll, st.PatternMode, st.Scope,
 		st.CaseSensitive, st.FullPath, st.IncludeMetaColumns, st.OnlyMetaColumns, types, st.PreviewShow, st.PreviewFiles, st.PreviewFolders)
 }
 
@@ -141,14 +141,14 @@ func TestGroupSelectKeyScripts(t *testing.T) {
 		{"alt-checkbox-from-button", "Down Down Down Alt+e"},
 		{"alt-checkbox-from-type", "Up Up Up Right Alt+e"},
 		{"alt-unknown-in-pattern", "a Alt+x Alt+q Alt+g b"},
-		{"alt-invert-is-unknown", "Alt+i Alt+i"},
-		{"alt-full-path-without-find", "Alt+h Alt+h"},
+		{"alt-invert-is-unknown", "Alt+x Alt+x"},
+		{"alt-full-path-without-find", "Alt+w Alt+w"},
 		{"alt-meta-without-meta", "Alt+m Alt+n"},
 		{"alt-dirs-only-disables-types", "Alt+v Alt+d Alt+v Alt+d Alt+v"},
 		{"alt-dirs-only-then-nav-types", "Alt+v Alt+d Up Up Up Right Down Down Right Left Left"},
 		{"alt-dirs-only-then-space-type", "Alt+d Up Up Up Right Space Down Space"},
 		{"alt-dirs-only-focus-type-then-toggle", "Up Up Up Right Alt+d"},
-		{"alt-files-only-excludes-dirs-only", "Alt+y Alt+d Alt+y Alt+y"},
+		{"alt-scope-letters", "Alt+h Alt+d Alt+i Alt+H Alt+I"},
 		{"alt-dirs-only-from-options", "Down Alt+d Alt+y"},
 	}
 	runKeyGoldenScripts(t, groupSelectKeyDialog("group_select", "select", "panel", 0, false), panelScripts)
@@ -164,13 +164,13 @@ func TestGroupSelectKeyScripts(t *testing.T) {
 		// restricts anything, so no asynchronous count starts.
 		{"space-full-path", "Down Right Down Right Space Space"},
 		{"enter-full-path", "Down Right Down Right Enter"},
-		{"alt-h-in-pattern", "Alt+h Alt+h Alt+H"},
-		{"alt-h-from-radio", "Up Alt+h"},
-		{"alt-h-from-button", "Down Down Down Alt+h"},
-		{"alt-mnemonics-in-pattern", "Alt+h Alt+e Alt+y Alt+d Alt+y"},
+		{"alt-w-in-pattern", "Alt+w Alt+w Alt+W"},
+		{"alt-w-from-radio", "Up Alt+w"},
+		{"alt-w-from-button", "Down Down Down Alt+w"},
+		{"alt-mnemonics-in-pattern", "Alt+w Alt+e Alt+y Alt+d Alt+h Alt+i"},
 		{"alt-meta-is-unknown", "Alt+m Alt+n"},
 		{"space-ok-empty", "Down Down Down Space"},
-		{"esc", "Alt+h Esc"},
+		{"esc", "Alt+w Esc"},
 	}
 	runKeyGoldenScripts(t, groupSelectKeyDialog("group_select_find", "select", "find", 0, false), findScripts)
 	metaScripts := []simpleKeyScript{
