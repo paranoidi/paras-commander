@@ -55,16 +55,26 @@ func themeSamplePanel() (panel.State, map[string]struct{}, []JobPathMark, themeS
 	link := func(name string, broken bool) localfs.Entry {
 		return localfs.Entry{Name: name, Path: p(name), Type: localfs.EntrySymlink, Mode: fs.ModeSymlink | 0o777, ModifiedAt: at(4), BrokenLink: broken}
 	}
-	denied := file("secret.key", 1700, 0)
-	denied.AccessDenied = true
 	parent := dir("..")
 	parent.Path = "/srv"
 	entries := []localfs.Entry{
 		parent, dir("harbor"), dir("lantern"), dir("quarry"),
 		link("current", false), link("stale", true),
-		file("main.go", 8420, 0o644), file("notes.md", 2310, 0o644), file("photo.png", 482113, 0o644),
-		file("archive.zip", 7340032, 0o644), file("deploy.sh", 940, 0o755), file("cache.log", 51200, 0o644),
-		denied, file("todo.txt", 312, 0o644), file("readme.md", 1830, 0o644),
+	}
+	// Disk usage bars step linearly from full (harbor) down to none (the last file), so every
+	// bar width shows against each row state.
+	files := []struct {
+		name string
+		mode fs.FileMode
+	}{
+		{"main.go", 0o644}, {"notes.md", 0o644}, {"photo.png", 0o644}, {"archive.zip", 0o644},
+		{"deploy.sh", 0o755}, {"cache.log", 0o644}, {"secret.key", 0}, {"todo.txt", 0o644}, {"readme.md", 0o644},
+	}
+	const usageStep = 1 << 20
+	for i, f := range files {
+		e := file(f.name, int64(len(files)-1-i)*usageStep, f.mode)
+		e.AccessDenied = f.name == "secret.key"
+		entries = append(entries, e)
 	}
 	root := pathloc.MustParse(themeSamplePanelDir)
 	st := panel.State{
@@ -88,7 +98,7 @@ func themeSamplePanel() (panel.State, map[string]struct{}, []JobPathMark, themeS
 		{ID: "2", Type: string(jobs.TypeCopy), Status: string(jobs.StatusQueued), Sources: []string{p("deploy.sh")}, Destination: "/srv/orchard", DestIsDir: true},
 		{ID: "3", Type: string(jobs.TypeDelete), Status: string(jobs.StatusRunning), Sources: []string{p("cache.log")}},
 	}
-	disk := themeSamplePanelDiskPainter{sizes: map[string]int64{p("harbor"): 3 << 30, p("current"): 0}}
+	disk := themeSamplePanelDiskPainter{sizes: map[string]int64{p("harbor"): int64(len(files)) * usageStep, p("current"): 0}}
 	return st, map[string]struct{}{p("readme.md"): {}}, marks, disk
 }
 
