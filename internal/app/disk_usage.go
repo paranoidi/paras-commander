@@ -225,10 +225,6 @@ func (a *App) deferDiskIdleSortOnUserActivity() {
 	a.idleSortDeferOnUserActivity(a.diskIdleSortSpec())
 }
 
-func (a *App) startDiskUsageScan() {
-	a.startDiskUsageScanForPanel(a.model.ActivePanel)
-}
-
 func (a *App) clearAllDiskUsageData() {
 	if a.disk.engine == nil {
 		return

@@ -21,6 +21,7 @@ const (
 	PrimaryModalQuit
 	PrimaryModalDedupEmptyDirs
 	PrimaryModalUndo
+	PrimaryModalDiskUsagePrompt
 	PrimaryModalFindRelocate
 )
 

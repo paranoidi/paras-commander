@@ -243,6 +243,11 @@ func (a *App) modalActiveDialog(event *tcell.EventKey) (activeDialog, bool) {
 			OK:     func() { a.answerUndoConfirm(m.UndoConfirm.Focus == dialog.UndoYes) },
 			Cancel: func() { a.answerUndoConfirm(false) },
 		})
+	case m.DiskUsagePrompt.Open:
+		return found(func() dlg.Spec { return dialog.DiskUsagePromptView(m.DiskUsagePrompt) }, &m.DiskUsagePrompt.Focus, noQuit(a.applyDiskUsagePromptEvent), dialogButtons{
+			OK:     func() { a.answerDiskUsagePrompt(m.DiskUsagePrompt.Focus) },
+			Cancel: func() { a.answerDiskUsagePrompt(dlg.Cancel) },
+		})
 	case m.FindRelocate.Open:
 		return found(func() dlg.Spec { return dialog.FindRelocateView(m.FindRelocate) }, &m.FindRelocate.Focus, noQuit(a.applyFindRelocateEvent), dialogButtons{
 			OK:     func() { a.answerFindRelocate(m.FindRelocate.Focus) },

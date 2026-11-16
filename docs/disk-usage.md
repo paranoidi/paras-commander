@@ -12,7 +12,9 @@ Disk usage scans directory sizes in the background and draws a proportional bar 
 | `M-Space` | Size only the directory under the cursor, then move down |
 | `C-M-d` | Abort the scan and drop all the data |
 
-Both are rebindable in `keybindings.toml`.
+All are rebindable in `keybindings.toml`.
+
+Pressing `M-d` again while a scan runs, or while either panel shows disk usage bars, asks instead of starting another scan: **Rescan** aborts any running scan and scans the active panel's directory again, **Clear** drops all the data like `C-M-d`, and **Cancel** leaves everything as it is. The Disk usage menu entry asks the same.
 
 ## Behaviour
 

@@ -94,6 +94,21 @@ func TestUndoConfirmGoldenRender(t *testing.T) {
 	runSimpleGoldens(t, "undo_confirm", cases)
 }
 
+func TestDiskUsagePromptGoldenRender(t *testing.T) {
+	var cases []simpleGolden
+	for _, scanning := range []bool{false, true} {
+		st := DiskUsagePromptState{Open: true, Focus: DiskUsageRescan, Scanning: scanning}
+		variant := "shown"
+		if scanning {
+			variant = "scanning"
+		}
+		cases = append(cases, simpleGolden{fmt.Sprintf("80x24_%s_focus-rescan", variant), 80, 24, func(s tcell.Screen, l Layout) {
+			DrawDiskUsagePromptDialog(s, l, st, asciiDialogStyles())
+		}})
+	}
+	runSimpleGoldens(t, "disk_usage_prompt", cases)
+}
+
 func TestQuitConfirmGoldenRender(t *testing.T) {
 	var cases []simpleGolden
 	for _, variant := range []string{"default", "commands"} {

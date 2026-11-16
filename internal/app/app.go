@@ -1655,6 +1655,8 @@ func (a *App) handleDialogKey(event *tcell.EventKey) bool {
 		return a.handleDedupEmptyDirsConfirmKey(event)
 	case a.model.UndoConfirm.Open:
 		return a.handleUndoConfirmKey(event)
+	case a.model.DiskUsagePrompt.Open:
+		return a.handleDiskUsagePromptKey(event)
 	case a.model.FindRelocate.Open:
 		a.handleFindRelocateKey(event)
 		return false

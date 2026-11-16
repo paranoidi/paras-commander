@@ -285,7 +285,7 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 	case keymap.ActionPanelRefresh:
 		a.userRefreshPanel(panelScope, label+" refreshed")
 	case keymap.ActionPanelDiskUsageScan:
-		a.startDiskUsageScanForPanel(panelScope)
+		a.requestDiskUsageScanForPanel(panelScope)
 	case keymap.ActionPanelHistoryDialog:
 		a.openHistoryDialog(panelScope)
 	case keymap.ActionPanelFindDialog:

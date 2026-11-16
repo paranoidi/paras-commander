@@ -364,6 +364,7 @@ type Model struct {
 	QuitConfirm            dialog.QuitConfirmState
 	DedupEmptyDirsConfirm  dialog.DedupEmptyDirsConfirmState
 	UndoConfirm            dialog.UndoConfirmState
+	DiskUsagePrompt        dialog.DiskUsagePromptState
 	StashRestoreDialog     dialog.StashRestoreDialogState
 	CompareSelection       dialog.CompareSelectionDialogState
 	MessageDialog          dialog.MessageDialogState
@@ -409,6 +410,8 @@ func (m *Model) PrimaryModal() dialog.PrimaryModal {
 		return dialog.PrimaryModalDedupEmptyDirs
 	case m.UndoConfirm.Open:
 		return dialog.PrimaryModalUndo
+	case m.DiskUsagePrompt.Open:
+		return dialog.PrimaryModalDiskUsagePrompt
 	case m.FindRelocate.Open:
 		return dialog.PrimaryModalFindRelocate
 	default:
@@ -735,14 +738,14 @@ func (m *Model) QuickFilterStartBlocked() bool {
 		m.ColumnsDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open || m.StatusCommandsDialog.Open ||
 		m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open || m.ArchivePasswordDialog.Open ||
 		m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.CompareSelection.Open || m.LeaderMenu.Open ||
-		m.CommandOutputDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.DedupEmptyDirsConfirm.Open || m.UndoConfirm.Open || m.FindRelocate.Open
+		m.CommandOutputDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.DedupEmptyDirsConfirm.Open || m.UndoConfirm.Open || m.DiskUsagePrompt.Open || m.FindRelocate.Open
 }
 
 // AuxiliaryViewDialogKeysBlocked reports transfer/conflict/quit dialogs plus the pulldown menu that block
 // dedicated Jobs/Commands view keyboard handling. inputMode checks this only after earlier cases have ruled
 // out other modals.
 func (m *Model) AuxiliaryViewDialogKeysBlocked() bool {
-	return m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.CompareSelection.Open || m.DedupEmptyDirsConfirm.Open || m.UndoConfirm.Open || m.FindRelocate.Open || m.Menu.Open
+	return m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.CompareSelection.Open || m.DedupEmptyDirsConfirm.Open || m.UndoConfirm.Open || m.DiskUsagePrompt.Open || m.FindRelocate.Open || m.Menu.Open
 }
 
 // MenuBarLayoutReserved is true when the top row is reserved for the menu strip (config
@@ -1104,6 +1107,8 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 		dialog.DrawDedupEmptyDirsConfirmDialog(screen, layout, model.DedupEmptyDirsConfirm, dialogRenderContext(model, styles), PaintDedupEmptyDirsConfirmRowIcon)
 	case dialog.PrimaryModalUndo:
 		dialog.DrawUndoConfirmDialog(screen, layout, model.UndoConfirm, styles)
+	case dialog.PrimaryModalDiskUsagePrompt:
+		dialog.DrawDiskUsagePromptDialog(screen, layout, model.DiskUsagePrompt, styles)
 	case dialog.PrimaryModalFindRelocate:
 		dialog.DrawFindRelocateDialog(screen, layout, model.FindRelocate, styles)
 	}

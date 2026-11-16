@@ -141,7 +141,7 @@ func (a *App) inputMode() InputMode {
 		return InputModeMessagesView
 	case a.viewActiveForInput(ui.ViewJobs):
 		return InputModeJobsView
-	case a.model.TransferDialog.Open, a.model.FlattenDialog.Open, a.model.QuitConfirm.Open, a.model.DedupEmptyDirsConfirm.Open, a.model.UndoConfirm.Open, a.model.FindRelocate.Open, a.model.StashRestoreDialog.Open, a.model.CompareSelection.Open:
+	case a.model.TransferDialog.Open, a.model.FlattenDialog.Open, a.model.QuitConfirm.Open, a.model.DedupEmptyDirsConfirm.Open, a.model.UndoConfirm.Open, a.model.DiskUsagePrompt.Open, a.model.FindRelocate.Open, a.model.StashRestoreDialog.Open, a.model.CompareSelection.Open:
 		return InputModeDialog
 	case a.model.Menu.Open:
 		return InputModeMenu
@@ -1337,7 +1337,7 @@ func (a *App) dispatch(actionID string) bool {
 	case keymap.ActionPanelExternalBrowser:
 		a.openPanelPathInExternalBrowser(a.model.ActivePanel)
 	case keymap.ActionPanelDiskUsageScan:
-		a.startDiskUsageScan()
+		a.requestDiskUsageScanForPanel(a.model.ActivePanel)
 	case keymap.ActionPanelDirSize:
 		a.scanCursorDirSize()
 	case keymap.ActionPanelSwitch:
