@@ -22,7 +22,8 @@ type WalkOptions struct {
 	Gitignore     *gitignore.Cache
 	ShouldSkipDir func(string) bool
 	// DirsOnly indexes directories only (jump mode); files are neither
-	// indexed nor recorded as skipped.
+	// indexed nor recorded as skipped. Symlinks to directories are indexed
+	// (hidden ones recorded as skipped files) but never descended into.
 	DirsOnly bool
 	// MaxDepth limits the levels read below Root (1 = Root's children only); 0 = unlimited.
 	MaxDepth int
@@ -203,11 +204,11 @@ func (w *rootWalk) runBFS(ctx context.Context, opts WalkOptions, listOpts localf
 			}
 			for ci, d := range children {
 				isDir := d.IsDir()
-				if opts.DirsOnly && !isDir {
-					continue
-				}
 				name := d.Name()
 				path := filepath.Join(dir, name)
+				if opts.DirsOnly && !isDir && !isSymlinkToDir(path, d) {
+					continue
+				}
 				if opts.Exclude != nil && opts.Exclude(path) {
 					continue
 				}
@@ -288,7 +289,7 @@ func statChildren(ctx context.Context, dir string, children []os.DirEntry, opts 
 		}
 		isDir, name := d.IsDir(), d.Name()
 		path := filepath.Join(dir, name)
-		if (opts.DirsOnly && !isDir) || (opts.Exclude != nil && opts.Exclude(path)) || !localfs.EntryVisible(name, dir, isDir, listOpts) {
+		if (opts.DirsOnly && !isDir && !isSymlinkToDir(path, d)) || (opts.Exclude != nil && opts.Exclude(path)) || !localfs.EntryVisible(name, dir, isDir, listOpts) {
 			continue
 		}
 		out[i] = statEntry(path, opts.Stat)

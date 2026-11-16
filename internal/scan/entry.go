@@ -34,6 +34,15 @@ func (e Entry) subject() findcrit.Subject {
 	}
 }
 
+// isSymlinkToDir reports whether d (at path) is a symlink whose target is a directory.
+func isSymlinkToDir(path string, d fs.DirEntry) bool {
+	if d.Type()&fs.ModeSymlink == 0 {
+		return false
+	}
+	info, err := os.Stat(path)
+	return err == nil && info.IsDir()
+}
+
 // entryStat is the metadata a statting walk collected for one directory child.
 type entryStat struct {
 	meta *findcrit.Meta

@@ -178,8 +178,12 @@ func (h *Handler) debounce() time.Duration {
 // toggling, the widget engine, then query editing.
 func (h *Handler) HandleFindKey(ev *tcell.EventKey) {
 	st := &h.model.IndexFindDialog
-	if id, ok := h.keys.Lookup(ev); ok && findctrl.IsParkKey(id, st.JumpMode) {
-		st.Open, st.Parked = false, true // hidden with its state kept; the opener key shows it again
+	if id, ok := h.keys.Lookup(ev); ok && findctrl.IsOpenerKey(id, st.JumpMode) {
+		if st.JumpMode {
+			h.CloseFindDialog()
+		} else {
+			st.Open, st.Parked = false, true // hidden with its state kept; the opener key shows it again
+		}
 		return
 	}
 	if h.keysFind != nil {

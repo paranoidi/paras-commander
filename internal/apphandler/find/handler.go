@@ -943,9 +943,10 @@ func (h *Handler) live() bool {
 // it opened), so its updates need no repaint.
 func (h *Handler) Hidden() bool { return h.hiddenForView || h.model.FindDialog.Parked }
 
-// IsParkKey reports whether action id parks an open find dialog: the action that opens it
-// (panel.jump-dialog in jump mode; panel.find-dialog or fileindex.find otherwise).
-func IsParkKey(id string, jump bool) bool {
+// IsOpenerKey reports whether action id is the action that opens the find dialog
+// (panel.jump-dialog in jump mode; panel.find-dialog or fileindex.find otherwise). Inside the
+// dialog it parks Find and closes Jump: a parked Jump would show a stale directory snapshot.
+func IsOpenerKey(id string, jump bool) bool {
 	if jump {
 		return id == keymap.ActionPanelJumpDialog
 	}
@@ -1408,8 +1409,12 @@ func (h *Handler) RunAction(id string) bool {
 
 func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	st := &h.model.FindDialog
-	if id, ok := h.keys.Lookup(event); ok && IsParkKey(id, st.JumpMode) {
-		h.Park()
+	if id, ok := h.keys.Lookup(event); ok && IsOpenerKey(id, st.JumpMode) {
+		if st.JumpMode {
+			h.CloseDialog()
+		} else {
+			h.Park()
+		}
 		return
 	}
 	if h.tryFindDialogActionKey(event) {

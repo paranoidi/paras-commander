@@ -440,6 +440,9 @@ func (s *session) excludeFunc() func(string) bool {
 // session's Stat level (in place). Spliced hidden files arrive typed as plain files; the lstat
 // also tells symlinks (and broken ones) apart.
 func (s *session) enrichHidden(batch []Entry) []Entry {
+	if s.opts.DirsOnly {
+		batch = resolveHiddenDirLinks(batch, s.opts.DisplayRoot)
+	}
 	if len(s.opts.Exclude) == 0 && s.opts.Stat < findcrit.StatMeta {
 		return batch
 	}
@@ -459,6 +462,25 @@ func (s *session) enrichHidden(batch []Entry) []Entry {
 				}
 			}
 			e = e.withStat(st)
+		}
+		kept = append(kept, e)
+	}
+	return kept
+}
+
+// resolveHiddenDirLinks types the spliced hidden files of a DirsOnly walk (only symlinks to
+// directories are recorded there) as directories, as buildEntry does, in place, and drops any
+// whose target is no longer a directory.
+func resolveHiddenDirLinks(batch []Entry, displayRoot string) []Entry {
+	displayRoot = filepath.Clean(displayRoot)
+	kept := batch[:0]
+	for _, e := range batch {
+		if !e.IsDir {
+			info, err := os.Stat(filepath.Join(displayRoot, filepath.FromSlash(e.RelLine)))
+			if err != nil || !info.IsDir() {
+				continue
+			}
+			e.IsDir, e.Type = true, localfs.EntryDirectory
 		}
 		kept = append(kept, e)
 	}

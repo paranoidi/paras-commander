@@ -225,7 +225,8 @@ selection;
 `F3` opens the real file in the viewer (closing it returns to the
 dialog as it was) and `F4` in the external editor; `Shift+Left` and
 `Shift+Right` show a result in a panel without closing; `Alt+Insert`
-pins it. The key that opened the dialog hides it with its query and marks kept; the panel shows a
+pins it. The key that opened Find in index hides it with its query and marks kept
+(in Jump to directory it closes the dialog); the panel shows a
 yellow search icon at its bottom right until the same key on that panel and
 directory brings it back. Opening it anywhere else asks whether to restore the
 parked search or start a new one there. OK without marks shows the result under the cursor in the panel: a

@@ -46,7 +46,9 @@ The same list serves as a **path picker** in path fields (copy and move destinat
 
 Only directories are indexed, breadth-first: every directory directly under the panel's path first, then the next level down, and so on, so shallow targets show up immediately even in very large trees.
 
-Enter changes the panel to the highlighted directory. `S-←` / `S-→` point the left or right panel at it and keep the dialog open. `M-Insert` pins it. `Esc` cancels the scan and closes the dialog.
+Symbolic links to directories are listed too, but the scan does not follow them further.
+
+Enter changes the panel to the highlighted directory. `S-←` / `S-→` point the left or right panel at it and keep the dialog open. `M-Insert` pins it. `Esc` or `M-c` cancels the scan and closes the dialog; every Jump to directory starts a new scan, so it always shows what is on disk now.
 
 - **Stay on current volume** (`M-v`, default on) does not descend into other mounted file systems.
 - **Include hidden** (`M-i`, default off) adds dot-directories and git-ignored directories.
