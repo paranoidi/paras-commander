@@ -119,17 +119,10 @@ func (h *Handler) scheduleFind(delay time.Duration) {
 		found, truncated, err := h.index.Find(root, q, limit)
 		res := make([]dialog.IndexFindResult, len(found))
 		for i, f := range found {
-			res[i] = dialog.IndexFindResult{Path: f.Path, Rel: relTo(root, f.Path), IsDir: f.IsDir, Size: f.Size}
+			res[i] = dialog.IndexFindResult{Path: f.Path, Rel: pathloc.RelOrSelf(root, f.Path), IsDir: f.IsDir, Size: f.Size}
 		}
 		h.post(FindPayload{Gen: gen, Results: res, Truncated: truncated, Err: err})
 	})
-}
-
-func relTo(root, path string) string {
-	if rel, err := filepath.Rel(root, path); err == nil {
-		return rel
-	}
-	return path
 }
 
 // HandleFind applies a finished query unless the dialog closed or the query changed since.

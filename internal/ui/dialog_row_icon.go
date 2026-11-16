@@ -66,19 +66,13 @@ func PaintFindDialogRowIcon(screen tcell.Screen, x, y int, entry dialog.FindEntr
 	PaintDialogRowIcon(screen, x, y, findEntryLocalfs(entry), styles)
 }
 
-// PaintJumpDialogRowIcon draws the closed-folder devicon for one jump dialog row (every row is a
-// directory).
-func PaintJumpDialogRowIcon(screen tcell.Screen, x, y int, r dialog.JumpResult, styles theme.Theme) {
-	PaintDialogRowIcon(screen, x, y, localfs.Entry{Name: filepath.Base(r.Path), Path: r.Path, Type: localfs.EntryDirectory}, styles)
-}
-
 // PaintDeleteDialogRowIcon draws file-list devicons for one delete dialog row.
 func PaintDeleteDialogRowIcon(screen tcell.Screen, x, y int, entry dialog.DeleteListEntry, styles theme.Theme) {
 	PaintDialogRowIcon(screen, x, y, deleteListEntryLocalfs(entry), styles)
 }
 
-// PaintDedupEmptyDirsConfirmRowIcon draws the closed-folder devicon for one row
-// of the "remove empty directories" confirmation list; every row is a directory.
-func PaintDedupEmptyDirsConfirmRowIcon(screen tcell.Screen, x, y int, dir string, styles theme.Theme) {
+// PaintDirRowIcon draws the closed-folder devicon for a dialog list row naming directory dir
+// (dialog.DirRowIconPainter: Jump to directory, the remove-empty-directories confirmation).
+func PaintDirRowIcon(screen tcell.Screen, x, y int, dir string, styles theme.Theme) {
 	PaintDialogRowIcon(screen, x, y, localfs.Entry{Name: filepath.Base(dir), Path: dir, Type: localfs.EntryDirectory}, styles)
 }

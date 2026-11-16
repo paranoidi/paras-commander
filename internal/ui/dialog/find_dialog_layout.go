@@ -17,7 +17,7 @@ func findListHeight(layoutHeight int) int {
 }
 
 // FindDialogMetrics returns the find dialog's width, height and visible list row count, from its
-// placed spec for the rows state shows (selection scope, jump mode, advanced section). listH is
+// placed spec for the rows state shows (selection scope, advanced section). listH is
 // the result list's height in FindDialogView and is used for list scroll math; ok is false when
 // the dialog does not fit.
 func FindDialogMetrics(layout Layout, state *FindDialogState) (width, height, listH int, ok bool) {

@@ -5,18 +5,12 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // dedupEmptyDirsConfirmMaxListRows caps visible directory rows (a trailing
 // "(+N more)" line takes the last slot when the list is longer).
 const dedupEmptyDirsConfirmMaxListRows = 10
-
-// DedupEmptyDirsRowIconPainter draws a folder devicon for one row of the
-// empty-dirs confirmation list; nil skips icons. dir is the relative path
-// shown on that row (used only to derive the display name for lookup).
-type DedupEmptyDirsRowIconPainter func(screen tcell.Screen, x, y int, dir string, styles theme.Theme)
 
 func dedupEmptyDirsConfirmWidth(state DedupEmptyDirsConfirmState, msg string, iconLead int) int {
 	width := utf8.RuneCountInString(msg) + 4
@@ -74,7 +68,7 @@ func DedupEmptyDirsConfirmView(state DedupEmptyDirsConfirmState, iconLead int) d
 	}
 }
 
-func DrawDedupEmptyDirsConfirmDialog(screen tcell.Screen, layout Layout, state DedupEmptyDirsConfirmState, ctx DialogRenderContext, paintIcon DedupEmptyDirsRowIconPainter) {
+func DrawDedupEmptyDirsConfirmDialog(screen tcell.Screen, layout Layout, state DedupEmptyDirsConfirmState, ctx DialogRenderContext, paintIcon DirRowIconPainter) {
 	iconLead := 0
 	if ctx.ShowIcons && paintIcon != nil && ctx.IconLead > 0 {
 		iconLead = ctx.IconLead

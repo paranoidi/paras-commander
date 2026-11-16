@@ -21,7 +21,6 @@ func jumpGoldenState(n int) JumpDialogState {
 		rel := fmt.Sprintf("%s/%s-%d", a, b, i)
 		st.Results = append(st.Results, JumpResult{Path: "/home/meadow/" + rel, Rel: rel, Match: []search.Range{{Start: 0, End: 1}}})
 	}
-	st.Matched = n
 	return st
 }
 
@@ -45,7 +44,7 @@ func TestJumpGoldenRender(t *testing.T) {
 	index.Source = JumpIndex
 	add("index", 100, 30, index)
 	capped := jumpGoldenState(30)
-	capped.Matched = 45
+	capped.Truncated = true
 	add("capped", 100, 30, capped)
 	add("no_matches", 100, 30, jumpGoldenState(0))
 	bad := jumpGoldenState(0)

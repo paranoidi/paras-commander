@@ -3,6 +3,9 @@ package dialog
 import (
 	"strings"
 
+	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/theme"
+
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
@@ -37,6 +40,10 @@ func paintListIcons(p dlg.Placement, id dlg.ID, paint func(row, x, y int)) {
 	list, _ := p.Item(id)
 	p.EachListRow(id, func(row, y int) { paint(row, list.Rect.X, y) })
 }
+
+// DirRowIconPainter draws the folder devicon for a list row that names directory dir (a path
+// whose base name picks the icon); nil skips icons.
+type DirRowIconPainter func(screen tcell.Screen, x, y int, dir string, styles theme.Theme)
 
 // fillList fits spec to layout (dlg.FitSpec) and puts fill(height, width) in place of its list
 // id: the list built for the rows and the width it got, for lists whose rows are windowed or

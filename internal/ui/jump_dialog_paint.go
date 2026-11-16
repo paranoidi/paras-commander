@@ -14,7 +14,7 @@ func PaintJumpDialog(screen tcell.Screen, layout Layout, model *Model, styles th
 		return dialog.PaintedArea{}
 	}
 	marks := rowMarksResolver(model.PinnedItems, model.JobPathMarks)
-	return dialog.DrawJumpDialog(screen, layout, *st, dialogRenderContext(*model, styles), PaintJumpDialogRowIcon, func(r dialog.JumpResult) dialog.RowMarks {
+	return dialog.DrawJumpDialog(screen, layout, *st, dialogRenderContext(*model, styles), PaintDirRowIcon, func(r dialog.JumpResult) dialog.RowMarks {
 		return marks(st.PanelPath(r))
 	})
 }

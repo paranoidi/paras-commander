@@ -58,8 +58,8 @@ func jumpKeyState(app *App) string {
 	if r, ok := st.Cursor(); ok {
 		cursor = r.Rel
 	}
-	return fmt.Sprintf("focus=%d query=%q qcursor=%d depth=%q sel=%d cursor=%q scroll=%d results=%d matched=%d hidden=%v volume=%v",
-		jumpKeyFocus(&st), st.Query, st.QueryCursor, st.DepthInput, st.Selected, cursor, st.ListScroll, len(st.Results), st.Matched,
+	return fmt.Sprintf("focus=%d query=%q qcursor=%d depth=%q sel=%d cursor=%q scroll=%d results=%d truncated=%v hidden=%v volume=%v",
+		jumpKeyFocus(&st), st.Query, st.QueryCursor, st.DepthInput, st.Selected, cursor, st.ListScroll, len(st.Results), st.Truncated,
 		st.IncludeHidden, st.StayOnVolume)
 }
 

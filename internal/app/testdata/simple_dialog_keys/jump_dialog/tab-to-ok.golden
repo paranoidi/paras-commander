@@ -1,14 +1,14 @@
 == open ==
-focus=0 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 results=8 matched=8 hidden=false volume=true
+focus=0 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 results=8 truncated=false hidden=false volume=true
 == Down ==
-focus=0 query="" qcursor=0 depth="" sel=1 cursor="birch" scroll=0 results=8 matched=8 hidden=false volume=true
+focus=0 query="" qcursor=0 depth="" sel=1 cursor="birch" scroll=0 results=8 truncated=false hidden=false volume=true
 == Tab ==
-focus=1 query="" qcursor=0 depth="" sel=1 cursor="birch" scroll=0 results=8 matched=8 hidden=false volume=true
+focus=1 query="" qcursor=0 depth="" sel=1 cursor="birch" scroll=0 results=8 truncated=false hidden=false volume=true
 == Tab ==
-focus=2 query="" qcursor=0 depth="" sel=1 cursor="birch" scroll=0 results=8 matched=8 hidden=false volume=true
+focus=2 query="" qcursor=0 depth="" sel=1 cursor="birch" scroll=0 results=8 truncated=false hidden=false volume=true
 == Tab ==
-focus=4 query="" qcursor=0 depth="" sel=1 cursor="birch" scroll=0 results=8 matched=8 hidden=false volume=true
+focus=4 query="" qcursor=0 depth="" sel=1 cursor="birch" scroll=0 results=8 truncated=false hidden=false volume=true
 == Tab ==
-focus=0 query="" qcursor=0 depth="" sel=1 cursor="birch" scroll=0 results=8 matched=8 hidden=false volume=true
+focus=0 query="" qcursor=0 depth="" sel=1 cursor="birch" scroll=0 results=8 truncated=false hidden=false volume=true
 == Enter ==
 CLOSED: panel="birch" cursor="fable_draft.go" selected=[]

@@ -1,20 +1,20 @@
 == open ==
-focus=0 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 results=8 matched=8 hidden=false volume=true
+focus=0 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 results=8 truncated=false hidden=false volume=true
 == Down ==
-focus=0 query="" qcursor=0 depth="" sel=1 cursor="birch" scroll=0 results=8 matched=8 hidden=false volume=true
+focus=0 query="" qcursor=0 depth="" sel=1 cursor="birch" scroll=0 results=8 truncated=false hidden=false volume=true
 == Down ==
-focus=0 query="" qcursor=0 depth="" sel=2 cursor="cinder" scroll=0 results=8 matched=8 hidden=false volume=true
+focus=0 query="" qcursor=0 depth="" sel=2 cursor="cinder" scroll=0 results=8 truncated=false hidden=false volume=true
 == Down ==
-focus=0 query="" qcursor=0 depth="" sel=3 cursor="delta" scroll=0 results=8 matched=8 hidden=false volume=true
+focus=0 query="" qcursor=0 depth="" sel=3 cursor="delta" scroll=0 results=8 truncated=false hidden=false volume=true
 == Down ==
-focus=0 query="" qcursor=0 depth="" sel=4 cursor="harbor" scroll=0 results=8 matched=8 hidden=false volume=true
+focus=0 query="" qcursor=0 depth="" sel=4 cursor="harbor" scroll=0 results=8 truncated=false hidden=false volume=true
 == Down ==
-focus=0 query="" qcursor=0 depth="" sel=5 cursor="amber/delta" scroll=0 results=8 matched=8 hidden=false volume=true
+focus=0 query="" qcursor=0 depth="" sel=5 cursor="amber/delta" scroll=0 results=8 truncated=false hidden=false volume=true
 == Down ==
-focus=0 query="" qcursor=0 depth="" sel=6 cursor="delta/juniper" scroll=0 results=8 matched=8 hidden=false volume=true
+focus=0 query="" qcursor=0 depth="" sel=6 cursor="delta/juniper" scroll=0 results=8 truncated=false hidden=false volume=true
 == Down ==
-focus=0 query="" qcursor=0 depth="" sel=7 cursor="harbor/quartz" scroll=0 results=8 matched=8 hidden=false volume=true
+focus=0 query="" qcursor=0 depth="" sel=7 cursor="harbor/quartz" scroll=0 results=8 truncated=false hidden=false volume=true
 == Down ==
-focus=0 query="" qcursor=0 depth="" sel=7 cursor="harbor/quartz" scroll=0 results=8 matched=8 hidden=false volume=true
+focus=0 query="" qcursor=0 depth="" sel=7 cursor="harbor/quartz" scroll=0 results=8 truncated=false hidden=false volume=true
 == Down ==
-focus=0 query="" qcursor=0 depth="" sel=7 cursor="harbor/quartz" scroll=0 results=8 matched=8 hidden=false volume=true
+focus=0 query="" qcursor=0 depth="" sel=7 cursor="harbor/quartz" scroll=0 results=8 truncated=false hidden=false volume=true

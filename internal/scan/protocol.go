@@ -19,7 +19,7 @@ type StartOpts struct {
 	SelectionRoots       []string
 	SearchOnlySelections bool
 	Walk                 fswalk.Params
-	// DirsOnly indexes directories only (jump mode).
+	// DirsOnly indexes directories only (Jump to directory).
 	DirsOnly bool
 	// MaxDepth limits indexed entries to this many path segments below DisplayRoot; 0 = unlimited.
 	MaxDepth int

@@ -49,9 +49,8 @@ type JumpDialogState struct {
 	StayOnVolume bool
 
 	Results []JumpResult
-	// Matched is how many directories the query matched; more than len(Results) when the list
-	// is capped at [ui.find].max_results.
-	Matched int
+	// Truncated is set when more directories matched than the list holds ([ui.find].max_results).
+	Truncated bool
 	// Searching is set while a query (index) or a match pass (disk) for the current query runs.
 	Searching bool
 	// Scanning, Scanned, Depth, LevelDone and LevelTotal are the disk walk's progress: the
@@ -72,9 +71,6 @@ type JumpDialogState struct {
 func (s *JumpDialogState) NoMatches() bool {
 	return strings.TrimSpace(s.Query) != "" && !s.Searching && !s.Scanning && s.Err == "" && len(s.Results) == 0
 }
-
-// Truncated reports whether more directories matched than the list holds.
-func (s *JumpDialogState) Truncated() bool { return s.Matched > len(s.Results) }
 
 // Cursor is the result under the list cursor.
 func (s *JumpDialogState) Cursor() (JumpResult, bool) {

@@ -33,7 +33,7 @@ func (h *Handler) startScan() {
 	})
 	st.Scanning, st.Scanned, st.Err = true, 0, ""
 	st.Depth, st.LevelDone, st.LevelTotal = 0, 0, 0
-	st.Results, st.Matched, st.Selected, st.ListScroll = nil, 0, 0, 0
+	st.Results, st.Truncated, st.Selected, st.ListScroll = nil, false, 0, 0
 	h.rankGen++
 }
 
@@ -148,7 +148,7 @@ func (h *Handler) applyMatch(m scan.MatchOutput) {
 			Match: m.MatchRanges[idx],
 		}
 	}
-	st.Results, st.Matched = results, len(m.FullRanked)
+	st.Results, st.Truncated = results, len(m.FullRanked) > len(results)
 	st.Searching = false
 	h.keepCursor(prev.Path)
 }

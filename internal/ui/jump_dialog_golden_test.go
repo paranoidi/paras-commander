@@ -47,7 +47,7 @@ func TestJumpDialogGoldenRender(t *testing.T) {
 				PanelScrollbar:   uiscrollbar.StyleThumb,
 				PinnedItems:      []PinnedItem{{Path: filepath.Join(root, "birch")}},
 				JumpDialog: dialog.JumpDialogState{
-					Open: true, Root: root, Results: results, Matched: len(results), Selected: 1, StayOnVolume: true, Scanned: len(results),
+					Open: true, Root: root, Results: results, Selected: 1, StayOnVolume: true, Scanned: len(results),
 				},
 			}
 			PaintJumpDialog(screen, Layout{Width: 80, Height: 24}, model, styles)

@@ -56,7 +56,7 @@ func TestDedupEmptyDirsConfirmGoldenRender(t *testing.T) {
 	add := func(name string, w, h int, st DedupEmptyDirsConfirmState, icons bool) {
 		cases = append(cases, simpleGolden{fmt.Sprintf("%dx%d_%s", w, h, name), w, h, func(s tcell.Screen, l Layout) {
 			ctx := DialogRenderContext{Styles: asciiDialogStyles()}
-			var painter DedupEmptyDirsRowIconPainter
+			var painter DirRowIconPainter
 			if icons {
 				ctx.ShowIcons, ctx.IconLead = true, 2
 				painter = dedupGoldenIconPainter

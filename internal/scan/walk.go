@@ -21,7 +21,7 @@ type WalkOptions struct {
 	IncludeHidden bool
 	Gitignore     *gitignore.Cache
 	ShouldSkipDir func(string) bool
-	// DirsOnly indexes directories only (jump mode); files are neither
+	// DirsOnly indexes directories only (Jump to directory); files are neither
 	// indexed nor recorded as skipped. Symlinks to directories are indexed
 	// (hidden ones recorded as skipped files) but never descended into.
 	DirsOnly bool

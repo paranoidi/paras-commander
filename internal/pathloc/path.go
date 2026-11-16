@@ -231,16 +231,7 @@ func (p Path) HostPath() (string, bool) {
 	if p.IsZero() {
 		return "", false
 	}
-	var host string
-	var err error
-	switch p.Scheme() {
-	case SchemeFile:
-		host, err = p.FilePath()
-	case SchemeFileIndex:
-		host, err = IndexHostPath(p)
-	default:
-		return "", false
-	}
+	host, err := ResolveHostPath(p)
 	return host, err == nil
 }
 
@@ -327,6 +318,23 @@ func ForPanel(hostPath string, indexPanel bool) (Path, error) {
 // than a host path, so it is parsed as given instead of resolved against a directory.
 func HasURIPrefix(raw string) bool {
 	return strings.HasPrefix(raw, "sftp://") || strings.HasPrefix(raw, FileIndexPrefix)
+}
+
+// ResolveHostPath is the disk path p names (as Path.HostPath), with the reason when it has none:
+// itself on file://, the indexed host path on fileindex://, an error for other schemes. No I/O.
+func ResolveHostPath(p Path) (string, error) {
+	if p.Scheme() == SchemeFileIndex {
+		return IndexHostPath(p)
+	}
+	return p.FilePath()
+}
+
+// RelOrSelf is path relative to root, or path itself when it has no relative form.
+func RelOrSelf(root, path string) string {
+	if rel, err := filepath.Rel(root, path); err == nil {
+		return rel
+	}
+	return path
 }
 
 // IndexHostPath returns the host path a fileindex:// location names (the path the index

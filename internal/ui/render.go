@@ -1106,7 +1106,7 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 	case dialog.PrimaryModalQuit:
 		dialog.DrawQuitConfirmDialog(screen, layout, model.QuitConfirm, styles)
 	case dialog.PrimaryModalDedupEmptyDirs:
-		dialog.DrawDedupEmptyDirsConfirmDialog(screen, layout, model.DedupEmptyDirsConfirm, dialogRenderContext(model, styles), PaintDedupEmptyDirsConfirmRowIcon)
+		dialog.DrawDedupEmptyDirsConfirmDialog(screen, layout, model.DedupEmptyDirsConfirm, dialogRenderContext(model, styles), PaintDirRowIcon)
 	case dialog.PrimaryModalUndo:
 		dialog.DrawUndoConfirmDialog(screen, layout, model.UndoConfirm, styles)
 	case dialog.PrimaryModalDiskUsagePrompt:

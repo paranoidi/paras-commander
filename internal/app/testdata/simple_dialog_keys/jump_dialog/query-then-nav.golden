@@ -1,10 +1,10 @@
 == open ==
-focus=0 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 results=8 matched=8 hidden=false volume=true
+focus=0 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 results=8 truncated=false hidden=false volume=true
 == j ==
-focus=0 query="j" qcursor=1 depth="" sel=0 cursor="delta/juniper" scroll=0 results=1 matched=1 hidden=false volume=true
+focus=0 query="j" qcursor=1 depth="" sel=0 cursor="delta/juniper" scroll=0 results=1 truncated=false hidden=false volume=true
 == u ==
-focus=0 query="ju" qcursor=2 depth="" sel=0 cursor="delta/juniper" scroll=0 results=1 matched=1 hidden=false volume=true
+focus=0 query="ju" qcursor=2 depth="" sel=0 cursor="delta/juniper" scroll=0 results=1 truncated=false hidden=false volume=true
 == Down ==
-focus=0 query="ju" qcursor=2 depth="" sel=0 cursor="delta/juniper" scroll=0 results=1 matched=1 hidden=false volume=true
+focus=0 query="ju" qcursor=2 depth="" sel=0 cursor="delta/juniper" scroll=0 results=1 truncated=false hidden=false volume=true
 == Up ==
-focus=0 query="ju" qcursor=2 depth="" sel=0 cursor="delta/juniper" scroll=0 results=1 matched=1 hidden=false volume=true
+focus=0 query="ju" qcursor=2 depth="" sel=0 cursor="delta/juniper" scroll=0 results=1 truncated=false hidden=false volume=true

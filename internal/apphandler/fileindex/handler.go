@@ -235,10 +235,7 @@ func hostPath(raw string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if loc.Scheme() == pathloc.SchemeFileIndex {
-		return pathloc.IndexHostPath(loc)
-	}
-	return loc.FilePath()
+	return pathloc.ResolveHostPath(loc)
 }
 
 func (h *Handler) queueTask(title string, task *jobs.Task, paths []string) {

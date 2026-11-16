@@ -14,7 +14,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
-const errTitle = "Jump to directory"
+const errTitle = dialog.JumpDialogTitle
 
 // Open opens the dialog on panelID: a disk walk on a local panel, an index query on a
 // fileindex:// panel (the caller makes sure the index opens first). Every open starts afresh.
@@ -28,7 +28,7 @@ func (h *Handler) Open(panelID int) {
 	if p.Path.Scheme() == pathloc.SchemeFileIndex {
 		src = dialog.JumpIndex
 	}
-	root, err := hostPath(p.Path)
+	root, err := pathloc.ResolveHostPath(p.Path)
 	if err != nil {
 		h.host.SetErrorMessage(errTitle, err)
 		return
@@ -46,13 +46,6 @@ func (h *Handler) Open(panelID int) {
 		h.host.SetTransientMessage("Explicit search on gitignore allowed", ui.MessageUrgencyInfo)
 	}
 	h.startScan()
-}
-
-func hostPath(p pathloc.Path) (string, error) {
-	if p.Scheme() == pathloc.SchemeFileIndex {
-		return pathloc.IndexHostPath(p)
-	}
-	return p.FilePath()
 }
 
 // Close closes the dialog, stops its walk and drops any match or query in flight.

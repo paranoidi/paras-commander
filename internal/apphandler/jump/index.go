@@ -1,10 +1,10 @@
 package jump
 
 import (
-	"path/filepath"
 	"strings"
 
 	fi "github.com/paranoidi/paras-commander/internal/fileindex"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
@@ -14,7 +14,7 @@ func (h *Handler) queryIndex() {
 	st := &h.model.JumpDialog
 	st.Err = ""
 	if strings.TrimSpace(st.Query) == "" {
-		st.Results, st.Matched, st.Searching = nil, 0, false
+		st.Results, st.Truncated, st.Searching = nil, false, false
 		st.Selected, st.ListScroll = 0, 0
 		return
 	}
@@ -26,11 +26,7 @@ func (h *Handler) queryIndex() {
 		found, truncated, err := index.Find(root, q, limit)
 		res := make([]dialog.JumpResult, len(found))
 		for i, f := range found {
-			rel, rerr := filepath.Rel(root, f.Path)
-			if rerr != nil {
-				rel = f.Path
-			}
-			res[i] = dialog.JumpResult{Path: f.Path, Rel: rel}
+			res[i] = dialog.JumpResult{Path: f.Path, Rel: pathloc.RelOrSelf(root, f.Path)}
 		}
 		h.post(IndexResultPayload{Gen: gen, Results: res, Truncated: truncated, Err: err})
 	}()
@@ -45,10 +41,7 @@ func (h *Handler) HandleIndexResult(p IndexResultPayload) bool {
 	}
 	prev, _ := st.Cursor()
 	st.Searching = false
-	st.Results, st.Matched = p.Results, len(p.Results)
-	if p.Truncated {
-		st.Matched++ // more matched than the list holds
-	}
+	st.Results, st.Truncated = p.Results, p.Truncated
 	if p.Err != nil {
 		st.Err = p.Err.Error()
 	}
