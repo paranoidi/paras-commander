@@ -18,7 +18,7 @@ func testAppZoomed(t *testing.T, width int) *App {
 	}
 	sim.SetSize(width, 30)
 	app.config.UI.Zoom.ActivePanel = true
-	app.config.UI.Zoom.DisabledAboveNameWidth = 0
+	app.config.UI.Zoom.MaxNameWidth = 0
 	app.config.UI.Zoom.ActivePercent = 70
 	app.config.UI.Zoom.InactivePercent = 30
 	app.model.UseNerdfontIcons = false

@@ -225,8 +225,8 @@ func TestDefaultPathPickerValidateDelayMS(t *testing.T) {
 	if got := Default().UI.Zoom.InactivePercent; got != DefaultPanelZoomInactivePercent {
 		t.Fatalf("Zoom.InactivePercent = %d, want %d", got, DefaultPanelZoomInactivePercent)
 	}
-	if got := Default().UI.Zoom.DisabledAboveNameWidth; got != DefaultZoomActivePanelDisabledAboveNameWidth {
-		t.Fatalf("Zoom.DisabledAboveNameWidth = %d, want %d", got, DefaultZoomActivePanelDisabledAboveNameWidth)
+	if got := Default().UI.Zoom.MaxNameWidth; got != DefaultZoomMaxNameWidth {
+		t.Fatalf("Zoom.MaxNameWidth = %d, want %d", got, DefaultZoomMaxNameWidth)
 	}
 	if got := Default().UI.NarrowPanelsNameOnly; got != DefaultNarrowPanelsNameOnly {
 		t.Fatalf("NarrowPanelsNameOnly = %v, want %v", got, DefaultNarrowPanelsNameOnly)
@@ -352,22 +352,22 @@ func TestValidateResetsInvalidPanelScrollbar(t *testing.T) {
 	}
 }
 
-func TestValidateClampsNegativeZoomActivePanelDisabledAboveNameWidth(t *testing.T) {
+func TestValidateClampsNegativeZoomMaxNameWidth(t *testing.T) {
 	cfg := Default()
-	cfg.UI.Zoom.DisabledAboveNameWidth = -10
+	cfg.UI.Zoom.MaxNameWidth = -10
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.UI.Zoom.DisabledAboveNameWidth != DefaultZoomActivePanelDisabledAboveNameWidth {
-		t.Fatalf("Zoom.DisabledAboveNameWidth = %d, want %d",
-			cfg.UI.Zoom.DisabledAboveNameWidth, DefaultZoomActivePanelDisabledAboveNameWidth)
+	if cfg.UI.Zoom.MaxNameWidth != DefaultZoomMaxNameWidth {
+		t.Fatalf("Zoom.MaxNameWidth = %d, want %d",
+			cfg.UI.Zoom.MaxNameWidth, DefaultZoomMaxNameWidth)
 	}
-	cfg.UI.Zoom.DisabledAboveNameWidth = 0
+	cfg.UI.Zoom.MaxNameWidth = 0
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.UI.Zoom.DisabledAboveNameWidth != 0 {
-		t.Fatalf("Zoom.DisabledAboveNameWidth = %d, want 0", cfg.UI.Zoom.DisabledAboveNameWidth)
+	if cfg.UI.Zoom.MaxNameWidth != 0 {
+		t.Fatalf("Zoom.MaxNameWidth = %d, want 0", cfg.UI.Zoom.MaxNameWidth)
 	}
 }
 

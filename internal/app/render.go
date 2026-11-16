@@ -661,13 +661,13 @@ func (a *App) effectiveZoomActivePanel() bool {
 }
 
 // zoomActivePanelSuppressedByNameWidth reports whether the active panel's file-name column at an
-// even 50/50 split of a width-cell terminal is at least [ui.zoom].disabled_above_name_width or
+// even 50/50 split of a width-cell terminal is at least [ui.zoom].max_name_width or
 // every visible name already fits that column (zoom only helps cut-off names). The
 // even split (width/2, whichever panel is active) is measured, never the current zoomed width, so
 // the decision cannot oscillate with its own result nor flip when Tab swaps panels on odd widths.
 // Icons, git strip, file columns and meta columns all count against the name column.
 func (a *App) zoomActivePanelSuppressedByNameWidth(width int) bool {
-	n := a.config.UI.Zoom.DisabledAboveNameWidth
+	n := a.config.UI.Zoom.MaxNameWidth
 	if n <= 0 {
 		return false
 	}
@@ -678,7 +678,7 @@ func (a *App) zoomActivePanelSuppressedByNameWidth(width int) bool {
 }
 
 func (a *App) zoomActivePanelSuppressedByTerminalHeight(height int) bool {
-	n := a.config.UI.Zoom.DisabledAboveHeight
+	n := a.config.UI.Zoom.MaxHeight
 	return n > 0 && height >= n
 }
 

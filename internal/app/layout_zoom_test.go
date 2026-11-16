@@ -256,7 +256,7 @@ func wideMetaColumn() []ui.MetaColumnState {
 	}}
 }
 
-func TestLayoutForTerminalSizeDisablesZoomAtOrAboveDisabledAboveNameWidth(t *testing.T) {
+func TestLayoutForTerminalSizeDisablesZoomAtOrAboveZoomMaxNameWidth(t *testing.T) {
 	app := newNameWidthZoomApp(t, 160)
 
 	lay := app.layoutForTerminalSize(160, 30)
@@ -341,9 +341,9 @@ func TestRenderBrowserListNavUpdateFullRendersWhenZoomDecisionChanged(t *testing
 	}
 }
 
-func TestLayoutForTerminalSizeZoomNotSuppressedWhenDisabledAboveNameWidthIsZero(t *testing.T) {
+func TestLayoutForTerminalSizeZoomNotSuppressedWhenZoomMaxNameWidthIsZero(t *testing.T) {
 	app := newNameWidthZoomApp(t, 300)
-	app.config.UI.Zoom.DisabledAboveNameWidth = 0
+	app.config.UI.Zoom.MaxNameWidth = 0
 
 	lay := app.layoutForTerminalSize(300, 30)
 	if lay.Primary.Width != 210 || lay.Secondary.Width != 90 {

@@ -514,17 +514,16 @@ type UIConfig struct {
 type UIZoomConfig struct {
 	// ActivePanel widens the active browser column; inactive column uses the remainder (see ActivePercent/InactivePercent).
 	ActivePanel bool `toml:"active_panel"`
-	// DisabledAboveNameWidth: when > 0 and the active panel's file-name column at an even 50/50
-	// split (after border, icons, git strip, listing format and meta columns) is >= this many
-	// cells, or already holds every visible name, zoom is not applied (50/50 split). Zero
-	// disables this gate and the names-fit rule (zoom follows
-	// active_panel and runtime toggle only).
-	// Default DefaultZoomActivePanelDisabledAboveNameWidth.
-	DisabledAboveNameWidth int `toml:"disabled_above_name_width"`
-	// DisabledAboveHeight: when > 0 and terminal height (cells) is >= this value, zoom is not
-	// applied in stacked (top/bottom) layout. Zero disables this gate.
-	// Default DefaultZoomActivePanelDisabledAboveHeight.
-	DisabledAboveHeight int `toml:"disabled_above_height"`
+	// MaxNameWidth: zoom applies only while the active panel's file-name column at an even
+	// 50/50 split (after border, icons, git strip, listing format and meta columns) is narrower
+	// than this many cells and does not already hold every visible name. Zero means no limit
+	// and skips the names-fit rule (zoom follows active_panel and runtime toggle only).
+	// Default DefaultZoomMaxNameWidth.
+	MaxNameWidth int `toml:"max_name_width"`
+	// MaxHeight: in stacked (top/bottom) layout, zoom applies only while terminal height
+	// (cells) is below this value. Zero means no limit.
+	// Default DefaultZoomMaxHeight.
+	MaxHeight int `toml:"max_height"`
 	// Orientation selects twin-pane layout: "side_by_side" (default) or "stacked".
 	Orientation string `toml:"orientation"`
 	// ActivePercent and InactivePercent are the width shares (must sum to 100) when ActivePanel is true.
@@ -759,12 +758,12 @@ func Default() Config {
 			SelectedPanelMaxRows:        0,
 			SelectedPanelActivePercent:  DefaultSelectedPanelActivePercent,
 			Zoom: UIZoomConfig{
-				ActivePanel:            DefaultZoomActivePanel,
-				DisabledAboveNameWidth: DefaultZoomActivePanelDisabledAboveNameWidth,
-				DisabledAboveHeight:    DefaultZoomActivePanelDisabledAboveHeight,
-				Orientation:            DefaultPaneSplitOrientation,
-				ActivePercent:          DefaultPanelZoomActivePercent,
-				InactivePercent:        DefaultPanelZoomInactivePercent,
+				ActivePanel:     DefaultZoomActivePanel,
+				MaxNameWidth:    DefaultZoomMaxNameWidth,
+				MaxHeight:       DefaultZoomMaxHeight,
+				Orientation:     DefaultPaneSplitOrientation,
+				ActivePercent:   DefaultPanelZoomActivePercent,
+				InactivePercent: DefaultPanelZoomInactivePercent,
 			},
 			Scroll: UIScrollConfig{
 				Mode:              DefaultScrollMode,
@@ -1307,11 +1306,11 @@ func (c *Config) validateUIZoom(builtin *Config) {
 		c.UI.Zoom.ActivePercent = DefaultPanelZoomActivePercent
 		c.UI.Zoom.InactivePercent = DefaultPanelZoomInactivePercent
 	}
-	if c.UI.Zoom.DisabledAboveNameWidth < 0 {
-		c.UI.Zoom.DisabledAboveNameWidth = builtin.UI.Zoom.DisabledAboveNameWidth
+	if c.UI.Zoom.MaxNameWidth < 0 {
+		c.UI.Zoom.MaxNameWidth = builtin.UI.Zoom.MaxNameWidth
 	}
-	if c.UI.Zoom.DisabledAboveHeight < 0 {
-		c.UI.Zoom.DisabledAboveHeight = builtin.UI.Zoom.DisabledAboveHeight
+	if c.UI.Zoom.MaxHeight < 0 {
+		c.UI.Zoom.MaxHeight = builtin.UI.Zoom.MaxHeight
 	}
 	if !c.paneSplitOrientationValid(c.UI.Zoom.Orientation) {
 		c.UI.Zoom.Orientation = DefaultPaneSplitOrientation

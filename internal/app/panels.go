@@ -1117,7 +1117,7 @@ func (a *App) toggleZoomActivePanelGuarded() {
 		if a.zoomActivePanelSuppressedByTerminalHeight(th) {
 			a.setTransientMessage(fmt.Sprintf(
 				"Panel zoom unavailable (terminal height ≥ %d)",
-				a.config.UI.Zoom.DisabledAboveHeight,
+				a.config.UI.Zoom.MaxHeight,
 			), ui.MessageUrgencyInfo)
 			return
 		}
