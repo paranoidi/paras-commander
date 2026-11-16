@@ -2409,17 +2409,20 @@ func (s *State) CountGroupMatches(spec FilterSpec, meta GroupSelectMeta, selecte
 	return files, dirs, nil
 }
 
-// CountPatternMatches reports how many visible entries match spec, split into files and
-// directories — a plain total count (unlike CountGroupMatches, which counts only matches whose
-// selection state would flip). Used by the Filter dialog's live preview. meta: optional meta
-// column data; when Cols is non-empty, values are also matched; OnlyMeta skips filename matching.
+// CountPatternMatches reports how many listed entries match spec, ignoring the active entry
+// filter (the Filter dialog replaces it), split into files and directories — a plain total count
+// (unlike CountGroupMatches, which counts only matches whose selection state would flip). Used by
+// the Filter dialog's live preview and apply message. meta: optional meta column data; when Cols
+// is non-empty, values are also matched; OnlyMeta skips filename matching.
 func (s *State) CountPatternMatches(spec FilterSpec, meta GroupSelectMeta) (files, dirs int, err error) {
 	match, err := spec.MatchFunc()
 	if err != nil {
 		return 0, 0, err
 	}
-	for i := 0; i < s.VisibleEntryCount(); i++ {
-		entry, _, ok := s.VisibleEntry(i)
+	unfiltered := *s
+	unfiltered.ActiveEntryFilter = nil
+	for i := 0; i < unfiltered.VisibleEntryCount(); i++ {
+		entry, _, ok := unfiltered.VisibleEntry(i)
 		if !ok || !match(entry, meta) {
 			continue
 		}

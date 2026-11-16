@@ -328,6 +328,15 @@ func TestPatternFilterTypes(t *testing.T) {
 			if files+dirs != tc.count {
 				t.Fatalf("CountPatternMatches = %d files %d dirs, want %d entries", files, dirs, tc.count)
 			}
+			// The count ignores the active filter, which the Filter dialog replaces.
+			other, err := PatternFilter(FilterSpec{Pattern: "nomatch*", Mode: GroupPatternSimple, Scope: ScopeBoth}, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			state.SetEntryFilter(other)
+			if files2, dirs2, _ := state.CountPatternMatches(tc.spec, GroupSelectMeta{}); files2 != files || dirs2 != dirs {
+				t.Fatalf("under another filter: %d files %d dirs, want %d %d", files2, dirs2, files, dirs)
+			}
 		})
 	}
 }
