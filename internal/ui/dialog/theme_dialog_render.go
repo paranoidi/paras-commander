@@ -220,9 +220,14 @@ func drawThemePreview(screen tcell.Screen, p dlg.Placement, pane draw.Rect, page
 		themePreviewPages[page].paint(ctx)
 	}
 
-	// Last, so it overlays the samples below the input like a dialog's own tooltip.
-	if ctx.activeInput.Width > 0 {
-		dlg.PaintTooltipFor(screen, p, ctx.activeInput, themePreviewTooltip, styles)
+	// Last, so it overlays the samples below the input like a dialog's own tooltip. The sample
+	// skips dlg's tooltip delay gate: dlg.Draw clears it every frame (the focused filter has no
+	// tooltip), so a gated sample would never become due.
+	if in := ctx.activeInput; in.Width > 0 {
+		lines, w := draw.TooltipLines(themePreviewTooltip, rightBorderCol-in.X, styles)
+		if len(lines) > 0 && in.Y+len(lines) < outerSepY {
+			draw.PaintTooltip(screen, in.X, in.Y+1, w, lines, styles)
+		}
 	}
 
 	// Override box-drawing connector characters at the vertical separator column
@@ -232,10 +237,10 @@ func drawThemePreview(screen tcell.Screen, p dlg.Placement, pane draw.Rect, page
 }
 
 // themeInputPageRows is the rows of the input page: a blank row, four input demos of three rows,
-// the path autocomplete demo (label, input, its three-row dropdown, a blank row), two checkboxes,
-// a blank row and two button rows (plain letters, then letters that need Alt) with a blank row
+// the path autocomplete demo (label, input, its three-row dropdown, a blank row), a row of two
+// checkboxes, a blank row and two button rows (plain letters, then letters that need Alt) with a blank row
 // between them.
-const themeInputPageRows = 25
+const themeInputPageRows = 24
 
 // themeSampleCompletionItems are the path autocomplete demo's dropdown entries for the partial
 // segment "do".
@@ -245,7 +250,7 @@ var themeSampleCompletionItems = []pathpick.Candidate{
 	{Name: "dotfiles", IsDir: true, Ranges: []search.Range{{Start: 0, End: 2}}},
 }
 
-// paintThemeInputPage paints sample inputs (a tooltip under the active one), checkboxes and buttons.
+// paintThemeInputPage paints sample inputs (a tooltip under the first active one), checkboxes and buttons.
 func paintThemeInputPage(c *themePreviewCtx) {
 	screen, styles, previewLeft, previewWidth := c.screen, c.styles, c.left, c.width
 	_, dbg, _ := styles.DialogSurface.Decompose()
@@ -306,11 +311,9 @@ func paintThemeInputPage(c *themePreviewCtx) {
 
 	if fits(previewY) {
 		draw.DrawDialogCheckbox(screen, previewLeft, previewY, "Selected", 'S', true, false, false, styles)
-	}
-	previewY++
-	if fits(previewY) {
 		// Shows dialog.accent_alt: the mnemonic as drawn when it needs Alt (focus in an input).
-		draw.DrawDialogCheckbox(screen, previewLeft, previewY, "Unselected", 'U', false, false, false, styles.WithAltMnemonics())
+		x := previewLeft + draw.DialogOptionWidth("Selected") + 2
+		draw.DrawDialogCheckbox(screen, x, previewY, "Unselected", 'U', false, false, false, styles.WithAltMnemonics())
 	}
 	previewY += 2 // blank row before the buttons
 
