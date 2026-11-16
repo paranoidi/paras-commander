@@ -30,7 +30,7 @@ func TestJumpGoldenRender(t *testing.T) {
 	var cases []simpleGolden
 	add := func(name string, w, h int, st JumpDialogState) {
 		cases = append(cases, simpleGolden{fmt.Sprintf("%dx%d_%s", w, h, name), w, h, func(s tcell.Screen, l Layout) {
-			DrawJumpDialog(s, l, st, DialogRenderContext{Styles: asciiDialogStyles(), ScrollbarStyle: uiscrollbar.StyleThumb}, nil)
+			DrawJumpDialog(s, l, st, DialogRenderContext{Styles: asciiDialogStyles(), ScrollbarStyle: uiscrollbar.StyleThumb}, nil, nil)
 		}})
 	}
 	st := jumpGoldenState(12)

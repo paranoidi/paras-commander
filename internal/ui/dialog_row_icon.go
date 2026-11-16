@@ -66,6 +66,12 @@ func PaintFindDialogRowIcon(screen tcell.Screen, x, y int, entry dialog.FindEntr
 	PaintDialogRowIcon(screen, x, y, findEntryLocalfs(entry), styles)
 }
 
+// PaintJumpDialogRowIcon draws the closed-folder devicon for one jump dialog row (every row is a
+// directory).
+func PaintJumpDialogRowIcon(screen tcell.Screen, x, y int, r dialog.JumpResult, styles theme.Theme) {
+	PaintDialogRowIcon(screen, x, y, localfs.Entry{Name: filepath.Base(r.Path), Path: r.Path, Type: localfs.EntryDirectory}, styles)
+}
+
 // PaintDeleteDialogRowIcon draws file-list devicons for one delete dialog row.
 func PaintDeleteDialogRowIcon(screen tcell.Screen, x, y int, entry dialog.DeleteListEntry, styles theme.Theme) {
 	PaintDialogRowIcon(screen, x, y, deleteListEntryLocalfs(entry), styles)

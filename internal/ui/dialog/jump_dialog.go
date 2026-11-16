@@ -2,6 +2,7 @@ package dialog
 
 import (
 	"fmt"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -23,8 +24,10 @@ const (
 // JumpViewContext is what JumpDialogView needs besides the state.
 type JumpViewContext struct {
 	Layout         Layout
-	Styles         theme.Theme
-	ShowIcons      bool
+	Styles theme.Theme
+	// IconLead is the cells each row keeps free before its text for the devicon DrawJumpDialog
+	// paints there (0 = no icons).
+	IconLead       int
 	ScrollbarStyle uiscrollbar.Style
 	// RowMarks resolves pin / job marks by a row's panel path (nil = none).
 	RowMarks func(r JumpResult) RowMarks
@@ -104,11 +107,12 @@ func JumpDialogView(st *JumpDialogState, ctx JumpViewContext) dlg.Spec {
 	spec, _ = fillList(spec, ctx.Layout, JumpList, func(height, _ int) dlg.Item {
 		from, to := dlg.ListWindow(st.Selected, st.ListScroll, height, len(st.Results))
 		rows := make([]dlg.ListRow, 0, to-from)
+		icon := ""
+		if ctx.IconLead > 0 {
+			icon = strings.Repeat(findListIconPad, ctx.IconLead-1)
+		}
 		for _, r := range st.Results[from:to] {
-			row := dlg.ListRow{Text: r.Rel, Match: r.Match}
-			if ctx.ShowIcons {
-				row.Icon = ctx.Styles.IconFolder()
-			}
+			row := dlg.ListRow{Text: r.Rel, Match: r.Match, Icon: icon}
 			if ctx.RowMarks != nil {
 				row.Marks = ctx.RowMarks(r)
 			}
@@ -127,15 +131,29 @@ func EnsureJumpListScroll(st *JumpDialogState, listRows int) {
 	EnsurePickerScroll(len(st.Results), &st.Selected, &st.ListScroll, listRows)
 }
 
-// DrawJumpDialog paints the jump-to-directory dialog and returns the area it painted (zero when
-// the dialog does not fit).
-func DrawJumpDialog(screen tcell.Screen, layout Layout, st JumpDialogState, ctx DialogRenderContext, rowMarks func(JumpResult) RowMarks) PaintedArea {
+// JumpRowIconPainter draws the panel devicon for one jump dialog row; nil skips icons.
+type JumpRowIconPainter func(screen tcell.Screen, x, y int, r JumpResult, styles theme.Theme)
+
+// DrawJumpDialog paints the jump-to-directory dialog from its widget spec, then the row devicons
+// over the leading cells each list row reserves for them (as DrawFindDialog). It returns the area
+// it painted (zero when the dialog does not fit).
+func DrawJumpDialog(screen tcell.Screen, layout Layout, st JumpDialogState, ctx DialogRenderContext, paintIcon JumpRowIconPainter, rowMarks func(JumpResult) RowMarks) PaintedArea {
+	iconLead := ctx.IconLead
+	if !ctx.ShowIcons || paintIcon == nil {
+		iconLead = 0
+	}
 	spec := JumpDialogView(&st, JumpViewContext{
-		Layout: layout, Styles: ctx.Styles, ShowIcons: ctx.ShowIcons, ScrollbarStyle: ctx.ScrollbarStyle, RowMarks: rowMarks,
+		Layout: layout, Styles: ctx.Styles, IconLead: iconLead, ScrollbarStyle: ctx.ScrollbarStyle, RowMarks: rowMarks,
 	})
 	p, ok := dlg.Draw(screen, layout.Width, layout.Height, spec, st.Focus, ctx.Styles)
 	if !ok {
 		return PaintedArea{}
+	}
+	if iconLead > 0 {
+		list, _ := p.Item(JumpList)
+		p.EachListRow(JumpList, func(row, y int) {
+			paintIcon(screen, list.Rect.X, y, st.Results[row], ctx.Styles)
+		})
 	}
 	return PaintedArea{Frame: p.Rect}
 }

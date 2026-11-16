@@ -72,7 +72,7 @@ func (h *Handler) viewContext() dialog.JumpViewContext {
 	w, hh := h.screen.Size()
 	return dialog.JumpViewContext{
 		Layout: h.host.LayoutForTerminalSize(w, hh), Styles: h.host.Styles(),
-		ShowIcons: h.model.UseNerdfontIcons, ScrollbarStyle: h.model.PanelScrollbar,
+		IconLead: ui.DialogListIconLeadingWidth(h.model.UseNerdfontIcons), ScrollbarStyle: h.model.PanelScrollbar,
 	}
 }
 
