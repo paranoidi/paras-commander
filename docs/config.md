@@ -289,7 +289,7 @@ Background file-operation jobs: display, timing, and throttling.
 | `scan_yield_interval_ms` | int | `50` | Cooperative sleep interval during a pre-copy directory scan, so the UI stays responsive (clamped 50–5000). |
 | `scan_yield_work_ms` | int | `200` | How long a pre-scan walk runs between `scan_yield_interval_ms` sleeps (clamped 50–5000). Yields are per time slice, so a walk over cached metadata runs at disk speed instead of a fixed entries-per-second rate. |
 | `scan_progress_min_interval_ms` | int | `200` | Throttle for scan-progress UI updates during pre-scan (clamped 50–5000). |
-| `scan_disable_adaptive_throttle` | bool | `false` | Disable the pre-scan counting walk's adaptive contention probe. When enabled (default), the counting walk periodically pauses itself and measures whether that improves the job's transfer throughput, growing a duty-cycle pause when it measurably helps (e.g. on a contended mechanical disk) and decaying it back to zero otherwise (SSD/NVMe/network storage). |
+| `scan_adaptive_throttle` | bool | `true` | Adaptive contention probe for the pre-scan counting walk. When enabled, the counting walk periodically pauses itself and measures whether that improves the job's transfer throughput, growing a duty-cycle pause when it measurably helps (e.g. on a contended mechanical disk) and decaying it back to zero otherwise (SSD/NVMe/network storage). |
 
 ## `[operations]`
 

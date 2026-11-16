@@ -626,11 +626,11 @@ type JobsConfig struct {
 	ScanYieldWorkMS int `toml:"scan_yield_work_ms"`
 	// ScanProgressMinIntervalMS throttles scan-progress events during pre-scan.
 	ScanProgressMinIntervalMS int `toml:"scan_progress_min_interval_ms"`
-	// ScanDisableAdaptiveThrottle disables the pre-scan counting walk's adaptive contention
-	// probe (see jobbridge.ScanFunc), which otherwise periodically pauses the background
-	// counting walk and measures whether that improves the job's transfer throughput, backing
-	// off the pause when it doesn't. Default false.
-	ScanDisableAdaptiveThrottle bool `toml:"scan_disable_adaptive_throttle"`
+	// ScanAdaptiveThrottle enables the pre-scan counting walk's adaptive contention probe
+	// (see jobbridge.ScanFunc), which periodically pauses the background counting walk and
+	// measures whether that improves the job's transfer throughput, backing off the pause when
+	// it doesn't. Default DefaultScanAdaptiveThrottle.
+	ScanAdaptiveThrottle bool `toml:"scan_adaptive_throttle"`
 	// OperationsMemoryRows is how many Operations-pane rows a job keeps in memory before its
 	// log spills to $XDG_CACHE_HOME/pc/jobs (0 = never spill; otherwise at least 1000).
 	OperationsMemoryRows int `toml:"operations_memory_rows"`
@@ -813,7 +813,7 @@ func Default() Config {
 			ScanYieldIntervalMS:         DefaultScanYieldIntervalMS,
 			ScanYieldWorkMS:             DefaultScanYieldWorkMS,
 			ScanProgressMinIntervalMS:   DefaultScanProgressMinIntervalMS,
-			ScanDisableAdaptiveThrottle: false,
+			ScanAdaptiveThrottle:        DefaultScanAdaptiveThrottle,
 			OperationsMemoryRows:        DefaultJobsOperationsMemoryRows,
 			OperationsRefreshIntervalMS: DefaultJobsOperationsRefreshIntervalMS,
 			OperationsLayout:            DefaultJobsOperationsLayout,

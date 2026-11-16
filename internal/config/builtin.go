@@ -256,6 +256,8 @@ const (
 	DefaultScanYieldCheckEveryN = 64
 	// DefaultScanProgressMinIntervalMS throttles scan-progress UI events during pre-scan walks.
 	DefaultScanProgressMinIntervalMS = 200
+	// DefaultScanAdaptiveThrottle enables the pre-scan counting walk's adaptive contention probe.
+	DefaultScanAdaptiveThrottle = true
 	// DefaultPlanStreamBufferItems bounds the pre-scan producer's PlanItem channel so a
 	// multi-terabyte/million-file walk holds only a few hundred KB of buffered items in memory
 	// regardless of tree size, same order of magnitude as DefaultScanYieldCheckEveryN.

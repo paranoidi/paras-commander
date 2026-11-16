@@ -60,8 +60,8 @@ func EventUpdatesMarks(t jobs.EventType) bool {
 // but the counting walk keeps enumerating and Totals keeps growing regardless. Both walks start
 // immediately; ScanFunc returns without blocking for the source tree to be fully enumerated.
 //
-// The counting walk additionally runs an adaptive contention probe (see scan_throttle.go) unless
-// jobsCfg.ScanDisableAdaptiveThrottle is set: it periodically pauses the counting walk and
+// The counting walk additionally runs an adaptive contention probe (see scan_throttle.go) when
+// jobsCfg.ScanAdaptiveThrottle is set: it periodically pauses the counting walk and
 // measures whether that improves the job's transfer throughput, growing a duty-cycle pause when
 // it measurably does and decaying it otherwise. This is pure measured-evidence throttling — no
 // disk-type detection — so it self-corrects to zero pause on SSD/NVMe/network storage.
@@ -81,7 +81,7 @@ func ScanFunc(jobsCfg config.JobsConfig) jobs.ScanFunc {
 		// countOpts is the counting walk's own copy of opts (the delivery walk above keeps the
 		// original, untouched) with its own time-sliced Yield (the duty-cycle state is per walk),
 		// whose sleep is wrapped by the adaptive throttle when a throughput signal is available
-		// and the probe isn't disabled, so the probe and its pause run once per sleep. OnWarning and OnPath are cleared (OnItemError is replaced by a no-op): the
+		// and the probe is enabled, so the probe and its pause run once per sleep. OnWarning and OnPath are cleared (OnItemError is replaced by a no-op): the
 		// counting walk enumerates the same tree independently, so leaving them wired would
 		// double-report every symlink-dereference fallback and every progress path (once per
 		// walk), and OnPath's rate-limit state is not safe for two concurrent walks.
@@ -93,7 +93,7 @@ func ScanFunc(jobsCfg config.JobsConfig) jobs.ScanFunc {
 			countOpts.OnItemError = func(ops.PlanItem, error) {}
 		}
 		countSleep := hooks.Yield
-		if hooks.ThroughputBPS != nil && !jobsCfg.ScanDisableAdaptiveThrottle {
+		if hooks.ThroughputBPS != nil && jobsCfg.ScanAdaptiveThrottle {
 			countSleep = newAdaptiveThrottleYield(hooks.Yield, hooks.ThroughputBPS)
 		}
 		countOpts.Yield = newDutyCycleYield(countSleep, hooks.YieldWork, time.Now)
