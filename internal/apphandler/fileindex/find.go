@@ -27,13 +27,13 @@ type FindPayload struct {
 	Err       error
 }
 
-// OpenFindDialog opens the find-in-index dialog for panel panelID, a fileindex:// or local panel
-// (jump: the directories-only "Jump to directory" form), once the index is known to open.
-func (h *Handler) OpenFindDialog(panelID int, jump bool) {
-	h.withIndex(func() { h.openFindDialog(panelID, jump) })
+// OpenFindDialog opens the find-in-index dialog for panel panelID, a fileindex:// or local panel,
+// once the index is known to open.
+func (h *Handler) OpenFindDialog(panelID int) {
+	h.WithIndex(func() { h.openFindDialog(panelID) })
 }
 
-func (h *Handler) openFindDialog(panelID int, jump bool) {
+func (h *Handler) openFindDialog(panelID int) {
 	if ui.IsAuxiliaryView(h.model.ViewMode) {
 		return
 	}
@@ -44,14 +44,14 @@ func (h *Handler) openFindDialog(panelID int, jump bool) {
 		return
 	}
 	if st := &h.model.IndexFindDialog; st.Parked {
-		if st.PanelID == panelID && st.JumpMode == jump && st.Root == root {
+		if st.PanelID == panelID && st.Root == root {
 			h.RestoreParkedFind()
 			return
 		}
-		h.model.FindRelocate = dialog.FindRelocateState{Open: true, Focus: dialog.FindRelocateRestore, Index: true, PanelID: panelID, Jump: jump, Root: st.Root}
+		h.model.FindRelocate = dialog.FindRelocateState{Open: true, Focus: dialog.FindRelocateRestore, Index: true, PanelID: panelID, Root: st.Root}
 		return
 	}
-	h.openFreshFind(panelID, p, root, jump)
+	h.openFreshFind(panelID, p, root)
 }
 
 // RestoreParkedFind shows the parked Find in index as it was, wherever it was parked.
@@ -61,18 +61,16 @@ func (h *Handler) RestoreParkedFind() {
 }
 
 // OpenFreshFind drops any Find in index (open or parked) and starts a new one on panelID.
-func (h *Handler) OpenFreshFind(panelID int, jump bool) {
+func (h *Handler) OpenFreshFind(panelID int) {
 	h.CloseFindDialog()
-	h.openFindDialog(panelID, jump)
+	h.openFindDialog(panelID)
 }
 
-func (h *Handler) openFreshFind(panelID int, p *panel.State, root string, jump bool) {
+func (h *Handler) openFreshFind(panelID int, p *panel.State, root string) {
 	var selRoots []string
-	if !jump {
-		for _, uri := range panel.PruneNestedPaths(p.SelectedDirectoryPaths()) {
-			if hp, err := hostPath(uri); err == nil {
-				selRoots = append(selRoots, hp)
-			}
+	for _, uri := range panel.PruneNestedPaths(p.SelectedDirectoryPaths()) {
+		if hp, err := hostPath(uri); err == nil {
+			selRoots = append(selRoots, hp)
 		}
 	}
 	h.CloseFindDialog()
@@ -80,7 +78,6 @@ func (h *Handler) openFreshFind(panelID int, p *panel.State, root string, jump b
 		ShowSearchSelectionsOption: len(selRoots) > 0, SelectionDirRoots: selRoots,
 		Gen:  h.model.IndexFindDialog.Gen, // keeps counting up, so a result of an earlier dialog is stale
 		Open: true, PanelID: panelID, FromIndexPanel: p.Path.Scheme() == pathloc.SchemeFileIndex, Root: root, Focus: dialog.IndexFindQuery,
-		JumpMode: jump, OnlyDirs: jump,
 	}
 }
 
@@ -178,12 +175,8 @@ func (h *Handler) debounce() time.Duration {
 // toggling, the widget engine, then query editing.
 func (h *Handler) HandleFindKey(ev *tcell.EventKey) {
 	st := &h.model.IndexFindDialog
-	if id, ok := h.keys.Lookup(ev); ok && findctrl.IsOpenerKey(id, st.JumpMode) {
-		if st.JumpMode {
-			h.CloseFindDialog()
-		} else {
-			st.Open, st.Parked = false, true // hidden with its state kept; the opener key shows it again
-		}
+	if id, ok := h.keys.Lookup(ev); ok && findctrl.IsParkKey(id) {
+		st.Open, st.Parked = false, true // hidden with its state kept; the opener key shows it again
 		return
 	}
 	if h.keysFind != nil {
@@ -237,14 +230,7 @@ func (h *Handler) HandleFindKey(ev *tcell.EventKey) {
 // Pattern / Boolean.
 func (h *Handler) runFindAction(id string) bool {
 	st := &h.model.IndexFindDialog
-	switch id {
-	case keymap.ActionPanelSelectToggle, keymap.ActionFindView, keymap.ActionFindEdit, keymap.ActionFindUnselectAll,
-		keymap.ActionFindSelectAll, keymap.ActionFindSelectGroup, keymap.ActionFindUnselectGroup,
-		keymap.ActionFindSelectParentDirs, keymap.ActionFindCycleMatchMode:
-		if st.JumpMode {
-			return true // marking, viewing, editing and the Boolean mode do not apply to jump mode
-		}
-	case keymap.ActionFindToggleAdvanced, keymap.ActionFindResetAdvanced:
+	if id == keymap.ActionFindToggleAdvanced || id == keymap.ActionFindResetAdvanced {
 		return true
 	}
 	switch id {

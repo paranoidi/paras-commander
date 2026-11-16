@@ -1,13 +1,10 @@
 package find
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/paranoidi/paras-commander/internal/findcrit"
-	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
@@ -160,39 +157,5 @@ func TestMaybeRenderFindIndexingThrottles(t *testing.T) {
 	h.lastIndexCountRenderAt = time.Now().Add(-600 * time.Millisecond)
 	if !h.maybeRenderFindIndexing(st) {
 		t.Fatal("render should pass after throttle interval")
-	}
-}
-
-func TestRootGitignoreExcluded(t *testing.T) {
-	t.Parallel()
-	if rootGitignoreExcluded(nil, "/anything") {
-		t.Fatal("nil cache should never report excluded")
-	}
-
-	root := t.TempDir()
-	if err := os.Mkdir(filepath.Join(root, ".git"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte("ignored_dir/\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	ignoredDir := filepath.Join(root, "ignored_dir")
-	if err := os.Mkdir(ignoredDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	plainDir := filepath.Join(root, "plain_dir")
-	if err := os.Mkdir(plainDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-
-	cache := gitignore.NewCache()
-	if !rootGitignoreExcluded(cache, ignoredDir) {
-		t.Fatal("ignored_dir should be reported as gitignore-excluded")
-	}
-	if rootGitignoreExcluded(cache, plainDir) {
-		t.Fatal("plain_dir should not be reported as gitignore-excluded")
-	}
-	if rootGitignoreExcluded(cache, root) {
-		t.Fatal("repo root itself should never be reported as gitignore-excluded")
 	}
 }

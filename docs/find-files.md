@@ -1,6 +1,6 @@
 # Find files
 
-Find is a fuzzy, recursive search across everything below a panel's directory. Results appear while the index is still being built, so shallow matches show immediately even in very large trees. [Jump to directory](navigation.md#jump-to-directory) is the same dialog reduced to directories only.
+Find is a fuzzy, recursive search across everything below a panel's directory. Results appear while the index is still being built, so shallow matches show immediately even in very large trees. To change into a directory by name, [Jump to directory](navigation.md#jump-to-directory) is quicker.
 
 ## Opening
 
@@ -47,7 +47,7 @@ Matching ignores case when `[filter] case_insensitive` is on, unless **Case sens
 | Kind | **Empty** (zero-byte files and directories without entries), **Symlinks**, **Broken symlinks**, **Executables**; checked kinds are alternatives | |
 | Types | files of the checked [Filter type groups](panel-filter.md) (`[filter.types]`) | |
 
-Age, size, owner, executable and empty criteria need file metadata, so the first such criterion re-scans with it (Empty also looks inside every directory). Changing Exclude re-scans too. Accessed times are coarse on file systems mounted with `relatime`. Jump to directory has no advanced section.
+Age, size, owner, executable and empty criteria need file metadata, so the first such criterion re-scans with it (Empty also looks inside every directory). Changing Exclude re-scans too. Accessed times are coarse on file systems mounted with `relatime`.
 
 ## Working with results
 

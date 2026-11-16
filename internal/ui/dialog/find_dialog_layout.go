@@ -23,7 +23,6 @@ func findListHeight(layoutHeight int) int {
 func FindDialogMetrics(layout Layout, state *FindDialogState) (width, height, listH int, ok bool) {
 	shape := FindDialogState{
 		ShowSearchSelectionsOption: state.ShowSearchSelectionsOption,
-		JumpMode:                   state.JumpMode,
 		Advanced:                   state.Advanced,
 	}
 	spec := FindDialogView(&shape, FindViewContext{Layout: layout})

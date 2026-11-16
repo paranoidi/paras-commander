@@ -71,6 +71,7 @@ func (a *App) applyLoadedConfig(cfg config.Config) []string {
 	a.config = cfg
 	a.jobsCtrl.SetConfig(cfg)
 	a.findCtrl.SetConfig(cfg)
+	a.jumpCtrl.SetConfig(cfg)
 	a.metaCtrl.SetConfig(cfg)
 	a.compareCtrl.SetConfig(cfg)
 	a.dedupCtrl.SetConfig(cfg)

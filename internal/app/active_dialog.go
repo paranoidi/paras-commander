@@ -103,6 +103,9 @@ func (a *App) activeDialog(event *tcell.EventKey) (activeDialog, bool) {
 	case InputModeFindDialog:
 		return found(fits(a.findCtrl.DialogSpec), &m.FindDialog.Focus, noQuit(a.findCtrl.ApplyDialogEvent),
 			dialogButtons{OK: a.findCtrl.ActivateDialogOK, Cancel: a.findCtrl.CloseDialog})
+	case InputModeJumpDialog:
+		return found(fits(a.jumpCtrl.DialogSpec), &m.JumpDialog.Focus, noQuit(a.jumpCtrl.ApplyEvent),
+			dialogButtons{OK: a.jumpCtrl.Activate, Cancel: a.jumpCtrl.Close})
 	case InputModeIndexFindDialog:
 		return found(fits(a.fileindexCtrl.DialogSpec), &m.IndexFindDialog.Focus, noQuit(a.fileindexCtrl.ApplyFindEvent),
 			dialogButtons{OK: a.fileindexCtrl.ActivateFindOK, Cancel: a.fileindexCtrl.CloseFindDialog})

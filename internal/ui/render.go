@@ -301,6 +301,7 @@ type Model struct {
 	SFTPConnectDialog       dialog.SFTPConnectDialogState
 	FindDialog              dialog.FindDialogState
 	IndexFindDialog         dialog.IndexFindDialogState
+	JumpDialog              dialog.JumpDialogState
 	IndexTagsDialog         dialog.IndexTagsDialogState
 	FindRelocate            dialog.FindRelocateState
 	// PinnedItems is the ad-hoc, session-only pin list (most-recently-pinned first),
@@ -426,7 +427,7 @@ func (m *Model) AnyModalOpen() bool {
 	return m.PrimaryModal() != dialog.PrimaryModalNone ||
 		m.SortDialog.Open || m.StatusCommandsDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open ||
 		m.FileDialog.Open || m.SFTPConnectDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open ||
-		m.FindDialog.Open || m.IndexFindDialog.Open || m.IndexTagsDialog.Open || m.ColumnsDialog.Open || m.LeaderMenu.Open || m.CompareMergeDialog.Open || m.PinDialog.Open
+		m.FindDialog.Open || m.JumpDialog.Open || m.IndexFindDialog.Open || m.IndexTagsDialog.Open || m.ColumnsDialog.Open || m.LeaderMenu.Open || m.CompareMergeDialog.Open || m.PinDialog.Open
 }
 
 // FindParkedOn reports whether Find or Find in index is parked (hidden, state kept) from panelID.
@@ -722,7 +723,7 @@ func (m *Model) nonLeaderModalOpen() bool {
 	if m.PrimaryModal() != dialog.PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.StatusCommandsDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.IndexFindDialog.Open || m.IndexTagsDialog.Open || m.ColumnsDialog.Open || m.HelpView.Open || m.IconLegendDialog.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open || m.ArchivePasswordDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.StashRestoreDialog.Open || m.CompareSelection.Open || m.CommandOutputDialog.Open || m.PinDialog.Open {
+	if m.SortDialog.Open || m.StatusCommandsDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.JumpDialog.Open || m.IndexFindDialog.Open || m.IndexTagsDialog.Open || m.ColumnsDialog.Open || m.HelpView.Open || m.IconLegendDialog.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open || m.ArchivePasswordDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.StashRestoreDialog.Open || m.CompareSelection.Open || m.CommandOutputDialog.Open || m.PinDialog.Open {
 		return true
 	}
 	return false
@@ -734,7 +735,7 @@ func (m *Model) QuickFilterStartBlocked() bool {
 	if m.Menu.Open {
 		return true
 	}
-	return m.MessageDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.IndexFindDialog.Open || m.IndexTagsDialog.Open || m.PinDialog.Open ||
+	return m.MessageDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.JumpDialog.Open || m.IndexFindDialog.Open || m.IndexTagsDialog.Open || m.PinDialog.Open ||
 		m.ColumnsDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open || m.StatusCommandsDialog.Open ||
 		m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open || m.ArchivePasswordDialog.Open ||
 		m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.CompareSelection.Open || m.LeaderMenu.Open ||
@@ -777,6 +778,7 @@ type OverlayKind int
 const (
 	OverlayFind OverlayKind = iota
 	OverlayFile
+	OverlayJump
 	overlayKindCount
 )
 
@@ -1156,6 +1158,9 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 			styles.IconWorking(),
 		)
 		out[OverlayFind] = dialog.DrawFindDialog(screen, layout, model.FindDialog, dialogRenderContext(model, styles), PaintFindDialogRowIcon, selectionLabel, rowMarksResolver(model.PinnedItems, model.JobPathMarks))
+	}
+	if model.JumpDialog.Open {
+		out[OverlayJump] = PaintJumpDialog(screen, layout, &model, styles)
 	}
 	if model.GroupSelect.Open && !model.GroupSelectOverOutput() {
 		dialog.DrawGroupSelectDialog(screen, layout, model.GroupSelect, styles)

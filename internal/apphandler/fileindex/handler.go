@@ -139,35 +139,35 @@ func (h *Handler) Dispatch(actionID string) bool {
 	case keymap.ActionFileIndexMenu:
 		h.host.ToggleFileIndexMenu()
 	case keymap.ActionFileIndexScan:
-		h.withIndex(h.Scan)
+		h.WithIndex(h.Scan)
 	case keymap.ActionFileIndexScanFast:
-		h.withIndex(h.ScanFast)
+		h.WithIndex(h.ScanFast)
 	case keymap.ActionFileIndexPrune:
-		h.withIndex(h.Prune)
+		h.WithIndex(h.Prune)
 	case keymap.ActionFileIndexTags:
-		h.withIndex(h.OpenTagDialog)
+		h.WithIndex(h.OpenTagDialog)
 	case keymap.ActionFileIndexFind:
 		if h.localOrIndex() {
-			h.OpenFindDialog(h.model.ActivePanel, false)
+			h.OpenFindDialog(h.model.ActivePanel)
 		}
 	case keymap.ActionFileIndexFindUnique:
 		if h.localOrIndex() {
-			h.withIndex(h.host.OpenUniqueFiles)
+			h.WithIndex(h.host.OpenUniqueFiles)
 		}
 	case keymap.ActionFileIndexBrowseWith:
-		h.withIndex(h.BrowseWith)
+		h.WithIndex(h.BrowseWith)
 	case keymap.ActionFileIndexBrowse:
-		h.withIndex(h.Browse)
+		h.WithIndex(h.Browse)
 	case keymap.ActionFileIndexReveal:
 		h.Reveal()
 	case keymap.ActionFileIndexCopies:
 		h.Copies()
 	case keymap.ActionFileIndexReportDifferences:
-		h.withIndex(h.ReportDifferences)
+		h.WithIndex(h.ReportDifferences)
 	case keymap.ActionFileIndexCopiesOutside:
-		h.withIndex(h.CopiesOutside)
+		h.WithIndex(h.CopiesOutside)
 	case keymap.ActionFileIndexFindDuplicates:
-		h.withIndex(h.FindDuplicates)
+		h.WithIndex(h.FindDuplicates)
 	default:
 		return false
 	}
@@ -295,7 +295,7 @@ func (h *Handler) ScanAfterCommand(dir pathloc.Path) {
 		h.host.SetErrorMessage(messageTitle, err)
 		return
 	}
-	h.withIndex(func() {
+	h.WithIndex(func() {
 		paths := []string{p}
 		task := h.index.ScanTask(paths)
 		task.ReportsOwnOutcome = true

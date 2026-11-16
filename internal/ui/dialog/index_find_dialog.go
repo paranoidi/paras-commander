@@ -42,9 +42,6 @@ func IndexFindListRows(layout Layout) int {
 
 func indexFindTitle(st *IndexFindDialogState, styles theme.Theme) string {
 	title := "Find in index"
-	if st.JumpMode {
-		title = "Jump to directory"
-	}
 	if st.Err == "" && st.Query != "" && !st.Searching {
 		suffix := ""
 		if st.Truncated {
@@ -59,7 +56,7 @@ func indexFindTitle(st *IndexFindDialogState, styles theme.Theme) string {
 }
 
 // IndexFindDialogView is the find-in-index dialog's widget spec: the query, the Pattern / Boolean and
-// Only directories / Only files radios (hidden in jump mode), the result list driven by the
+// Only directories / Only files radios, the result list driven by the
 // query and OK / Cancel.
 func IndexFindDialogView(st *IndexFindDialogState, ctx IndexFindViewContext) dlg.Spec {
 	const gap = 5
@@ -69,18 +66,15 @@ func IndexFindDialogView(st *IndexFindDialogState, ctx IndexFindViewContext) dlg
 		Value: st.DepthInput, Cursor: utf8.RuneCountInString(st.DepthInput), LeadingIcon: ctx.Styles.IconDialogDepth(),
 		Tooltip: findDepthSyntax + "\nIt filters the indexed results; nothing is read from disk."}
 	col := []dlg.Item{{Kind: dlg.KindRow, Cells: []dlg.Item{query, depth}}}
-	options := []dlg.Item{}
-	if !st.JumpMode {
-		col = append(col, dlg.Item{Kind: dlg.KindRow, Cells: []dlg.Item{
-			{ID: IndexFindPattern, Kind: dlg.KindRadio, Label: "Pattern", Mnemonic: 'P', On: !st.Boolean, Gap: gap},
-			{ID: IndexFindBoolean, Kind: dlg.KindRadio, Label: "Boolean", Mnemonic: 'B', On: st.Boolean},
-		}})
-		options = append(options,
-			dlg.Item{ID: IndexFindOnlyDirs, Kind: dlg.KindRadio, Label: "Only directories", Mnemonic: 'N', On: st.OnlyDirs, Disabled: st.Boolean, Gap: gap},
-			dlg.Item{ID: IndexFindOnlyFiles, Kind: dlg.KindRadio, Label: "Only files", Mnemonic: 'Y', On: st.OnlyFiles, Gap: gap},
-		)
+	col = append(col, dlg.Item{Kind: dlg.KindRow, Cells: []dlg.Item{
+		{ID: IndexFindPattern, Kind: dlg.KindRadio, Label: "Pattern", Mnemonic: 'P', On: !st.Boolean, Gap: gap},
+		{ID: IndexFindBoolean, Kind: dlg.KindRadio, Label: "Boolean", Mnemonic: 'B', On: st.Boolean},
+	}})
+	options := []dlg.Item{
+		{ID: IndexFindOnlyDirs, Kind: dlg.KindRadio, Label: "Only directories", Mnemonic: 'N', On: st.OnlyDirs, Disabled: st.Boolean, Gap: gap},
+		{ID: IndexFindOnlyFiles, Kind: dlg.KindRadio, Label: "Only files", Mnemonic: 'Y', On: st.OnlyFiles, Gap: gap},
+		{ID: IndexFindHidden, Kind: dlg.KindCheckbox, Label: "Include hidden", Mnemonic: 'I', On: st.IncludeHidden},
 	}
-	options = append(options, dlg.Item{ID: IndexFindHidden, Kind: dlg.KindCheckbox, Label: "Include hidden", Mnemonic: 'I', On: st.IncludeHidden})
 	col = append(col, dlg.Item{Kind: dlg.KindRow, Cells: options})
 	if st.ShowSearchSelectionsOption {
 		col = append(col, dlg.Item{ID: IndexFindSelections, Kind: dlg.KindCheckbox, Label: "Search only from selected directories", Mnemonic: 'S', On: st.SearchOnlySelections})

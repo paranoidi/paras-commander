@@ -26,10 +26,10 @@ type InitPayload struct {
 	then    func()
 }
 
-// withIndex runs then on the event loop once the index is open, checked off the UI thread. A
+// WithIndex runs then on the event loop once the index is open, checked off the UI thread. A
 // missing database asks whether to create it, an outdated one whether to upgrade it (then runs
 // once that is done); any other open failure is reported instead of running then.
-func (h *Handler) withIndex(then func()) {
+func (h *Handler) WithIndex(then func()) {
 	go func() {
 		_, err := h.index.DB()
 		var path string

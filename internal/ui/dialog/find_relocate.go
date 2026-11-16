@@ -20,7 +20,6 @@ type FindRelocateState struct {
 	Focus   dlg.ID // FindRelocateRestore (the default) or FindRelocateNew
 	Index   bool   // the parked search is Find in index
 	PanelID int    // where a new search starts
-	Jump    bool
 	Root    string // where the parked search searches
 }
 

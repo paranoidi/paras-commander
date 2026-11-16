@@ -44,7 +44,7 @@ func (h *Handler) Copies() {
 		return
 	}
 	res := CopiesPayload{PanelID: h.model.ActivePanel, Path: entry.Path, Name: entry.Name, IndexPanel: p.Path.Scheme() == pathloc.SchemeFileIndex}
-	h.withIndex(func() {
+	h.WithIndex(func() {
 		go func() {
 			res.Files, res.State, res.Err = h.index.OtherCopies(host)
 			h.post(res)

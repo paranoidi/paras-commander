@@ -70,10 +70,7 @@ func formatIndexedCount(n int) string {
 }
 
 func findDialogTitle(state FindDialogState, styles theme.Theme) string {
-	name := "Find"
-	if state.JumpMode {
-		name = "Jump to directory"
-	}
+	const name = "Find"
 	title := name
 	count := formatIndexedCount(state.IndexedCount)
 	if state.Indexing {

@@ -9,7 +9,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/apphandler/host"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
-	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/scan"
@@ -18,13 +17,9 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
-func (h *Handler) OpenDialog(panelID int) { h.openDialog(panelID, false) }
-
-// OpenJumpDialog opens the Find dialog in jump mode: a breadth-first,
-// directories-only index whose Enter changes the panel directory.
-func (h *Handler) OpenJumpDialog(panelID int) { h.openDialog(panelID, true) }
-
-func (h *Handler) openDialog(panelID int, jump bool) {
+// OpenDialog opens Find on panelID: the parked Find when it was parked there, else a fresh one
+// (asking first when a Find is parked elsewhere).
+func (h *Handler) OpenDialog(panelID int) {
 	if ui.IsAuxiliaryView(h.model.ViewMode) {
 		return
 	}
@@ -32,14 +27,14 @@ func (h *Handler) openDialog(panelID int, jump bool) {
 		h.host.ActivePanel().CancelFilter(h.host.ActiveViewportRows())
 	}
 	if st := &h.model.FindDialog; st.Parked {
-		if st.PanelID == panelID && st.JumpMode == jump && st.RootPath == filepath.Clean(h.host.PanelByID(panelID).PathString()) {
+		if st.PanelID == panelID && st.RootPath == filepath.Clean(h.host.PanelByID(panelID).PathString()) {
 			h.RestoreParked()
 			return
 		}
-		h.model.FindRelocate = dialog.FindRelocateState{Open: true, Focus: dialog.FindRelocateRestore, PanelID: panelID, Jump: jump, Root: st.RootPath}
+		h.model.FindRelocate = dialog.FindRelocateState{Open: true, Focus: dialog.FindRelocateRestore, PanelID: panelID, Root: st.RootPath}
 		return
 	}
-	h.OpenFresh(panelID, jump)
+	h.OpenFresh(panelID)
 }
 
 // RestoreParked shows the parked Find as it was, wherever it was parked.
@@ -49,16 +44,13 @@ func (h *Handler) RestoreParked() {
 }
 
 // OpenFresh drops any Find (open or parked) and starts a new one on panelID.
-func (h *Handler) OpenFresh(panelID int, jump bool) {
+func (h *Handler) OpenFresh(panelID int) {
 	if h.live() {
 		h.CloseDialog()
 	}
 	p := h.host.PanelByID(panelID)
 	root := filepath.Clean(p.PathString())
-	var selRoots []string
-	if !jump {
-		selRoots = panel.PruneNestedPaths(p.SelectedDirectoryPaths())
-	}
+	selRoots := panel.PruneNestedPaths(p.SelectedDirectoryPaths())
 	h.model.FindDialog = dialog.FindDialogState{
 		Open:                       true,
 		PanelID:                    panelID,
@@ -72,8 +64,6 @@ func (h *Handler) OpenFresh(panelID int, jump bool) {
 		SelectionDirRoots:          selRoots,
 		Focus:                      dialog.FindQuery,
 		Indexing:                   true,
-		JumpMode:                   jump,
-		OnlyDirectories:            jump,
 		Advanced:                   h.savedAdvanced,
 		AdvancedMnemonic:           dialog.FindAdvancedMnemonic(h.keysFindDialog.BindingsForAction(keymap.ActionFindToggleAdvanced)),
 	}
@@ -83,25 +73,10 @@ func (h *Handler) OpenFresh(panelID int, jump bool) {
 	// Start the walk normally (above) so gitignore skips get recorded as usual,
 	// then flip Include Hidden on through the same path the checkbox uses — that
 	// way toggling it back off correctly re-hides what was revealed.
-	if len(selRoots) == 0 && rootGitignoreExcluded(h.host.GitignoreCache(), root) {
+	if len(selRoots) == 0 && h.host.GitignoreCache().DirIgnored(root) {
 		h.ToggleIncludeHidden()
 		h.host.SetTransientMessage("Explicit search on gitignore allowed", ui.MessageUrgencyInfo)
 	}
-}
-
-// rootGitignoreExcluded reports whether root itself is excluded by a
-// .gitignore rule from one of its ancestors (e.g. root is a node_modules/
-// or similar directory matched from above) — the degenerate case where a
-// plain walk would silently index nothing.
-func rootGitignoreExcluded(gi *gitignore.Cache, root string) bool {
-	if gi == nil {
-		return false
-	}
-	m, err := gi.MatcherForDir(root)
-	if err != nil || m == nil {
-		return false
-	}
-	return m.Ignored(root, true)
 }
 
 func (h *Handler) CloseDialog() {
@@ -943,13 +918,9 @@ func (h *Handler) live() bool {
 // it opened), so its updates need no repaint.
 func (h *Handler) Hidden() bool { return h.hiddenForView || h.model.FindDialog.Parked }
 
-// IsOpenerKey reports whether action id is the action that opens the find dialog
-// (panel.jump-dialog in jump mode; panel.find-dialog or fileindex.find otherwise). Inside the
-// dialog it parks Find and closes Jump: a parked Jump would show a stale directory snapshot.
-func IsOpenerKey(id string, jump bool) bool {
-	if jump {
-		return id == keymap.ActionPanelJumpDialog
-	}
+// IsParkKey reports whether action id parks an open Find or Find in index: the actions that open
+// them (panel.find-dialog, fileindex.find).
+func IsParkKey(id string) bool {
 	return id == keymap.ActionPanelFindDialog || id == keymap.ActionFileIndexFind
 }
 
@@ -1326,9 +1297,6 @@ func findToggleFieldForID(id dlg.ID) findToggleField {
 
 // applyFindToggle runs the Toggle* method for field. Returns false (no-op) for findToggleNone.
 func (h *Handler) applyFindToggle(field findToggleField) bool {
-	if h.model.FindDialog.JumpMode && (field == findToggleOnlyDirs || field == findToggleOnlyFiles || field == findToggleSelections) {
-		return false
-	}
 	switch field {
 	case findToggleStayOnVolume:
 		h.ToggleStayOnVolume()
@@ -1363,15 +1331,6 @@ func (h *Handler) tryFindDialogActionKey(event *tcell.EventKey) bool {
 // RunAction runs a find-dialog action by ID (key bindings and the Find leader menu).
 // Returns false when id is not a find-dialog action.
 func (h *Handler) RunAction(id string) bool {
-	if h.model.FindDialog.JumpMode {
-		switch id {
-		case keymap.ActionPanelSelectToggle, keymap.ActionFindView, keymap.ActionFindEdit, keymap.ActionFindUnselectAll,
-			keymap.ActionFindSelectAll, keymap.ActionFindSelectGroup, keymap.ActionFindUnselectGroup,
-			keymap.ActionFindSelectParentDirs, keymap.ActionFindToggleAdvanced, keymap.ActionFindCycleMatchMode,
-			keymap.ActionFindResetAdvanced:
-			return true // marking, viewing, editing and the advanced criteria do not apply to jump mode
-		}
-	}
 	switch id {
 	case keymap.ActionPanelSelectToggle:
 		h.findDialogToggleSelectionAndAdvance()
@@ -1409,19 +1368,15 @@ func (h *Handler) RunAction(id string) bool {
 
 func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	st := &h.model.FindDialog
-	if id, ok := h.keys.Lookup(event); ok && IsOpenerKey(id, st.JumpMode) {
-		if st.JumpMode {
-			h.CloseDialog()
-		} else {
-			h.Park()
-		}
+	if id, ok := h.keys.Lookup(event); ok && IsParkKey(id) {
+		h.Park()
 		return
 	}
 	if h.tryFindDialogActionKey(event) {
 		return
 	}
 	// Plain space is query text here, even though it is globally bound to select-toggle.
-	if id, ok := h.keys.Lookup(event); ok && id == keymap.ActionPanelSelectToggle && !keymap.IsPlainPrintableRune(event) && !st.JumpMode {
+	if id, ok := h.keys.Lookup(event); ok && id == keymap.ActionPanelSelectToggle && !keymap.IsPlainPrintableRune(event) {
 		h.findDialogToggleSelectionAndAdvance()
 		return
 	}
@@ -1430,9 +1385,7 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 		return
 	}
 	if event.Key() == tcell.KeyInsert {
-		if !st.JumpMode {
-			h.findDialogToggleSelectionAndAdvance()
-		}
+		h.findDialogToggleSelectionAndAdvance()
 		return
 	}
 	spec := h.DialogSpec()

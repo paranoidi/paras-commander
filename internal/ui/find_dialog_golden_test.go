@@ -182,10 +182,6 @@ func findGoldenCases() []findGolden {
 			pinned: []PinnedItem{{Path: filepath.Join(findGoldenRoot, "amber")}, {Path: filepath.Join(findGoldenRoot, "birch")}},
 			jobs:   []JobPathMark{{ID: "job-quartz", Type: "copy", Status: "running", Sources: []string{filepath.Join(findGoldenRoot, "amber")}}},
 		},
-		findGolden{name: "80x24_jump_mode", w: 80, h: 24, icons: true, state: func(st *dialog.FindDialogState) {
-			st.JumpMode = true
-			st.Focus = dialog.FindOnlyDirs // hidden in jump mode
-		}},
 		findGolden{name: "80x24_indexing", w: 80, h: 24, icons: true, state: func(st *dialog.FindDialogState) {
 			st.IndexDone = false
 			st.Indexing = true

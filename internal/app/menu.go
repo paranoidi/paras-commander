@@ -289,9 +289,9 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 	case keymap.ActionPanelHistoryDialog:
 		a.openHistoryDialog(panelScope)
 	case keymap.ActionPanelFindDialog:
-		a.openFindDialog(panelScope, false)
+		a.openFindDialog(panelScope)
 	case keymap.ActionPanelJumpDialog:
-		a.openFindDialog(panelScope, true)
+		a.openJumpDialog(panelScope)
 	case keymap.ActionPanelComparePanels:
 		a.openComparePanels()
 	case keymap.ActionPanelFindDuplicates:

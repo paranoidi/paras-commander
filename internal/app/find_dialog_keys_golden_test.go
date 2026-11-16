@@ -18,7 +18,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
-// Key-script goldens for the find dialog (and its jump-to-directory mode) over a fixed fixture
+// Key-script goldens for the find dialog over a fixed fixture
 // tree. Every key is followed by settleFind, which drains indexing and ranking so the transcript
 // never depends on timing. Paths are reported relative to the fixture root.
 
@@ -85,10 +85,7 @@ func findKeyRel(app *App, p string) string {
 // findKeyFocus is the focused widget's position in the dialog's focus order (0 = the query, which
 // also drives the list; the selections row only when shown).
 func findKeyFocus(st *dialog.FindDialogState) int {
-	ids := []dlg.ID{dialog.FindQuery, dialog.FindDepth}
-	if !st.JumpMode {
-		ids = append(ids, dialog.FindAdvanced)
-	}
+	ids := []dlg.ID{dialog.FindQuery, dialog.FindDepth, dialog.FindAdvanced}
 	ids = append(ids, dialog.FindOnlyDirs, dialog.FindOnlyFiles, dialog.FindHidden, dialog.FindStayOnVol)
 	if st.ShowSearchSelectionsOption {
 		ids = append(ids, dialog.FindSelections)
@@ -160,9 +157,9 @@ func findKeyOutcome(app *App, _ bool) string {
 	return fmt.Sprintf("panel=%q cursor=%q selected=%v", findKeyRel(app, p.PathString()), cur, sel)
 }
 
-// findKeyDialog opens find (or jump) on the fixture; withSelection selects a directory in the
-// panel first, which adds the search-only-selections checkbox row.
-func findKeyDialog(name string, jump, withSelection bool) keyGoldenDialog {
+// findKeyDialog opens find on the fixture; withSelection selects a directory in the panel first,
+// which adds the search-only-selections checkbox row.
+func findKeyDialog(name string, withSelection bool) keyGoldenDialog {
 	return keyGoldenDialog{
 		name: name,
 		setup: func(t *testing.T, dir string) *App {
@@ -174,11 +171,7 @@ func findKeyDialog(name string, jump, withSelection bool) keyGoldenDialog {
 			if withSelection {
 				app.panelByID(ui.PrimaryPanel).AddSelection(filepath.Join(dir, "amber"))
 			}
-			if jump {
-				app.findCtrl.OpenJumpDialog(ui.PrimaryPanel)
-			} else {
-				app.findCtrl.OpenDialog(ui.PrimaryPanel)
-			}
+			app.findCtrl.OpenDialog(ui.PrimaryPanel)
 			settleFind(t, app)
 			return app
 		},
@@ -242,22 +235,12 @@ func findKeyScripts() []simpleKeyScript {
 }
 
 func TestFindDialogKeyScripts(t *testing.T) {
-	runKeyGoldenScripts(t, findKeyDialog("find_dialog", false, false), findKeyScripts())
+	runKeyGoldenScripts(t, findKeyDialog("find_dialog", false), findKeyScripts())
 }
 
 func TestFindDialogSelectionsKeyScripts(t *testing.T) {
-	runKeyGoldenScripts(t, findKeyDialog("find_dialog_selections", false, true), []simpleKeyScript{
+	runKeyGoldenScripts(t, findKeyDialog("find_dialog_selections", true), []simpleKeyScript{
 		{"mnemonic-selections", "Alt+s Down Alt+s"},
 		{"space-selections", "Tab Tab Tab Tab Tab Tab Tab Tab Space Space"},
-	})
-}
-
-func TestFindJumpDialogKeyScripts(t *testing.T) {
-	runKeyGoldenScripts(t, findKeyDialog("find_jump", true, false), []simpleKeyScript{
-		{"walk-down", "Down Down Down Down Down"},
-		{"mnemonics", "Alt+n Alt+y Alt+i Alt+v"},
-		{"insert-ignored", "Down Insert Down"},
-		{"query-enter", findQuery("quartz") + " Enter"},
-		{"enter-first", "Enter"},
 	})
 }

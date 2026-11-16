@@ -33,8 +33,8 @@ func (a *App) answerFindRelocate(id dlg.ID) {
 	case id == dialog.FindRelocateRestore:
 		a.findCtrl.RestoreParked()
 	case id == dialog.FindRelocateNew && s.Index:
-		a.fileindexCtrl.OpenFreshFind(s.PanelID, s.Jump)
+		a.fileindexCtrl.OpenFreshFind(s.PanelID)
 	case id == dialog.FindRelocateNew:
-		a.findCtrl.OpenFresh(s.PanelID, s.Jump)
+		a.findCtrl.OpenFresh(s.PanelID)
 	}
 }

@@ -10,7 +10,7 @@ import (
 )
 
 // Render goldens for the find-in-index dialog: default focus with results and marks, Boolean mode
-// (Only directories greyed), jump mode (no radio rows), the truncated count, an error and the
+// (Only directories greyed), the truncated count, an error and the
 // empty list.
 
 func indexFindGoldenState(n int) IndexFindDialogState {
@@ -39,9 +39,6 @@ func TestIndexFindGoldenRender(t *testing.T) {
 	boolean := st
 	boolean.Boolean, boolean.OnlyFiles = true, true
 	add("boolean", 100, 30, boolean)
-	jump := st
-	jump.JumpMode, jump.OnlyDirs = true, true
-	add("jump", 100, 30, jump)
 	trunc := indexFindGoldenState(30)
 	trunc.Truncated = true
 	add("truncated", 100, 30, trunc)

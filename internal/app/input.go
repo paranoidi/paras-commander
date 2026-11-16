@@ -45,6 +45,7 @@ const (
 	InputModePinDialog
 	InputModeFindDialog
 	InputModeIndexFindDialog
+	InputModeJumpDialog
 	InputModeIndexTagsDialog
 	InputModeColumnsDialog
 	InputModeLeaderMenu
@@ -95,6 +96,8 @@ func (a *App) inputMode() InputMode {
 		return InputModeFindDialog
 	case a.model.IndexFindDialog.Open:
 		return InputModeIndexFindDialog
+	case a.model.JumpDialog.Open:
+		return InputModeJumpDialog
 	case a.model.IndexTagsDialog.Open:
 		return InputModeIndexTagsDialog
 	case a.model.ColumnsDialog.Open:
@@ -201,12 +204,17 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 	}
 	if a.model.FindDialog.Open {
 		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
-		rest = append(findDialogOverlayFooterKeys(a.keys.FindDialog, a.model.FindDialog.JumpMode), rest...)
+		rest = append(findDialogOverlayFooterKeys(a.keys.FindDialog), rest...)
 		return footerWithEscClose(rest)
 	}
 	if a.model.IndexFindDialog.Open {
 		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
-		rest = append(findDialogOverlayFooterKeys(a.keys.FindDialog, a.model.IndexFindDialog.JumpMode), rest...)
+		rest = append(findDialogOverlayFooterKeys(a.keys.FindDialog), rest...)
+		return footerWithEscClose(rest)
+	}
+	if a.model.JumpDialog.Open {
+		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
+		rest = append(openInPanelFooterKeys(a.keys.JumpDialog), rest...)
 		return footerWithEscClose(rest)
 	}
 	if a.model.HistoryDialog.Open {
@@ -539,16 +547,12 @@ func footerWithEscClose(rest []menu.FunctionKey) []menu.FunctionKey {
 }
 
 // findDialogOverlayFooterKeys is the footer of Find and its twin Find in index: the marking keys
-// (not in jump mode) and Open.
-func findDialogOverlayFooterKeys(keys *keymap.Map, jumpMode bool) []menu.FunctionKey {
+// and Open.
+func findDialogOverlayFooterKeys(keys *keymap.Map) []menu.FunctionKey {
 	if keys == nil {
 		return nil
 	}
-	var out []menu.FunctionKey
-	if !jumpMode {
-		out = findDialogMarkingFooterKeys(keys)
-	}
-	return append(out, openInPanelFooterKeys(keys)...)
+	return append(findDialogMarkingFooterKeys(keys), openInPanelFooterKeys(keys)...)
 }
 
 // openInPanelFooterKeys is the one source of the "Open ◄" / "Open ►" footer hints shown by the
@@ -807,6 +811,10 @@ var inputModeKeyHandlers = map[InputMode]func(*App, *tcell.EventKey) bool{
 	},
 	InputModeIndexFindDialog: func(a *App, ev *tcell.EventKey) bool {
 		a.fileindexCtrl.HandleFindKey(ev)
+		return false
+	},
+	InputModeJumpDialog: func(a *App, ev *tcell.EventKey) bool {
+		a.jumpCtrl.HandleKey(ev)
 		return false
 	},
 	InputModeIndexTagsDialog: func(a *App, ev *tcell.EventKey) bool {
@@ -1387,9 +1395,9 @@ func (a *App) dispatch(actionID string) bool {
 	case keymap.ActionPanelFolderColorMenu:
 		a.openFolderColorMenu(a.model.ActivePanel)
 	case keymap.ActionPanelFindDialog:
-		a.openFindDialog(a.model.ActivePanel, false)
+		a.openFindDialog(a.model.ActivePanel)
 	case keymap.ActionPanelJumpDialog:
-		a.openFindDialog(a.model.ActivePanel, true)
+		a.openJumpDialog(a.model.ActivePanel)
 	case keymap.ActionAppUserMenu:
 		a.toggleUserMenu()
 	case keymap.ActionAppLeaderMenu:

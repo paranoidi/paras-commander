@@ -74,15 +74,11 @@ func (h fileindexHost) OpenFullscreenFilePreviewAt(path string, isDir bool) erro
 
 func (h fileindexHost) EditFile(path string) { h.app.editFileAt(path) }
 
-// openFindDialog is the one entry for panel.find-dialog and panel.jump-dialog: the find-in-index
-// dialog on a fileindex:// panel, Find everywhere else.
-func (a *App) openFindDialog(panelID int, jump bool) {
+// openFindDialog is the one entry for panel.find-dialog: the find-in-index dialog on a
+// fileindex:// panel, Find everywhere else.
+func (a *App) openFindDialog(panelID int) {
 	if a.panelByID(panelID).Path.Scheme() == pathloc.SchemeFileIndex {
-		a.fileindexCtrl.OpenFindDialog(panelID, jump)
-		return
-	}
-	if jump {
-		a.findCtrl.OpenJumpDialog(panelID)
+		a.fileindexCtrl.OpenFindDialog(panelID)
 		return
 	}
 	a.findCtrl.OpenDialog(panelID)

@@ -29,6 +29,7 @@ type Bundle struct {
 	ColumnsDialog       *Map // Columns dialog (column profiles)
 	ThemeDialog         *Map // theme picker (toggle the extra preview samples)
 	PatternDialog       *Map // Filter and Select group dialogs (saved patterns and history)
+	JumpDialog          *Map // Jump to directory (open-primary/open-secondary)
 	FilePreviewSearch   *Map // F3 preview search match-jump chords, consulted only while typing the search query; may be nil
 	// LeaderKey maps action ID → single-letter Esc function-menu leader key (merged defaults + user).
 	LeaderKey map[string]string
@@ -48,7 +49,7 @@ func (b *Bundle) Overlays() []*Map {
 		b.BookmarkDialog, b.FindDialog, b.HistoryDialog, b.FlattenDialog, b.TransferDialog,
 		b.Compare, b.Dedup, b.Terminal, b.MassRenameDialog, b.RunForEachDialog, b.PinDialog,
 		b.HelpDialog, b.UserMenu, b.CommandOutputDialog, b.ColumnsDialog, b.FilePreviewSearch, b.Unique,
-		b.ThemeDialog, b.PatternDialog,
+		b.ThemeDialog, b.PatternDialog, b.JumpDialog,
 	}
 }
 
@@ -121,7 +122,7 @@ func (b *Bundle) mapFields() []**Map {
 		&b.BookmarkDialog, &b.FindDialog, &b.HistoryDialog, &b.FlattenDialog, &b.TransferDialog,
 		&b.Compare, &b.Dedup, &b.Terminal, &b.MassRenameDialog, &b.RunForEachDialog, &b.PinDialog,
 		&b.HelpDialog, &b.UserMenu, &b.CommandOutputDialog, &b.ColumnsDialog, &b.FilePreviewSearch, &b.Unique,
-		&b.ThemeDialog, &b.PatternDialog,
+		&b.ThemeDialog, &b.PatternDialog, &b.JumpDialog,
 	}
 }
 

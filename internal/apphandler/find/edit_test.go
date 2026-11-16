@@ -52,20 +52,6 @@ func TestFindEditRefusesDirectory(t *testing.T) {
 	}
 }
 
-func TestFindEditSwallowedInJumpMode(t *testing.T) {
-	t.Parallel()
-	host := &fakeFindHost{}
-	model := editTestModel(0)
-	model.FindDialog.JumpMode = true
-	h := newTestFindHandler(host, model)
-	if !h.RunAction(keymap.ActionFindEdit) {
-		t.Fatal("find.edit not swallowed in jump mode")
-	}
-	if host.editedPath != "" {
-		t.Fatalf("jump mode edited %q", host.editedPath)
-	}
-}
-
 // A rank result that lands while Find is hidden behind the viewer it opened is applied, and the
 // reopened dialog shows it; a closed Find drops it.
 func TestFindRankAppliesWhileHiddenForView(t *testing.T) {

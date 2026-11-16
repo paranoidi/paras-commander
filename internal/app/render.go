@@ -91,6 +91,24 @@ func (a *App) renderFindDialogUpdate() {
 	a.render()
 }
 
+// paintJumpDialogOverlay repaints only Jump to directory (paintOverlay), while it is the top
+// input layer.
+func (a *App) paintJumpDialogOverlay() bool {
+	if !a.model.JumpDialog.Open || a.inputMode() != InputModeJumpDialog {
+		return false
+	}
+	return a.paintOverlay(ui.OverlayJump, func(layout ui.Layout) dialog.PaintedArea {
+		return ui.PaintJumpDialog(a.screen, layout, &a.model, a.styles)
+	})
+}
+
+// renderJumpDialogUpdate repaints the jump overlay; when that is not possible, a full render.
+func (a *App) renderJumpDialogUpdate() {
+	if !a.paintJumpDialogOverlay() {
+		a.render()
+	}
+}
+
 // renderDeleteDialogUpdate repaints the delete overlay when it is open; otherwise falls back to a full render.
 func (a *App) renderDeleteDialogUpdate() {
 	if a.deleteDialogOpen() && a.paintFileDialogOverlay() {

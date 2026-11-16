@@ -1,0 +1,16 @@
+== open ==
+focus=0 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 results=8 matched=8 hidden=false volume=true
+== q ==
+focus=0 query="q" qcursor=1 depth="" sel=0 cursor="harbor/quartz" scroll=0 results=1 matched=1 hidden=false volume=true
+== u ==
+focus=0 query="qu" qcursor=2 depth="" sel=0 cursor="harbor/quartz" scroll=0 results=1 matched=1 hidden=false volume=true
+== a ==
+focus=0 query="qua" qcursor=3 depth="" sel=0 cursor="harbor/quartz" scroll=0 results=1 matched=1 hidden=false volume=true
+== r ==
+focus=0 query="quar" qcursor=4 depth="" sel=0 cursor="harbor/quartz" scroll=0 results=1 matched=1 hidden=false volume=true
+== t ==
+focus=0 query="quart" qcursor=5 depth="" sel=0 cursor="harbor/quartz" scroll=0 results=1 matched=1 hidden=false volume=true
+== z ==
+focus=0 query="quartz" qcursor=6 depth="" sel=0 cursor="harbor/quartz" scroll=0 results=1 matched=1 hidden=false volume=true
+== Enter ==
+CLOSED: panel="harbor/quartz" cursor="thistle_note.txt" selected=[]

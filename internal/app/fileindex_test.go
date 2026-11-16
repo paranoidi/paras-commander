@@ -760,7 +760,7 @@ func TestFindDialogOnFileIndexPanelOpensIndexFind(t *testing.T) {
 	if a.model.FindDialog.Open || a.inputMode() != InputModeIndexFindDialog {
 		t.Fatalf("find open=%v mode=%v, want only the index find dialog", a.model.FindDialog.Open, a.inputMode())
 	}
-	if st := a.model.IndexFindDialog; st.Root != dir || st.JumpMode {
+	if st := a.model.IndexFindDialog; st.Root != dir {
 		t.Fatalf("state = %+v", st)
 	}
 	typeIndexFindQuery(t, a, screen, "HARBOR", 1)

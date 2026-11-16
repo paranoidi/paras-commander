@@ -24,6 +24,7 @@ import (
 	fileindexctrl "github.com/paranoidi/paras-commander/internal/apphandler/fileindex"
 	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
 	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
+	jumpctrl "github.com/paranoidi/paras-commander/internal/apphandler/jump"
 	metactrl "github.com/paranoidi/paras-commander/internal/apphandler/meta"
 	pinctrl "github.com/paranoidi/paras-commander/internal/apphandler/pin"
 	previewctrl "github.com/paranoidi/paras-commander/internal/apphandler/preview"
@@ -213,6 +214,7 @@ type App struct {
 	jobState      *jobs.State
 	jobsCtrl      *jobsctrl.Handler
 	findCtrl      *findctrl.Handler
+	jumpCtrl      *jumpctrl.Handler
 	metaCtrl      *metactrl.Handler
 	fileindexCtrl *fileindexctrl.Handler
 	// fileIndex is the shared fileindex database handle behind fileindex://, the tags column
@@ -855,6 +857,16 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		PromptElevate:        app.promptElevate,
 		Getenv:               func(k string) string { return app.getenv(k) },
 	})
+	app.jumpCtrl = jumpctrl.New(jumpctrl.Deps{
+		Host:            jumpHost{appShellHost: appShellHost{app: app}},
+		Screen:          screen,
+		Model:           &app.model,
+		Config:          cfg,
+		Index:           app.fileIndex,
+		Keys:            keys.Global,
+		KeysJumpDialog:  keys.JumpDialog,
+		KeysDialogInput: keys.DialogInput,
+	})
 	app.fileindexCtrl = fileindexctrl.New(fileindexctrl.Deps{
 		Host:   fileindexHost{appShellHost: appShellHost{app: app}},
 		Screen: screen,
@@ -1245,6 +1257,21 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 	case findctrl.FindNavIdlePayload:
 		if a.findCtrl.HandleFindNavIdle(d.Epoch) {
 			a.renderFindDialogUpdate()
+			out.didRender = true
+		}
+	case jumpctrl.WakePayload:
+		if a.jumpCtrl.PollScan() {
+			a.renderJumpDialogUpdate()
+			out.didRender = true
+		}
+	case jumpctrl.RankDuePayload:
+		if a.jumpCtrl.HandleRankDue(d) {
+			a.renderJumpDialogUpdate()
+			out.didRender = true
+		}
+	case jumpctrl.IndexResultPayload:
+		if a.jumpCtrl.HandleIndexResult(d) {
+			a.renderJumpDialogUpdate()
 			out.didRender = true
 		}
 	case comparectrl.WakePayload:

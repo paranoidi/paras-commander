@@ -42,17 +42,15 @@ type FindViewContext struct {
 	RowMarks       RowMarksFunc
 }
 
-// FindDialogView is the find (and jump-to-directory) dialog's widget spec: the query and depth
+// FindDialogView is the find dialog's widget spec: the query and depth
 // inputs on one row, the result filters and scope options, the ranked result list driven by the
 // query, and OK / Cancel. Row devicons are painted over the list's leading cells by
 // DrawFindDialog (see FindRowIconPainter).
 func FindDialogView(state *FindDialogState, ctx FindViewContext) dlg.Spec {
 	styles := ctx.Styles
 	adv := state.Advanced
-	advanced := !state.JumpMode // jump mode is a plain fuzzy directory search
-
 	queryIcon := styles.IconSearchIcon()
-	if tag := adv.Mode.Tag(); advanced && tag != "" {
+	if tag := adv.Mode.Tag(); tag != "" {
 		queryIcon += " " + tag // the query is not fuzzy: say how it is read
 	}
 	query := dlg.Item{
@@ -64,22 +62,14 @@ func FindDialogView(state *FindDialogState, ctx FindViewContext) dlg.Spec {
 		Value: state.DepthInput, Cursor: utf8.RuneCountInString(state.DepthInput), LeadingIcon: styles.IconDialogDepth(),
 		Tooltip: findDepthTooltip,
 	}
-	queryRow := []dlg.Item{query, depth}
-	if advanced {
-		depth.Gap = 1
-		queryRow = []dlg.Item{query, depth, {ID: FindAdvanced, Kind: dlg.KindCheckbox, Label: findAdvancedLabel, Mnemonic: state.AdvancedMnemonic, On: adv.Expanded, Seg: 1}}
+	depth.Gap = 1
+	queryRow := []dlg.Item{query, depth, {ID: FindAdvanced, Kind: dlg.KindCheckbox, Label: findAdvancedLabel, Mnemonic: state.AdvancedMnemonic, On: adv.Expanded, Seg: 1}}
+	options := []dlg.Item{
+		{ID: FindOnlyDirs, Kind: dlg.KindRadio, Label: "Only directories", Mnemonic: 'N', On: state.OnlyDirectories, Gap: findOptionsGap},
+		{ID: FindOnlyFiles, Kind: dlg.KindRadio, Label: "Only files", Mnemonic: 'Y', On: state.OnlyFiles, Gap: findOptionsGap},
+		{ID: FindHidden, Kind: dlg.KindCheckbox, Label: "Include hidden", Mnemonic: 'I', On: state.IncludeHidden, Gap: findOptionsGap},
+		{ID: FindStayOnVol, Kind: dlg.KindCheckbox, Label: "Stay on current volume", Mnemonic: 'V', On: state.StayOnCurrentVolume},
 	}
-	var options []dlg.Item
-	if !state.JumpMode {
-		options = append(options,
-			dlg.Item{ID: FindOnlyDirs, Kind: dlg.KindRadio, Label: "Only directories", Mnemonic: 'N', On: state.OnlyDirectories, Gap: findOptionsGap},
-			dlg.Item{ID: FindOnlyFiles, Kind: dlg.KindRadio, Label: "Only files", Mnemonic: 'Y', On: state.OnlyFiles, Gap: findOptionsGap},
-		)
-	}
-	options = append(options,
-		dlg.Item{ID: FindHidden, Kind: dlg.KindCheckbox, Label: "Include hidden", Mnemonic: 'I', On: state.IncludeHidden, Gap: findOptionsGap},
-		dlg.Item{ID: FindStayOnVol, Kind: dlg.KindCheckbox, Label: "Stay on current volume", Mnemonic: 'V', On: state.StayOnCurrentVolume},
-	)
 	col := []dlg.Item{
 		{Kind: dlg.KindRow, Cells: queryRow},
 		{Kind: dlg.KindSeparator},
@@ -94,14 +84,14 @@ func FindDialogView(state *FindDialogState, ctx FindViewContext) dlg.Spec {
 	listSep := dlg.Item{Kind: dlg.KindSeparator}
 	list := dlg.Item{ID: FindList, Kind: dlg.KindList, Height: findListHeight(ctx.Layout.Height), MinHeight: findDialogMinListRows}
 	switch {
-	case advanced && adv.Expanded:
+	case adv.Expanded:
 		advCol := append([]dlg.Item{{Kind: dlg.KindSeparator, Label: "Advanced"}}, findAdvancedRows(adv, rowW)...)
 		groups = append(groups, dlg.Group{Columns: [][]dlg.Item{advCol}})
 		// The open section takes its rows from the results, so the frame wants the height it
 		// has with the section closed (down to a one-row list); fitting shrinks both alike.
 		list.Height = max(list.Height-len(advCol), 1)
 		list.MinHeight = 1
-	case advanced:
+	default:
 		listSep.Label = adv.Summary(styles, rowW-4) // the separator pads its label by a cell each side
 	}
 	groups = append(groups, dlg.Group{Columns: [][]dlg.Item{{listSep, list}}})

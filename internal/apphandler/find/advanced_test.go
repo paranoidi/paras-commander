@@ -164,13 +164,6 @@ func TestToggleAdvancedFocusAndJumpMode(t *testing.T) {
 	if st.Advanced.Expanded || st.Focus != dialog.FindQuery {
 		t.Fatalf("collapse: Expanded=%v Focus=%q, want collapsed and focus on the query", st.Advanced.Expanded, st.Focus)
 	}
-
-	st.JumpMode = true
-	h.RunAction(keymap.ActionFindToggleAdvanced)
-	h.RunAction(keymap.ActionFindCycleMatchMode)
-	if st.Advanced.Expanded || st.Advanced.Mode != findcrit.ModeFuzzy {
-		t.Fatal("jump mode must ignore the advanced actions")
-	}
 }
 
 func TestAdvancedFieldCommitsWhenFocusLeaves(t *testing.T) {

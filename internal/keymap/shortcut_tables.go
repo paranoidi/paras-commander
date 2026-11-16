@@ -16,6 +16,7 @@ const (
 	DialogMkdirShortcutsTable         = "dialog.mkdir"
 	DialogBookmarkShortcutsTable      = "dialog.bookmark"
 	DialogFindShortcutsTable          = "dialog.find"
+	DialogJumpShortcutsTable          = "dialog.jump"
 	DialogHistoryShortcutsTable       = "dialog.history"
 	DialogColumnsShortcutsTable       = "dialog.columns"
 	DialogThemeShortcutsTable         = "dialog.theme"
@@ -43,6 +44,7 @@ var dialogShortcutSubtables = map[string]struct{}{
 	"mkdir":          {},
 	"bookmark":       {},
 	"find":           {},
+	"jump":           {},
 	"history":        {},
 	"columns":        {},
 	"theme":          {},
@@ -71,6 +73,7 @@ func AllShortcutTablePaths() []string {
 		DialogMkdirShortcutsTable,
 		DialogBookmarkShortcutsTable,
 		DialogFindShortcutsTable,
+		DialogJumpShortcutsTable,
 		DialogHistoryShortcutsTable,
 		DialogColumnsShortcutsTable,
 		DialogThemeShortcutsTable,

@@ -23,6 +23,17 @@ func NewCache() *Cache {
 	return &Cache{entries: make(map[string]*cacheEntry)}
 }
 
+// DirIgnored reports whether directory dir itself is excluded by a .gitignore rule from one of its
+// ancestors (dir is node_modules/ or similar): a search rooted there must include ignored entries
+// or it finds nothing. A nil cache or a directory outside a work tree is never ignored.
+func (c *Cache) DirIgnored(dir string) bool {
+	m, err := c.MatcherForDir(dir)
+	if err != nil || m == nil {
+		return false
+	}
+	return m.Ignored(dir, true)
+}
+
 // MatcherForDir returns a matcher for listing directory listDir, or nil when not in a Git work tree.
 func (c *Cache) MatcherForDir(listDir string) (*Matcher, error) {
 	if c == nil {

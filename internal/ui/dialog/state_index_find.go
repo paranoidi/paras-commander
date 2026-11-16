@@ -16,7 +16,7 @@ type IndexFindResult struct {
 	Size  int64
 }
 
-// IndexFindDialogState is the "Find in index" dialog (and its jump-to-directory form) on a
+// IndexFindDialogState is the "Find in index" dialog on a
 // fileindex:// panel. Its widgets are described by IndexFindDialogView; Focus names the focused
 // one (the IndexFind* IDs, OK or Cancel; empty = the query, which also drives the result list).
 type IndexFindDialogState struct {
@@ -47,9 +47,7 @@ type IndexFindDialogState struct {
 	ShowSearchSelectionsOption bool
 	SearchOnlySelections       bool
 	SelectionDirRoots          []string
-	// JumpMode is "Jump to directory": name search over directories only, no marking.
-	JumpMode bool
-	Results  []IndexFindResult
+	Results                    []IndexFindResult
 	// Truncated is true when more results matched than Results holds.
 	Truncated bool
 	Searching bool

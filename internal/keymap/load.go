@@ -116,6 +116,7 @@ func buildBundle(global map[string][]string, overlayLayers []map[string][]string
 		Unique:              overlayMaps[23],
 		ThemeDialog:         overlayMaps[24],
 		PatternDialog:       overlayMaps[25],
+		JumpDialog:          overlayMaps[26],
 		LeaderKey:           menus[LeaderKeyShortcutsTable],
 		CopyMenuKey:         menus[CopyMenuShortcutsTable],
 		PreviewMenuKey:      menus[PreviewMenuShortcutsTable],
@@ -306,6 +307,7 @@ type dialogShortcuts struct {
 	Mkdir         map[string][]string `toml:"mkdir"`
 	Bookmark      map[string][]string `toml:"bookmark"`
 	Find          map[string][]string `toml:"find"`
+	Jump          map[string][]string `toml:"jump"`
 	History       map[string][]string `toml:"history"`
 	Flatten       map[string][]string `toml:"flatten"`
 	Transfer      map[string][]string `toml:"transfer"`
@@ -387,6 +389,7 @@ func EncodeDefaultStub(w io.Writer) error {
 			Mkdir:         DefaultMkdirDialogOverlayKeys(),
 			Bookmark:      DefaultBookmarkDialogOverlayKeys(),
 			Find:          DefaultFindDialogOverlayKeys(),
+			Jump:          DefaultJumpDialogOverlayKeys(),
 			History:       DefaultHistoryDialogOverlayKeys(),
 			Flatten:       DefaultFlattenDialogOverlayKeys(),
 			Transfer:      DefaultTransferDialogOverlayKeys(),

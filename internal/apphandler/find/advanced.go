@@ -20,18 +20,15 @@ import (
 // inputs apply on Enter and when focus leaves them (commitAdvanced), since an owner lookup or new
 // exclude patterns cost more than a keystroke should.
 
-// matchMode is the query match mode in effect (jump mode is always fuzzy).
+// matchMode is the query match mode in effect.
 func (h *Handler) matchMode(st *dialog.FindDialogState) findcrit.Mode {
-	if st.JumpMode {
-		return findcrit.ModeFuzzy
-	}
 	return st.Advanced.Mode
 }
 
 // caseInsensitive reports whether the query ignores case: [filter] case_insensitive unless the
 // advanced Case sensitive box is checked.
 func (h *Handler) caseInsensitive(st *dialog.FindDialogState) bool {
-	return h.config.Filter.CaseInsensitive && (st.JumpMode || !st.Advanced.CaseSensitive)
+	return h.config.Filter.CaseInsensitive && !st.Advanced.CaseSensitive
 }
 
 // findFilterEmpty reports whether the dialog filters nothing: an empty query and no criteria. The
@@ -48,11 +45,8 @@ func (h *Handler) validateQuery(st *dialog.FindDialogState) {
 }
 
 // parseAdvanced turns the advanced section into criteria and exclude patterns, flagging the
-// fields that do not parse (they are left out). Jump mode has no criteria.
+// fields that do not parse (they are left out).
 func (h *Handler) parseAdvanced(st *dialog.FindDialogState) (findcrit.Criteria, findcrit.Excludes) {
-	if st.JumpMode {
-		return findcrit.Criteria{}, nil
-	}
 	a := &st.Advanced
 	now := time.Now()
 	age := func(f dialog.FindAdvField) int64 {
@@ -156,9 +150,6 @@ func (h *Handler) editAdvField(event *tcell.EventKey, f dialog.FindAdvField) {
 // the section back to the query.
 func (h *Handler) ToggleAdvanced() {
 	st := &h.model.FindDialog
-	if st.JumpMode {
-		return
-	}
 	st.Advanced.Expanded = !st.Advanced.Expanded
 	if st.Advanced.Expanded {
 		h.commitLeftAdvField()
@@ -173,9 +164,6 @@ func (h *Handler) ToggleAdvanced() {
 // CycleMatchMode switches the query to the next match mode (fuzzy, glob, regex).
 func (h *Handler) CycleMatchMode() {
 	st := &h.model.FindDialog
-	if st.JumpMode {
-		return
-	}
 	h.setMatchMode(st.Advanced.Mode.Next())
 }
 
@@ -189,9 +177,6 @@ func (h *Handler) setMatchMode(m findcrit.Mode) {
 // ResetAdvanced clears the match mode and every criterion.
 func (h *Handler) ResetAdvanced() {
 	st := &h.model.FindDialog
-	if st.JumpMode {
-		return
-	}
 	st.Advanced.Clear()
 	h.commitAdvanced()
 }

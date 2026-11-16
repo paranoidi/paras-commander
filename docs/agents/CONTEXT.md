@@ -100,6 +100,10 @@ _Avoid_: master/slave, source/target panel
 **Find**:
 Recursive name search under a panel's directory, backed by a background index.
 
+**Jump to directory**:
+Fuzzy directory-name search under a panel's directory whose Enter changes that panel to the hit; a dialog of its own (disk walk, or the index on an index view), never parked.
+_Avoid_: jump mode, find jump
+
 **Match mode**:
 How Find reads its query: fuzzy (ranked), glob (shell pattern) or regex. Find in index has its own Pattern / Boolean modes.
 

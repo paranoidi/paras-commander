@@ -196,8 +196,8 @@ In an index view:
 
 Find (`C-f`) on an index view opens **Find in index**, which searches
 the index under the panel directory instead of walking the disk (files that
-have gone from disk are found too). Jump to directory (`M-c`) opens the same dialog
-for directories only. `M-F` opens it from an ordinary local panel
+have gone from disk are found too). [Jump to directory](navigation.md#jump-to-directory)
+(`M-c`) on an index view searches the indexed directories the same way. `M-F` opens it from an ordinary local panel
 too, so you can search the index without leaving the real directory: Enter
 then shows the result in the real location (falling back to the index view when
 the directory is gone from disk). The query runs as you type; results are capped at
@@ -225,8 +225,7 @@ selection;
 `F3` opens the real file in the viewer (closing it returns to the
 dialog as it was) and `F4` in the external editor; `Shift+Left` and
 `Shift+Right` show a result in a panel without closing; `Alt+Insert`
-pins it. The key that opened Find in index hides it with its query and marks kept
-(in Jump to directory it closes the dialog); the panel shows a
+pins it. The key that opened the dialog hides it with its query and marks kept; the panel shows a
 yellow search icon at its bottom right until the same key on that panel and
 directory brings it back. Opening it anywhere else asks whether to restore the
 parked search or start a new one there. OK without marks shows the result under the cursor in the panel: a
