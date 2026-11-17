@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/paranoidi/paras-commander/internal/cmdmacro"
+	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/entrymatch"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -41,6 +43,8 @@ var menuEntryKeys = map[string]struct{}{
 	"dialog_height":  {},
 	"cwd":            {},
 	"fileindex_scan": {},
+	"nice":           {},
+	"ionice":         {},
 }
 
 // boolField decodes a TOML boolean, tracking whether it was set.
@@ -95,7 +99,9 @@ type MenuEntry struct {
 	// FileIndexScan is the macro letter ('d' or 'D', 0 when unset) of fileindex_scan: the directory
 	// to scan into the fileindex once the command has run (FileIndexScanDir).
 	FileIndexScan byte
-	Entries       []MenuEntry
+	// Priority is the nice / ionice prefix (nice, ionice); the zero value runs the command as is.
+	Priority cmdrun.Priority
+	Entries  []MenuEntry
 }
 
 // WorkDir is the directory a non-run_for_each launch of e uses on panel p.
@@ -194,6 +200,8 @@ type menuEntry struct {
 	DialogHeight  *dimField  `toml:"dialog_height"`
 	Cwd           string     `toml:"cwd"`
 	FileIndexScan string     `toml:"fileindex_scan"`
+	Nice          int64      `toml:"nice"`
+	IONice        string     `toml:"ionice"`
 }
 
 // LoadFile reads and validates menu.toml from path.
@@ -399,7 +407,7 @@ func decodeEntryAtPath(meta toml.MetaData, prim toml.Primitive, path string, ord
 	if len(childNames) > 0 {
 		return decodeSubmenuEntry(meta, prim, path, title, raw, childNames, orderIndex, entryShellPatterns, warnings)
 	}
-	return decodeLeafEntry(path, title, raw, entryShellPatterns)
+	return decodeLeafEntry(path, title, raw, entryShellPatterns, warnings)
 }
 
 // decodeSubmenuEntry decodes a table with nested child tables into a submenu container,
@@ -482,6 +490,12 @@ func validateSubmenuMutualExclusion(path string, raw menuEntry) error {
 	}
 	if strings.TrimSpace(raw.FileIndexScan) != "" {
 		return entryError(path, "fileindex_scan "+suffix)
+	}
+	if raw.Nice != 0 {
+		return entryError(path, "nice "+suffix)
+	}
+	if strings.TrimSpace(raw.IONice) != "" {
+		return entryError(path, "ionice "+suffix)
 	}
 	return nil
 }
@@ -615,9 +629,46 @@ func decodeFileIndexScan(path, raw string, detach bool) (byte, error) {
 	return letter, nil
 }
 
+// lookPath finds the nice / ionice binaries; a variable so tests need not depend on the machine.
+var lookPath = exec.LookPath
+
+// decodePriority validates nice / ionice. A setting whose tool is not installed (no ionice on
+// macOS, neither on Windows) is dropped with a warning so the command still runs.
+func decodePriority(path, title string, raw menuEntry, warnings *[]string) (cmdrun.Priority, error) {
+	var p cmdrun.Priority
+	if raw.Nice < 0 || raw.Nice > 19 {
+		return p, entryError(path, fmt.Sprintf("nice: invalid value %d (want 1-19)", raw.Nice))
+	}
+	p.Nice = int(raw.Nice)
+	if strings.TrimSpace(raw.IONice) != "" {
+		args, err := cmdrun.ParseIONice(raw.IONice)
+		if err != nil {
+			return p, entryError(path, err.Error())
+		}
+		p.IOArgs = args
+	}
+	for _, tool := range []struct {
+		name string
+		set  bool
+	}{{"nice", p.Nice != 0}, {"ionice", len(p.IOArgs) > 0}} {
+		if !tool.set {
+			continue
+		}
+		if _, err := lookPath(tool.name); err != nil {
+			*warnings = append(*warnings, fmt.Sprintf("User menu: %q: %s not found, running without it", title, tool.name))
+			if tool.name == "nice" {
+				p.Nice = 0
+			} else {
+				p.IOArgs = nil
+			}
+		}
+	}
+	return p, nil
+}
+
 // decodeLeafEntry validates and converts a raw table with no child tables (path, for error
 // messages) into a runnable leaf MenuEntry.
-func decodeLeafEntry(path, title string, raw menuEntry, entryShellPatterns bool) (MenuEntry, error) {
+func decodeLeafEntry(path, title string, raw menuEntry, entryShellPatterns bool, warnings *[]string) (MenuEntry, error) {
 	if strings.TrimSpace(raw.Command) == "" {
 		return MenuEntry{}, entryError(path, "command is required")
 	}
@@ -663,6 +714,11 @@ func decodeLeafEntry(path, title string, raw menuEntry, entryShellPatterns bool)
 		return MenuEntry{}, err
 	}
 
+	prio, err := decodePriority(path, title, raw, warnings)
+	if err != nil {
+		return MenuEntry{}, err
+	}
+
 	keepOpen := raw.KeepOpen != nil && raw.KeepOpen.Set && raw.KeepOpen.Value
 	if keepOpen {
 		if modes.dialog {
@@ -699,6 +755,7 @@ func decodeLeafEntry(path, title string, raw menuEntry, entryShellPatterns bool)
 		DialogHeight:  dialogHeight,
 		CwdPanel:      cwdPanel,
 		FileIndexScan: fileIndexScan,
+		Priority:      prio,
 	}, nil
 }
 

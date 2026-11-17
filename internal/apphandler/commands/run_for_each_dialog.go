@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/cmdmacro"
+	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -92,7 +93,7 @@ func (h *Handler) ExecuteRunForEach() {
 		PTY:             usePTY,
 		NotifyLabel:     "Run for each",
 		BuildItem: func(ent localfs.Entry, ctx cmdmacro.Context) (RunForEachBuiltItem, error) {
-			return BuildRunForEachItem(cmdLine, ent, ctx, false, !inDirs)
+			return BuildRunForEachItem(cmdLine, ent, ctx, false, !inDirs, cmdrun.Priority{})
 		},
 	})
 }
@@ -165,7 +166,7 @@ func validateRunForEachCommand(cmdLine string, entries []localfs.Entry, active, 
 	if msg := runForEachRefusal(cmdLine, entries, active, other); msg != "" {
 		return "", msg
 	}
-	built, err := BuildRunForEachItem(cmdLine, ent, usermenu.MacroContext(active, other, "", ""), false, !inDirs)
+	built, err := BuildRunForEachItem(cmdLine, ent, usermenu.MacroContext(active, other, "", ""), false, !inDirs, cmdrun.Priority{})
 	if err != nil {
 		return "", err.Error()
 	}

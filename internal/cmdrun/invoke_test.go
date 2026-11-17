@@ -214,3 +214,49 @@ func TestBuildInvocationFallbackGroupStaysExec(t *testing.T) {
 		t.Fatalf("a real pipe beside a group: argv = %#v", built.Argv)
 	}
 }
+
+func TestBuildInvocationPriorityPrefix(t *testing.T) {
+	ioIdle, err := ParseIONice(" IDLE ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ioBE, err := ParseIONice("best-effort:4")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cases := []struct {
+		name     string
+		template string
+		prio     Priority
+		want     []string
+	}{
+		{"exec nice", "gzip -9", Priority{Nice: 19}, []string{"nice", "-n", "19", "gzip", "-9"}},
+		{"exec ionice", "gzip -9", Priority{IOArgs: ioIdle}, []string{"ionice", "-c", "3", "gzip", "-9"}},
+		{"exec both", "gzip -9", Priority{Nice: 5, IOArgs: ioBE}, []string{"nice", "-n", "5", "ionice", "-c", "2", "-n", "4", "gzip", "-9"}},
+		{"shell both", "tar -c | zstd", Priority{Nice: 19, IOArgs: ioIdle}, []string{"nice", "-n", "19", "ionice", "-c", "3", "@sh"}},
+		{"shell nice", "tar -c | zstd", Priority{Nice: 1}, []string{"nice", "-n", "1", "@sh"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			built, err := BuildInvocation(InvocationSpec{Template: tc.template, Mode: ModeAuto, Priority: tc.prio, Ctx: cmdmacro.Context{Active: &cmdmacro.PanelSnapshot{Dir: "/tmp"}}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := slices.Clone(tc.want)
+			if i := slices.Index(want, "@sh"); i >= 0 {
+				want = append(want[:i], ShellArgv(tc.template)...)
+			}
+			if !slices.Equal(built.Argv, want) {
+				t.Fatalf("argv = %q, want %q", built.Argv, want)
+			}
+			if built.Display != tc.template {
+				t.Fatalf("display = %q", built.Display)
+			}
+		})
+	}
+	for _, bad := range []string{"", "realtime", "best-effort:8", "best-effort:x", "best-effort:", "best-effort:04"} {
+		if _, err := ParseIONice(bad); err == nil {
+			t.Fatalf("ParseIONice(%q) accepted", bad)
+		}
+	}
+}

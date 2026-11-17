@@ -115,6 +115,7 @@ So a ghost row highlighted in a flat listing does not stop `touch x`, which runs
 | `keep_open = true` | Keeps the menu open after launching (needs `background`, `detach` or `interactive`) |
 | `cwd = "panel"` | Runs in the panel directory instead of the highlighted row's directory (`"cursor"`, the default); see [Working directory](#working-directory) |
 | `fileindex_scan = "%d"` | Scans that directory into the [file index](fileindex.md) once the command has run (`"%d"` or `"%D"`, not with `detach`); see [Updating the file index](#updating-the-file-index) |
+| `nice = 19`, `ionice = "idle"` | Runs the command at lower CPU / disk priority (`nice` 1 to 19, `ionice` `"idle"`, `"best-effort"` or `"best-effort:0"` to `"best-effort:7"`); see [Lower priority](#lower-priority-nice-ionice) |
 
 Other fields: `title` (required), `command` (required unless the table is a submenu), `key` (single activation letter, otherwise derived from the title), `default = true`, `toast` (message after success), `shell = true` (force `sh -c`), `when` (visibility), `shell_patterns`, `dialog_width` and `dialog_height` (`"80%"` or a number). `interactive` cannot be combined with `detach`, `background`, `dialog` or `run_for_each`.
 
@@ -138,7 +139,7 @@ fileindex_scan = "%D"
 - The scan appears in the job list like any other, without the usual job started and completed messages, so the command's `toast` or failure notification stays on screen. A scan that fails or is canceled still says so.
 - It works with every mode except `detach`, because pc never sees a detached process finish. A value other than `"%d"` or `"%D"`, or combining it with `detach`, is a menu load error.
 
-Entries are uniquely named TOML tables in the order you write them. A table that contains child tables instead of `command` is a submenu, nested as deep as you like. Load errors (unknown field, bad `when`, `cwd` other than `cursor` / `panel`, `run_for_each` without `%f`, unknown `pool`) are shown as a critical message.
+Entries are uniquely named TOML tables in the order you write them. A table that contains child tables instead of `command` is a submenu, nested as deep as you like. Load errors (unknown field, bad `when`, `cwd` other than `cursor` / `panel`, `nice` outside 1 to 19, a bad `ionice`, `run_for_each` without `%f`, unknown `pool`) are shown as a critical message.
 
 ```toml
 [shell_here]
@@ -181,6 +182,24 @@ When a `dialog = true` command finishes, paths printed in its output that exist 
 ### Selection after a command
 
 A command clears the tags it consumed when it starts: `%t` clears the active panel, `%T` the other panel, and a command using neither leaves selections alone. `interactive` and `detach` entries clear only after a successful start. `run_for_each` entries and the Run for each dialog clear the active panel.
+
+### Lower priority (nice, ionice)
+
+To keep a heavy command from slowing down the rest of the desktop, set `nice` (CPU) and `ionice` (disk) on the entry. The app puts the prefix in front of the whole command, so a pipeline is lowered as a whole, and every process the command starts inherits the lower priority:
+
+```toml
+[compress]
+title = "Compress"
+command = "tar -c %f | zstd > %f.tar.zst"
+nice = 19
+ionice = "idle"
+```
+
+`nice` is a number from 1 to 19 (19 is the lowest priority); leaving it out or using 0 changes nothing. `ionice` is `"idle"` (only uses disk time nobody else wants), `"best-effort"` or `"best-effort:N"` with N from 0 (highest) to 7. Other values, including realtime, are load errors, as is a `nice` outside 1 to 19. Both keys work in every mode, including `run_for_each`, and are not allowed on a submenu.
+
+`ionice` takes effect only with the BFQ I/O scheduler. With `none`, which NVMe drives often use, it does nothing. Check with `cat /sys/block/<device>/queue/scheduler`.
+
+If `nice` or `ionice` is not installed (macOS has no `ionice`, Windows has neither), the menu shows a warning naming the entry and the command runs without that setting.
 
 ## Worker pools
 

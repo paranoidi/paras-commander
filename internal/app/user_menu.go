@@ -273,6 +273,7 @@ func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 		Mode:       cmdrun.ModeAuto,
 		ForceShell: entry.Shell,
 		Ctx:        macroCtx,
+		Priority:   entry.Priority,
 	})
 	if err != nil {
 		if strings.Contains(err.Error(), "cmdmacro:") || strings.Contains(err.Error(), "user menu:") {
@@ -369,7 +370,7 @@ func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active *panel.
 		NotifyLabel:  notifyLabel,
 		AfterRun:     scanAfter,
 		BuildItem: func(ent localfs.Entry, ctx cmdmacro.Context) (commandsctrl.RunForEachBuiltItem, error) {
-			return commandsctrl.BuildRunForEachItem(cmdTemplate, ent, ctx, forceShell, true)
+			return commandsctrl.BuildRunForEachItem(cmdTemplate, ent, ctx, forceShell, true, entry.Priority)
 		},
 	})
 	return true

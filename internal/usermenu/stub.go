@@ -33,7 +33,7 @@ const MenuStubTOML = `# User function menu
 # A table becomes a submenu once it has its own nested [parent.child] tables
 # instead of a command — submenus can nest arbitrarily deep. A submenu table
 # cannot also set command / run_for_each / pool / toast / interactive /
-# detach / background / keep_open / dialog / pty / cwd (mutually exclusive with being a container).
+# detach / background / keep_open / dialog / pty / cwd / fileindex_scan / nice / ionice (mutually exclusive with being a container).
 # key=/default= uniqueness is scoped per menu level, so a key can be reused
 # across sibling submenus but not twice within the same level. A duplicate
 # key= within one level is warned about when the menu is opened; the later
@@ -110,6 +110,21 @@ const MenuStubTOML = `# User function menu
 #   the command starts. Runs after a non-zero exit too, not after a failed launch
 #   or a canceled or killed command; a run_for_each batch scans once at its end.
 #   Not combinable with detach; an SFTP directory refuses the launch.
+#
+# nice            int      optional   default: unchanged   values: 1-19
+#   Lower the CPU priority (nice -n N) of the command; 19 is lowest. The prefix
+#   goes in front of the whole command, so a shell pipeline is lowered as a
+#   whole, and child processes inherit it. Applies to every mode, including
+#   run_for_each. Skipped with a warning when nice is not installed.
+#
+# ionice          string   optional   values: "idle" | "best-effort" | "best-effort:0".."best-effort:7"
+#   Lower the disk priority (ionice -c 3 for idle, -c 2 [-n N] for best-effort).
+#   Case-insensitive. Only takes effect with the BFQ I/O scheduler (check
+#   /sys/block/<device>/queue/scheduler; "none", common on NVMe, ignores it).
+#   Skipped with a warning when ionice is not installed (macOS, Windows).
+#     command = "tar -c %f | zstd > %f.tar.zst"
+#     nice = 19
+#     ionice = "idle"
 #
 # keep_open       bool     optional   default: false
 #   Keep the menu open at the same level after launching, to fire several

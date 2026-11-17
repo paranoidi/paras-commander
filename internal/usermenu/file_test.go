@@ -1,6 +1,7 @@
 package usermenu
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -808,5 +809,52 @@ func TestDecodeFileIndexScan(t *testing.T) {
 		if err == nil || !strings.Contains(err.Error(), "fileindex_scan") {
 			t.Fatalf("%s: err = %v, want a fileindex_scan error", name, err)
 		}
+	}
+}
+
+func TestDecodePriority(t *testing.T) {
+	old := lookPath
+	t.Cleanup(func() { lookPath = old })
+	lookPath = func(name string) (string, error) { return "/usr/bin/" + name, nil }
+
+	mf, err := Decode([]byte(`[mango]
+title = "Mango"
+command = "tar -c %f | zstd"
+nice = 19
+ionice = " Best-Effort:3 "
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := mf.Entries[0].Priority
+	if p.Nice != 19 || strings.Join(p.IOArgs, " ") != "-c 2 -n 3" {
+		t.Fatalf("priority = %+v", p)
+	}
+	if len(mf.Warnings) != 0 {
+		t.Fatalf("warnings = %v", mf.Warnings)
+	}
+
+	for name, body := range map[string]string{
+		"nice high":     "command = \"true\"\nnice = 20",
+		"nice negative": "command = \"true\"\nnice = -1",
+		"ionice bad":    "command = \"true\"\nionice = \"realtime\"",
+		"submenu nice":  "nice = 5\n[mango.child]\ntitle = \"Child\"\ncommand = \"true\"",
+	} {
+		if _, err := Decode([]byte("[mango]\ntitle = \"Mango\"\n" + body + "\n")); err == nil {
+			t.Fatalf("%s: want load error", name)
+		}
+	}
+
+	// Missing tools: warn and run without the setting.
+	lookPath = func(string) (string, error) { return "", os.ErrNotExist }
+	mf, err = Decode([]byte("[mango]\ntitle = \"Mango\"\ncommand = \"true\"\nnice = 3\nionice = \"idle\"\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p := mf.Entries[0].Priority; p.Nice != 0 || len(p.IOArgs) != 0 {
+		t.Fatalf("priority not dropped: %+v", p)
+	}
+	if len(mf.Warnings) != 2 || !strings.Contains(mf.Warnings[0], "Mango") {
+		t.Fatalf("warnings = %v", mf.Warnings)
 	}
 }

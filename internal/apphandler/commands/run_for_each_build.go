@@ -24,7 +24,7 @@ type RunForEachBuiltItem struct {
 // When requireF is true, returns an error if the template omits the required %f (iterated
 // item) macro; when false (run-in-each-directory mode), %f is optional since the shell is
 // already positioned inside ent's directory.
-func BuildRunForEachItem(cmdTemplate string, ent localfs.Entry, ctx cmdmacro.Context, forceShell bool, requireF bool) (RunForEachBuiltItem, error) {
+func BuildRunForEachItem(cmdTemplate string, ent localfs.Entry, ctx cmdmacro.Context, forceShell bool, requireF bool, prio cmdrun.Priority) (RunForEachBuiltItem, error) {
 	if requireF && !usermenu.CommandRequiresIteratedF(cmdTemplate) {
 		return RunForEachBuiltItem{}, errors.New(usermenu.ErrRunForEachRequiresF)
 	}
@@ -34,6 +34,7 @@ func BuildRunForEachItem(cmdTemplate string, ent localfs.Entry, ctx cmdmacro.Con
 		Mode:       cmdrun.ModeAuto,
 		ForceShell: forceShell,
 		Ctx:        ctx,
+		Priority:   prio,
 	})
 	if err != nil {
 		return RunForEachBuiltItem{}, err

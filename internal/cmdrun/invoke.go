@@ -2,6 +2,7 @@ package cmdrun
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/cmdmacro"
@@ -25,6 +26,46 @@ type InvocationSpec struct {
 	Mode       InvocationMode
 	ForceShell bool
 	Ctx        cmdmacro.Context
+	Priority   Priority
+}
+
+// Priority lowers CPU (nice) and disk (ionice) priority of a command; the zero value changes nothing.
+type Priority struct {
+	// Nice is the nice -n increment (1..19); 0 leaves it unchanged.
+	Nice int
+	// IOArgs are the ionice arguments (see ParseIONice); empty leaves them unchanged.
+	IOArgs []string
+}
+
+// ParseIONice turns an ionice setting ("idle", "best-effort" or "best-effort:N" with N 0..7,
+// case-insensitive) into ionice arguments.
+func ParseIONice(s string) ([]string, error) {
+	v := strings.ToLower(strings.TrimSpace(s))
+	if v == "idle" {
+		return []string{"-c", "3"}, nil
+	}
+	if v == "best-effort" {
+		return []string{"-c", "2"}, nil
+	}
+	if lvl, ok := strings.CutPrefix(v, "best-effort:"); ok {
+		if n, err := strconv.Atoi(lvl); err == nil && n >= 0 && n <= 7 && lvl == strconv.Itoa(n) {
+			return []string{"-c", "2", "-n", lvl}, nil
+		}
+	}
+	return nil, fmt.Errorf("invalid ionice %q (want idle, best-effort or best-effort:0-7)", s)
+}
+
+// wrap prepends the nice / ionice commands to argv.
+func (p Priority) wrap(argv []string) []string {
+	var out []string
+	if p.Nice != 0 {
+		out = append(out, "nice", "-n", strconv.Itoa(p.Nice))
+	}
+	if len(p.IOArgs) > 0 {
+		out = append(out, "ionice")
+		out = append(out, p.IOArgs...)
+	}
+	return append(out, argv...)
 }
 
 // InvocationResult holds argv and display strings for UI/logging.
@@ -54,7 +95,7 @@ func BuildInvocation(spec InvocationSpec) (InvocationResult, error) {
 	}
 	if useShell {
 		return InvocationResult{
-			Argv:     ShellArgv(expanded),
+			Argv:     spec.Priority.wrap(ShellArgv(expanded)),
 			Expanded: expanded,
 			Display:  display,
 		}, nil
@@ -64,7 +105,7 @@ func BuildInvocation(spec InvocationSpec) (InvocationResult, error) {
 		return InvocationResult{}, err
 	}
 	return InvocationResult{
-		Argv:     argv,
+		Argv:     spec.Priority.wrap(argv),
 		Expanded: expanded,
 		Display:  display,
 	}, nil
