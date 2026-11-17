@@ -30,17 +30,19 @@ leader_bg = "#dce0e8"
 focus_bg = "#acb0be"
 button_bg = "#eff1f5"
 button_focus_bg = "#acb0be"
-file_cursor_bg = "#c9cdd8"
+file_cursor_bg = "#acb0be"
 file_cursor_dim = "#dce0e8"
 highlight_bg = "#1e66f5"
-range_bg = "#9ca0b0"
-range_unselect_bg = "#e64553"
+usage_cursor_bg = "bright_cyan"
+range_bg = "#bcc0cc"
+range_unselect_bg = "#dce0e8"
 inverse_bg = "white"
 fg = "#4c4f69"
 fg_strong = "#000000"
 muted = "#5c5f77"
 faint = "#9ca0b0"
 info_columns = "#5c5f77"
+git_unchanged = "#acb0be"
 ink = "#eff1f5"
 focus_fg = "#4c4f69"
 file_cursor_fg = "#000000"
@@ -116,6 +118,7 @@ other_panel = { fg = "fg", bold = true }
 
 [panel.git]
 new = { fg = "fg" }
+not_modified = { fg = "git_unchanged", bold = true }  # keep the dim mark: repair would brighten it  # tuned
 renamed = { fg = "fg" }
 typechange = { fg = "fg" }
 
@@ -132,9 +135,9 @@ warn = { fg = "fg" }
 selected = { fg = "fg_strong", bg = "surface", icon.file = "faint", icon.folder_open = "faint", icon.folder_mount = "faint", icon.folder_excluded = "faint", icon.fileindex = "faint", icon.git = "faint", icon.suffix = "faint" }
 
 [panel.dedup]
-row.cursor.all_marked = { fg = "fg", bg = "file_cursor_bg", bold = true }
+row.cursor.all_marked = { fg = "fg_strong", bg = "file_cursor_bg", bold = true }
 row.keep = { fg = "fg", bold = true }
-row.cursor.keep = { fg = "fg", bg = "file_cursor_bg", bold = true }
+row.cursor.keep = { fg = "fg_strong", bg = "file_cursor_bg", bold = true }
 full_dir = { fg = "fg" }
 full_dir_content = { fg = "fg" }
 potential = { fg = "fg" }
@@ -201,6 +204,7 @@ selection_size = { fg = "fg_strong" }
 [leader_menu]
 group = { fg = "fg", bold = true }
 arrow = { fg = "faint" }  # overlay0: chord hints and arrows sit well below the labels  # tuned
+hover = { fg = "fg_strong", bg = "focus_bg" }  # entry under the mouse pointer (its click area)
 
 [dialog.help]
 section = { fg = "fg_strong", bold = true }
@@ -211,7 +215,7 @@ item.selected = { fg = "fg_strong", bg = "focus_bg", bold = true }
 match.selected = { fg = "fg_strong", bg = "focus_bg", bold = true, underline = true }
 
 [tooltip]
-info = { fg = "ink" }       # foreground of the info icon ([icons.dialog] info) on the box
+info = { fg = "accent_alt" }  # rosewater info icon  # tuned
 
 [dialog.massrename]
 before.removed = { fg = "fg_strong", bold = true }

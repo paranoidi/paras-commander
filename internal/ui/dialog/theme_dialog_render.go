@@ -32,10 +32,12 @@ type ThemeSamplePainter func(screen tcell.Screen, x, y, width, maxY int, styles 
 
 // ThemeAppSamples are the samples of the app preview pages; a nil painter leaves its rows blank.
 type ThemeAppSamples struct {
-	MenuBar  ThemeSamplePainter // ThemeAppMenuRows rows: the bar, then its open pulldown
-	Jobs     ThemeSamplePainter // ThemeAppJobRows rows: the focused Queue header, then one per job status
-	Progress ThemeSamplePainter // ThemeAppProgressRows rows: the unfocused Queue header, then active, inactive and completed bars
-	Panel    ThemeSamplePainter // ThemePanelRows rows: the active file panel, the inactive one below it
+	MenuBar    ThemeSamplePainter // ThemeAppMenuRows rows: the bar, then its open pulldown
+	Jobs       ThemeSamplePainter // ThemeAppJobRows rows: the focused Queue header, then one per job status
+	Progress   ThemeSamplePainter // ThemeAppProgressRows rows: the unfocused Queue header, then active, inactive and completed bars
+	Panel      ThemeSamplePainter // ThemePanelRows rows: the active file panel, the inactive one below it
+	PanelUsage ThemeSamplePainter // as Panel, with disk usage bars
+	PanelRange ThemeSamplePainter // as Panel, with a pending range select (active) and range unselect (inactive)
 }
 
 // themePreviewCtx is what a preview page paints with: the pane's geometry (y is the page's first row,
@@ -61,7 +63,9 @@ type themePreviewPage struct {
 // themePreviewPages are the preview pages in cycling order; add a page by appending an entry. The pane
 // is as tall as the tallest page, so cycling never resizes the dialog.
 var themePreviewPages = []themePreviewPage{
-	{rows: ThemePanelRows, appBG: true, paint: paintThemePanelPage},
+	{rows: ThemePanelRows, appBG: true, paint: func(c *themePreviewCtx) { paintThemePanelPage(c, c.app.Panel) }},
+	{rows: ThemePanelRows, appBG: true, paint: func(c *themePreviewCtx) { paintThemePanelPage(c, c.app.PanelUsage) }},
+	{rows: ThemePanelRows, appBG: true, paint: func(c *themePreviewCtx) { paintThemePanelPage(c, c.app.PanelRange) }},
 	{rows: ThemeAppMenuRows + ThemeAppJobRows + ThemeAppProgressRows + themeAppSectionGaps, appBG: true, paint: paintThemeAppPage},
 	{rows: themeInputPageRows, paint: paintThemeInputPage},
 }
@@ -362,10 +366,10 @@ func paintThemeAppPage(c *themePreviewCtx) {
 	}
 }
 
-// paintThemePanelPage paints the file panel sample across the pane (already filled with the app
-// background); the painter clips it to maxY.
-func paintThemePanelPage(c *themePreviewCtx) {
-	if c.app.Panel != nil && c.y < c.maxY {
-		c.app.Panel(c.screen, c.left, c.y, c.width, c.maxY, c.styles)
+// paintThemePanelPage paints a file panel sample (Panel, PanelUsage or PanelRange) across the pane (already
+// filled with the app background); the painter clips it to maxY.
+func paintThemePanelPage(c *themePreviewCtx, paint ThemeSamplePainter) {
+	if paint != nil && c.y < c.maxY {
+		paint(c.screen, c.left, c.y, c.width, c.maxY, c.styles)
 	}
 }

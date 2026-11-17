@@ -41,6 +41,7 @@ button_focus_bg = "cyan"      # face of the focused dialog button
 file_cursor_bg = "cyan"       # cursor row of an active file list (panels, duplicate finder)
 file_cursor_dim = "black"     # cursor row of an inactive, carousel-inactive or blocked panel
 highlight_bg = "bright_blue"  # clickable part of the hovered footer entry, disk usage cursor on a selected row, mount mark
+usage_cursor_bg = "bright_cyan"  # disk usage bar on the active panel's cursor row
 range_bg = "bright_black"     # rows covered by a pending range select
 range_unselect_bg = "red"     # rows covered by a mouse-drag unselect
 inverse_bg = "white"          # light boxes: tooltips, info toast, toast sweep edge
@@ -50,6 +51,7 @@ fg_strong = "bright_white"    # emphasised text: headers, hints, active input, p
 muted = "bright_black"        # dimmed text: blocked frames, placeholders
 faint = "black"               # barely visible text on bg/surface: disabled options, remaining progress
 info_columns = "bright_black"  # file-list info columns: size, mtime, permissions, meta
+git_unchanged = "bright_black"  # git status mark of an unchanged file ("--")
 ink = "black"                 # dark text on a coloured fill
 focus_fg = "black"            # text on focus_bg
 file_cursor_fg = "black"      # text and icon on file_cursor_bg
@@ -59,7 +61,7 @@ accent_alt = "magenta"        # dialog shortcut letters that need Alt
 primary = "blue"              # active panel frame, info icon, git modified, tagged
 inactive_frame = "bright_black"  # inactive panel frame
 directory = "blue"            # directory names in listings
-symlink = "bright_cyan"       # symlinks, open-folder mark, disk usage cursor
+symlink = "bright_cyan"       # symlinks, open-folder mark
 selected = "yellow"           # selected files, selection sizes, active/selected dialog options
 # States
 info = "cyan"                 # informational: decision, status text, group titles, other-panel marks
@@ -195,7 +197,7 @@ deleted = { fg = "danger" }
 ignored = { fg = "muted" }
 modified = { fg = "primary" }
 new = { fg = "success" }
-not_modified = { fg = "muted", bold = true }
+not_modified = { fg = "git_unchanged", bold = true }
 renamed = { fg = "warning" }
 typechange = { fg = "special" }
 
@@ -251,7 +253,7 @@ row.cursor.selected = { fg = "selected", bg = "file_cursor_bg", bold = true, ico
 row.cursor.unique = { fg = "ink", bg = "success", icon = "ink" }
 surface = { fg = "fg" }
 title = { fg = "fg", bold = true }
-usage.cursor = { fg = "ink", bg = "symlink" }
+usage.cursor = { fg = "ink", bg = "usage_cursor_bg" }
 usage.cursor.selected = { fg = "selected", bg = "highlight_bg", bold = true }
 
 [panel.target]

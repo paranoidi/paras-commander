@@ -30,17 +30,19 @@ leader_bg = "#11111b"
 focus_bg = "#585b70"
 button_bg = "#1e1e2e"
 button_focus_bg = "#585b70"
-file_cursor_bg = "#9399b2"
+file_cursor_bg = "#6c7086"
 file_cursor_dim = "#313244"
 highlight_bg = "#b4befe"
-range_bg = "#6c7086"
-range_unselect_bg = "#eba0ac"
+usage_cursor_bg = "#878ec0"
+range_bg = "#292a3c"
+range_unselect_bg = "#11111b"
 inverse_bg = "white"
 fg = "#cdd6f4"
 fg_strong = "#cdd6f4"
 muted = "#9399b2"
 faint = "#6c7086"
 info_columns = "#585b70"
+git_unchanged = "#585b70"
 ink = "#11111b"
 focus_fg = "#cdd6f4"
 file_cursor_fg = "#11111b"
@@ -70,6 +72,9 @@ error = { fg = "ink", bg = "danger", bold = true }
 [panel.row]
 info = { fg = "info_columns" }  # keep the dark columns: repair would brighten them  # tuned
 
+[panel.git]
+not_modified = { fg = "git_unchanged", bold = true }  # keep the dim mark: repair would brighten it  # tuned
+
 [panel.usage]
 normal = { fg = "fg", bg = "file_cursor_dim", icon.file = "faint", icon.folder_open = "faint", icon.folder_mount = "faint", icon.folder_excluded = "faint", icon.fileindex = "faint", icon.git = "faint", icon.suffix = "faint" }  # tuned
 selected = { fg = "selected", bg = "file_cursor_dim", icon.file = "faint", icon.folder_open = "faint", icon.folder_mount = "faint", icon.folder_excluded = "faint", icon.fileindex = "faint", icon.git = "faint", icon.suffix = "faint" }  # tuned
@@ -82,8 +87,8 @@ row.cursor.keep = { fg = "ink", bg = "file_cursor_bg", bold = true }
 header = { fg = "ink", bg = "header_bg", bold = true }
 row.cursor.selected = { fg = "selected", bg = "file_cursor_bg", bold = true, icon = "file_cursor_fg" }  # keep yellow marked files on the cursor row: repair would swap it for ink  # tuned
 title = { fg = "special", bold = true }  # pink (magenta): the active panel title (path, Queue, Details, Operations) stands out  # tuned
-usage.cursor = { fg = "ink", bg = "highlight_bg" }  # tuned
-usage.cursor.selected = { fg = "ink", bg = "highlight_bg", bold = true }
+usage.cursor = { fg = "ink", bg = "usage_cursor_bg" }  # tuned
+usage.cursor.selected = { fg = "ink", bg = "usage_cursor_bg", bold = true }  # tuned
 
 [panel.inactive]
 frame = { fg = "inactive_frame" }  # keep the dim frame: repair would brighten it  # tuned
@@ -113,7 +118,7 @@ invalid = { fg = "fg" }
 arrow = { fg = "info_columns" }  # surface2: chord hints and arrows sit well below the labels  # tuned
 
 [tooltip]
-info = { fg = "ink" }       # foreground of the info icon ([icons.dialog] info) on the box
+info = { fg = "accent_alt" }  # rosewater info icon  # tuned
 
 [dialog.massrename]
 before.removed = { fg = "fg", bold = true }

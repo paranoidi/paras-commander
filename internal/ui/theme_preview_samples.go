@@ -20,7 +20,13 @@ func themeAppSamples(model Model) dialog.ThemeAppSamples {
 		Jobs:     drawThemeSampleJobs,
 		Progress: drawThemeSampleProgress,
 		Panel: func(screen tcell.Screen, x, y, width, maxY int, styles theme.Theme) {
-			drawThemeSamplePanel(screen, x, y, width, maxY, styles, model)
+			drawThemeSamplePanel(screen, x, y, width, maxY, styles, model, false, false)
+		},
+		PanelUsage: func(screen tcell.Screen, x, y, width, maxY int, styles theme.Theme) {
+			drawThemeSamplePanel(screen, x, y, width, maxY, styles, model, true, false)
+		},
+		PanelRange: func(screen tcell.Screen, x, y, width, maxY int, styles theme.Theme) {
+			drawThemeSamplePanel(screen, x, y, width, maxY, styles, model, false, true)
 		},
 	}
 }

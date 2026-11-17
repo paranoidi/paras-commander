@@ -6,7 +6,7 @@ Colors, text styles and status glyphs come from a TOML theme file. Several theme
 
 - Options -> Theme opens the theme picker. Typing fuzzy-filters the list. Moving the cursor previews the highlighted theme live once you stop (holding an arrow key does not load every theme on the way), `Enter` applies it and saves `theme` in `config.toml`, `Esc` restores the previous theme, and the footer shows two entries:
   - **Reload** (`F5`, on when the picker opens): while it is on, the highlighted theme's file in the themes directory is checked twice a second and the preview reloads by itself when the file changes, so you can edit a theme and watch it. Switching it on reloads the highlighted theme at once. Built-in themes with no file on disk are not watched. A file that fails to load is reported once per saved change.
-  - **Preview** (`F6` next page, `Shift+F6` previous page, wrapping; the footer shows the current page, such as "Preview 1/3"): the preview pane has several pages and the picker opens on page 1. Page 3 shows sample inputs (with a tooltip under the first active one), a path input with its autocomplete dropdown open over three entries (the first selected), two checkboxes side by side and two rows of sample buttons (selected, unselected and a red destructive one, as in the delete confirmation): the second row shows the shortcut letters as drawn when they need Alt. Pages 1 and 2 fill the whole right side of the dialog with the background the Jobs view uses, so they look as they do in the app. Page 2 shows app samples: a menu bar with an open pulldown, the Jobs queue column header as it looks when focused followed by one job row per job status (with sample ETA and speed), and the column header as it looks unfocused followed by progress bars (active, inactive and completed). Page 1 shows a file panel with sample entries: a parent row, folders (one with a disk usage bar, one being scanned, one skipped), symlinks (one broken), files of several types, selected rows and the cursor, pinned, new, renamed and job marks, a no-permission file, and git statuses. The dialog keeps its size on every page, and on a short terminal the pane shows what fits.
+  - **Preview** (`F6` next page, `Shift+F6` previous page, wrapping; the footer shows the current page, such as "Preview 1/5"): the preview pane has several pages and the picker opens on page 1. Page 5 shows sample inputs (with a tooltip under the first active one), a path input with its autocomplete dropdown open over three entries (the first selected), two checkboxes side by side and two rows of sample buttons (selected, unselected and a red destructive one, as in the delete confirmation): the second row shows the shortcut letters as drawn when they need Alt. Pages 1 to 4 fill the whole right side of the dialog with the background the Jobs view uses, so they look as they do in the app. Page 4 shows app samples: a menu bar with an open pulldown, the Jobs queue column header as it looks when focused followed by one job row per job status (with sample ETA and speed), and the column header as it looks unfocused followed by progress bars (active, inactive and completed). Page 1 shows a file panel with sample entries, page 2 the same panel with disk usage bars, and page 3 the same panel mid range select (the rows a pending range select covers in the active panel, the rows a mouse-drag unselect covers in the inactive one): a parent row, folders (one with a disk usage bar on page 2, one being scanned, one skipped), symlinks (one broken), files of several types, selected rows and the cursor, pinned, new, renamed and job marks, a no-permission file, and git statuses. The dialog keeps its size on every page, and on a short terminal the pane shows what fits.
   The page keys can be rebound in `[dialog.theme]` in `keybindings.toml`.
 - Or set it directly:
 
@@ -43,7 +43,7 @@ red = 1
 bg = "#303446"       # background of the whole UI; "default" keeps the terminal's own
 surface = "bright_black"   # dialog / chip fill
 muted = "bright_black"     # dimmed text
-# ... 38 roles in all, listed in themes/default.toml
+# ... 40 roles in all, listed in themes/default.toml
 
 [menu.bar]
 active   = { fg = "fg" }
@@ -69,11 +69,13 @@ Colors come in two layers. `[palette]` holds only raw colors: the 16 ANSI slot n
 | `file_cursor_bg` / `file_cursor_fg` | `cyan` / `black` | cursor row of an active file list (panels, duplicate finder) |
 | `file_cursor_dim` | `black` | cursor row of an inactive or blocked panel |
 | `highlight_bg` | `bright_blue` | clickable part of the hovered footer entry, disk usage cursor on a selected row, mount mark |
+| `usage_cursor_bg` | `bright_cyan` | disk usage bar on the active panel's cursor row |
 | `range_bg` / `range_unselect_bg` | `bright_black` / `red` | tints of rows covered by a pending range select / unselect |
 | `inverse_bg` | `white` | light boxes: tooltips, info toast |
 | `fg` / `fg_strong` | `white` / `bright_white` | body text / emphasised text |
 | `muted` / `faint` | `bright_black` / `black` | dimmed text / barely visible text (disabled options) |
 | `info_columns` | `bright_black` | file-list info columns: size, date, permissions, meta |
+| `git_unchanged` | `bright_black` | git status mark of an unchanged file |
 | `ink` | `black` | dark text on a colored fill |
 | `accent` | `magenta` | shortcut letters, key hints, match highlights |
 | `accent_alt` | `magenta` | dialog shortcut letters that need Alt |

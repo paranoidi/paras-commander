@@ -30,9 +30,10 @@ leader_bg = "#3b4252"
 focus_bg = "#4c566a"
 button_bg = "#2e3440"
 button_focus_bg = "#4c566a"
-file_cursor_bg = "#4c566a"
+file_cursor_bg = "#616e88"
 file_cursor_dim = "#3b4252"
 highlight_bg = "bright_blue"
+usage_cursor_bg = "bright_cyan"
 range_bg = "#434c5e"
 range_unselect_bg = "#3b4252"
 inverse_bg = "white"
@@ -41,6 +42,7 @@ fg_strong = "bright_white"
 muted = "#e5e9f0"
 faint = "#5e81ac"
 info_columns = "#d8dee9"
+git_unchanged = "#4c566a"
 ink = "#2e3440"
 focus_fg = "#d8dee9"
 file_cursor_fg = "#d8dee9"
@@ -77,6 +79,7 @@ image_sixel_tmux = { fg = "fg", bold = true }
 [panel.git]
 conflicted = { fg = "fg" }
 deleted = { fg = "fg" }
+not_modified = { fg = "git_unchanged", bold = true }  # keep the dim mark: repair would brighten it  # tuned
 
 [panel.fileindex]
 new = { fg = "fg" }
@@ -87,11 +90,13 @@ critical = { fg = "fg" }
 
 [panel.dedup]
 row.all_marked = { fg = "fg", bold = true }
-row.cursor.all_marked = { fg = "fg", bg = "file_cursor_bg", bold = true }
-row.cursor.keep = { fg = "fg", bg = "file_cursor_bg", bold = true }
+row.cursor.all_marked = { fg = "fg_strong", bg = "file_cursor_bg", bold = true }
+row.cursor.keep = { fg = "fg_strong", bg = "file_cursor_bg", bold = true }
 full_dir_hidden = { fg = "fg" }
 
 [panel.active]
+row.cursor = { fg = "file_cursor_fg", bg = "file_cursor_bg", icon = "file_cursor_fg" }  # keep snow storm text: repair would swap it for fg_strong  # tuned
+row.cursor.selected = { fg = "selected", bg = "file_cursor_bg", bold = true, icon = "file_cursor_fg" }  # keep yellow marked files on the cursor row  # tuned
 usage.cursor = { fg = "fg_strong", bg = "header_bg" }  # snow storm 3 on nord10, as the active header (3.5:1)  # tuned
 usage.cursor.selected = { fg = "selected", bg = "header_bg", bold = true }  # tuned
 

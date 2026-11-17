@@ -45,10 +45,12 @@ func themeGoldenSamples() ThemeAppSamples {
 		}
 	}
 	return ThemeAppSamples{
-		MenuBar:  fill("menu", ThemeAppMenuRows),
-		Jobs:     fill("job", ThemeAppJobRows),
-		Progress: fill("progress", ThemeAppProgressRows),
-		Panel:    fill("panel", ThemePanelRows),
+		MenuBar:    fill("menu", ThemeAppMenuRows),
+		Jobs:       fill("job", ThemeAppJobRows),
+		Progress:   fill("progress", ThemeAppProgressRows),
+		Panel:      fill("panel", ThemePanelRows),
+		PanelUsage: fill("panel usage", ThemePanelRows),
+		PanelRange: fill("panel range", ThemePanelRows),
 	}
 }
 
@@ -115,17 +117,17 @@ func TestThemeDialogGoldenRender(t *testing.T) {
 	// narrow
 	add(60, 24, 30, 12, "filter")
 	add(40, 24, 5, 3, "filter")
-	// page 2: the whole pane, cut off on a short screen, narrow
-	addPage(2, 120, 60, 17, 8)
-	addPage(2, 100, 40, 17, 8)
-	addPage(2, 100, 20, 30, 15)
-	addPage(2, 80, 24, 30, 12)
-	addPage(2, 60, 24, 30, 12)
-	addPage(2, 40, 24, 5, 3)
-	// page 3: the file panel sample, whole and cut off
-	addPage(3, 100, 40, 17, 8)
-	addPage(3, 100, 20, 30, 15)
-	addPage(3, 80, 24, 30, 12)
+	// page 4: the app samples, whole pane, cut off on a short screen, narrow
+	addPage(4, 120, 60, 17, 8)
+	addPage(4, 100, 40, 17, 8)
+	addPage(4, 100, 20, 30, 15)
+	addPage(4, 80, 24, 30, 12)
+	addPage(4, 60, 24, 30, 12)
+	addPage(4, 40, 24, 5, 3)
+	// page 5: the input samples, whole and cut off
+	addPage(5, 100, 40, 17, 8)
+	addPage(5, 100, 20, 30, 15)
+	addPage(5, 80, 24, 30, 12)
 	// too short to draw
 	add(100, 9, 5, 1, "filter")
 	// empty list draws nothing

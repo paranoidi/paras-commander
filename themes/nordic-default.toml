@@ -30,9 +30,10 @@ leader_bg = "#191d24"
 focus_bg = "#4c566a"
 button_bg = "#242933"
 button_focus_bg = "#4c566a"
-file_cursor_bg = "#3b4252"
+file_cursor_bg = "#4c566a"
 file_cursor_dim = "#2e3440"
 highlight_bg = "bright_blue"
+usage_cursor_bg = "bright_cyan"
 range_bg = "#3b4252"
 range_unselect_bg = "#2e3440"
 inverse_bg = "white"
@@ -41,9 +42,10 @@ fg_strong = "bright_white"
 muted = "#81a1c1"
 faint = "#4c566a"
 info_columns = "#bbc3d4"
+git_unchanged = "#434c5e"
 ink = "#191d24"
 focus_fg = "#d8dee9"
-file_cursor_fg = "#bbc3d4"
+file_cursor_fg = "#d8dee9"
 accent = "#ebcb8b"
 accent_alt = "#ebcb8b"
 primary = "#81a1c1"
@@ -73,6 +75,7 @@ error = { fg = "ink", bg = "danger", bold = true }
 [panel.git]
 conflicted = { fg = "fg" }
 deleted = { fg = "fg" }
+not_modified = { fg = "git_unchanged", bold = true }  # keep the dim mark: repair would brighten it  # tuned
 
 [panel.fileindex]
 new = { fg = "fg" }

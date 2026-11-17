@@ -36,7 +36,7 @@ func TestThemeDialogAppPageRender(t *testing.T) {
 
 	styles := theme.Default()
 	state := dialog.ThemeDialogState{
-		Open: true, Page: 1, CurrentName: "default", Ranked: []int{0},
+		Open: true, Page: 3, CurrentName: "default", Ranked: []int{0},
 		Choices: []dialog.ThemeChoice{{Name: "default", Label: "Default"}},
 	}
 	dialog.DrawThemeDialog(screen, Layout{Width: w, Height: h}, state, styles, themeAppSamples(Model{UseNerdfontIcons: true}))
@@ -106,12 +106,42 @@ func TestThemeDialogPanelPageRender(t *testing.T) {
 	t.Log("\n" + text)
 	for _, name := range []string{"harbor", "lantern", "quarry", "current", "stale", "main.go", "notes.md", "photo.png", "archive.zip", "deploy.sh", "cache.log", "secret.key", "todo.txt", "readme.md"} {
 		if !strings.Contains(text, name) {
-			t.Errorf("theme dialog page 3 lacks %q", name)
+			t.Errorf("theme dialog page 1 lacks %q", name)
 		}
 	}
 	// Short screens clip the sample without panicking.
 	for _, height := range []int{12, 16, 22, 30} {
 		screen.SetSize(w, height)
 		dialog.DrawThemeDialog(screen, Layout{Width: w, Height: height}, state, theme.Default(), themeAppSamples(Model{}))
+	}
+}
+
+func TestThemeDialogRangePageRender(t *testing.T) {
+	const w, h = 130, 60
+	screen := tcell.NewSimulationScreen("")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(w, h)
+	styles := theme.Default()
+	state := dialog.ThemeDialogState{
+		Open: true, Page: 2, CurrentName: "default", Ranked: []int{0},
+		Choices: []dialog.ThemeChoice{{Name: "default", Label: "Default"}},
+	}
+	dialog.DrawThemeDialog(screen, Layout{Width: w, Height: h}, state, styles, themeAppSamples(Model{}))
+	_, rangeBG, _ := styles.PanelRowRange.Decompose()
+	_, unselectBG, _ := styles.PanelRowRangeUnselect.Decompose()
+	// notes.md is in the active panel's range select, then in the inactive panel's unselect drag.
+	var got []tcell.Color
+	for y, line := range themeSampleScreenText(screen, w, h) {
+		if x := strings.Index(line, "notes.md"); x >= 0 {
+			_, st, _ := screen.Get(len([]rune(line[:x])), y)
+			_, bg, _ := st.Decompose()
+			got = append(got, bg)
+		}
+	}
+	if len(got) != 2 || got[0] != rangeBG || got[1] != unselectBG {
+		t.Errorf("notes.md backgrounds = %v, want [%v %v] (range, then unselect)", got, rangeBG, unselectBG)
 	}
 }

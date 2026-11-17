@@ -105,15 +105,16 @@ func themeSamplePanel() (panel.State, map[string]struct{}, []JobPathMark, themeS
 // drawThemeSamplePanel draws the sample listing with drawPanel, the routine the app's panels
 // use, at x, y, width wide: as the active panel, then below it a short window of the same listing
 // as the inactive panel (its cursor on an unselected file next to selected ones). A frame is cut
-// short (closed early) above maxY.
-func drawThemeSamplePanel(screen tcell.Screen, x, y, width, maxY int, styles theme.Theme, model Model) {
+// short (closed early) above maxY. diskUsage turns on the disk usage bars; rangeSelect adds a
+// pending range select to the active panel and a range unselect drag to the inactive one.
+func drawThemeSamplePanel(screen tcell.Screen, x, y, width, maxY int, styles theme.Theme, model Model, diskUsage, rangeSelect bool) {
 	activeRows := dialog.ThemePanelRows - dialog.ThemeInactivePanelRows
-	drawThemeSampleListing(screen, Rect{X: x, Y: y, Width: width, Height: min(maxY-y, activeRows)}, true, styles, model)
+	drawThemeSampleListing(screen, Rect{X: x, Y: y, Width: width, Height: min(maxY-y, activeRows)}, true, styles, model, diskUsage, rangeSelect)
 	y += activeRows
-	drawThemeSampleListing(screen, Rect{X: x, Y: y, Width: width, Height: min(maxY-y, dialog.ThemeInactivePanelRows)}, false, styles, model)
+	drawThemeSampleListing(screen, Rect{X: x, Y: y, Width: width, Height: min(maxY-y, dialog.ThemeInactivePanelRows)}, false, styles, model, diskUsage, rangeSelect)
 }
 
-func drawThemeSampleListing(screen tcell.Screen, rect Rect, active bool, styles theme.Theme, model Model) {
+func drawThemeSampleListing(screen tcell.Screen, rect Rect, active bool, styles theme.Theme, model Model, diskUsage, rangeSelect bool) {
 	if rect.Width < 12 || rect.Height < 3 {
 		return
 	}
@@ -123,11 +124,19 @@ func drawThemeSampleListing(screen tcell.Screen, rect Rect, active bool, styles 
 		id = SecondaryPanel
 		st.Cursor, st.ScrollOffset = 6, 5 // main.go, between the broken link and two selected files
 	}
+	if rangeSelect {
+		// Active: a range select from the symlink down to the cursor (photo.png), over a selected
+		// file; inactive: an unselect drag from the cursor (main.go) down to photo.png.
+		st.RangeAnchor = themeSamplePanelDir + "/current"
+		if !active {
+			st.RangeAnchor, st.RangeUnselect = themeSamplePanelDir+"/photo.png", true
+		}
+	}
 	drawPanel(screen, rect, st,
 		PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
 		PanelContext{PanelID: id, FileListActive: active, CursorRowActive: active, ActivePanel: PrimaryPanel, SyncDriverPanelID: -1, QuickViewDriverPanelID: -1},
 		PanelDisplayConfig{
-			ShowIcons: model.UseNerdfontIcons, Painter: disk, ShowDiskUsage: true, JobMarks: marks, PinnedPaths: pinned,
+			ShowIcons: model.UseNerdfontIcons, Painter: disk, ShowDiskUsage: diskUsage, JobMarks: marks, PinnedPaths: pinned,
 			ScrollbarShowInactive: true, CarouselLayout: panelcarousel.DefaultLayout(), UserHomeDir: "/home/user",
 		})
 }

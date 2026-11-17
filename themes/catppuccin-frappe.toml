@@ -33,14 +33,16 @@ button_focus_bg = "#626880"
 file_cursor_bg = "#949cbb"
 file_cursor_dim = "#414559"
 highlight_bg = "#babbf1"
-range_bg = "#737994"
-range_unselect_bg = "#ea999c"
+usage_cursor_bg = "bright_cyan"
+range_bg = "#3a3e51"
+range_unselect_bg = "#232634"
 inverse_bg = "white"
 fg = "#c6d0f5"
 fg_strong = "#c6d0f5"
 muted = "#a5adce"
 faint = "#737994"
 info_columns = "#626880"
+git_unchanged = "#626880"
 ink = "#232634"
 focus_fg = "#c6d0f5"
 file_cursor_fg = "#232634"
@@ -69,6 +71,9 @@ error = { fg = "ink", bg = "danger", bold = true }
 
 [panel.row]
 info = { fg = "info_columns" }  # keep the dark columns: repair would brighten them  # tuned
+
+[panel.git]
+not_modified = { fg = "git_unchanged", bold = true }  # keep the dim mark: repair would brighten it  # tuned
 
 [panel.usage]
 normal = { fg = "fg", bg = "file_cursor_dim", icon.file = "faint", icon.folder_open = "faint", icon.folder_mount = "faint", icon.folder_excluded = "faint", icon.fileindex = "faint", icon.git = "faint", icon.suffix = "faint" }  # tuned
@@ -117,7 +122,7 @@ section = { fg = "fg", bold = true }
 key     = { fg = "fg", bold = true }
 
 [tooltip]
-info = { fg = "ink" }       # foreground of the info icon ([icons.dialog] info) on the box
+info = { fg = "accent_alt" }  # rosewater info icon  # tuned
 
 [dialog.massrename]
 before.removed = { fg = "fg", bold = true }
