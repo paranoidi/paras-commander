@@ -41,7 +41,7 @@ fg = "#d8dee9"
 fg_strong = "bright_white"
 muted = "#81a1c1"
 faint = "#4c566a"
-info_columns = "#bbc3d4"
+info_columns = "#60728a"
 git_unchanged = "#434c5e"
 ink = "#191d24"
 focus_fg = "#d8dee9"
@@ -71,6 +71,9 @@ dropdown.accent = { fg = "accent"}
 
 [message]
 error = { fg = "ink", bg = "danger", bold = true }
+
+[panel.row]
+info = { fg = "info_columns" }  # keep the dim columns: repair would brighten them  # tuned
 
 [panel.git]
 conflicted = { fg = "fg" }

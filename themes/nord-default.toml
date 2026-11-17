@@ -41,7 +41,7 @@ fg = "#d8dee9"
 fg_strong = "bright_white"
 muted = "#e5e9f0"
 faint = "#5e81ac"
-info_columns = "#d8dee9"
+info_columns = "#7b88a1"
 git_unchanged = "#4c566a"
 ink = "#2e3440"
 focus_fg = "#d8dee9"
@@ -72,6 +72,9 @@ dropdown.accent = { fg = "accent"}
 
 [menu.bar]
 alert = { fg = "fg", bold = true }
+
+[panel.row]
+info = { fg = "info_columns" }  # keep the dim columns: repair would brighten them  # tuned
 
 [panel.status]
 image_sixel_tmux = { fg = "fg", bold = true }
