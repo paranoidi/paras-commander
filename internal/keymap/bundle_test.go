@@ -49,3 +49,15 @@ func TestBundleMapFieldsCoverEveryMap(t *testing.T) {
 		t.Fatalf("mapFields covers %d maps, Bundle has %d", got, want)
 	}
 }
+
+func TestEditConfigDefaultsToF4InEveryOverlay(t *testing.T) {
+	b, err := DefaultBundle()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, m := range map[string]*Map{"user menu": b.UserMenu, "columns": b.ColumnsDialog, "config": b.ConfigDialog} {
+		if got := m.BindingsForAction(ActionEditConfig); !reflect.DeepEqual(got, []string{"F4"}) {
+			t.Errorf("%s overlay binds %s to %v, want [F4]", name, ActionEditConfig, got)
+		}
+	}
+}

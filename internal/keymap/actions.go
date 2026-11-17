@@ -60,7 +60,9 @@ const (
 	// ActionHelpFindByKey is bound via [dialog.help], not [main].
 	ActionHelpFindByKey = "help.find-by-key"
 	// ActionUserMenuBack is bound via [dialog.user_menu], not [main].
-	ActionUserMenuBack                = "usermenu.back"
+	ActionUserMenuBack = "usermenu.back"
+	// ActionEditConfig is bound via [dialog.user_menu], [dialog.columns] and [dialog.config], not [main].
+	ActionEditConfig                  = "ui.edit-config"
 	ActionPanelFindDialog             = "panel.find-dialog"
 	ActionPanelJumpDialog             = "panel.jump-dialog"
 	ActionFindView                    = "find.view"
@@ -457,6 +459,7 @@ var KnownActions = map[string]struct{}{
 	ActionHelpLegend:                  {},
 	ActionHelpFindByKey:               {},
 	ActionUserMenuBack:                {},
+	ActionEditConfig:                  {},
 	ActionPanelFindDialog:             {},
 	ActionPanelJumpDialog:             {},
 	ActionFindView:                    {},

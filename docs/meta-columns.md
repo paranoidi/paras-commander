@@ -4,7 +4,7 @@ Meta columns add computed columns to a panel by running a shell command per entr
 
 ## Open
 
-`M-,` (leader `,`, Left/Right menu, Columns...) opens the [Columns dialog](columns.md), which lists the defined entries in its Meta section; tick any subset. `M-;` (also `M-S-,`) opens `meta.toml` in `$EDITOR`; `F9` in the dialog does the same and reloads the list. Both are rebindable in `keybindings.toml`. A per-directory `meta.toml` (name from `[meta].local_names`) is preferred over the global one.
+`M-,` (leader `,`, Left/Right menu, Columns...) opens the [Columns dialog](columns.md), which lists the defined entries in its Meta section; tick any subset. `M-;` (also `M-S-,`) opens `meta.toml` in `$EDITOR`; `F4` in the dialog does the same and reloads the list. Both are rebindable in `keybindings.toml`. A per-directory `meta.toml` (name from `[meta].local_names`) is preferred over the global one.
 
 Because its commands run as you, a `meta.toml` is loaded only when it is a regular file owned by you (or root) that no one else can write: not world-writable, and group-writable only when its group is your own private group (named after your user, the usual setup with umask `0002`). An untrusted file is skipped with a warning. When the picker has nothing to offer it says why in place of the list: the file was skipped (with a `chmod` hint), it failed to parse, or no commands are defined yet.
 

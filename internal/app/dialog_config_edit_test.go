@@ -34,7 +34,7 @@ func testColumnsDialogApp(t *testing.T, dir, cfgDir string) *App {
 	return app
 }
 
-func TestActiveFooterKeysColumnsDialogShowsF9EditConfig(t *testing.T) {
+func TestActiveFooterKeysColumnsDialogShowsF4EditConfig(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
 	metaPath := filepath.Join(cfgDir, config.DefaultMetaFileName)
@@ -58,7 +58,7 @@ file = "wc -l"
 
 	keys := app.activeFooterKeys()
 	if len(keys) != 5 {
-		t.Fatalf("columns dialog footer len = %d, want Esc + Load + Save + F9 + F10", len(keys))
+		t.Fatalf("columns dialog footer len = %d, want Esc + Load + Save + F4 + F10", len(keys))
 	}
 	if keys[1].Hint != "Load" || keys[1].KeyLabel != "F2" {
 		t.Fatalf("second footer key = %+v, want F2 Load", keys[1])
@@ -66,12 +66,12 @@ file = "wc -l"
 	if keys[2].Hint != "Save" || keys[2].KeyLabel != "F5" {
 		t.Fatalf("third footer key = %+v, want F5 Save", keys[2])
 	}
-	if keys[3].Key != tcell.KeyF9 || keys[3].Hint != menu.FunctionKeyEditConfig.Hint {
-		t.Fatalf("fourth footer key = %+v, want F9 Edit config", keys[3])
+	if keys[3].KeyLabel != "F4" || keys[3].Hint != menu.EditConfigHint {
+		t.Fatalf("fourth footer key = %+v, want F4 Edit config", keys[3])
 	}
 }
 
-func TestColumnsDialogF9RefreshesDocumentationBeforeEditor(t *testing.T) {
+func TestColumnsDialogF4RefreshesDocumentationBeforeEditor(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
 	metaPath := filepath.Join(cfgDir, config.DefaultMetaFileName)
@@ -110,14 +110,14 @@ file = "wc -l"
 		return nil
 	}
 
-	app.metaCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	app.metaCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
 
 	if !strings.Contains(app.model.Message, "updated documentation") {
 		t.Fatalf("Message = %q, want updated documentation notice", app.model.Message)
 	}
 }
 
-func TestColumnsDialogF9ReloadsEntriesAfterEdit(t *testing.T) {
+func TestColumnsDialogF4ReloadsEntriesAfterEdit(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
 	metaPath := filepath.Join(cfgDir, config.DefaultMetaFileName)
@@ -153,7 +153,7 @@ file = "wc -c"
 		return os.WriteFile(path, []byte(updated), 0o644)
 	}
 
-	app.metaCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	app.metaCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
 
 	if !app.model.ColumnsDialog.Open {
 		t.Fatal("columns dialog should stay open after F4 edit")
@@ -166,7 +166,7 @@ file = "wc -c"
 	}
 }
 
-func TestUserMenuDialogF9RefreshesDocumentationBeforeEditor(t *testing.T) {
+func TestUserMenuDialogF4RefreshesDocumentationBeforeEditor(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
 	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
@@ -205,14 +205,14 @@ command = "true"
 		return nil
 	}
 
-	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
 
 	if !strings.Contains(app.model.Message, "updated documentation") {
 		t.Fatalf("Message = %q, want updated documentation notice", app.model.Message)
 	}
 }
 
-func TestUserMenuDialogF9ReloadsEntriesAfterEdit(t *testing.T) {
+func TestUserMenuDialogF4ReloadsEntriesAfterEdit(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
 	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
@@ -247,10 +247,10 @@ command = "true"
 		return os.WriteFile(path, []byte(updated), 0o644)
 	}
 
-	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
 
 	if !app.model.LeaderMenu.Open {
-		t.Fatal("user menu dialog should stay open after F9 edit")
+		t.Fatal("user menu dialog should stay open after F4 edit")
 	}
 	if len(app.model.LeaderMenu.Items) != 2 {
 		t.Fatalf("items len = %d, want 2", len(app.model.LeaderMenu.Items))
@@ -260,7 +260,7 @@ command = "true"
 	}
 }
 
-func TestUserMenuDialogF9DisablesOnInvalidFile(t *testing.T) {
+func TestUserMenuDialogF4DisablesOnInvalidFile(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
 	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
@@ -283,7 +283,7 @@ command = "true"
 		return os.WriteFile(path, []byte("shell_patterns = []\n"), 0o644)
 	}
 
-	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
 
 	assertUserMenuDisabled(t, app)
 	if app.model.MessageUrgency != ui.MessageUrgencyCritical {
@@ -291,7 +291,7 @@ command = "true"
 	}
 }
 
-func TestUserMenuDisabledF9RecoversAfterFix(t *testing.T) {
+func TestUserMenuDisabledF4RecoversAfterFix(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
 	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
@@ -309,7 +309,7 @@ func TestUserMenuDisabledF9RecoversAfterFix(t *testing.T) {
 	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
 		return os.WriteFile(path, []byte("[lantern]\nkey = \"l\"\ntitle = \"Lantern\"\ncommand = \"true\"\n"), 0o644)
 	}
-	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
 
 	st := app.model.LeaderMenu
 	if !st.Open || len(st.Items) != 1 || st.Items[0].Disabled || st.Items[0].Label != "Lantern" {
@@ -317,7 +317,7 @@ func TestUserMenuDisabledF9RecoversAfterFix(t *testing.T) {
 	}
 }
 
-func TestColumnsDialogF9KeepsCheckedWhenFileInvalid(t *testing.T) {
+func TestColumnsDialogF4KeepsCheckedWhenFileInvalid(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
 	metaPath := filepath.Join(cfgDir, config.DefaultMetaFileName)
@@ -341,7 +341,7 @@ file = "wc -l"
 		return os.WriteFile(path, []byte("not valid meta\n"), 0o644)
 	}
 
-	app.metaCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	app.metaCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
 
 	if !app.model.ColumnsDialog.Open {
 		t.Fatal("columns dialog should stay open")

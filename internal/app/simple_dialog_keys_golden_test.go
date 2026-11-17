@@ -513,9 +513,10 @@ func TestColumnsDialogKeyScripts(t *testing.T) {
 		{"alt-o", "Space Alt+o"},
 		{"alt-c", "Space Alt+c"},
 		{"alt-enter", "Space Alt+Enter"},
-		{"f9-on-item", "Down F9"},
-		{"f9-on-ok", "Down Down Down F9"},
-		{"f9-on-cancel", "Down Down Down Right F9"},
+		{"f4-on-item", "Down F4"},
+		{"f4-on-ok", "Down Down Down F4"},
+		{"f4-on-cancel", "Down Down Down Right F4"},
+		{"f9-cancels", "Down F9"},
 	})
 }
 

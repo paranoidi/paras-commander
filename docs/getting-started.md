@@ -58,7 +58,7 @@ pc --config-stub
 
 This writes `config.toml`, `keybindings.toml`, `menu.toml`, `meta.toml`, `pools.toml` and `patterns.toml`, leaving existing files unchanged. Themes go in `themes/` in the same directory. Details: [Config](config.md), [Keybindings](keybindings.md), [Themes](themes.md).
 
-Inside the app, Options -> Configuration edits settings, and `F9` there opens `config.toml` in your editor (writing the default file first if it does not exist yet).
+Inside the app, Options -> Configuration edits settings, and `F4` there opens `config.toml` in your editor (writing the default file first if it does not exist yet).
 
 ## Orientation
 

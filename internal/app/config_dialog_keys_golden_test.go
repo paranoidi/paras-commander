@@ -138,16 +138,17 @@ func TestConfigDialogKeyScripts(t *testing.T) {
 		{"input-home-end", "Tab Tab Tab Home End"},
 		{"input-restore-default", "Tab Tab Tab Backspace Backspace Backspace Ctrl+L"},
 		{"f8-nofile", "F8"},
-		{"f9-stub-confirm", "F9"},
+		{"f4-stub-confirm", "F4"},
 		{"all-options-then-ok", "Space Down Space Down Space Down Space Down Down Space Down Down Down Space Alt+o"},
 	}
 	runKeyGoldenScripts(t, configKeyDialog("config_nofile", false), scripts)
 	fileScripts := []simpleKeyScript{
-		{"f9-edits", "F9"},
-		{"f9-then-state", "Alt+d F9 Down"},
+		{"f4-edits", "F4"},
+		{"f9-cancels", "F9"},
+		{"f4-then-state", "Alt+d F4 Down"},
 		{"f8-reset-confirm", "F8"},
 		{"f8-then-navigation", "F8 Down Tab Left Right"},
-		{"f9-alt-o", "Alt+d F9 Alt+o"},
+		{"f4-alt-o", "Alt+d F4 Alt+o"},
 	}
 	runKeyGoldenScripts(t, configKeyDialog("config_withfile", true), fileScripts)
 }
@@ -180,11 +181,11 @@ func TestConfigDialogSubConfirmKeyScripts(t *testing.T) {
 		}
 	}
 	// The edit-config confirm needs no config.toml; the reset confirm needs one.
-	runKeyGoldenScripts(t, configKeyDialog("config_editstub", false), confirm("F9"))
+	runKeyGoldenScripts(t, configKeyDialog("config_editstub", false), confirm("F4"))
 	runKeyGoldenScripts(t, configKeyDialog("config_reset", true), confirm("F8"))
 	// A rejected edit-stub confirm leaves the config dialog usable.
 	runKeyGoldenScripts(t, configKeyDialog("config_editstub_after", false), []simpleKeyScript{
-		{"no-then-toggle", "F9 Right Enter Alt+d Down"},
-		{"esc-then-esc", "F9 Esc Esc"},
+		{"no-then-toggle", "F4 Right Enter Alt+d Down"},
+		{"esc-then-esc", "F4 Esc Esc"},
 	})
 }

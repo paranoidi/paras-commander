@@ -180,11 +180,10 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 	}
 	if a.model.LeaderMenu.Open {
 		if a.model.LeaderMenu.Kind == ui.LeaderMenuUser {
-			keys := footerWithEscClose([]menu.FunctionKey{
-				menu.FunctionKeyEditConfig,
-				{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
-			})
-			return keys
+			return footerWithEscClose(append(
+				editConfigFooterKeys(a.keys.UserMenu),
+				menu.FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
+			))
 		}
 		if a.model.LeaderMenu.Kind == ui.LeaderMenuCopy {
 			return footerWithEscClose([]menu.FunctionKey{
@@ -295,6 +294,15 @@ func viMotionFooterKeys(fkeys []menu.FunctionKey, letters map[string]string) []m
 	return out
 }
 
+// editConfigFooterKeys is the "Edit config" footer hint of the overlay km, empty when ui.edit-config
+// is unbound there. KeyLabel only: a footer click replays the binding, so a rebound chord still works.
+func editConfigFooterKeys(km *keymap.Map) []menu.FunctionKey {
+	if lbl := km.MenuBindingLabel(keymap.ActionEditConfig); lbl != "" {
+		return []menu.FunctionKey{{KeyLabel: lbl, Hint: menu.EditConfigHint}}
+	}
+	return nil
+}
+
 // columnsDialogFooterKeys is the footer of the Columns dialog's current phase. KeyLabel only: a
 // footer click replays the binding, so a rebound chord still works.
 func (a *App) columnsDialogFooterKeys() []menu.FunctionKey {
@@ -308,7 +316,7 @@ func (a *App) columnsDialogFooterKeys() []menu.FunctionKey {
 	case dialog.ColumnsPhaseMain:
 		add(keymap.ActionColumnsLoadProfile, "Load")
 		add(keymap.ActionColumnsSaveProfile, "Save")
-		out = append(out, menu.FunctionKeyEditConfig)
+		out = append(out, editConfigFooterKeys(a.keys.ColumnsDialog)...)
 	case dialog.ColumnsPhaseLoadPicker:
 		add(keymap.ActionColumnsDefaultProfile, "Default")
 		add(keymap.ActionColumnsDeleteProfile, "Delete")
@@ -368,7 +376,7 @@ func (a *App) pathPickerColumnsFooterKeys() []menu.FunctionKey {
 func (a *App) primaryModalFooterKeys() []menu.FunctionKey {
 	rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
 	if a.model.ConfigDialog.Open && !a.model.ConfigDialog.EditStubConfirm && !a.model.ConfigDialog.ResetDefaultsConfirm {
-		rest = append([]menu.FunctionKey{menu.FunctionKeyEditConfig}, rest...)
+		rest = append(editConfigFooterKeys(a.keys.ConfigDialog), rest...)
 		if a.configFileExists() {
 			rest = append([]menu.FunctionKey{{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Reset to defaults"}}, rest...)
 		}

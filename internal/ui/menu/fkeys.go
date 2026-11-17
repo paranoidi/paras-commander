@@ -48,8 +48,9 @@ func (fk FunctionKey) FullHint() string {
 // FooterEscClose is prepended to dialog and menu footers where Esc dismisses the overlay.
 var FooterEscClose = FunctionKey{Key: tcell.KeyEsc, KeyLabel: "Esc", Hint: "Close"}
 
-// FunctionKeyEditConfig opens meta.toml or menu.toml from meta/user-menu dialogs.
-var FunctionKeyEditConfig = FunctionKey{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Edit config"}
+// EditConfigHint is the footer hint of the ui.edit-config action (meta.toml, menu.toml or
+// config.toml, whichever the open dialog edits).
+const EditConfigHint = "Edit config"
 
 // FunctionKeyLeaderMenuToggleChords toggles direct keybind hints in the Esc function menu.
 var FunctionKeyLeaderMenuToggleChords = FunctionKey{Key: tcell.KeyF3, KeyLabel: "F3", Hint: "Toggle chords"}

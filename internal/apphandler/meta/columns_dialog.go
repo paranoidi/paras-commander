@@ -140,11 +140,10 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 }
 
 func (h *Handler) handleMainKey(event *tcell.EventKey, action string) {
-	if event.Key() == tcell.KeyF9 {
+	switch action {
+	case keymap.ActionEditConfig:
 		h.editConfigFromDialog()
 		return
-	}
-	switch action {
 	case keymap.ActionColumnsSaveProfile:
 		h.setPhase(dialog.ColumnsPhaseSavePrompt)
 		return

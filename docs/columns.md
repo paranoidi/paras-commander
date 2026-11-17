@@ -26,7 +26,7 @@ The file columns come first and are always shown:
 
 The checkboxes sit in three aligned columns, or fewer on a narrow terminal. A meta column's description shows on the line below them while the checkbox has focus.
 
-`F9` opens `meta.toml` in `$EDITOR` and reloads the list. A `meta.toml` that is skipped as untrusted or fails to load is reported as a message.
+`F4` opens `meta.toml` in `$EDITOR` and reloads the list. A `meta.toml` that is skipped as untrusted or fails to load is reported as a message.
 
 Not every source has every fact, and a column with nothing to show stays blank:
 

@@ -319,6 +319,9 @@ func (a *App) effectiveKeyStringsForView(actionID string, defaults []string, vm 
 	if a.keys.ColumnsDialog != nil {
 		add(a.keys.ColumnsDialog.BindingsForAction(actionID))
 	}
+	if a.keys.ConfigDialog != nil {
+		add(a.keys.ConfigDialog.BindingsForAction(actionID))
+	}
 	if a.keys.ThemeDialog != nil {
 		add(a.keys.ThemeDialog.BindingsForAction(actionID))
 	}
@@ -366,6 +369,9 @@ func (a *App) effectiveKeyStringsForView(actionID string, defaults []string, vm 
 		add(od)
 	}
 	if od := keymap.DefaultColumnsDialogOverlayKeys()[actionID]; len(od) > 0 {
+		add(od)
+	}
+	if od := keymap.DefaultConfigDialogOverlayKeys()[actionID]; len(od) > 0 {
 		add(od)
 	}
 	if od := keymap.DefaultPatternDialogOverlayKeys()[actionID]; len(od) > 0 {

@@ -320,9 +320,11 @@ func (a *App) activateLeaderMenu(i int) bool {
 }
 
 func (a *App) handleLeaderMenuKey(event *tcell.EventKey) bool {
-	if event.Key() == tcell.KeyF9 && a.model.LeaderMenu.Kind == ui.LeaderMenuUser {
-		a.editUserMenuConfigFromDialog()
-		return false
+	if a.model.LeaderMenu.Kind == ui.LeaderMenuUser && a.keys.UserMenu != nil {
+		if id, ok := a.keys.UserMenu.Lookup(event); ok && id == keymap.ActionEditConfig {
+			a.editUserMenuConfigFromDialog()
+			return false
+		}
 	}
 	st := &a.model.LeaderMenu
 	if len(st.Items) == 0 {

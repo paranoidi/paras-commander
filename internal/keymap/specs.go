@@ -530,6 +530,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"user menu", "submenu", "back", "parent"},
 		},
 		{
+			ID:           ActionEditConfig,
+			Title:        "Edit config file",
+			Section:      "Navigation",
+			DefaultKeys:  nil, // overlays: DefaultUserMenuOverlayKeys, DefaultColumnsDialogOverlayKeys, DefaultConfigDialogOverlayKeys
+			PreferredKey: "F4",
+			Keywords:     []string{"menu.toml", "meta.toml", "config.toml", "editor", "user menu", "columns", "configuration"},
+		},
+		{
 			ID:           ActionPanelFindDialog,
 			Views:        HelpBrowser,
 			Title:        "Find files",

@@ -6,5 +6,7 @@ focus=ok phase=0 files=[size] checked=[false true false]
 focus=ok phase=0 files=[size] checked=[false true false]
 == Down ==
 focus=ok phase=0 files=[size] checked=[false true false]
-== F9 ==
-focus=ok phase=0 files=[size] checked=[false true false]
+== Right ==
+focus=cancel phase=0 files=[size] checked=[false true false]
+== F4 ==
+focus=cancel phase=0 files=[size] checked=[false true false]

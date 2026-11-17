@@ -19,6 +19,7 @@ const (
 	DialogJumpShortcutsTable          = "dialog.jump"
 	DialogHistoryShortcutsTable       = "dialog.history"
 	DialogColumnsShortcutsTable       = "dialog.columns"
+	DialogConfigShortcutsTable        = "dialog.config"
 	DialogThemeShortcutsTable         = "dialog.theme"
 	DialogPatternShortcutsTable       = "dialog.pattern"
 	DialogPinShortcutsTable           = "dialog.pin"
@@ -47,6 +48,7 @@ var dialogShortcutSubtables = map[string]struct{}{
 	"jump":           {},
 	"history":        {},
 	"columns":        {},
+	"config":         {},
 	"theme":          {},
 	"pattern":        {},
 	"flatten":        {},
@@ -76,6 +78,7 @@ func AllShortcutTablePaths() []string {
 		DialogJumpShortcutsTable,
 		DialogHistoryShortcutsTable,
 		DialogColumnsShortcutsTable,
+		DialogConfigShortcutsTable,
 		DialogThemeShortcutsTable,
 		DialogPatternShortcutsTable,
 		DialogFlattenShortcutsTable,

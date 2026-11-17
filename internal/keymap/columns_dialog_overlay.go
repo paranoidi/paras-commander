@@ -7,6 +7,7 @@ func DefaultColumnsDialogOverlayKeys() map[string][]string {
 		ActionColumnsLoadProfile:    {"F2"},
 		ActionColumnsDeleteProfile:  {"F8"},
 		ActionColumnsDefaultProfile: {"F6"},
+		ActionEditConfig:            {"F4"},
 	}
 }
 

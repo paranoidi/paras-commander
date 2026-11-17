@@ -997,6 +997,7 @@ func resolveKeymapBundle(opts Options) (*keymap.Bundle, error) {
 		{&rk.HistoryDialog, keymap.DefaultHistoryDialogOverlayKeys, "history dialog overlay"},
 		{&rk.ColumnsDialog, keymap.DefaultColumnsDialogOverlayKeys, "columns dialog overlay"},
 		{&rk.PatternDialog, keymap.DefaultPatternDialogOverlayKeys, "filter dialog overlay"},
+		{&rk.ConfigDialog, keymap.DefaultConfigDialogOverlayKeys, "config dialog overlay"},
 		{&rk.ThemeDialog, keymap.DefaultThemeDialogOverlayKeys, "theme dialog overlay"},
 		{&rk.HelpDialog, keymap.DefaultHelpDialogOverlayKeys, "help dialog overlay"},
 		{&rk.UserMenu, keymap.DefaultUserMenuOverlayKeys, "user menu overlay"},

@@ -34,4 +34,4 @@ The Jobs, Commands, Messages, Compare and Duplicates views each have their own `
 
 ## User menu
 
-`F2` (or `§` or `;`) opens your own command list from `menu.toml`, with submenus, optional hotkeys and conditions. `F9` inside it edits the file and reloads. When `menu.toml` has an error (or no entries to show), the menu still opens showing the full error in place of the entries, so `F9` can fix the file. Entries and fields are described in [Commands](commands.md) and [`[user_menu]`](config.md#user_menu).
+`F2` (or `§` or `;`) opens your own command list from `menu.toml`, with submenus, optional hotkeys and conditions. `F4` inside it edits the file and reloads. When `menu.toml` has an error (or no entries to show), the menu still opens showing the full error in place of the entries, so `F4` can fix the file. Entries and fields are described in [Commands](commands.md) and [`[user_menu]`](config.md#user_menu).

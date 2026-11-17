@@ -46,7 +46,7 @@ func fits(view func() dlg.Spec) func() (dlg.Spec, bool) {
 // on a.inputMode() and every dlg dialog adds one case. spec must be the one the renderer draws
 // (same builder, same layout inputs) and the one the dialog's key handler passes to dlg.HandleKey,
 // and apply the event function that handler calls after it. Dialogs whose key handler keeps its
-// own focus (message, pin) get a scratch focus. event is the key the buttons answer (F9 and the
+// own focus (message, pin) get a scratch focus. event is the key the buttons answer (the
 // conflict screen's Alt+letter choices take no button); the mouse passes Enter.
 func (a *App) activeDialog(event *tcell.EventKey) (activeDialog, bool) {
 	found := func(spec func() (dlg.Spec, bool), focus *dlg.ID, apply func(dlg.Event) bool, b dialogButtons) (activeDialog, bool) {
@@ -113,11 +113,8 @@ func (a *App) activeDialog(event *tcell.EventKey) (activeDialog, bool) {
 		return found(fits(a.fileindexCtrl.TagDialogSpec), &m.IndexTagsDialog.Focus, noQuit(a.fileindexCtrl.ApplyTagEvent),
 			dialogButtons{OK: a.fileindexCtrl.TagDialogOK, Cancel: a.fileindexCtrl.CloseTagDialog, Esc: a.fileindexCtrl.TagDialogEsc})
 	case InputModeColumnsDialog:
-		b := dialogButtons{OK: a.metaCtrl.DialogOK, Cancel: a.metaCtrl.DialogCancel}
-		if event.Key() == tcell.KeyF9 {
-			b = dialogButtons{} // F9 edits meta.toml from the Columns dialog
-		}
-		return found(fits(a.metaCtrl.DialogSpec), &m.ColumnsDialog.Focus, noQuit(a.metaCtrl.ApplyDialogEvent), b)
+		return found(fits(a.metaCtrl.DialogSpec), &m.ColumnsDialog.Focus, noQuit(a.metaCtrl.ApplyDialogEvent),
+			dialogButtons{OK: a.metaCtrl.DialogOK, Cancel: a.metaCtrl.DialogCancel})
 	case InputModeHelpView:
 		return found(func() (dlg.Spec, bool) {
 			spec, _, fit := dialog.HelpDialogView(m.HelpView, layout(), a.styles)
@@ -139,7 +136,7 @@ func (a *App) activeDialog(event *tcell.EventKey) (activeDialog, bool) {
 		return found(fits(func() dlg.Spec { return dialog.StatusCommandsDialogView(m.StatusCommandsDialog) }), &m.StatusCommandsDialog.Focus, noQuit(a.applyStatusCommandsDialogEvent),
 			dialogButtons{OK: a.applyStatusCommandsDialog, Cancel: a.closeStatusCommandsDialog})
 	case InputModeConfigDialog:
-		return a.configActiveDialog(event)
+		return a.configActiveDialog()
 	case InputModePreviewSettingsDialog:
 		return found(fits(a.previewSettingsView), &m.PreviewSettingsDialog.Focus, noQuit(a.applyPreviewSettingsEvent),
 			dialogButtons{OK: a.applyPreviewSettingsDialog, Cancel: a.closePreviewSettingsDialog})
@@ -186,9 +183,9 @@ func (a *App) activeDialog(event *tcell.EventKey) (activeDialog, bool) {
 }
 
 // configActiveDialog resolves the Configuration dialog: its screen on top (an open Yes/No
-// sub-confirm or the dialog), whose OK / Cancel answer the confirm first; F9 stays "edit
-// config.toml". applyConfigDialogEvent routes the sub-confirms' events itself.
-func (a *App) configActiveDialog(event *tcell.EventKey) (activeDialog, bool) {
+// sub-confirm or the dialog), whose OK / Cancel answer the confirm first.
+// applyConfigDialogEvent routes the sub-confirms' events itself.
+func (a *App) configActiveDialog() (activeDialog, bool) {
 	st := &a.model.ConfigDialog
 	s := a.configDialogScreen()
 	b := dialogButtons{OK: a.applyConfigDialog, Cancel: a.closeConfigDialog}
@@ -203,8 +200,6 @@ func (a *App) configActiveDialog(event *tcell.EventKey) (activeDialog, bool) {
 			OK:     func() { st.ResetDefaultsConfirm = false; a.resetConfigToDefaults() },
 			Cancel: func() { st.ResetDefaultsConfirm = false },
 		}
-	case event.Key() == tcell.KeyF9:
-		b = dialogButtons{}
 	}
 	return activeDialog{func() (dlg.Spec, bool) { return s.Spec, true }, s.Focus, noQuit(a.applyConfigDialogEvent), b}, true
 }

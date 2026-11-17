@@ -13,6 +13,7 @@ import (
 	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
 	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
@@ -199,9 +200,11 @@ func (a *App) configDialogScreen() dialog.DialogScreen {
 func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 	st := &a.model.ConfigDialog
 	confirm := st.EditStubConfirm || st.ResetDefaultsConfirm
-	if !confirm && event.Key() == tcell.KeyF9 {
-		a.editConfigTOMLFromDialog()
-		return
+	if !confirm && a.keys.ConfigDialog != nil {
+		if id, ok := a.keys.ConfigDialog.Lookup(event); ok && id == keymap.ActionEditConfig {
+			a.editConfigTOMLFromDialog()
+			return
+		}
 	}
 	if !confirm && event.Key() == tcell.KeyF8 && a.configFileExists() {
 		st.ResetDefaultsConfirm = true
@@ -302,7 +305,7 @@ func (a *App) resetConfigToDefaults() {
 	a.setReloadedMessage("Configuration reset to defaults", restart)
 }
 
-// editConfigTOMLFromDialog handles F9 in the Configuration dialog: opens config.toml in the
+// editConfigTOMLFromDialog handles ui.edit-config in the Configuration dialog: opens config.toml in the
 // external editor, or prompts to generate a default stub first when it doesn't exist yet.
 func (a *App) editConfigTOMLFromDialog() {
 	st := &a.model.ConfigDialog
