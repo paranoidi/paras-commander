@@ -20,7 +20,7 @@ These work in every dialog, whatever has focus (`[dialog.input]` in `keybindings
 | Key | Action |
 |---|---|
 | `M-o`, `M-Enter` | Press OK |
-| `Esc`, `M-c`, `F9` | Press Cancel |
+| `Esc`, `M-c` | Press Cancel |
 
 A dialog with an inner layer (a sub-confirm, a rename tool page, an open completion list) closes that layer first. Where Esc means something else it keeps that meaning: in a running command-output dialog it leaves the command running. Some window managers take `M-Enter`; `M-o` always works. The Configuration, meta-column and user-menu dialogs use `F4` to edit their config file (rebindable in `keybindings.toml`). The meta-column dialog also binds `F5` (`[dialog.meta]`) to save the checked columns as the fileindex defaults.
 

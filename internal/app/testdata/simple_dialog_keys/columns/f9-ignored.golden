@@ -3,4 +3,4 @@ focus=item0 phase=0 files=[size] checked=[false true false]
 == Down ==
 focus=ok phase=0 files=[size] checked=[false true false]
 == F9 ==
-CLOSED: meta columns=[] file columns=[size] profile="brief" message=""
+focus=ok phase=0 files=[size] checked=[false true false]

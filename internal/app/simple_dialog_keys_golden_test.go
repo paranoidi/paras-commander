@@ -516,7 +516,7 @@ func TestColumnsDialogKeyScripts(t *testing.T) {
 		{"f4-on-item", "Down F4"},
 		{"f4-on-ok", "Down Down Down F4"},
 		{"f4-on-cancel", "Down Down Down Right F4"},
-		{"f9-cancels", "Down F9"},
+		{"f9-ignored", "Down F9"},
 	})
 }
 

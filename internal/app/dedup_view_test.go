@@ -1623,7 +1623,6 @@ func TestDedupViewEmptyDirsConfirmCancelDeletesNothing(t *testing.T) {
 	presses := map[string]func(app *App){
 		"esc":   func(app *App) { app.handleKey(tcell.NewEventKey(tcell.KeyEscape, 0, tcell.ModNone)) },
 		"alt-c": func(app *App) { app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModAlt)) },
-		"f9":    func(app *App) { app.handleKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone)) },
 		"enter-on-cancel": func(app *App) {
 			app.model.DedupEmptyDirsConfirm.Focus = dlg.Cancel
 			app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))

@@ -3,4 +3,4 @@ focus=nerdfont nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb 
 == F4 ==
 edit-stub-confirm focus=0
 == F9 ==
-focus=nerdfont nerd=true zoom=true stacked=false mouse=true mode=edge bar=thumb split=[<22|*|62] cursors=[3|1|2] msg=""
+edit-stub-confirm focus=0

@@ -214,7 +214,7 @@ func (a *App) modalActiveDialog(event *tcell.EventKey) (activeDialog, bool) {
 	case m.ConflictDialog.Open:
 		b := dialogButtons{OK: a.jobsCtrl.DialogOK, Cancel: a.jobsCtrl.DialogCancel}
 		// Alt+letter picks a conflict choice (Alt+O = Overwrite, Alt+C = Cancel), so only the
-		// non-letter chords (M-Enter, Esc, F9) map to OK / postpone.
+		// non-letter chords (M-Enter, Esc) map to OK / postpone.
 		if !m.ConflictDialog.Advanced && event.Key() == tcell.KeyRune {
 			b = dialogButtons{}
 		}

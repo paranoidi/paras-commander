@@ -3,4 +3,4 @@ focus=overwrite
 == Right ==
 focus=overwrite-all
 == F9 ==
-CLOSED: submitted nothing (postponed or closed) quit=false
+focus=overwrite-all

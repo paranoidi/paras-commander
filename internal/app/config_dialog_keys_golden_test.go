@@ -144,7 +144,7 @@ func TestConfigDialogKeyScripts(t *testing.T) {
 	runKeyGoldenScripts(t, configKeyDialog("config_nofile", false), scripts)
 	fileScripts := []simpleKeyScript{
 		{"f4-edits", "F4"},
-		{"f9-cancels", "F9"},
+		{"f9-ignored", "F9"},
 		{"f4-then-state", "Alt+d F4 Down"},
 		{"f8-reset-confirm", "F8"},
 		{"f8-then-navigation", "F8 Down Tab Left Right"},

@@ -10,7 +10,7 @@ import "strings"
 func DefaultDialogInputOverlayKeys() map[string][]string {
 	return map[string][]string{
 		ActionDialogOK:                    {"M-o", "M-Enter"},
-		ActionDialogCancel:                {"Esc", "M-c", "F9"},
+		ActionDialogCancel:                {"Esc", "M-c"},
 		ActionDialogInputRestoreDefault:   {"C-r", "C-d"},
 		ActionDialogInputPathPickerAll:    {"*", "|"},
 		ActionDialogInputKillWordBackward: {"C-w", "M-backspace"},

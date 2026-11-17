@@ -2472,7 +2472,7 @@ func DefaultActionSpecs() []ActionSpec {
 			ID:           ActionDialogCancel,
 			Title:        "Cancel dialog",
 			Section:      "UI",
-			DefaultKeys:  nil, // bound only via [dialog.input] (defaults Esc, M-c and F9)
+			DefaultKeys:  nil, // bound only via [dialog.input] (defaults Esc and M-c)
 			PreferredKey: "M-c",
 			Keywords:     []string{"cancel", "close", "dismiss", "escape", "dialog"},
 		},

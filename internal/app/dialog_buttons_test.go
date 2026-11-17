@@ -20,12 +20,11 @@ var (
 	keyAltEnter = tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModAlt)
 	keyAltC     = tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModAlt)
 	keyEsc      = tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone)
-	keyF9       = tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone)
 )
 
 func TestCentralDialogOKCancelKeys(t *testing.T) {
 	okKeys := map[string]*tcell.EventKey{"Alt+O": keyAltO, "Alt+Enter": keyAltEnter}
-	cancelKeys := map[string]*tcell.EventKey{"Alt+C": keyAltC, "Esc": keyEsc, "F9": keyF9}
+	cancelKeys := map[string]*tcell.EventKey{"Alt+C": keyAltC, "Esc": keyEsc}
 	dialogs := []struct {
 		name   string
 		open   func(*App)
@@ -93,7 +92,7 @@ func TestCentralCancelCommandOutputEscKeepsRunning(t *testing.T) {
 		name       string
 		ev         *tcell.EventKey
 		wantCancel bool
-	}{{"Esc", keyEsc, false}, {"Alt+Enter", keyAltEnter, false}, {"Alt+C", keyAltC, true}, {"F9", keyF9, true}} {
+	}{{"Esc", keyEsc, false}, {"Alt+Enter", keyAltEnter, false}, {"Alt+C", keyAltC, true}} {
 		t.Run(tc.name, func(t *testing.T) {
 			app := newApp(t, newScreen(t, 100, 30), t.TempDir())
 			canceled := false
