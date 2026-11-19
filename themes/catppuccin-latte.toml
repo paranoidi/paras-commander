@@ -126,7 +126,6 @@ typechange = { fg = "fg" }
 unhashed = { fg = "fg" }       # indexed, hash pending
 changed = { fg = "fg" }
 differs = { fg = "fg", bold = true }
-unchecked = { fg = "fg" }
 
 [panel.meta]
 warn = { fg = "fg" }

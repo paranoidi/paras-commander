@@ -211,7 +211,7 @@ new = { fg = "danger" }
 missing = { fg = "error" }
 excluded = { fg = "muted" }
 differs = { fg = "warning", bold = true }
-unchecked = { fg = "info" }
+unchecked = { fg = "info_columns" }  # dim like the meta column
 tagged = { fg = "primary" }
 
 [panel.meta]                  # meta cells matching a warn/critical rule; on the cursor row: the cursor text colour, bold
