@@ -628,67 +628,6 @@ func TestDrawDedupViewOpenFolderIconUsesDirectoryBlue(t *testing.T) {
 	}
 }
 
-func TestDrawDedupViewCursorDirFolderIconUsesCursorIconColor(t *testing.T) {
-	screen := tcell.NewSimulationScreen("UTF-8")
-	if err := screen.Init(); err != nil {
-		t.Fatalf("Init() error = %v", err)
-	}
-	defer screen.Fini()
-	screen.SetSize(80, 16)
-
-	styles := theme.Default()
-	layout := Layout{
-		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 13},
-		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 13},
-	}
-	rect := layout.Primary
-	contentX := rect.X + 2
-	lineY := rect.Y + 2
-
-	snap := comparepkg.DedupSnapshot{
-		Root:  pathloc.MustParse("/scan/root"),
-		Phase: comparepkg.DedupDone,
-		Groups: []comparepkg.DedupGroup{{
-			Size: 4,
-			Files: []comparepkg.DedupFile{
-				{Rel: "meadow/lantern.txt", Abs: pathloc.MustParse("/scan/root/meadow/lantern.txt")},
-				{Rel: "lantern.txt", Abs: pathloc.MustParse("/scan/root/lantern.txt")},
-			},
-		}},
-	}
-	view := DedupViewState{
-		IgnoreEmpty: true,
-		TreeDirs:    true,
-		SourceRow:   0,
-		Main:        DedupPane{Selected: 0}, // cursor on meadow dir row
-	}
-	list, _ := DedupRowsFromSnapshot(snap, view)
-	if list[0].Value.Kind != DedupRowDir {
-		t.Fatalf("first row kind = %v, want DedupRowDir", list[0].Value.Kind)
-	}
-	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil, ListRowHover{})
-
-	// Like the main file list: the cursor row's folder icon takes the cursor icon color.
-	key := styles.PanelListingCursorIconKey(theme.PanelListingCursorOpts{FileListActive: true})
-	wantFG := styles.PanelFileIconFG[key]
-	dirFG, _, _ := styles.PanelRowDirectory.Decompose()
-	if wantFG == dirFG {
-		t.Fatal("test requires distinct cursor icon and panel.row.directory foregrounds")
-	}
-
-	gutterX := contentX
-	iconFG, _, _ := cellStyleAt(screen, gutterX, lineY).Decompose()
-	if iconFG != wantFG {
-		t.Fatalf("cursor dir folder icon fg %v, want cursor icon fg %v", iconFG, wantFG)
-	}
-
-	nameX := contentX + len([]rune(dedupTreePrefix(styles, list[0]))) + 1
-	nameFG, _, _ := cellStyleAt(screen, nameX, lineY).Decompose()
-	if nameFG == dirFG {
-		t.Fatal("test requires dir name to use cursor styling, not plain directory fg")
-	}
-}
-
 func TestDrawDedupViewDetailsUseListingColumns(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
@@ -1895,53 +1834,71 @@ func TestDrawDedupViewCollapsedAncestorOfTwinGetsWithinIcon(t *testing.T) {
 	}
 }
 
-// The cursor row's folder icon takes the file list's cursor icon color, not directory blue.
-func TestTreeRowGutterCursorFolderIconUsesCursorIconColor(t *testing.T) {
-	styles := theme.Default()
-	key := styles.PanelListingCursorIconKey(theme.PanelListingCursorOpts{FileListActive: true})
-	want, ok := styles.PanelFileIconFG[key]
-	if !ok {
-		t.Fatalf("default theme has no cursor icon color for %q", key)
+// treeRowStateCase is one state of row 0 that every tree view (Duplicates, Unique files) paints
+// like the main file list: its folder icon color and its Size/Count column style.
+type treeRowStateCase struct {
+	name       string
+	cursor     bool         // the cursor is on row 0 (else on the last row)
+	hover      ListRowHover // the pointer
+	wantIconFG tcell.Color
+	wantDetail tcell.Style // fg always checked, bg only when checkBG (the plain row's is the surface)
+	checkBG    bool
+}
+
+// treeRowStateCases is the single list of tree row states; each tree view runs all of them.
+func treeRowStateCases(t *testing.T, styles theme.Theme) []treeRowStateCase {
+	t.Helper()
+	folderFG := func(key string) tcell.Color {
+		return styles.FolderIconForeground(theme.FolderIconDefault, key, styles.PanelRowDirectory)
 	}
-	_, st := treeRowGutter(styles, true, true, false, tcell.StyleDefault, key, false)
-	if fg, _, _ := st.Decompose(); fg != want {
-		t.Fatalf("cursor folder icon fg = %v, want %v", fg, want)
+	cursor := styles.PanelListingCursor(styles.PanelRowFile, styles.PanelRowFile, theme.PanelListingCursorOpts{FileListActive: true})
+	hover := styles.PanelListingHover(styles.PanelRowFile, styles.PanelRowFile, false)
+	// The default theme's hover (inactive cursor) sets no icon color, so only the cursor case
+	// tells the icon key apart; the hover case is told apart by its detail-column style.
+	if folderFG(cursor.IconKey) == folderFG("") {
+		t.Fatal("test requires a cursor icon color distinct from the plain folder color")
 	}
-	_, st = treeRowGutter(styles, true, true, false, tcell.StyleDefault, "", false)
-	if fg, _, _ := st.Decompose(); fg == want {
-		t.Fatalf("non-cursor folder icon fg = cursor color %v", fg)
+	return []treeRowStateCase{
+		{name: "plain", wantIconFG: folderFG(""), wantDetail: styles.PanelBlockedText},
+		{name: "cursor", cursor: true, wantIconFG: folderFG(cursor.IconKey),
+			wantDetail: styles.PanelListingInfoStyle(cursor.Line, cursor.IconKey, cursor.Info), checkBG: true},
+		{name: "hover", hover: ListRowHover{Active: true, Row: 0}, wantIconFG: folderFG(hover.IconKey),
+			wantDetail: styles.PanelListingInfoStyle(hover.Line, hover.IconKey, hover.Info), checkBG: true},
 	}
 }
 
-// assertListingHoverRow checks a hovered tree row against the main file list's hover: the folder
-// icon at iconX takes the hover icon color and the right-aligned detail column ending before
-// innerRight takes the hover info style.
-func assertListingHoverRow(t *testing.T, screen tcell.SimulationScreen, styles theme.Theme, iconX, innerRight, y int) {
+// assertTreeRowState checks row y against c: the folder icon at iconX, and the right-aligned
+// detail column ending before innerRight.
+func assertTreeRowState(t *testing.T, screen tcell.SimulationScreen, c treeRowStateCase, iconX, innerRight, y int) {
 	t.Helper()
-	hover := styles.PanelListingHover(styles.PanelRowFile, styles.PanelRowFile, false)
-	if fg, _, _ := cellStyleAt(screen, iconX, y).Decompose(); fg != styles.FolderIconForeground(theme.FolderIconDefault, hover.IconKey, styles.PanelRowDirectory) {
-		t.Fatalf("hovered folder icon fg %v, want the file list's hover icon color", fg)
+	if fg, _, _ := cellStyleAt(screen, iconX, y).Decompose(); fg != c.wantIconFG {
+		t.Errorf("folder icon fg %v, want %v", fg, c.wantIconFG)
 	}
-	wantFG, wantBG, _ := styles.PanelListingInfoStyle(hover.Line, hover.IconKey, hover.Info).Decompose()
 	x := innerRight - 1
 	for ; x > iconX; x-- {
 		if ch, _, _ := screen.Get(x, y); ch != " " && ch != "" {
 			break
 		}
 	}
-	if fg, bg, _ := cellStyleAt(screen, x, y).Decompose(); fg != wantFG || bg != wantBG {
-		t.Fatalf("hovered detail column fg/bg %v/%v, want the file list's hover info %v/%v", fg, bg, wantFG, wantBG)
+	fg, bg, _ := cellStyleAt(screen, x, y).Decompose()
+	wantFG, wantBG, _ := c.wantDetail.Decompose()
+	if fg != wantFG || (c.checkBG && bg != wantBG) {
+		t.Errorf("detail column fg/bg %v/%v, want %v/%v (bg checked: %v)", fg, bg, wantFG, wantBG, c.checkBG)
 	}
 }
 
-func TestDrawDedupViewHoverFollowsFileList(t *testing.T) {
+func newTreeTestScreen(t *testing.T, w, h int) tcell.SimulationScreen {
+	t.Helper()
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
 	}
-	defer screen.Fini()
-	screen.SetSize(80, 16)
+	t.Cleanup(screen.Fini)
+	screen.SetSize(w, h)
+	return screen
+}
 
+func TestDrawDedupViewRowStatesFollowFileList(t *testing.T) {
 	styles := theme.Default()
 	layout := Layout{
 		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 13},
@@ -1959,13 +1916,20 @@ func TestDrawDedupViewHoverFollowsFileList(t *testing.T) {
 			},
 		}},
 	}
-	view := DedupViewState{IgnoreEmpty: true, TreeDirs: true}
-	list, _ := DedupRowsFromSnapshot(snap, view)
-	if list[0].Value.Kind != DedupRowDir {
-		t.Fatalf("first row kind = %v, want DedupRowDir", list[0].Value.Kind)
+	for _, c := range treeRowStateCases(t, styles) {
+		t.Run(c.name, func(t *testing.T) {
+			screen := newTreeTestScreen(t, 80, 16)
+			view := DedupViewState{IgnoreEmpty: true, TreeDirs: true}
+			list, _ := DedupRowsFromSnapshot(snap, view)
+			if list[0].Value.Kind != DedupRowDir {
+				t.Fatalf("first row kind = %v, want DedupRowDir", list[0].Value.Kind)
+			}
+			view.Main.Selected = len(list) - 1
+			if c.cursor {
+				view.Main.Selected = 0
+			}
+			drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil, c.hover)
+			assertTreeRowState(t, screen, c, rect.X+2, rect.X+rect.Width-2, rect.Y+2)
+		})
 	}
-	view.Main.Selected = len(list) - 1 // cursor off the hovered dir row
-	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil, ListRowHover{Active: true, Row: 0})
-
-	assertListingHoverRow(t, screen, styles, rect.X+2, rect.X+rect.Width-2, rect.Y+2)
 }
