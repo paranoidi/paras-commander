@@ -233,9 +233,13 @@ func (a *App) buildLeaderMenuItems(entries []keymap.LeaderMenuEntry) ([]ui.Leade
 			items = append(items, ui.LeaderMenuItem{GroupTitle: e.GroupTitle, GroupColumn: e.GroupColumn})
 			continue
 		}
+		label := e.Label
+		if icon := a.styles.IconLeaderMenuScreen(); e.Bottom && icon != 0 {
+			label += " " + string(icon)
+		}
 		items = append(items, ui.LeaderMenuItem{
 			Key:         e.Key,
-			Label:       e.Label,
+			Label:       label,
 			GroupColumn: e.GroupColumn,
 			Bottom:      e.Bottom,
 			DirectKey:   a.leaderMenuDirectKey(e.ActionID),

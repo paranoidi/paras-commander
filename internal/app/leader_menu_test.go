@@ -810,3 +810,29 @@ func TestJobsLeaderMenuDimsInapplicableActions(t *testing.T) {
 		}
 	}
 }
+
+func TestBuiltinLeaderMenuBottomLinksCarryScreenIcon(t *testing.T) {
+	app := testLeaderMenuApp(t)
+	app.styles.UseNerdfontIcons = true
+	icon := app.styles.IconLeaderMenuScreen()
+	if icon == 0 {
+		t.Fatal("IconLeaderMenuScreen should have a default")
+	}
+	app.model.ViewMode = ui.ViewBrowser
+	app.openBuiltinLeaderMenu()
+
+	bottom := 0
+	for _, it := range app.model.LeaderMenu.Items {
+		if it.Bottom {
+			bottom++
+			if !strings.HasSuffix(it.Label, " "+string(icon)) {
+				t.Fatalf("bottom item %q lacks screen icon", it.Label)
+			}
+		} else if strings.HasSuffix(it.Label, string(icon)) {
+			t.Fatalf("non-bottom item %q has screen icon", it.Label)
+		}
+	}
+	if bottom == 0 {
+		t.Fatal("expected bottom-row items")
+	}
+}

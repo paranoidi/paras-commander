@@ -766,6 +766,7 @@ const (
 // Menu-bar jobs strip icon keys ([icons] table); see IconMenuJob / IconMenuProgress*.
 const (
 	IconKeyLeaderMenuArrow       = "leader_menu.arrow"
+	IconKeyLeaderMenuScreen      = "leader_menu.screen"
 	IconKeyMenuProgressDone      = "menu.progress.done"
 	IconKeyMenuProgressRemaining = "menu.progress.remaining"
 	IconKeyMenuJobScanning       = "menu.job.scanning"
@@ -945,6 +946,15 @@ func (t Theme) IconFilelistNoPermission() rune {
 // IconLeaderMenuArrow returns the separator icon between shortcut key and label in the leader menu.
 func (t Theme) IconLeaderMenuArrow() rune {
 	return t.iconRune(IconKeyLeaderMenuArrow)
+}
+
+// IconLeaderMenuScreen returns the icon appended to a leader-menu bottom-row link that opens
+// another menu; 0 without Nerd Font icons (decoration only).
+func (t Theme) IconLeaderMenuScreen() rune {
+	if !t.UseNerdfontIcons {
+		return 0
+	}
+	return t.iconRune(IconKeyLeaderMenuScreen)
 }
 
 // IconTreeExpand returns the collapsed-node expander icon for tree-style lists

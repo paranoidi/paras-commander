@@ -573,6 +573,8 @@ multi_location = "\uef81"
 
 [icons.leader_menu]
 arrow = "\uea9c"
+# U+F03CC (nf-md-open_in_new): appended to the bottom-row links that open another menu
+screen = "\U000F03CC"
 
 [icons.search]
 icon = "\uf002"
