@@ -438,7 +438,7 @@ func TestMouseLeaderMenuHoverHighlightsEntry(t *testing.T) {
 	}
 }
 
-func TestMouseMessagesListClickCopiesAndWheel(t *testing.T) {
+func TestMouseMessagesListClickSelectsAndWheel(t *testing.T) {
 	prevWriter := clipboard.OSWriter
 	clipboard.OSWriter = func(string) error { return nil }
 	t.Cleanup(func() { clipboard.OSWriter = prevWriter; clipboard.Reset() })
@@ -453,24 +453,21 @@ func TestMouseMessagesListClickCopiesAndWheel(t *testing.T) {
 	app.openMessagesView()
 	selectedText := func() string { return app.model.MessageLog[app.model.MessagesView.Selected].Text }
 
-	// The top message: the logged toast must not take the selection from it.
-	x, y := screenTextCell(t, app, "harbor continued")
+	x, y := screenTextCell(t, app, "meadow copied")
 	click(app, x, y, tcell.Button1)
-	if got := clipboard.LastSet(); got != "harbor opened harbor continued" {
-		t.Fatalf("clipboard = %q, want the whole message", got)
+	if got := clipboard.LastSet(); got != "" {
+		t.Fatalf("clipboard = %q after a click, want nothing copied", got)
 	}
-	if got := app.model.MessageLog[0].Text; got != "Copied message to clipboard" {
-		t.Fatalf("newest log entry = %q, want the copy toast", got)
-	}
+
+	// A continuation row selects its message.
+	x, y = screenTextCell(t, app, "harbor continued")
+	click(app, x, y, tcell.Button1)
 	if got := selectedText(); got != "harbor opened" {
 		t.Fatalf("continuation row selected %q, want its message", got)
 	}
 
 	x, y = screenTextCell(t, app, "meadow copied")
 	click(app, x, y, tcell.Button1)
-	if got := clipboard.LastSet(); got != "meadow copied" {
-		t.Fatalf("clipboard = %q, want meadow copied", got)
-	}
 	if got := selectedText(); got != "meadow copied" {
 		t.Fatalf("selected %q, want meadow copied", got)
 	}

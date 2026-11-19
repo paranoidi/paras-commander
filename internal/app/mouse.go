@@ -909,8 +909,7 @@ func (a *App) handleLeaderMenuMouse(layout ui.Layout, x, y int, pressed tcell.Bu
 }
 
 // handleAuxListMouse handles the list pane of the Jobs, Commands and Messages views: a left click
-// focuses the list and selects the entry under the pointer (in Messages it also copies the
-// message), the wheel moves the selection.
+// focuses the list and selects the entry under the pointer, the wheel moves the selection.
 func (a *App) handleAuxListMouse(layout ui.Layout, x, y int, buttons, pressed tcell.ButtonMask) (rendered bool) {
 	hit, ok := a.auxListHit()
 	if !ok {
@@ -926,7 +925,7 @@ func (a *App) handleAuxListMouse(layout ui.Layout, x, y int, buttons, pressed tc
 		selectEntry = func(idx int) { a.moveCompareSelection(idx - a.model.CompareView.Selected) }
 		move = a.moveCompareSelection
 	default:
-		selectEntry, move = a.copyMessage, a.moveMessagesSelection
+		selectEntry, move = a.selectMessage, a.moveMessagesSelection
 	}
 	idx, ok := hit(layout, &a.model, x, y)
 	if !ok {

@@ -102,8 +102,8 @@ func (a *App) selectMessage(idx int) {
 	a.ensureMessagesViewSelectionVisible()
 }
 
-// copyMessage selects message idx (a head row) and copies its whole text to the clipboard (a
-// click on the message, messages.copy on the selection). The selection stays on that message although the toast is logged above
+// copyMessage selects message idx (a head row) and copies its whole text to the clipboard
+// (messages.copy on the selection). The selection stays on that message although the toast is logged above
 // it (appendMessageLogLines would otherwise move a top selection onto the toast).
 func (a *App) copyMessage(idx int) {
 	if idx < 0 || idx >= len(a.model.MessageLog) {
