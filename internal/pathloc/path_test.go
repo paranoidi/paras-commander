@@ -229,3 +229,15 @@ func TestUnavailable(t *testing.T) {
 		}
 	}
 }
+
+func TestSplitDirBaseKeepsScheme(t *testing.T) {
+	for raw, want := range map[string][2]string{
+		"fileindex:///lantern/meadow/chime.ogg": {"fileindex:///lantern/meadow", "chime.ogg"},
+		"/lantern/meadow/chime.ogg":             {"/lantern/meadow", "chime.ogg"},
+	} {
+		dir, name := SplitDirBase(raw)
+		if dir != want[0] || name != want[1] {
+			t.Errorf("SplitDirBase(%q) = %q, %q; want %q, %q", raw, dir, name, want[0], want[1])
+		}
+	}
+}

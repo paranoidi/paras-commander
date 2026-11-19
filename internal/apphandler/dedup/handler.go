@@ -1749,7 +1749,7 @@ func (h *Handler) selectedDirAbs() string {
 func (h *Handler) OpenInPanel(panelID int, path string, isDir bool) {
 	dir, name := path, ""
 	if !isDir {
-		dir, name = filepath.Dir(path), filepath.Base(path)
+		dir, name = pathloc.SplitDirBase(path)
 	}
 	if err := h.host.NavigatePanelToPath(panelID, dir, name); err != nil {
 		h.host.SetTransientMessage("Open: "+err.Error(), ui.MessageUrgencyWarn)

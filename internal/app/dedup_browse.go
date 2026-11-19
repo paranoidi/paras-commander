@@ -1,7 +1,7 @@
 package app
 
 import (
-	"path/filepath"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 
 	"github.com/gdamore/tcell/v2"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
@@ -80,7 +80,7 @@ func (a *App) reconcileDedupPanel() {
 		}
 		dirs[i], names[i] = path, ""
 		if !isDir {
-			dirs[i], names[i] = filepath.Dir(path), filepath.Base(path)
+			dirs[i], names[i] = pathloc.SplitDirBase(path)
 		}
 		fp[i] = dirs[i] + "\x00" + names[i]
 	}
