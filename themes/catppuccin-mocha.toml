@@ -116,6 +116,7 @@ invalid = { fg = "fg" }
 
 [leader_menu]
 arrow = { fg = "info_columns" }  # surface2: chord hints and arrows sit well below the labels  # tuned
+disabled = { fg = "info_columns" }  # surface2: unavailable entries sit well below the labels  # tuned
 
 [tooltip]
 info = { fg = "accent_alt" }  # rosewater info icon  # tuned
