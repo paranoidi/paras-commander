@@ -35,7 +35,8 @@ const (
 )
 
 // leaderMenuGroupColumn assigns each group to a macro column
-// (0=File, 1=Selection+View+Menu, 2=Navigation+Tools, 3=Add mark+Display+App).
+// (0=File, 1=Selection+View, 2=Navigation+Tools, 3=Add mark+Display+App). The Menu group is
+// not here: it is a bottom-row group (leaderMenuBottomGroups).
 var leaderMenuGroupColumn = map[string]int{
 	LeaderMenuGroupFile:       0,
 	LeaderMenuGroupSelection:  1,
@@ -44,20 +45,23 @@ var leaderMenuGroupColumn = map[string]int{
 	LeaderMenuGroupTools:      2,
 	LeaderMenuGroupAddMark:    3,
 	LeaderMenuGroupDisplay:    3,
-	LeaderMenuGroupMenu:       1,
 	LeaderMenuGroupApp:        3,
 }
+
+// leaderMenuBottomGroups are groups drawn as one headerless row at the bottom of the menu, one
+// item per macro column (item i in column i), instead of stacked in a column.
+var leaderMenuBottomGroups = map[string]bool{LeaderMenuGroupMenu: true}
 
 var leaderMenuGroupOrder = []string{
 	LeaderMenuGroupFile,
 	LeaderMenuGroupSelection,
 	LeaderMenuGroupView,
-	LeaderMenuGroupMenu,
 	LeaderMenuGroupNavigation,
 	LeaderMenuGroupTools,
 	LeaderMenuGroupAddMark,
 	LeaderMenuGroupDisplay,
 	LeaderMenuGroupApp,
+	LeaderMenuGroupMenu, // bottom row: keep last so a short terminal drops it first
 }
 
 // leaderMenuGroupActions is display order within each group (single source for row layout).
@@ -120,6 +124,7 @@ var leaderMenuGroupActions = map[string][]string{
 	LeaderMenuGroupMenu: {
 		ActionAppUserMenu,
 		ActionAppCopyMenu,
+		ActionPanelGitFilterMenu,
 		ActionFileIndexMenu,
 	},
 	LeaderMenuGroupApp: {
@@ -362,7 +367,8 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 // LeaderMenuEntry is one built-in Esc function-menu row (action or group title).
 type LeaderMenuEntry struct {
 	GroupTitle  string // non-empty = cyan group header row
-	GroupColumn int    // macro column 0..2 when GroupTitle set or action row
+	GroupColumn int    // macro column 0..3 when GroupTitle set or action row
+	Bottom      bool   // drawn in the single bottom row (headerless group), column = GroupColumn
 	ActionID    string
 	Key         rune
 	Label       string
@@ -418,6 +424,14 @@ func buildLeaderMenuEntries(keys map[string]string, order []string, actions map[
 			}
 		}
 		if len(groupItems) == 0 {
+			continue
+		}
+		if leaderMenuBottomGroups[group] {
+			for i := range groupItems {
+				groupItems[i].GroupColumn = i
+				groupItems[i].Bottom = true
+				out = append(out, groupItems[i])
+			}
 			continue
 		}
 		col := column[group]

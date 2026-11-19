@@ -237,6 +237,7 @@ func (a *App) buildLeaderMenuItems(entries []keymap.LeaderMenuEntry) ([]ui.Leade
 			Key:         e.Key,
 			Label:       e.Label,
 			GroupColumn: e.GroupColumn,
+			Bottom:      e.Bottom,
 			DirectKey:   a.leaderMenuDirectKey(e.ActionID),
 		})
 		actions = append(actions, e.ActionID)

@@ -56,6 +56,13 @@ func leaderMenuSplitByColumn(items []LeaderMenuItem) [leaderMenuMacroColumns][]L
 	var buckets [leaderMenuMacroColumns][]LeaderMenuItem
 	col := 0
 	for _, it := range items {
+		if it.Bottom {
+			// Bottom-row items sit in their own macro column (width, used-column count) without
+			// following the current group header.
+			c := leaderMenuClampColumn(it.GroupColumn)
+			buckets[c] = append(buckets[c], it)
+			continue
+		}
 		if it.GroupTitle != "" {
 			col = leaderMenuClampColumn(it.GroupColumn)
 		}
@@ -64,8 +71,27 @@ func leaderMenuSplitByColumn(items []LeaderMenuItem) [leaderMenuMacroColumns][]L
 	return buckets
 }
 
+// leaderMenuMacroColumnRows counts the rows a bucket stacks in its column; bottom-row items
+// are drawn in the shared bottom row instead.
 func leaderMenuMacroColumnRows(bucket []LeaderMenuItem) int {
-	return len(bucket)
+	n := 0
+	for _, it := range bucket {
+		if !it.Bottom {
+			n++
+		}
+	}
+	return n
+}
+
+// leaderMenuBottomRows is the rows the bottom row costs: one blank separator plus the row itself,
+// or 0 when no item is flagged Bottom.
+func leaderMenuBottomRows(items []LeaderMenuItem) int {
+	for _, it := range items {
+		if it.Bottom {
+			return 2
+		}
+	}
+	return 0
 }
 
 // leaderMenuContentRows returns content rows for the visible item prefix.
@@ -81,7 +107,7 @@ func leaderMenuContentRows(items []LeaderMenuItem) int {
 				max = r
 			}
 		}
-		return max
+		return max + leaderMenuBottomRows(items)
 	}
 	rows := 0
 	col := 0
@@ -487,6 +513,7 @@ func leaderMenuCells(rect geom.Rect, items []LeaderMenuItem, showDirectKeys bool
 		for i := range colY {
 			colY[i] = yBase
 		}
+		bottomY := yBase + leaderMenuContentRows(items) - 1 // after the blank separator row
 		for i, it := range items {
 			col := leaderMenuClampColumn(it.GroupColumn)
 			cell := leaderMenuCell{X: xs[col], Y: colY[col], Width: widths[col], Item: i, Action: -1}
@@ -494,8 +521,12 @@ func leaderMenuCells(rect geom.Rect, items []LeaderMenuItem, showDirectKeys bool
 				cell.Action = action
 				action++
 			}
+			if it.Bottom {
+				cell.Y = bottomY
+			} else {
+				colY[col]++
+			}
 			cells = append(cells, cell)
-			colY[col]++
 		}
 		return cells
 	}

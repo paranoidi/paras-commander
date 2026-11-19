@@ -478,6 +478,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:      "Navigation",
 			DefaultKeys:  []string{"M-g"},
 			PreferredKey: "M-g",
+			LeaderKey:    "G",
 			Keywords:     []string{"git", "filter", "staged", "unstaged", "tracked", "untracked", "stage", "untrack", "commit", "push", "pull"},
 		},
 		{

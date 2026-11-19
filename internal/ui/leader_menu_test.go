@@ -592,3 +592,82 @@ func TestDrawLeaderMenuHoverPaintsCell(t *testing.T) {
 		}
 	}
 }
+
+func bottomRowTestItems() []LeaderMenuItem {
+	return []LeaderMenuItem{
+		{GroupTitle: "Garden", GroupColumn: 0},
+		{Key: 'w', Label: "Walnut", GroupColumn: 0},
+		{Key: 'p', Label: "Pepper", GroupColumn: 0},
+		{GroupTitle: "Orchid", GroupColumn: 3},
+		{Key: 'v', Label: "Violin", GroupColumn: 3},
+		{Key: 'h', Label: "Harbor", GroupColumn: 0, Bottom: true},
+		{Key: 'm', Label: "Meadow", GroupColumn: 1, Bottom: true},
+		{Key: 'l', Label: "Lantern", GroupColumn: 2, Bottom: true},
+		{Key: 'c', Label: "Copper", GroupColumn: 3, Bottom: true},
+	}
+}
+
+func TestLeaderMenuBottomRowLayoutAndHitTest(t *testing.T) {
+	layout := geom.Layout{Width: 80, Height: 24, Menu: geom.Rect{Height: 1}, Footer: geom.Rect{Y: 23, Height: 1}}
+	items := bottomRowTestItems()
+	if got := leaderMenuContentRows(items); got != 5 {
+		t.Fatalf("rows = %d, want 5 (3 regular + blank + bottom)", got)
+	}
+	state := LeaderMenuState{Open: true, Items: items}
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatal(err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	DrawLeaderMenu(screen, layout, state, theme.Default())
+	_, pepperY := findScreenText(t, screen, "Pepper")
+	xs := make([]int, 0, 4)
+	action := 0
+	for _, it := range items {
+		if it.GroupTitle != "" {
+			continue
+		}
+		x, y := findScreenText(t, screen, it.Label)
+		if it.Bottom {
+			xs = append(xs, x)
+			if y != pepperY+2 {
+				t.Errorf("%q row = %d, want %d (one blank row below the last regular row)", it.Label, y, pepperY+2)
+			}
+		}
+		if got, _ := LeaderMenuActionAt(layout, state, x, y); got != action {
+			t.Errorf("%q hit = %d want %d", it.Label, got, action)
+		}
+		action++
+	}
+	if x, _ := findScreenText(t, screen, "Garden"); x != xs[0]-leaderMenuCellPrefixWidth('h') {
+		t.Errorf("column 0 group x = %d, bottom label x = %d", x, xs[0])
+	}
+	for i := 1; i < len(xs); i++ {
+		if xs[i] <= xs[i-1] {
+			t.Errorf("bottom xs not increasing: %v", xs)
+		}
+	}
+	// Column 3 is right-anchored: its x comes from the widest item, bottom row included.
+	if x, _ := findScreenText(t, screen, "Orchid"); x != xs[3]-leaderMenuCellPrefixWidth('c') {
+		t.Errorf("column 3 group x = %d, bottom label x = %d", x, xs[3])
+	}
+}
+
+func TestLeaderMenuBottomRowDroppedWhenTooShort(t *testing.T) {
+	items := bottomRowTestItems()
+	// 3 content rows fit the regular rows (header + 2 items) but not the blank + bottom rows.
+	layout := geom.Layout{Width: 80, Height: 7, Menu: geom.Rect{Height: 1}, Footer: geom.Rect{Y: 6, Height: 1}}
+	if got := leaderMenuMaxContentRows(layout); got != 3 {
+		t.Fatalf("max rows = %d, want 3", got)
+	}
+	visible := LeaderMenuVisibleItems(layout, items)
+	for _, it := range visible {
+		if it.Bottom {
+			t.Fatalf("bottom row must be dropped: %+v", visible)
+		}
+	}
+	if len(visible) != 5 {
+		t.Fatalf("visible = %d, want 5", len(visible))
+	}
+}

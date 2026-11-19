@@ -10,6 +10,7 @@ type LeaderMenuItem struct {
 	GroupColumn int    // macro column 0..2 for grouped menu; ignored for F2 user menu
 	Key         rune   // pinned activation letter, or 0 for auto-assignment
 	Label       string
+	Bottom      bool   // drawn in the single bottom row, in macro column GroupColumn (grouped menu)
 	Disabled    bool   // drawn dimmed (still activatable)
 	DirectKey   string // compact global binding, e.g. "C-s"; built-in Esc menu only
 }

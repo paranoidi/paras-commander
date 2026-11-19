@@ -196,8 +196,8 @@ func TestDefaultBundleLeaderKey(t *testing.T) {
 			t.Fatalf("invalid entry: %+v", e)
 		}
 	}
-	if actions != 46 {
-		t.Fatalf("action entries = %d, want 46", actions)
+	if actions != 47 {
+		t.Fatalf("action entries = %d, want 47", actions)
 	}
 }
 
@@ -414,5 +414,38 @@ func TestCompareLeaderMenuShortLabels(t *testing.T) {
 	}
 	if got := actionSpecTitle(ActionCompareClose); got != "Close compare view" {
 		t.Errorf("help title = %q, want it spelled out", got)
+	}
+}
+
+// The Menu group is a headerless bottom row: last in the list, one item per macro column.
+func TestBuildLeaderMenuEntriesMenuGroupIsBottomRow(t *testing.T) {
+	b, err := DefaultBundle()
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantOrder := []string{ActionAppUserMenu, ActionAppCopyMenu, ActionPanelGitFilterMenu, ActionFileIndexMenu}
+	var bottom []LeaderMenuEntry
+	for _, e := range b.LeaderMenuEntries() {
+		if e.GroupTitle == LeaderMenuGroupMenu {
+			t.Fatalf("Menu group must not render a header")
+		}
+		if e.Bottom {
+			bottom = append(bottom, e)
+		}
+	}
+	if len(bottom) != len(wantOrder) {
+		t.Fatalf("bottom entries = %d, want %d", len(bottom), len(wantOrder))
+	}
+	entries := b.LeaderMenuEntries()
+	if tail := entries[len(entries)-len(bottom):]; tail[0].ActionID != bottom[0].ActionID {
+		t.Fatalf("bottom row must be last: %+v", tail)
+	}
+	for i, e := range bottom {
+		if e.ActionID != wantOrder[i] || e.GroupColumn != i {
+			t.Errorf("bottom[%d] = %s col %d, want %s col %d", i, e.ActionID, e.GroupColumn, wantOrder[i], i)
+		}
+	}
+	if bottom[2].Key != 'G' || bottom[2].Label != "Git menu" {
+		t.Errorf("git entry = %q %q, want G / Git menu", string(bottom[2].Key), bottom[2].Label)
 	}
 }
