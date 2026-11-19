@@ -115,6 +115,9 @@ type DedupViewState struct {
 	RecheckDone           int                                // kept results being re-stat'ed on return: files checked so far
 	RecheckTotal          int                                // files to re-check; 0 = no check running
 	OutsideOf             string                             // host dir whose copies elsewhere in the index the view lists; "" = plain scan
+	GroupFilterRev        int                                // bumped on every GroupFilter assignment (a func cannot be compared); a DedupCache key
+	MarksRev              int                                // bumped on every change to Marked or Kept; a DedupCache key
+	Cache                 *DedupCache                        // shared by value copies; nil = compute directly
 }
 
 // RecheckPercent is the re-check progress for the title, or -1 when no check runs.
@@ -155,24 +158,8 @@ func DedupRowsFromSnapshot(snap comparepkg.DedupSnapshot, view DedupViewState) (
 	if snap.Phase != comparepkg.DedupDone {
 		return nil, 0
 	}
-	idxs := make([]int, 0, len(snap.Groups))
-	for i, g := range snap.Groups {
-		if view.IgnoreEmpty && g.Size == 0 {
-			ignoredEmpty += len(g.Files)
-			continue
-		}
-		if !view.groupVisible(g) {
-			continue
-		}
-		idxs = append(idxs, i)
-	}
-	var roots []treeflat.Node[DedupRowData]
-	if view.TreeDirs {
-		roots = dedupDirRoots(snap, idxs, nil)
-	} else {
-		roots = dedupGroupRoots(snap, idxs, view.SortByWasted)
-	}
-	return treeflat.Flatten(roots, dedupExpandedFn(view.Main.Collapsed)), ignoredEmpty
+	t := dedupTreeFor(snap, view)
+	return treeflat.Flatten(t.roots, dedupExpandedFn(view.Main.Collapsed)), t.ignoredEmpty
 }
 
 func dedupExpandedFn(collapsed map[string]bool) func(string) bool {
@@ -251,22 +238,13 @@ func DedupTwinDirs(snap comparepkg.DedupSnapshot, dirRel string) []string {
 }
 
 // DedupExpandableIDs returns every collapsible node ID for the view's current
-// tree mode, ignoring current collapse state (collapse-all).
+// tree mode, ignoring current collapse state (collapse-all). The slice is shared
+// with the cache: callers must not modify it.
 func DedupExpandableIDs(snap comparepkg.DedupSnapshot, view DedupViewState) []string {
 	if snap.Phase != comparepkg.DedupDone {
 		return nil
 	}
-	idxs := make([]int, 0, len(snap.Groups))
-	for i, g := range snap.Groups {
-		if !view.groupVisible(g) {
-			continue
-		}
-		idxs = append(idxs, i)
-	}
-	if view.TreeDirs {
-		return treeflat.ExpandableIDs(dedupDirRoots(snap, idxs, nil))
-	}
-	return treeflat.ExpandableIDs(dedupGroupRoots(snap, idxs, view.SortByWasted))
+	return dedupTreeFor(snap, view).expandableIDs()
 }
 
 // dedupGroupRoots builds one root node per duplicate group; the group's first

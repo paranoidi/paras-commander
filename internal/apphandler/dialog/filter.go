@@ -139,6 +139,7 @@ func (h *Handler) dedupMatchCount(spec panel.FilterSpec) (int, error) {
 	}
 	view := h.model.DedupView
 	view.GroupFilter = fn
+	view.Cache = nil // a probe copy: its filter must not reach the shared cache
 	n := 0
 	for _, g := range ui.DedupActiveGroups(h.model.DedupSnapshot, view) {
 		n += len(g.Files)

@@ -143,16 +143,15 @@ func drawDedupView(
 		rootHeader = primitive.PathWithHomeTilde(view.OutsideOf, userHomeDir)
 		emptyText = "No copies outside " + rootHeader
 	}
-	markedDirs := dedupMarkedDirSet(snap, view.Marked)
-	dangerMarkedDirs := dedupDangerMarkedDirSet(snap, view.Marked)
-	keptDirs := dedupKeptDirSet(snap, view.Kept)
+	sets := dedupMarkSetsFor(snap, view)
+	markedDirs, dangerMarkedDirs, keptDirs := sets.marked, sets.danger, sets.kept
 	var treeFullyMarkedDirs map[string]bool
 	if view.TreeDirs {
-		treeFullyMarkedDirs = dedupSnapshotFullyMarkedDirSet(snap, view.Marked)
+		treeFullyMarkedDirs = sets.treeFull
 	}
 	var copyFullyMarkedDirs map[string]bool
 	if sel, ok := dedupRowAt(list, view.SourceRow); ok && sel.Value.Kind == DedupRowFile {
-		copyFullyMarkedDirs = dedupCopyPaneFullyMarkedDirSet(snap, view, sel)
+		copyFullyMarkedDirs = dedupCopyFullyMarkedFor(snap, view, sel)
 	}
 	activeGroup := -1
 	if !view.SourceStale && view.SourceRow >= 0 && view.SourceRow < len(list) {
@@ -280,7 +279,11 @@ func drawDedupTreePane(
 	headerY := rect.Y + 1
 	y := headerY + 1
 	headerStyle := layoutChrome.Chrome.Header
-	sizeW, countW := dedupListColumnWidths(p.Rows)
+	slot := 0
+	if p.CopiesPane {
+		slot = 1
+	}
+	sizeW, countW := view.Cache.columnWidths(p.Rows, slot)
 	cols := dedupListColumnLayout(contentX, innerRight, sizeW, countW)
 	pathHeader := primitive.FitPathForWidth(p.Header, cols.pathW)
 	primitive.Text(screen, rect.X+1, headerY, rect.Width-2, "", headerStyle)

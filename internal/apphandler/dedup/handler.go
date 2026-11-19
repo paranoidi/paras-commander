@@ -292,7 +292,7 @@ func (h *Handler) applyVerified() bool {
 		return false
 	}
 	for abs := range missing {
-		delete(st.Kept, abs)
+		h.setKept(abs, false)
 	}
 	h.model.DedupSnapshot = h.model.DedupSnapshot.WithoutPaths(missing)
 	if len(h.model.DedupSnapshot.Groups) == 0 {
@@ -302,7 +302,7 @@ func (h *Handler) applyVerified() bool {
 	}
 	// Re-apply marks for survivors only (WithoutPaths drops whole groups too).
 	oldMarked := st.Marked
-	st.Marked, st.MarkedCount, st.MarkedReclaimBytes = map[string]bool{}, 0, 0
+	h.resetMarked()
 	for _, g := range h.model.DedupSnapshot.Groups {
 		for _, f := range g.Files {
 			if abs := f.Abs.String(); oldMarked[abs] {
@@ -352,6 +352,7 @@ func (h *Handler) openRoot(root pathloc.Path, only []string) {
 	h.model.DedupView = ui.DedupViewState{
 		Marked:                map[string]bool{},
 		Kept:                  map[string]bool{},
+		Cache:                 &ui.DedupCache{},
 		IgnoreEmpty:           true,
 		TreeDirs:              true,
 		DirsCollapsePending:   true,
@@ -490,6 +491,7 @@ func (h *Handler) applyPending(snap comparepkg.DedupSnapshot) {
 	st.SortByWasted = p.sortByWasted
 	st.IgnoreEmpty = p.ignoreEmpty
 	st.GroupFilter, st.NameFilterLabel = p.groupFilter, p.nameFilterLabel
+	st.GroupFilterRev++
 	st.Main.Collapsed = p.mainCollapsed
 	st.Copies.Collapsed = p.copiesCollapsed
 	// Only the restored mode keeps its collapse state; the other mode still gets
@@ -507,7 +509,7 @@ func (h *Handler) applyPending(snap comparepkg.DedupSnapshot) {
 				h.setMark(abs, g.Size, true)
 			}
 			if p.kept[abs] {
-				st.Kept[abs] = true
+				h.setKept(abs, true)
 			}
 		}
 	}
@@ -1376,6 +1378,7 @@ func (h *Handler) SetGroupFilter(fn func(g comparepkg.DedupGroup) bool, label st
 	st := &h.model.DedupView
 	prevIDs := ui.DedupExpandableIDs(h.model.DedupSnapshot, *st)
 	st.GroupFilter, st.NameFilterLabel = fn, label
+	st.GroupFilterRev++
 	ui.DedupCollapseNewIDs(&st.Main, prevIDs, ui.DedupExpandableIDs(h.model.DedupSnapshot, *st))
 	h.syncDedupList()
 	h.ensureSelectionVisible(0)
@@ -1404,11 +1407,44 @@ func (h *Handler) setMark(absKey string, size int64, on bool) {
 		st.Marked[absKey] = true
 		st.MarkedCount++
 		st.MarkedReclaimBytes += size
+		st.MarksRev++
 	case !on && st.Marked[absKey]:
 		delete(st.Marked, absKey)
 		st.MarkedCount--
 		st.MarkedReclaimBytes -= size
+		st.MarksRev++
 	}
+}
+
+// setKept adds/removes one file's keep designation. Every change to Kept goes
+// through here (or resetMarked) so MarksRev invalidates the cached dir sets.
+func (h *Handler) setKept(absKey string, on bool) {
+	st := &h.model.DedupView
+	if st.Kept[absKey] == on {
+		return
+	}
+	if on {
+		if st.Kept == nil {
+			st.Kept = map[string]bool{}
+		}
+		st.Kept[absKey] = true
+	} else {
+		delete(st.Kept, absKey)
+	}
+	st.MarksRev++
+}
+
+// resetMarked drops every delete mark (not the keeps) and their totals.
+func (h *Handler) resetMarked() {
+	st := &h.model.DedupView
+	st.Marked, st.MarkedCount, st.MarkedReclaimBytes = map[string]bool{}, 0, 0
+	st.MarksRev++
+}
+
+// resetMarks drops every delete mark and keep designation.
+func (h *Handler) resetMarks() {
+	h.resetMarked()
+	h.model.DedupView.Kept = map[string]bool{}
 }
 
 // ToggleMark flips the delete mark on the selected file. Directory rows use
@@ -1632,9 +1668,6 @@ func (h *Handler) applyGroupKeep(gi int, keepAbs map[string]bool) (applied bool,
 	}
 	g := h.model.DedupSnapshot.Groups[gi]
 	st := &h.model.DedupView
-	if st.Kept == nil {
-		st.Kept = map[string]bool{}
-	}
 	currentKeep := map[string]bool{}
 	for _, f := range g.Files {
 		if st.Kept[f.Abs.String()] {
@@ -1644,7 +1677,7 @@ func (h *Handler) applyGroupKeep(gi int, keepAbs map[string]bool) (applied bool,
 	if dedupKeepSetsEqual(currentKeep, keepAbs) {
 		for _, f := range g.Files {
 			abs := f.Abs.String()
-			delete(st.Kept, abs)
+			h.setKept(abs, false)
 			h.setMark(abs, g.Size, false)
 		}
 		return true, false
@@ -1653,10 +1686,10 @@ func (h *Handler) applyGroupKeep(gi int, keepAbs map[string]bool) (applied bool,
 	for _, f := range g.Files {
 		abs := f.Abs.String()
 		if keepAbs[abs] {
-			st.Kept[abs] = true
+			h.setKept(abs, true)
 			h.setMark(abs, g.Size, false)
 		} else {
-			delete(st.Kept, abs)
+			h.setKept(abs, false)
 			h.setMark(abs, g.Size, true)
 		}
 	}
@@ -1805,10 +1838,7 @@ func (h *Handler) ClearMarks() {
 	if st.MarkedCount == 0 && len(st.Kept) == 0 {
 		return
 	}
-	st.Marked = map[string]bool{}
-	st.MarkedCount = 0
-	st.MarkedReclaimBytes = 0
-	st.Kept = map[string]bool{}
+	h.resetMarks()
 }
 
 // MarkedFiles returns marked files that still exist in the current snapshot, in
@@ -1939,10 +1969,7 @@ func (h *Handler) DeleteMarked(removeEmptyDirs bool) {
 	// ponytail: no re-walk — if a delete fails the row just vanishes; reopen to rescan.
 	oldRows, oldSel := h.model.DedupList, st.Main.Selected
 	h.model.DedupSnapshot = h.model.DedupSnapshot.WithoutPaths(st.Marked)
-	st.Marked = map[string]bool{}
-	st.MarkedCount = 0
-	st.MarkedReclaimBytes = 0
-	st.Kept = map[string]bool{}
+	h.resetMarks()
 	st.FocusCopies = false
 	h.syncDedupList()
 	// Keep the cursor on the same row, else the nearest surviving one (next, then previous).
