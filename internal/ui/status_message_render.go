@@ -44,18 +44,19 @@ func messageUrgencyStyle(styles theme.Theme, u MessageUrgency) tcell.Style {
 	}
 }
 
-// messageUrgencyListStyle applies message urgency on a panel list row. Warn and error use the
-// on-surface message.warn_text / message.error_text; info and success reuse the banner background
-// as foreground (banner foregrounds are tuned for the banner fill, not panel.surface).
+// messageUrgencyListStyle styles a Messages view row's text with the on-surface
+// message.*_text style for its urgency.
 func messageUrgencyListStyle(styles theme.Theme, u MessageUrgency, bg tcell.Color) tcell.Style {
 	switch u {
 	case MessageUrgencyWarn:
 		return styles.MessageWarnText.Background(bg)
 	case MessageUrgencyError, MessageUrgencyCritical:
 		return styles.MessageErrorText.Background(bg)
+	case MessageUrgencySuccess:
+		return styles.MessageSuccessText.Background(bg)
+	default:
+		return styles.MessageInfoText.Background(bg)
 	}
-	_, bannerBG, _ := messageUrgencyStyle(styles, u).Decompose()
-	return tcell.StyleDefault.Foreground(bannerBG).Background(bg)
 }
 
 // PaintTransientStatusMessage redraws the status row above the footer when a banner is active.

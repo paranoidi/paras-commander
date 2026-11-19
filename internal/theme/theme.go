@@ -348,6 +348,10 @@ type Theme struct {
 	// MessageWarnText is warning text drawn on a non-banner background: a dialog's warn
 	// line, the jobs conflict panel, a mass-rename warning row (message.warn_text, fg only).
 	MessageWarnText tcell.Style
+	// MessageInfoText / MessageSuccessText are info / success text on a non-banner
+	// background: a Messages view row (message.info_text / message.success_text, fg only).
+	MessageInfoText    tcell.Style
+	MessageSuccessText tcell.Style
 	// MessageSweep styles the leading edge cell of a toast sweeping in (message.sweep).
 	MessageSweep tcell.Style
 	// MessageSuccess styles success toasts (message.success).
@@ -1268,6 +1272,8 @@ var styleKeys = append([]string{
 	"message.error",
 	"message.error_text",
 	"message.warn_text",
+	"message.info_text",
+	"message.success_text",
 	"jobs.row",
 	"jobs.header",
 	"jobs.header.inactive",
@@ -2020,13 +2026,15 @@ func build(src source) (Theme, error) {
 		LeaderMenuDisabled: styles["leader_menu.disabled"],
 		LeaderMenuHover:    styles["leader_menu.hover"],
 
-		MessageInfo:      styles["message.info"],
-		MessageWarn:      styles["message.warn"],
-		MessageError:     styles["message.error"],
-		MessageErrorText: styles["message.error_text"],
-		MessageWarnText:  styles["message.warn_text"],
-		MessageSweep:     styles["message.sweep"],
-		MessageSuccess:   styles["message.success"],
+		MessageInfo:        styles["message.info"],
+		MessageWarn:        styles["message.warn"],
+		MessageError:       styles["message.error"],
+		MessageErrorText:   styles["message.error_text"],
+		MessageWarnText:    styles["message.warn_text"],
+		MessageInfoText:    styles["message.info_text"],
+		MessageSuccessText: styles["message.success_text"],
+		MessageSweep:       styles["message.sweep"],
+		MessageSuccess:     styles["message.success"],
 
 		JobsRow:            styles["jobs.row"],
 		JobsHeader:         styles["jobs.header"],

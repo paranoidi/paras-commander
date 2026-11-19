@@ -9,14 +9,14 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
-func TestMessageUrgencyListStyleUsesBannerBackgroundForInfo(t *testing.T) {
+func TestMessageUrgencyListStyleUsesInfoTextOnPanel(t *testing.T) {
 	styles := theme.Default()
 	_, panelBG, _ := styles.PanelActiveSurface.Decompose()
 	st := messageUrgencyListStyle(styles, MessageUrgencyInfo, panelBG)
 	fg, bg, _ := st.Decompose()
-	_, bannerBG, _ := styles.MessageInfo.Decompose()
-	if fg != bannerBG {
-		t.Fatalf("info list fg = %v, want banner bg %v", fg, bannerBG)
+	wantFG, _, _ := styles.MessageInfoText.Decompose()
+	if fg != wantFG {
+		t.Fatalf("info list fg = %v, want message.info_text fg %v", fg, wantFG)
 	}
 	if bg != panelBG {
 		t.Fatalf("info list bg = %v, want panel bg %v", bg, panelBG)
