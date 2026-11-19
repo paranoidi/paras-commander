@@ -259,19 +259,16 @@ func drawUniquePathColumn(screen tcell.Screen, styles theme.Theme, p uniqueTreeP
 	if marksW > 0 && x+marksW <= right {
 		x += dlg.DrawRowMarksSuffix(screen, x, lineY, marksW, marks, rowBG, styles)
 	}
-	iconStyle := func(base tcell.Style) tcell.Style {
-		return base.Background(rowBG).Foreground(styles.PanelRowIconForeground(cursorStyleKey, base))
-	}
 	if subtreeMark && x+1 < right {
 		base := styles.PanelRowMarkSelectionSubtree
 		if p.ChromeBlocked {
 			base = styles.PanelBlockedRowSelected
 		}
-		primitive.Text(screen, x+1, lineY, 1, string(styles.IconFilelistSelectionSubtree()), lineStyle.Foreground(styles.PanelRowIconForeground(cursorStyleKey, base)))
+		primitive.Text(screen, x+1, lineY, 1, string(styles.IconFilelistSelectionSubtree()), styles.RowIconStyle(cursorStyleKey, base, rowBG))
 		x += 2
 	}
 	if showUnverified && x+1 < right {
-		primitive.Text(screen, x+1, lineY, 1, string(unverifiedIcon), iconStyle(styles.PanelFileIndexStyle(localfs.IndexStatusUnhashed)))
+		primitive.Text(screen, x+1, lineY, 1, string(unverifiedIcon), styles.RowIconStyle(cursorStyleKey, styles.PanelFileIndexStyle(localfs.IndexStatusUnhashed), rowBG))
 	}
 }
 

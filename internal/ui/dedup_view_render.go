@@ -508,20 +508,16 @@ func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPanePar
 		default:
 			base = styles.PanelRowMarkSelectionSubtree
 		}
-		markStyle := lineStyle.Foreground(styles.PanelRowIconForeground(cursorStyleKey, base))
-		primitive.Text(screen, markX, lineY, 1, string(styles.IconFilelistSelectionSubtree()), markStyle)
+		primitive.Text(screen, markX, lineY, 1, string(styles.IconFilelistSelectionSubtree()), styles.RowIconStyle(cursorStyleKey, base, rowBG))
 		cursorX = markX + 1
 	}
 	// Suffix icons take the cursor-row icon color on the cursor row, like the main file list.
-	iconStyle := func(base tcell.Style) tcell.Style {
-		return base.Background(rowBG).Foreground(styles.PanelRowIconForeground(cursorStyleKey, base))
-	}
 	for _, ic := range icons {
 		markX := cursorX + 1
 		if markX >= pathX+pathW {
 			break
 		}
-		primitive.Text(screen, markX, lineY, 1, string(ic.Icon), iconStyle(ic.Style))
+		primitive.Text(screen, markX, lineY, 1, string(ic.Icon), styles.RowIconStyle(cursorStyleKey, ic.Style, rowBG))
 		cursorX = markX + 1
 	}
 }

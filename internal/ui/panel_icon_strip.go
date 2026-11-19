@@ -64,10 +64,8 @@ func panelIconStripContextFor(display PanelDisplayConfig, ctx PanelContext, stat
 // When chromeBlocked is true, devicon hex is skipped so icons match panel.blocked.row.* foreground.
 func fileDeviconForeground(rowStyle tcell.Style, deviconHex string, th theme.Theme, cursorStyleKey string, chromeBlocked bool) tcell.Color {
 	rowFG, _, _ := rowStyle.Decompose()
-	if cursorStyleKey != "" && th.PanelFileIconFG != nil {
-		if c, ok := th.PanelFileIconFG[cursorStyleKey]; ok {
-			return c
-		}
+	if c, ok := th.CursorIconForeground(cursorStyleKey); ok {
+		return c
 	}
 	if !chromeBlocked && deviconHex != "" {
 		if c, ok := deviconHexForeground(deviconHex); ok {
@@ -140,7 +138,7 @@ func paintPanelIconStrip(
 			fg = fileDeviconForeground(rowStyle, st.Color, th, ctx.CursorStyleKey, ctx.ChromeBlocked)
 		}
 	}
-	_, themed := th.PanelFileIconFG[ctx.CursorStyleKey]
+	_, themed := th.CursorIconForeground(ctx.CursorStyleKey)
 	if !ctx.ChromeBlocked {
 		if c, ok := th.DiskUsageBarIconColor(ctx.BarIconKey, group); ok {
 			fg, themed = c, true

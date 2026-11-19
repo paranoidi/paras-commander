@@ -458,13 +458,28 @@ func (t Theme) DialogSearchIconStyle(base tcell.Style) tcell.Style {
 // defines icon; otherwise the base indicator style foreground is used. (Disk-usage bar styles take
 // per-group colors through DiskUsageBarIconColor instead.)
 func (t Theme) PanelRowIconForeground(cursorStyleKey string, base tcell.Style) tcell.Color {
-	if cursorStyleKey != "" && t.PanelFileIconFG != nil {
-		if c, ok := t.PanelFileIconFG[cursorStyleKey]; ok {
-			return c
-		}
+	if c, ok := t.CursorIconForeground(cursorStyleKey); ok {
+		return c
 	}
 	fg, _, _ := base.Decompose()
 	return fg
+}
+
+// RowIconStyle is a row adornment icon's style as the file list paints its suffix icons: base's
+// foreground (the cursor-row override when cursorStyleKey names one) on rowBG, no attributes.
+func (t Theme) RowIconStyle(cursorStyleKey string, base tcell.Style, rowBG tcell.Color) tcell.Style {
+	return tcell.StyleDefault.Foreground(t.PanelRowIconForeground(cursorStyleKey, base)).Background(rowBG)
+}
+
+// CursorIconForeground is the theme's icon color for cursor-row key cursorStyleKey (from
+// PanelListingCursorIconKey); ok is false off the cursor row ("") or when the theme sets none.
+// Every row icon painter reads the cursor override through here.
+func (t Theme) CursorIconForeground(cursorStyleKey string) (tcell.Color, bool) {
+	if cursorStyleKey == "" {
+		return tcell.ColorDefault, false
+	}
+	c, ok := t.PanelFileIconFG[cursorStyleKey]
+	return c, ok
 }
 
 // DialogInputPair returns base (row fill + committed text) and placeholder icon styles.

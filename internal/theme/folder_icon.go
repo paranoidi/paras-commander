@@ -34,10 +34,8 @@ func (t Theme) FolderIcon(kind FolderIconKind) string {
 // then kind-specific style, then row foreground (for Default and as final fallback).
 func (t Theme) FolderIconForeground(kind FolderIconKind, cursorStyleKey string, rowStyle tcell.Style) tcell.Color {
 	rowFG, _, _ := rowStyle.Decompose()
-	if cursorStyleKey != "" && t.PanelFileIconFG != nil {
-		if c, ok := t.PanelFileIconFG[cursorStyleKey]; ok {
-			return c
-		}
+	if c, ok := t.CursorIconForeground(cursorStyleKey); ok {
+		return c
 	}
 	switch kind {
 	case FolderIconScanning:

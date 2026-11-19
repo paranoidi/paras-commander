@@ -520,9 +520,15 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 
 	cursorIconKey := ""
 	if hasEntry && rowHovered(entryIndex, state, ctx) {
-		cursorIconKey = panelCursorIconThemeKey(false, false, entryIndex, entryIndex, selected, false, false)
-	} else if hasEntry {
-		cursorIconKey = panelCursorIconThemeKey(ctx.CursorRowActive, ctx.ChromeBlocked, entryIndex, state.Cursor, selected, ctx.CursorRowActive && state.FilterUniqueMatch(), state.RangeAnchor != "")
+		cursorIconKey = panelStyle.Styles.PanelListingCursorIconKey(theme.PanelListingCursorOpts{Selected: selected})
+	} else if hasEntry && entryIndex == state.Cursor {
+		cursorIconKey = panelStyle.Styles.PanelListingCursorIconKey(theme.PanelListingCursorOpts{
+			ChromeBlocked:     ctx.ChromeBlocked,
+			FileListActive:    ctx.CursorRowActive,
+			Selected:          selected,
+			FilterUniqueMatch: ctx.CursorRowActive && state.FilterUniqueMatch(),
+			RangePending:      state.RangeAnchor != "",
+		})
 	}
 	barIconKey := ""
 	if !ctx.ChromeBlocked && fillCols > 0 {
@@ -1060,38 +1066,6 @@ const (
 	panelGitignoreChromeName   = "Gitignore"
 	panelGitignoreChromePadded = " " + panelGitignoreChromeName + " "
 )
-
-// panelCursorIconThemeKey is the semantic style key for Theme.PanelFileIconFG on the cursor row; empty otherwise.
-func panelCursorIconThemeKey(fileListActive, chromeBlocked bool, entryIndex, cursor int, selected, filterUniqueMatch, rangePending bool) string {
-	if entryIndex != cursor {
-		return ""
-	}
-	if rangePending {
-		if selected {
-			return "panel.row.cursor.range.selected"
-		}
-		return "panel.row.cursor.range"
-	}
-	if chromeBlocked {
-		if selected {
-			return "panel.blocked.row.cursor.selected"
-		}
-		return "panel.blocked.row.cursor"
-	}
-	if fileListActive {
-		if filterUniqueMatch {
-			return "panel.active.row.cursor.unique"
-		}
-		if selected {
-			return "panel.active.row.cursor.selected"
-		}
-		return "panel.active.row.cursor"
-	}
-	if selected {
-		return "panel.inactive.row.cursor.selected"
-	}
-	return "panel.inactive.row.cursor"
-}
 
 // metaSortArrowLayouts sets panel.SortArrow on the meta column layout whose EntryName is the panel's
 // active SortMeta target, leaving layouts untouched otherwise. Returns a copy so the caller's
