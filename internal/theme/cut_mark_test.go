@@ -53,3 +53,15 @@ func TestCutMarkStyleDefaultForegroundTogglesBold(t *testing.T) {
 		t.Fatal("bold default foreground should drop bold")
 	}
 }
+
+func TestCutMarkStyleKeepsContrastWithRowBackground(t *testing.T) {
+	// Dark text on a mid-grey cursor row: lightening by the plain shade lands on the row colour.
+	ink, row := tcell.NewRGBColor(0x11, 0x11, 0x1b), tcell.NewRGBColor(0x6c, 0x70, 0x86)
+	fg, _, _ := CutMarkStyle(tcell.StyleDefault.Foreground(ink).Background(row)).Decompose()
+	if got := contrastRatio(fg, row); got < cutMarkMinBG {
+		t.Fatalf("mark %v vs row contrast %.2f, want >= %.1f", fg, got, cutMarkMinBG)
+	}
+	if got := contrastRatio(fg, ink); got < cutMarkMinFG {
+		t.Fatalf("mark %v vs text contrast %.2f, want >= %.1f", fg, got, cutMarkMinFG)
+	}
+}
