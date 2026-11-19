@@ -628,7 +628,7 @@ func TestDrawDedupViewOpenFolderIconUsesDirectoryBlue(t *testing.T) {
 	}
 }
 
-func TestDrawDedupViewCursorSelectedDirFolderIconUsesDirectoryBlue(t *testing.T) {
+func TestDrawDedupViewCursorDirFolderIconUsesCursorIconColor(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -668,24 +668,23 @@ func TestDrawDedupViewCursorSelectedDirFolderIconUsesDirectoryBlue(t *testing.T)
 	}
 	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil, ListRowHover{})
 
-	wantDirFG, _, _ := styles.PanelRowDirectory.Decompose()
-	cursorFG, _, _ := styles.PanelCursorActive.Decompose()
-	if wantDirFG == cursorFG {
-		t.Fatal("test requires distinct panel.row.directory and panel.active.row.cursor foregrounds")
+	// Like the main file list: the cursor row's folder icon takes the cursor icon color.
+	key := styles.PanelListingCursorIconKey(theme.PanelListingCursorOpts{FileListActive: true})
+	wantFG := styles.PanelFileIconFG[key]
+	dirFG, _, _ := styles.PanelRowDirectory.Decompose()
+	if wantFG == dirFG {
+		t.Fatal("test requires distinct cursor icon and panel.row.directory foregrounds")
 	}
 
 	gutterX := contentX
 	iconFG, _, _ := cellStyleAt(screen, gutterX, lineY).Decompose()
-	if iconFG != wantDirFG {
-		t.Fatalf("cursor-selected dir folder icon fg %v, want directory fg %v", iconFG, wantDirFG)
-	}
-	if iconFG == cursorFG {
-		t.Fatalf("cursor-selected dir folder icon fg %v, should not use cursor fg", iconFG)
+	if iconFG != wantFG {
+		t.Fatalf("cursor dir folder icon fg %v, want cursor icon fg %v", iconFG, wantFG)
 	}
 
 	nameX := contentX + len([]rune(dedupTreePrefix(styles, list[0]))) + 1
 	nameFG, _, _ := cellStyleAt(screen, nameX, lineY).Decompose()
-	if nameFG == wantDirFG {
+	if nameFG == dirFG {
 		t.Fatal("test requires dir name to use cursor styling, not plain directory fg")
 	}
 }
@@ -1125,7 +1124,7 @@ func TestDedupTreeConnectorTwoRootsOnlyChildDir(t *testing.T) {
 	if imgPrefix != wantImg {
 		t.Fatalf("img prefix %q, want %q", imgPrefix, wantImg)
 	}
-	gutter, _ := dedupTreeGutter(styles, imgRow, tcell.StyleDefault, true)
+	gutter, _ := dedupTreeGutter(styles, imgRow, tcell.StyleDefault, "", true)
 	if gutter != "" {
 		t.Fatalf("file row gutter = %q, want empty", gutter)
 	}
@@ -1372,9 +1371,10 @@ func TestDrawDedupViewFileTreePaneDirUsesSelectionStyleWhenFullyMarked(t *testin
 
 	meadowGutterX := contentX + len([]rune(dedupTreeConnectorPrefix(styles, meadowRow)))
 	iconFG, _, _ := cellStyleAt(screen, meadowGutterX, dirRowY).Decompose()
-	wantIconFG, _, _ := styles.PanelRowDirectory.Decompose()
+	// meadow is the cursor row: its icon takes the selected-cursor icon color, like the file list.
+	wantIconFG := styles.PanelFileIconFG[styles.PanelListingCursorIconKey(theme.PanelListingCursorOpts{FileListActive: true, Selected: true})]
 	if iconFG != wantIconFG {
-		t.Fatalf("fully marked meadow folder icon fg %v, want directory fg %v", iconFG, wantIconFG)
+		t.Fatalf("fully marked meadow folder icon fg %v, want selected cursor icon fg %v", iconFG, wantIconFG)
 	}
 
 	var orchardRow DedupRow
@@ -1892,5 +1892,23 @@ func TestDrawDedupViewCollapsedAncestorOfTwinGetsWithinIcon(t *testing.T) {
 	}
 	if !within || related {
 		t.Errorf("collapsed attic: within=%v related=%v, want within icon only", within, related)
+	}
+}
+
+// The cursor row's folder icon takes the file list's cursor icon color, not directory blue.
+func TestTreeRowGutterCursorFolderIconUsesCursorIconColor(t *testing.T) {
+	styles := theme.Default()
+	key := styles.PanelListingCursorIconKey(theme.PanelListingCursorOpts{FileListActive: true})
+	want, ok := styles.PanelFileIconFG[key]
+	if !ok {
+		t.Fatalf("default theme has no cursor icon color for %q", key)
+	}
+	_, st := treeRowGutter(styles, true, true, false, tcell.StyleDefault, key, false)
+	if fg, _, _ := st.Decompose(); fg != want {
+		t.Fatalf("cursor folder icon fg = %v, want %v", fg, want)
+	}
+	_, st = treeRowGutter(styles, true, true, false, tcell.StyleDefault, "", false)
+	if fg, _, _ := st.Decompose(); fg == want {
+		t.Fatalf("non-cursor folder icon fg = cursor color %v", fg)
 	}
 }

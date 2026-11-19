@@ -207,7 +207,7 @@ func drawUniquePathColumn(screen tcell.Screen, styles theme.Theme, p uniqueTreeP
 	connector := dedupConnectorPrefix(styles, entry.Depth, entry.LastChild, entry.AncestorHasNext)
 	gutter, gutterStyle := "", lineStyle
 	if d.IsDir {
-		gutter, gutterStyle = treeRowGutter(styles, true, true, entry.Expanded, lineStyle, p.ChromeBlocked)
+		gutter, gutterStyle = treeRowGutter(styles, true, true, entry.Expanded, lineStyle, cursorStyleKey, p.ChromeBlocked)
 	}
 	prefixW := len([]rune(connector))
 	if gutter != "" {

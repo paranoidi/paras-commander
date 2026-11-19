@@ -443,7 +443,7 @@ func dedupRowAbsPath(snap comparepkg.DedupSnapshot, d DedupRowData) string {
 // icon, matching panellist's job/pin-before-subtree suffix ordering.
 func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPaneParams, snap comparepkg.DedupSnapshot, d DedupRowData, entry DedupRow, lineY, pathX, pathW int, lineStyle tcell.Style, cursorStyleKey string, chromeBlocked, hinted bool, matchRanges []search.Range, matchCursor bool) {
 	connectorPrefix := dedupTreeConnectorPrefix(styles, entry)
-	gutter, gutterStyle := dedupTreeGutter(styles, entry, lineStyle, chromeBlocked)
+	gutter, gutterStyle := dedupTreeGutter(styles, entry, lineStyle, cursorStyleKey, chromeBlocked)
 	prefix := connectorPrefix
 	if gutter != "" {
 		prefix += gutter + " "
@@ -666,18 +666,20 @@ func dedupTreeGutter(
 	styles theme.Theme,
 	entry DedupRow,
 	lineStyle tcell.Style,
+	cursorStyleKey string,
 	chromeBlocked bool,
 ) (string, tcell.Style) {
-	return treeRowGutter(styles, entry.Value.Kind == DedupRowDir, entry.HasChildren, entry.Expanded, lineStyle, chromeBlocked)
+	return treeRowGutter(styles, entry.Value.Kind == DedupRowDir, entry.HasChildren, entry.Expanded, lineStyle, cursorStyleKey, chromeBlocked)
 }
 
 // treeRowGutter is the expander of one tree row of the aux tree views (Dedup, Unique files).
-func treeRowGutter(styles theme.Theme, isDir, hasChildren, expanded bool, lineStyle tcell.Style, chromeBlocked bool) (string, tcell.Style) {
+// cursorStyleKey is the cursor row's icon key ("" off the cursor row), as in the main file list.
+func treeRowGutter(styles theme.Theme, isDir, hasChildren, expanded bool, lineStyle tcell.Style, cursorStyleKey string, chromeBlocked bool) (string, tcell.Style) {
 	if hasChildren {
 		if isDir {
-			// Dedup tree rows use jobs.row as line text; folder icons always use directory
-			// blue (panel.row.directory), never jobs.row grey, open-folder cyan, or cursor/selection FG.
-			// dedup always wants the *closed*-kind foreground even when expanded, so it can't
+			// Dedup tree rows use jobs.row as line text; folder icons use directory blue
+			// (panel.row.directory), never jobs.row grey or open-folder cyan; the cursor row takes
+			// the file list's cursor icon color. dedup always wants the *closed*-kind foreground even when expanded, so it can't
 			// reuse panellist.TreeExpanderIcon's FG (which switches to open-folder color); it
 			// only reuses the icon text.
 			kind := theme.FolderIconDefault
@@ -686,7 +688,7 @@ func treeRowGutter(styles theme.Theme, isDir, hasChildren, expanded bool, lineSt
 			}
 			gutter := styles.FolderIcon(kind)
 			iconRowStyle := styles.PanelListingEntryStyle(localfs.EntryDirectory, chromeBlocked)
-			iconFG := styles.FolderIconForeground(theme.FolderIconDefault, "", iconRowStyle)
+			iconFG := styles.FolderIconForeground(theme.FolderIconDefault, cursorStyleKey, iconRowStyle)
 			return gutter, lineStyle.Foreground(iconFG)
 		}
 		gutter := string(styles.IconTreeExpand())
@@ -707,7 +709,7 @@ func dedupConnectorPrefix(styles theme.Theme, depth int, lastChild bool, ancesto
 }
 
 func dedupTreePrefix(styles theme.Theme, row DedupRow) string {
-	gutter, _ := dedupTreeGutter(styles, row, tcell.StyleDefault, true)
+	gutter, _ := dedupTreeGutter(styles, row, tcell.StyleDefault, "", true)
 	connector := dedupTreeConnectorPrefix(styles, row)
 	if gutter == "" {
 		return connector
