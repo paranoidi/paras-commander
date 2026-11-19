@@ -290,10 +290,9 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 	}
 
 	if msg := strings.TrimSpace(st.ErrorMsg); msg != "" {
-		errSt := p.Theme.MessageError.Background(bg)
+		errSt := p.Theme.MessageErrorText.Background(bg)
 		if p.ChromeBlocked {
-			_, efg, _ := p.Theme.MessageError.Decompose()
-			errSt = p.Theme.PanelBlockedText.Foreground(efg)
+			errSt = p.Theme.PanelBlockedText
 		}
 		drawMessageContent(screen, rect, p.Embedded || p.Borderless, contentTop, contentH, textX, textW, msg, errSt, body)
 		return

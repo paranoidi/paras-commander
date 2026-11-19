@@ -959,3 +959,36 @@ func TestDrawCapabilityUncertainIndicatorFollowsState(t *testing.T) {
 		})
 	}
 }
+
+func TestDrawPreviewMessageColors(t *testing.T) {
+	styles := theme.Default()
+	for _, tc := range []struct {
+		name    string
+		blocked bool
+		wantFG  tcell.Style
+	}{
+		{"open", false, styles.MessageErrorText},
+		{"blocked", true, styles.PanelBlockedText},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			screen := tcell.NewSimulationScreen("UTF-8")
+			if err := screen.Init(); err != nil {
+				t.Fatalf("Init() error = %v", err)
+			}
+			defer screen.Fini()
+			screen.SetSize(40, 10)
+			Draw(screen, Rect{Width: 40, Height: 10}, State{Open: true, TitleBase: "pebble.bin", ErrorMsg: "Not a text file"},
+				DrawParams{Theme: styles, Embedded: true, BodyStyle: BodyStyle(styles, false), ChromeBlocked: tc.blocked})
+			want, _, _ := tc.wantFG.Decompose()
+			for x := 0; x < 40; x++ {
+				if r, st, _ := screen.Get(x, 1); r == "N" {
+					if got, _, _ := st.Decompose(); got != want {
+						t.Fatalf("message fg = %v, want %v", got, want)
+					}
+					return
+				}
+			}
+			t.Fatal("message not drawn on content row")
+		})
+	}
+}

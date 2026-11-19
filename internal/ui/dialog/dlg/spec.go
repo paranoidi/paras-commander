@@ -87,7 +87,7 @@ type TextStyle int
 const (
 	TextNormal       TextStyle = iota // DialogText on the surface
 	TextError                         // DialogText with the input error foreground
-	TextMessageError                  // the theme's MessageError style on the dialog surface (message dialog body)
+	TextMessageError                  // the theme's MessageErrorText style on the dialog surface (message dialog body)
 	TextWarn                          // the theme's MessageWarn style on the dialog surface
 )
 

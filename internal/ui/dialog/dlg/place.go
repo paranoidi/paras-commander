@@ -539,7 +539,7 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 				errFG, _, _ := styles.DialogInputActiveError.Decompose()
 				style = style.Foreground(errFG)
 			case TextMessageError:
-				style = styles.MessageError.Background(surface)
+				style = styles.MessageErrorText.Background(surface)
 			case TextWarn:
 				style = styles.MessageWarn.Background(surface)
 			}

@@ -835,8 +835,8 @@ func TestDrawMessageErrorLabelStyle(t *testing.T) {
 	p := mustPlace(t, spec)
 	_, surface, _ := styles.DialogSurface.Decompose()
 	r := p.Items[0].Rect
-	if _, st, _ := screen.Get(r.X, r.Y); st != styles.MessageError.Background(surface) {
-		t.Errorf("message label style = %v, want MessageError on the surface", st)
+	if _, st, _ := screen.Get(r.X, r.Y); st != styles.MessageErrorText.Background(surface) {
+		t.Errorf("message label style = %v, want MessageErrorText on the surface", st)
 	}
 	r = p.Items[1].Rect
 	if _, st, _ := screen.Get(r.X, r.Y); st != styles.DialogText.Background(surface) {

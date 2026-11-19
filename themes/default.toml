@@ -121,6 +121,7 @@ text = { fg = "fg", bg = "surface" }
 info = { fg = "ink", bg = "inverse_bg" }
 warn = { fg = "ink", bg = "warning", bold = true }
 error = { fg = "fg_strong", bg = "danger", bold = true }
+error_text = { fg = "error", bold = true } # error line on a panel/dialog surface (preview message, message dialog body)
 success = { fg = "ink", bg = "success" }
 sweep = { fg = "ink", bg = "inverse_bg" } # leading edge of a toast sweeping in
 

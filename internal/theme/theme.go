@@ -342,6 +342,9 @@ type Theme struct {
 	MessageInfo  tcell.Style
 	MessageWarn  tcell.Style
 	MessageError tcell.Style
+	// MessageErrorText is error text drawn on a non-banner background: a preview's
+	// "Not a text file" line, a message dialog's error body (message.error_text, fg only).
+	MessageErrorText tcell.Style
 	// MessageSweep styles the leading edge cell of a toast sweeping in (message.sweep).
 	MessageSweep tcell.Style
 	// MessageSuccess styles success toasts (message.success).
@@ -1260,6 +1263,7 @@ var styleKeys = append([]string{
 	"message.info",
 	"message.warn",
 	"message.error",
+	"message.error_text",
 	"jobs.row",
 	"jobs.header",
 	"jobs.header.inactive",
@@ -2012,11 +2016,12 @@ func build(src source) (Theme, error) {
 		LeaderMenuDisabled: styles["leader_menu.disabled"],
 		LeaderMenuHover:    styles["leader_menu.hover"],
 
-		MessageInfo:    styles["message.info"],
-		MessageWarn:    styles["message.warn"],
-		MessageError:   styles["message.error"],
-		MessageSweep:   styles["message.sweep"],
-		MessageSuccess: styles["message.success"],
+		MessageInfo:      styles["message.info"],
+		MessageWarn:      styles["message.warn"],
+		MessageError:     styles["message.error"],
+		MessageErrorText: styles["message.error_text"],
+		MessageSweep:     styles["message.sweep"],
+		MessageSuccess:   styles["message.success"],
 
 		JobsRow:            styles["jobs.row"],
 		JobsHeader:         styles["jobs.header"],
