@@ -447,8 +447,8 @@ pin = "\U000F0403"
 hidden_dotfiles = "\U000F06D1"
 fileindex = "\U000F01BC"   # nf-md-database: shown instead of "fileindex" in fileindex:// paths
 
-[icons.fileindex_state]   # one cell per row while browsing with fileindex; 8-digit escapes
-indexed = "\U000F0AA9"    # nf-md-database_check: in the index, unchanged
+[icons.fileindex_state]   # one cell per row while browsing with fileindex
+indexed = "\uf00c"        # nf-fa-check: in the index, unchanged
 changed = "\U000F0B86"    # nf-md-database_edit: size or mtime differs from the index
 new = "\U000F01BB"        # nf-md-database_minus: on disk, not in the index
 missing = "\U000F01BA"    # nf-md-database_plus: in the index only (ghost row)
@@ -456,7 +456,7 @@ excluded = "\U000F1640"   # nf-md-database_off: not indexed, skipped by the scan
 scanning = "\U000F0CFF"   # nf-md-database_sync: a scan or prune job works on it
 checking = "\U000F0866"   # nf-md-database_search: indexed directory, background check still running
 differs = "\U000F163A"    # nf-md-database_alert: indexed directory with differences below
-unchecked = "\U000F1640"  # nf-md-database_off: indexed directory too deep to check automatically
+unchecked = "\uf04e"      # nf-fa-forward: indexed directory too deep to check automatically
 tagged = "\U000F12F6"     # nf-md-database_marker: indexed and tagged
 unhashed = "\U000F163F"   # nf-md-database_clock: indexed, not hashed yet
 
