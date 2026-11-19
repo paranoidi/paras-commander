@@ -499,6 +499,7 @@ func (a *App) toggleSyncFollow() {
 // consistent). New invariants belong here, not sprinkled at call sites: any code path
 // that mutates panel state automatically triggers them via the Run-loop chokepoint.
 func (a *App) reconcileAfterEvent() {
+	a.reconcileTerminalStripScroll()
 	a.reconcileSelectedStripFocus()
 	a.jobsCtrl.ReconcileSeenFinished()
 	a.reconcileSelectionSizeScans(ui.PrimaryPanel)
@@ -528,6 +529,15 @@ func (a *App) reconcileAfterEvent() {
 	a.previewCtrl.ReconcileCarouselSidePreview(ui.PrimaryPanel)
 	a.previewCtrl.ReconcileCarouselSidePreview(ui.SecondaryPanel)
 	a.reconcileDirWatch()
+}
+
+// reconcileTerminalStripScroll re-clamps panel scroll when the terminal strip changes
+// height (open, close, grow, shrink, run-for-each wake), so the cursor stays visible.
+func (a *App) reconcileTerminalStripScroll() {
+	if rows := a.terminalLayoutRows(); rows != a.lastTerminalRows {
+		a.lastTerminalRows = rows
+		a.ensurePanelsVisible()
+	}
 }
 
 // syncFollowTargetPath returns the absolute directory path the follower should mirror when

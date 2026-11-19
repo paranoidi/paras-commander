@@ -198,6 +198,7 @@ type App struct {
 	devMode             bool
 	subshell            *subshell.Subshell  // persistent MC-style shell; nil until first Ctrl+O (lazy start)
 	terminalFeed        *subshell.PanelFeed // emulator feed shadowing the subshell for its whole life (started by ensureSubshell)
+	lastTerminalRows    int                 // terminalLayoutRows at the last reconcile; a change re-clamps panel scroll
 	terminalWakePending atomic.Bool         // coalesces terminalWakePayload posts from the PTY reader
 	model               ui.Model
 	// themeAtDialogOpen is the active theme when the theme dialog was opened; Esc restores it after preview.

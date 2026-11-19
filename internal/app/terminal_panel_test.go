@@ -3,6 +3,9 @@
 package app
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -13,6 +16,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/subshell"
+	"github.com/paranoidi/paras-commander/internal/ui"
 	"golang.org/x/sys/unix"
 )
 
@@ -201,6 +205,30 @@ func TestTerminalPanelResizeClamps(t *testing.T) {
 	app.shrinkTerminalPanel()
 	if tp.Rows != config.MinShellTerminalPanelHeight {
 		t.Fatalf("shrink at min: rows = %d, want clamp at %d", tp.Rows, config.MinShellTerminalPanelHeight)
+	}
+}
+
+func TestTerminalStripOpenKeepsCursorVisible(t *testing.T) {
+	dir := t.TempDir()
+	words := []string{"amber", "birch", "cobalt", "dune", "ember", "fjord", "grove", "harbor"}
+	for i := 0; i < 60; i++ {
+		name := fmt.Sprintf("%s-%02d.dat", words[i%len(words)], i)
+		if err := os.WriteFile(filepath.Join(dir, name), nil, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	app := newApp(t, newScreen(t, 100, 40), dir)
+	p := app.activePanel()
+	p.Cursor = len(p.Entries) - 1
+	app.ensurePanelsVisible()
+	app.reconcileAfterEvent()
+
+	tp := &app.model.TerminalPanel
+	tp.Visible, tp.Rows = true, 8
+	app.reconcileAfterEvent()
+
+	if vr := app.panelViewportRows(ui.PrimaryPanel); p.Cursor < p.ScrollOffset || p.Cursor >= p.ScrollOffset+vr {
+		t.Fatalf("cursor %d outside viewport [%d,%d) after strip opened", p.Cursor, p.ScrollOffset, p.ScrollOffset+vr)
 	}
 }
 
