@@ -1739,7 +1739,7 @@ func DefaultActionSpecs() []ActionSpec {
 		{
 			ID:               ActionFileIndexFindDuplicates,
 			Views:            HelpBrowser,
-			Title:            "Find duplicates",
+			Title:            "Find duplicates within index",
 			Section:          "File Index",
 			DefaultKeys:      []string{"M-W"},
 			PreferredKey:     "M-W",
