@@ -72,3 +72,44 @@ func BenchmarkDedupRowsFromSnapshotDirsCached(b *testing.B) {
 		DedupRowsFromSnapshot(snap, view)
 	}
 }
+
+// BenchmarkDedupCopyRowsTwinDirs is one cursor move onto a duplicate directory
+// with thousands of twins: the copies pane keeps every file under any twin.
+func BenchmarkDedupCopyRowsTwinDirs(b *testing.B) {
+	const dirs = 3000
+	words := []string{"amber", "birch", "cedar", "dune", "ember", "fjord", "grove", "harbor", "iris", "juniper", "kettle", "lantern"}
+	snap := comparepkg.DedupSnapshot{Root: pathloc.MustParse("/scan/root"), Phase: comparepkg.DedupDone}
+	grp := comparepkg.DedupGroup{Hash: [32]byte{1}, Size: 10240}
+	tops := make([]string, 0, dirs)
+	subs := make([]string, 0, dirs)
+	for i := range dirs {
+		top := fmt.Sprintf("data/%04d_%s_%s", i, words[i%12], words[(i/12)%12])
+		tops = append(tops, top)
+		subs = append(subs, top+"/sub")
+		for _, rel := range []string{"file1.dat", "file2.dat", "sub/file1.dat", "sub/file2.dat"} {
+			rel = top + "/" + rel
+			grp.Files = append(grp.Files, comparepkg.DedupFile{Rel: rel, Abs: pathloc.MustParse("/scan/root/" + rel)})
+		}
+	}
+	snap.Groups = []comparepkg.DedupGroup{grp}
+	snap.DirGroups = []comparepkg.DedupDirGroup{
+		{Kind: comparepkg.DirExact, Size: 20480, Files: 2, Rels: subs, Hidden: make([]bool, dirs)},
+		{Kind: comparepkg.DirExact, Size: 40960, Files: 4, Rels: tops, Hidden: make([]bool, dirs)},
+	}
+	list, _ := DedupRowsFromSnapshot(snap, DedupViewState{TreeDirs: true})
+	sel := -1
+	for i, r := range list {
+		if r.Value.Kind == DedupRowDir && DedupTwinDirs(snap, r.Value.DirRel) != nil {
+			sel = i
+			break
+		}
+	}
+	if sel < 0 {
+		b.Fatal("no duplicate-dir row")
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		DedupCopyRows(snap, list[sel], nil)
+	}
+}

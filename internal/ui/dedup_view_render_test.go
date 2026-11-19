@@ -1702,6 +1702,7 @@ func TestDedupCopyRowsForDuplicateDir(t *testing.T) {
 		Groups: []comparepkg.DedupGroup{
 			dedupTestGroup(1, 1024, "harbor/lantern.bin", "meadow/lantern.bin", "orchard/lantern.bin"),
 			dedupTestGroup(2, 512, "harbor/pebble.bin", "meadow/pebble.bin"),
+			dedupTestGroup(3, 256, "meadow2/ember.bin", "harbor2/ember.bin", "orchard/ember.bin"),
 		},
 		DirGroups: []comparepkg.DedupDirGroup{
 			{Kind: comparepkg.DirExact, Size: 1536, Files: 2, Rels: []string{"harbor", "meadow"}, Hidden: []bool{false, false}},

@@ -194,13 +194,22 @@ func dedupCopyRoots(snap comparepkg.DedupSnapshot, sel DedupRow) []treeflat.Node
 		for i := range idxs {
 			idxs[i] = i
 		}
+		twinSet := make(map[string]bool, len(twins))
+		for _, t := range twins {
+			twinSet[t] = true
+		}
 		return dedupDirRoots(snap, idxs, func(f comparepkg.DedupFile) bool {
-			for _, t := range twins {
-				if dedupFileRelUnderDirRel(f.Rel, t) {
+			// Walk up the file's ancestors: O(depth) lookups, no allocation.
+			for rel := f.Rel; ; {
+				if twinSet[rel] {
 					return true
 				}
+				i := strings.LastIndexByte(rel, '/')
+				if i < 0 {
+					return twinSet[""]
+				}
+				rel = rel[:i]
 			}
-			return false
 		})
 	}
 	if d.GroupIdx < 0 || d.GroupIdx >= len(snap.Groups) {
@@ -454,14 +463,14 @@ func DedupRowIndexByID(rows []DedupRow, id string) int {
 	return -1
 }
 
-// dedupFileRelUnderDirRel reports whether fileRel is a strict descendant of
-// dirRel (file directly in dir or in a nested subdirectory).
+// dedupFileRelUnderDirRel reports whether fileRel is dirRel itself or lies
+// under it (directly or in a nested subdirectory). The empty dirRel (the scan
+// root) contains everything.
 func dedupFileRelUnderDirRel(fileRel, dirRel string) bool {
-	if dirRel == "" {
+	if dirRel == "" || fileRel == dirRel {
 		return true
 	}
-	prefix := dirRel + "/"
-	return strings.HasPrefix(fileRel+"/", prefix)
+	return len(fileRel) > len(dirRel) && fileRel[len(dirRel)] == '/' && strings.HasPrefix(fileRel, dirRel)
 }
 
 // DedupCopyPaneFiles returns every copy-pane file for mainSel's duplicate group,
