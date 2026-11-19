@@ -46,10 +46,7 @@ func drawMessagesView(
 	}
 
 	hdrTime := fmt.Sprintf("%-*s", messagesListColTime, "Time")
-	headerStyle := styles.PanelActiveHeader.Background(bg)
-	if chromeBlocked {
-		headerStyle = styles.PanelBlockedHeader
-	}
+	headerStyle := auxPanelListHeaderStyle(styles, layoutChrome.Chrome, chromeBlocked, true, bg)
 	primitive.Text(screen, contentX, rect.Y+1, messagesListColTime, hdrTime, headerStyle)
 	primitive.TextOverlay(screen, msgStart, rect.Y+1, msgW, "Message", headerStyle)
 

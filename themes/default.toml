@@ -121,8 +121,8 @@ text = { fg = "fg", bg = "surface" }
 info = { fg = "ink", bg = "inverse_bg" }
 warn = { fg = "ink", bg = "warning", bold = true }
 error = { fg = "fg_strong", bg = "danger", bold = true }
-warn_text = { fg = "warning", bold = true } # warning line on a panel/dialog surface (dialog warn line, conflict panel, mass-rename row)
-error_text = { fg = "error", bold = true } # error line on a panel/dialog surface (preview message, message dialog body)
+warn_text = { fg = "warning", bold = true } # warning line on a panel/dialog surface (dialog warn line, conflict panel, mass-rename row, Messages view row)
+error_text = { fg = "error", bold = true } # error line on a panel/dialog surface (preview message, message dialog body, Messages view row)
 success = { fg = "ink", bg = "success" }
 sweep = { fg = "ink", bg = "inverse_bg" } # leading edge of a toast sweeping in
 
