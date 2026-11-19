@@ -43,7 +43,7 @@ red = 1
 bg = "#303446"       # background of the whole UI; "default" keeps the terminal's own
 surface = "bright_black"   # dialog / chip fill
 muted = "bright_black"     # dimmed text
-# ... 40 roles in all, listed in themes/default.toml
+# ... 41 roles in all, listed in themes/default.toml
 
 [menu.bar]
 active   = { fg = "fg" }
@@ -79,6 +79,7 @@ Colors come in two layers. `[palette]` holds only raw colors: the 16 ANSI slot n
 | `ink` | `black` | dark text on a colored fill |
 | `accent` | `magenta` | shortcut letters, key hints, match highlights |
 | `accent_alt` | `magenta` | dialog shortcut letters that need Alt |
+| `dialog_title` | `default` | dialog title text on the top border; `default` keeps the dialog frame colour |
 | `primary` / `directory` / `symlink` / `selected` | `blue` / `blue` / `bright_cyan` / `yellow` | active panel frame, directories, symlinks, selected files |
 | `inactive_frame` | `bright_black` | inactive panel frame |
 | `info` / `success` / `success_strong` | `cyan` / `green` / `bright_green` | informational, completed, running |

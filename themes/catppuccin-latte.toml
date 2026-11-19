@@ -48,6 +48,7 @@ focus_fg = "#4c4f69"
 file_cursor_fg = "#000000"
 accent = "#8839ef"
 accent_alt = "#dc8a78"
+dialog_title = "#7287fd"
 primary = "blue"
 inactive_frame = "#acb0be"
 directory = "blue"
@@ -182,6 +183,7 @@ title = { fg = "faint" }  # tuned
 input = { fg = "fg", bold = true }
 
 [dialog]
+title = { fg = "dialog_title", bold = true }  # lavender: dialog titles on the top border  # tuned
 accent_alt = { fg = "fg_strong", bold = true }
 
 [dialog.button]

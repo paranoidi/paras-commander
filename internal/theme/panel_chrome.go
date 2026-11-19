@@ -55,7 +55,9 @@ func (t Theme) DialogOnPanelChrome() Theme {
 	chrome := t.PanelChrome(true, false)
 	t.DialogSurface = chrome.Surface
 	t.DialogFrame = chrome.Frame
-	t.DialogTitle = chrome.Title
+	// The panel title's own colour would differ from the frame's; the dialog title keeps the frame colour.
+	frameFg, _, _ := chrome.Frame.Decompose()
+	t.DialogTitle = chrome.Title.Foreground(frameFg)
 	t.DialogText = t.PanelRowFile
 	return t
 }

@@ -58,6 +58,7 @@ file_cursor_fg = "black"      # text and icon on file_cursor_bg
 # Structure
 accent = "magenta"            # shortcut letters, key hints, match highlights
 accent_alt = "magenta"        # dialog shortcut letters that need Alt
+dialog_title = "default"      # dialog title text on the top border; "default" keeps the dialog.frame colour
 primary = "blue"              # active panel frame, info icon, git modified, tagged
 inactive_frame = "bright_black"  # inactive panel frame
 directory = "blue"            # directory names in listings
@@ -317,7 +318,7 @@ surface = { fg = "fg", bg = "surface" }
 text = { fg = "fg" }
 # background-only highlight for selectable text spans inside dialogs (e.g. detected paths); falls back to surface bg
 text_select = { bg = "bg" }
-title = { bold = true }
+title = { fg = "dialog_title", bold = true }  # fg "default" (the role default) falls back to the dialog.frame colour
 # bg matters for the path-picker trailing icon when that control is focused; shortcut letters use fg+bold only.
 accent = { fg = "fg", bg = "bg", bold = true }
 # shortcut letter that needs Alt: AltOnly dialogs, and every mnemonic while focus is in a text input

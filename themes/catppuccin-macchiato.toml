@@ -48,6 +48,7 @@ focus_fg = "#cad3f5"
 file_cursor_fg = "#181926"
 accent = "#c6a0f6"
 accent_alt = "#f4dbd6"
+dialog_title = "#b7bdf8"
 primary = "blue"
 inactive_frame = "#5b6078"
 directory = "blue"
@@ -105,6 +106,9 @@ row.symlink = { fg = "faint" }  # tuned
 surface = { fg = "faint" }  # tuned
 text = { fg = "faint" }  # tuned
 title = { fg = "faint" }  # tuned
+
+[dialog]
+title = { fg = "dialog_title", bold = true }  # lavender: dialog titles on the top border  # tuned
 
 [dialog.button]
 active_destructive = { fg = "ink", bg = "danger" }

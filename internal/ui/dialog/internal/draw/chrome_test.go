@@ -476,6 +476,34 @@ func TestDrawDialogFrameTitleTextUsesFrameForegroundAndSurfaceBackground(t *test
 	}
 }
 
+func TestDrawDialogFrameTitleForegroundFromDialogTitleWhenSet(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(60, 20)
+
+	th := theme.Default()
+	th.DialogFrame = th.DialogFrame.Foreground(tcell.ColorRed)
+	rect := Rect{X: 5, Y: 2, Width: 40, Height: 6}
+	titleFg := func() tcell.Color {
+		DrawDialogFrame(screen, rect, "Hi", th)
+		x := rect.X + 1 + (rect.Width-2-4)/2 + 1
+		_, st, _ := screen.Get(x, rect.Y)
+		fg, _, _ := st.Decompose()
+		return fg
+	}
+	th.DialogTitle = th.DialogTitle.Foreground(tcell.ColorDefault)
+	if got := titleFg(); got != tcell.ColorRed {
+		t.Fatalf("unset title fg = %v, want frame fg %v", got, tcell.ColorRed)
+	}
+	th.DialogTitle = th.DialogTitle.Foreground(tcell.ColorBlue)
+	if got := titleFg(); got != tcell.ColorBlue {
+		t.Fatalf("set title fg = %v, want %v", got, tcell.ColorBlue)
+	}
+}
+
 func TestDrawDialogFrameCentersShortTitle(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {

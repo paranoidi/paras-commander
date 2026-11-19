@@ -605,11 +605,14 @@ func CenteredDialogRect(layout Layout, width, height int) Rect {
 
 // DrawDialogFrame clears the rect with dialog background, draws a sharp-cornered border using
 // DialogFrame on that background, and paints the title row per docs/agents/dialogs.md (title glyph foreground
-// comes from DialogFrame — DialogTitle only contributes attributes like bold).
+// is DialogTitle's own when the theme sets one, else DialogFrame's; DialogTitle also supplies attributes like bold).
 // Returns borderStyle (for horizontal rules inside the dialog).
 func DrawDialogFrame(screen tcell.Screen, rect Rect, title string, styles theme.Theme) tcell.Style {
-	frameFg, _, _ := styles.DialogFrame.Decompose()
-	titleStyle := styles.DialogTitle.Foreground(frameFg)
+	titleStyle := styles.DialogTitle
+	if titleFg, _, _ := titleStyle.Decompose(); titleFg == tcell.ColorDefault {
+		frameFg, _, _ := styles.DialogFrame.Decompose()
+		titleStyle = titleStyle.Foreground(frameFg)
+	}
 	return DrawDialogFrameStyled(screen, rect, title, styles.DialogSurface, styles.DialogFrame, titleStyle, primitive.SharpBorder)
 }
 
