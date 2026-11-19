@@ -204,7 +204,7 @@ renamed = { fg = "warning" }
 typechange = { fg = "special" }
 
 [panel.fileindex]             # "browse with fileindex" state icon colors (replace git status)
-indexed = { fg = "muted" }
+indexed = { fg = "info_columns" }  # dim like the meta column
 unhashed = { fg = "info" }       # indexed, hash pending
 changed = { fg = "warning" }
 new = { fg = "danger" }
