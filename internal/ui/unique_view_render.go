@@ -165,28 +165,34 @@ func drawUniqueTree(screen tcell.Screen, rect Rect, view *UniqueViewState, rows 
 		fullyMarked := d.IsDir && markedUnder[d.Path] == d.Count
 		rowSelected := idx == view.Pane.Selected
 
+		// Cursor, hover, selection and info columns follow the main file list (panelRowStyle).
 		lineStyle := base
-		cursorStyleKey := ""
+		if marked || fullyMarked {
+			lineStyle = styles.PanelListingSelectedStyle(p.ChromeBlocked).Background(bg)
+		}
+		var cursorRow theme.PanelListingCursorRow
 		switch {
 		case rowSelected:
-			opts := theme.PanelListingCursorOpts{
+			cursorRow = styles.PanelListingCursor(base, base, theme.PanelListingCursorOpts{
 				ChromeBlocked: p.ChromeBlocked, FileListActive: p.Focused, Selected: marked || fullyMarked,
 				RangePending: p.Focused && view.RangeAnchor != "",
-			}
-			lineStyle = styles.PanelListingCursorStyle(base, opts)
-			cursorStyleKey = styles.PanelListingCursorIconKey(opts)
-		case marked || fullyMarked:
-			lineStyle = styles.PanelListingSelectedStyle(p.ChromeBlocked).Background(bg)
+			})
+			lineStyle = cursorRow.Line
 		case !p.ChromeBlocked && p.Hover.Active && p.Hover.Row == idx:
-			lineStyle = styles.JobsRowHover
+			cursorRow = styles.PanelListingHover(base, lineStyle, marked || fullyMarked)
+			lineStyle = cursorRow.Line
 		}
+		cursorStyleKey := cursorRow.IconKey
 		primitive.Text(screen, rect.X+1, lineY, 1, "", lineStyle)
 		drawUniquePathColumn(screen, styles, p, view, entry, markedUnder[d.Path], cols, lineY, lineStyle, cursorStyleKey, idx, rowSelected && p.Focused)
 		primitive.Text(screen, cols.gapBeforeCountX, lineY, 1, "", lineStyle)
 
 		sizeText, countText := uniqueRowDetailTexts(d)
 		detailStyle := dim
-		if rowSelected || marked || fullyMarked {
+		switch {
+		case cursorStyleKey != "":
+			detailStyle = styles.PanelListingInfoStyle(lineStyle, cursorStyleKey, cursorRow.Info)
+		case marked || fullyMarked:
 			detailStyle = lineStyle
 		}
 		primitive.Text(screen, cols.countColX, lineY, cols.countColW, fmt.Sprintf("%*s", cols.countColW, countText), detailStyle)

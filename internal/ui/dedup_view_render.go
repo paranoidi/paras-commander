@@ -334,22 +334,12 @@ func drawDedupTreePane(
 			DirFullyMarked: dirFullyMarked,
 			RangePending:   rowSelected && p.RangePending,
 		}
-		lineStyle := dedupRowStyle(styles, p, d, entry, flags, chromeBlocked, base, bg)
-		if !rowSelected && !chromeBlocked && p.Hover.Active && p.Hover.Row == idx {
-			lineStyle = styles.JobsRowHover
-		}
+		hovered := !rowSelected && !chromeBlocked && p.Hover.Active && p.Hover.Row == idx
+		lineStyle, cursorRow := dedupRowStyle(styles, p, d, entry, flags, chromeBlocked, hovered, base, bg)
 
 		primitive.Text(screen, rect.X+1, lineY, 1, "", lineStyle)
 
-		cursorStyleKey := ""
-		if rowSelected {
-			cursorStyleKey = styles.PanelListingCursorIconKey(theme.PanelListingCursorOpts{
-				ChromeBlocked:  chromeBlocked,
-				FileListActive: p.Focused,
-				Selected:       marked || dirFullyMarked,
-				RangePending:   p.RangePending,
-			})
-		}
+		cursorStyleKey := cursorRow.IconKey
 		hinted := dedupRowHinted(p, d, entry, rowSelected)
 		if rowSelected && p.Focused {
 			legend = dedupRowLegend(styles, p, snap, d, hinted)
@@ -357,7 +347,15 @@ func drawDedupTreePane(
 		drawDedupPathColumn(screen, styles, p, snap, d, entry, lineY, pathX, pathW, lineStyle, cursorStyleKey, chromeBlocked, hinted, p.Pane.Filter.Ranges(idx), rowSelected && p.Focused)
 		primitive.Text(screen, gapBeforeCountX, lineY, 1, "", lineStyle)
 
-		drawDedupDetailColumns(screen, cols, d, lineY, lineStyle, dim, rowSelected || kept || groupAllMarked || dirFullyMarked, innerRight)
+		detailStyle := dim
+		switch {
+		case cursorRow.IconKey != "" && !flags.ownCursorStyle(p.Focused):
+			// The file list's info columns on the cursor or hovered row.
+			detailStyle = styles.PanelListingInfoStyle(lineStyle, cursorRow.IconKey, cursorRow.Info)
+		case rowSelected || kept || groupAllMarked || dirFullyMarked:
+			detailStyle = lineStyle
+		}
+		drawDedupDetailColumns(screen, cols, d, lineY, lineStyle, detailStyle, innerRight)
 	}
 	drawAuxPanelBottomCenterLabel(screen, rect, legend, styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelectionSize, true, false))
 }
@@ -372,30 +370,35 @@ type dedupRowFlags struct {
 	RangePending   bool
 }
 
-// dedupRowStyle picks the row's base and line styles from precomputed per-row flags, moved out
-// of drawDedupTreePane's two stacked flag→style switches. Pure function of flags.
-func dedupRowStyle(styles theme.Theme, p dedupPaneParams, d DedupRowData, entry DedupRow, f dedupRowFlags, chromeBlocked bool, base tcell.Style, bg tcell.Color) tcell.Style {
+// ownCursorStyle reports whether the cursor row takes the view's own kept / all-marked cursor
+// style instead of the file list's cursor.
+func (f dedupRowFlags) ownCursorStyle(focused bool) bool {
+	return f.RowSelected && focused && !f.RangePending && (f.Kept || f.GroupAllMarked)
+}
+
+// dedupRowStyle picks the row's line style from precomputed per-row flags and, on the cursor or
+// hovered row, the file list's cursor treatment (theme.PanelListingCursorRow; zero elsewhere).
+func dedupRowStyle(styles theme.Theme, p dedupPaneParams, d DedupRowData, entry DedupRow, f dedupRowFlags, chromeBlocked, hovered bool, base tcell.Style, bg tcell.Color) (tcell.Style, theme.PanelListingCursorRow) {
 	rowBase := base
 	switch {
 	case dedupRowHinted(p, d, entry, f.RowSelected):
 		rowBase = styles.PanelHint.Background(bg)
 	}
+	selected := f.Marked || f.DirFullyMarked
+	if f.RowSelected {
+		cursor := styles.PanelListingCursor(rowBase, rowBase, theme.PanelListingCursorOpts{
+			ChromeBlocked: chromeBlocked, FileListActive: p.Focused, Selected: selected, RangePending: f.RangePending,
+		})
+		switch {
+		case f.ownCursorStyle(p.Focused) && f.Kept:
+			return styles.PanelDedupRowCursorKeep, cursor
+		case f.ownCursorStyle(p.Focused):
+			return styles.PanelDedupRowCursorAllMarked, cursor
+		}
+		return cursor.Line, cursor
+	}
 	lineStyle := rowBase
 	switch {
-	case f.RangePending:
-		lineStyle = styles.PanelListingCursorStyle(rowBase, theme.PanelListingCursorOpts{
-			ChromeBlocked: chromeBlocked, FileListActive: p.Focused, Selected: f.Marked || f.DirFullyMarked, RangePending: true,
-		})
-	case f.Kept && f.RowSelected && p.Focused:
-		lineStyle = styles.PanelDedupRowCursorKeep
-	case f.GroupAllMarked && f.RowSelected && p.Focused:
-		lineStyle = styles.PanelDedupRowCursorAllMarked
-	case f.RowSelected:
-		lineStyle = styles.PanelListingCursorStyle(rowBase, theme.PanelListingCursorOpts{
-			ChromeBlocked:  chromeBlocked,
-			FileListActive: p.Focused,
-			Selected:       f.Marked || f.DirFullyMarked,
-		})
 	case f.Kept:
 		lineStyle = styles.PanelDedupRowKeep.Background(bg)
 	case f.GroupAllMarked:
@@ -403,7 +406,11 @@ func dedupRowStyle(styles theme.Theme, p dedupPaneParams, d DedupRowData, entry 
 	case f.Marked, f.DirFullyMarked:
 		lineStyle = styles.PanelListingSelectedStyle(chromeBlocked).Background(bg)
 	}
-	return lineStyle
+	if hovered {
+		hover := styles.PanelListingHover(rowBase, lineStyle, selected)
+		return hover.Line, hover
+	}
+	return lineStyle, theme.PanelListingCursorRow{}
 }
 
 // dedupRowHinted reports whether a row relates to the cursor row: a sibling copy in the
@@ -606,12 +613,8 @@ func dedupRowLegend(styles theme.Theme, p dedupPaneParams, snap comparepkg.Dedup
 
 // drawDedupDetailColumns paints the Count and Size trailing columns for one row, moved out of
 // drawDedupTreePane's detail-column paint block.
-func drawDedupDetailColumns(screen tcell.Screen, cols dedupListColumns, d DedupRowData, lineY int, lineStyle, dim tcell.Style, showLineStyle bool, innerRight int) {
+func drawDedupDetailColumns(screen tcell.Screen, cols dedupListColumns, d DedupRowData, lineY int, lineStyle, detailStyle tcell.Style, innerRight int) {
 	sizeText, countText := dedupRowDetailTexts(d)
-	detailStyle := dim
-	if showLineStyle {
-		detailStyle = lineStyle
-	}
 	primitive.Text(screen, cols.countColX, lineY, cols.countColW, fmt.Sprintf("%*s", cols.countColW, countText), detailStyle)
 	primitive.Text(screen, cols.countColX+cols.countColW, lineY, 1, "", lineStyle)
 	primitive.Text(screen, cols.sizeColX, lineY, cols.sizeColW, fmt.Sprintf("%*s", cols.sizeColW, sizeText), detailStyle)

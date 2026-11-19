@@ -86,6 +86,30 @@ func (t Theme) PanelListingCursorStyle(base tcell.Style, opts PanelListingCursor
 	return cursor
 }
 
+// PanelListingCursorRow is the cursor (or hover) treatment of one listing row, resolved from one
+// PanelListingCursorOpts so the row, its info columns and its icons cannot disagree.
+type PanelListingCursorRow struct {
+	Line    tcell.Style // the row (PanelListingCursorStyle)
+	Info    tcell.Style // its info / detail columns (PanelListingCursorInfoStyle)
+	IconKey string      // its icons' cursor key (PanelListingCursorIconKey)
+}
+
+// PanelListingCursor resolves the cursor treatment of a row: base is the row's unselected style,
+// style its current one (selected or not).
+func (t Theme) PanelListingCursor(base, style tcell.Style, opts PanelListingCursorOpts) PanelListingCursorRow {
+	return PanelListingCursorRow{
+		Line:    t.PanelListingCursorStyle(style, opts),
+		Info:    t.PanelListingCursorInfoStyle(base, opts),
+		IconKey: t.PanelListingCursorIconKey(opts),
+	}
+}
+
+// PanelListingHover is the treatment of the row under the mouse pointer (not the cursor row) in
+// every file listing (file list, Duplicates, Unique files): the inactive panel's cursor.
+func (t Theme) PanelListingHover(base, style tcell.Style, selected bool) PanelListingCursorRow {
+	return t.PanelListingCursor(base, style, PanelListingCursorOpts{Selected: selected})
+}
+
 // PanelListingCursorInfoStyle is the cursor row's style for its info columns (size, date and the
 // rest): the cursor style of base, the row's unselected style, as if the entry were not selected, so
 // the columns never take the selected color. A cursor style without a foreground (the inactive

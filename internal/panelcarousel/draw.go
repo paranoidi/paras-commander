@@ -257,17 +257,8 @@ func drawCarouselColumn(cp carouselColumnParams) {
 				return blendCell(nameColOffset + di)
 			})
 		}
-		cursorKey := ""
-		if isCursor {
-			cursorKey = p.Styles.PanelListingCursorIconKey(theme.PanelListingCursorOpts{
-				ChromeBlocked:     p.ChromeBlocked,
-				FileListActive:    p.FileListActive && !inactive,
-				CarouselInactive:  inactive,
-				Selected:          selected,
-				FilterUniqueMatch: p.FileListActive && !inactive && p.Center.FilterUniqueMatch(),
-				RangePending:      c.Active && p.Center.RangeAnchor != "",
-			})
-		}
+		cursorKey := ce.Cursor.IconKey
+
 		barIconKey := ""
 		if fillCols > 0 {
 			barIconKey = p.Styles.DiskUsageBarIconKey(p.FileListActive && c.Active && !inactive, isCursor, selected)
@@ -286,7 +277,7 @@ func drawCarouselColumn(cp carouselColumnParams) {
 			return blendCell(nameColOffset + di)
 		})...)
 		drawCarouselRowIconAndText(screen, cp, carouselRowPaintState{
-			Y: y, Entry: entry, CursorKey: cursorKey, CursorInfo: ce.CursorInfo, BarIconKey: barIconKey, FillCols: fillCols, BlendCell: blendCell,
+			Y: y, Entry: entry, CursorKey: cursorKey, CursorInfo: ce.Cursor.Info, BarIconKey: barIconKey, FillCols: fillCols, BlendCell: blendCell,
 			Sliver: sliver, SliverStyle: p.Styles.DiskUsageBarStyle(p.FileListActive && c.Active && !inactive, isCursor, selected),
 			ListStart: listStart, ListW: listW, NameColOffset: nameColOffset, NameWidth: nameWidth,
 			Text: text, Spans: spans, MetaAlerts: metaAlerts, Styles: p.Styles,
@@ -317,7 +308,7 @@ type carouselColumnEntry struct {
 	IsCursor   bool
 	Selected   bool
 	Style      tcell.Style
-	CursorInfo tcell.Style // info columns' style on the cursor row (Theme.PanelListingCursorInfoStyle)
+	Cursor     theme.PanelListingCursorRow // the cursor row's treatment, zero elsewhere
 }
 
 // resolveCarouselColumnEntry looks up the entry for one row (Active columns read the live
@@ -348,7 +339,7 @@ func resolveCarouselColumnEntry(cp carouselColumnParams, row int) (carouselColum
 	style := p.Styles.PanelListingFolderStyle(entry, p.ChromeBlocked, p.FolderColor)
 	selected := selState.IsSelected(entry)
 	isCursor := entryIndex == cursor
-	var cursorInfo tcell.Style
+	var cursorRow theme.PanelListingCursorRow
 	if isCursor {
 		opts := theme.PanelListingCursorOpts{
 			ChromeBlocked:     p.ChromeBlocked,
@@ -358,8 +349,8 @@ func resolveCarouselColumnEntry(cp carouselColumnParams, row int) (carouselColum
 			FilterUniqueMatch: p.FileListActive && !inactive && p.Center.FilterUniqueMatch(),
 			RangePending:      c.Active && p.Center.RangeAnchor != "",
 		}
-		cursorInfo = p.Styles.PanelListingCursorInfoStyle(style, opts)
-		style = p.Styles.PanelListingCursorStyle(style, opts)
+		cursorRow = p.Styles.PanelListingCursor(style, style, opts)
+		style = cursorRow.Line
 	} else {
 		if selected {
 			style = p.Styles.PanelListingSelectedStyle(p.ChromeBlocked)
@@ -368,7 +359,7 @@ func resolveCarouselColumnEntry(cp carouselColumnParams, row int) (carouselColum
 			style = p.Styles.PanelListingRangeStyle(style, cp.RangeSpan.Unselect)
 		}
 	}
-	return carouselColumnEntry{Entry: entry, SelState: selState, EntryIndex: entryIndex, IsCursor: isCursor, Selected: selected, Style: style, CursorInfo: cursorInfo}, true
+	return carouselColumnEntry{Entry: entry, SelState: selState, EntryIndex: entryIndex, IsCursor: isCursor, Selected: selected, Style: style, Cursor: cursorRow}, true
 }
 
 // carouselRowPaintState carries the per-row values drawCarouselColumn computes that the

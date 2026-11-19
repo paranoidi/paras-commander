@@ -1912,3 +1912,60 @@ func TestTreeRowGutterCursorFolderIconUsesCursorIconColor(t *testing.T) {
 		t.Fatalf("non-cursor folder icon fg = cursor color %v", fg)
 	}
 }
+
+// assertListingHoverRow checks a hovered tree row against the main file list's hover: the folder
+// icon at iconX takes the hover icon color and the right-aligned detail column ending before
+// innerRight takes the hover info style.
+func assertListingHoverRow(t *testing.T, screen tcell.SimulationScreen, styles theme.Theme, iconX, innerRight, y int) {
+	t.Helper()
+	hover := styles.PanelListingHover(styles.PanelRowFile, styles.PanelRowFile, false)
+	if fg, _, _ := cellStyleAt(screen, iconX, y).Decompose(); fg != styles.FolderIconForeground(theme.FolderIconDefault, hover.IconKey, styles.PanelRowDirectory) {
+		t.Fatalf("hovered folder icon fg %v, want the file list's hover icon color", fg)
+	}
+	wantFG, wantBG, _ := styles.PanelListingInfoStyle(hover.Line, hover.IconKey, hover.Info).Decompose()
+	x := innerRight - 1
+	for ; x > iconX; x-- {
+		if ch, _, _ := screen.Get(x, y); ch != " " && ch != "" {
+			break
+		}
+	}
+	if fg, bg, _ := cellStyleAt(screen, x, y).Decompose(); fg != wantFG || bg != wantBG {
+		t.Fatalf("hovered detail column fg/bg %v/%v, want the file list's hover info %v/%v", fg, bg, wantFG, wantBG)
+	}
+}
+
+func TestDrawDedupViewHoverFollowsFileList(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 16)
+
+	styles := theme.Default()
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 13},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 13},
+	}
+	rect := layout.Primary
+	snap := comparepkg.DedupSnapshot{
+		Root:  pathloc.MustParse("/scan/root"),
+		Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{{
+			Size: 4,
+			Files: []comparepkg.DedupFile{
+				{Rel: "meadow/lantern.txt", Abs: pathloc.MustParse("/scan/root/meadow/lantern.txt")},
+				{Rel: "lantern.txt", Abs: pathloc.MustParse("/scan/root/lantern.txt")},
+			},
+		}},
+	}
+	view := DedupViewState{IgnoreEmpty: true, TreeDirs: true}
+	list, _ := DedupRowsFromSnapshot(snap, view)
+	if list[0].Value.Kind != DedupRowDir {
+		t.Fatalf("first row kind = %v, want DedupRowDir", list[0].Value.Kind)
+	}
+	view.Main.Selected = len(list) - 1 // cursor off the hovered dir row
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil, ListRowHover{Active: true, Row: 0})
+
+	assertListingHoverRow(t, screen, styles, rect.X+2, rect.X+rect.Width-2, rect.Y+2)
+}
