@@ -251,7 +251,7 @@ func drawJobsDiskSpacePanel(screen tcell.Screen, rect Rect, state JobsViewState,
 	layout := drawAuxPanelChrome(screen, rect, " Disk space ", "", focused, chromeBlocked, false, styles)
 	borderStyle := layout.Chrome.Frame
 	body := auxPanelBodyText(styles, chromeBlocked, layout.ContentBG)
-	warn := styles.MessageWarn.Background(layout.ContentBG)
+	warn := styles.MessageWarnText.Background(layout.ContentBG)
 
 	textW := rect.Width - 4
 	if textW < 1 {

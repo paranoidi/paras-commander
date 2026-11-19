@@ -191,7 +191,7 @@ func TestDrawWarnLabelStyle(t *testing.T) {
 	pi := p.Items[0]
 	_, surface, _ := styles.DialogSurface.Decompose()
 	_, got, _ := screen.Get(pi.Rect.X, pi.Rect.Y)
-	if got != styles.MessageWarn.Background(surface) {
-		t.Errorf("warn label style = %v, want %v", got, styles.MessageWarn.Background(surface))
+	if got != styles.MessageWarnText.Background(surface) {
+		t.Errorf("warn label style = %v, want %v", got, styles.MessageWarnText.Background(surface))
 	}
 }

@@ -541,7 +541,7 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 			case TextMessageError:
 				style = styles.MessageErrorText.Background(surface)
 			case TextWarn:
-				style = styles.MessageWarn.Background(surface)
+				style = styles.MessageWarnText.Background(surface)
 			}
 			primitive.Text(screen, pi.Rect.X, pi.Rect.Y, pi.Rect.Width, pi.Label, style)
 		case KindBar:

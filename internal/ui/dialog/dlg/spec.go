@@ -88,7 +88,7 @@ const (
 	TextNormal       TextStyle = iota // DialogText on the surface
 	TextError                         // DialogText with the input error foreground
 	TextMessageError                  // the theme's MessageErrorText style on the dialog surface (message dialog body)
-	TextWarn                          // the theme's MessageWarn style on the dialog surface
+	TextWarn                          // the theme's MessageWarnText style on the dialog surface
 )
 
 // Item is a radio or checkbox row, a static label row (KindLabel), a separator or a text input.

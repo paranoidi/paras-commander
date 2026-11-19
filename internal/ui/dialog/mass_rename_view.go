@@ -226,7 +226,7 @@ func massRenamePreviewList(st FileDialogState, height, width int, styles theme.T
 		return scrollList(massRenamePreview, 1, height, 0, func(int) dlg.ListRow {
 			text := primitive.TruncateRight(errMsg, width)
 			text += strings.Repeat(" ", max(width-runewidth.StringWidth(text), 0))
-			return dlg.ListRow{Text: text, Spans: []primitive.Span{{End: utf8.RuneCountInString(text), Style: styles.MessageWarn.Background(bg)}}}
+			return dlg.ListRow{Text: text, Spans: []primitive.Span{{End: utf8.RuneCountInString(text), Style: styles.MessageWarnText.Background(bg)}}}
 		})
 	}
 	n := min(len(st.MassRenamePreviewBefore), len(st.MassRenamePreviewAfter))
