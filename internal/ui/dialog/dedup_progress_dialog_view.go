@@ -29,6 +29,8 @@ func DedupProgressView(snap comparepkg.DedupSnapshot, userHomeDir string, now ti
 	case comparepkg.DedupWalking:
 		items = append(items,
 			label("Walking directories"+string(primitive.Ellipsis)+dedupWalkFilesSuffix(snap.Walked), dlg.FitPath, false), blank, blank)
+	case comparepkg.DedupQuerying:
+		items = append(items, label("Querying index"+string(primitive.Ellipsis), dlg.FitPath, false), blank, blank)
 	case comparepkg.DedupAwaitConfirm:
 		items = append(items, label(formatDedupByteSize(snap.HashBytesTotal)+" to hash. Continue?", dlg.FitRight, false), blank, blank)
 		buttons = []dlg.Button{dlg.OKButton, buttons[0]}

@@ -48,6 +48,7 @@ func TestDedupProgressGoldenRender(t *testing.T) {
 	add("walking_1", 80, 24, dedupProgressGoldenState("ok"), walk(1, false))
 	add("walking_many", 80, 24, dedupProgressGoldenState("ok"), walk(48213, false))
 	add("walking_longroot", 80, 24, dedupProgressGoldenState("ok"), walk(7, true))
+	add("querying", 80, 24, dedupProgressGoldenState("ok"), dedupProgressGoldenSnap(comparepkg.DedupQuerying, false))
 
 	confirm := dedupProgressGoldenSnap(comparepkg.DedupAwaitConfirm, false)
 	confirm.HashBytesTotal = 5 << 30

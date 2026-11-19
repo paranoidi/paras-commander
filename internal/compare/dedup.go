@@ -35,6 +35,9 @@ const (
 	DedupDone
 	DedupError
 	DedupCanceled
+	// DedupQuerying is an index-backed session (DedupOptions.Indexed) reading the index; it never
+	// walks or hashes.
+	DedupQuerying
 )
 
 // DedupFile is one member of a duplicate group.
@@ -219,7 +222,11 @@ func StartDedup(ctx context.Context, root pathloc.Path, opts DedupOptions) *Dedu
 		cancel:  cancel,
 		confirm: make(chan struct{}),
 	}
-	s.snap.Store(&DedupSnapshot{Root: root, Scope: opts.Walk.Only, Phase: DedupWalking})
+	phase := DedupWalking
+	if opts.Indexed != nil {
+		phase = DedupQuerying
+	}
+	s.snap.Store(&DedupSnapshot{Root: root, Scope: opts.Walk.Only, Phase: phase})
 	s.wg.Add(1)
 	go s.run(ctx)
 	return s
