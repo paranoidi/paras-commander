@@ -513,15 +513,12 @@ func (h *Handler) OpenableFile() (string, bool) {
 
 // OpenInPanel shows path in panelID: a directory itself, a file in its directory.
 func (h *Handler) OpenInPanel(panelID int, path string, isDir bool) {
-	dir, name := path, ""
-	if !isDir {
-		dir, name = pathloc.SplitDirBase(path)
-	}
-	if err := h.host.NavigatePanelToPath(panelID, dir, name); err != nil {
+	name, err := host.NavigatePanelToEntry(h.host, panelID, path, isDir)
+	if err != nil {
 		h.host.SetTransientMessage("Open: "+err.Error(), ui.MessageUrgencyWarn)
 		return
 	}
-	host.ReportOpenedInPanel(h.host, filepath.Base(path), panelID)
+	host.ReportOpenedInPanel(h.host, name, panelID)
 }
 
 // FilesQueued records an operation queued on paths: marks go, and with gone (a move, a delete)

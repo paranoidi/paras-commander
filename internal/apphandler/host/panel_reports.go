@@ -21,6 +21,17 @@ type PanelShowHost interface {
 	PanelViewportRows(panelID int) int
 }
 
+// NavigatePanelToEntry points panelID at path (a host path or a URI the panel would use): into it
+// when isDir, else into its parent with it highlighted. The split keeps the scheme
+// (pathloc.SplitDirBase). Returns path's base name, for the status message.
+func NavigatePanelToEntry(h PanelNavigationHost, panelID int, path string, isDir bool) (string, error) {
+	dir, name := pathloc.SplitDirBase(path)
+	if isDir {
+		return name, h.NavigatePanelToPath(panelID, path, "")
+	}
+	return name, h.NavigatePanelToPath(panelID, dir, name)
+}
+
 // ShowInPanel navigates panelID to the host path dir with name highlighted, as a fileindex:// path
 // when indexPanel, else a local one (falling back to the index's view when the real directory is
 // gone). Errors are shown under errTitle; it reports success.

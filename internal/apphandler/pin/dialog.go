@@ -127,17 +127,13 @@ func (h *Handler) OpenSelected(panelID int) bool {
 	if !ok {
 		return false
 	}
-	dir, name := item.Path, ""
-	if !item.IsDir {
-		dir = filepath.Clean(filepath.Dir(item.Path))
-		name = filepath.Base(item.Path)
-	}
-	if err := h.host.NavigatePanelToPath(panelID, dir, name); err != nil {
+	name, err := host.NavigatePanelToEntry(h.host, panelID, item.Path, item.IsDir)
+	if err != nil {
 		h.host.SetErrorMessage("Pin", err)
 		return false
 	}
 	h.host.PanelByID(panelID).EnsureCursorVisible(h.host.PanelViewportRows(panelID))
-	host.ReportOpenedInPanel(h.host, filepath.Base(item.Path), panelID)
+	host.ReportOpenedInPanel(h.host, name, panelID)
 	return true
 }
 

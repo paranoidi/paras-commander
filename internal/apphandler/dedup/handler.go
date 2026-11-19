@@ -1747,15 +1747,12 @@ func (h *Handler) selectedDirAbs() string {
 // OpenInPanel points the given panel at path (a directory, or a file's parent with the file
 // selected) and leaves the view open. Single entry point for the tree panes and the browse panel.
 func (h *Handler) OpenInPanel(panelID int, path string, isDir bool) {
-	dir, name := path, ""
-	if !isDir {
-		dir, name = pathloc.SplitDirBase(path)
-	}
-	if err := h.host.NavigatePanelToPath(panelID, dir, name); err != nil {
+	name, err := host.NavigatePanelToEntry(h.host, panelID, path, isDir)
+	if err != nil {
 		h.host.SetTransientMessage("Open: "+err.Error(), ui.MessageUrgencyWarn)
 		return
 	}
-	host.ReportOpenedInPanel(h.host, filepath.Base(path), panelID)
+	host.ReportOpenedInPanel(h.host, name, panelID)
 }
 
 // SelectedPinTarget is PaneTarget for the focused pane.

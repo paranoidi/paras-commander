@@ -852,17 +852,13 @@ func (h *Handler) navigateFindEntryToPanel(panelID int) (string, bool) {
 		return "", false
 	}
 
-	dir, name := path, ""
-	if !ent.IsDir {
-		dir = filepath.Clean(filepath.Dir(path))
-		name = filepath.Base(path)
-	}
-	if err := h.host.NavigatePanelToPath(panelID, dir, name); err != nil {
+	name, err := host.NavigatePanelToEntry(h.host, panelID, path, ent.IsDir)
+	if err != nil {
 		h.host.SetErrorMessage("Find", err)
 		return "", false
 	}
 	h.host.PanelByID(panelID).EnsureCursorVisible(h.host.PanelViewportRows(panelID))
-	return filepath.Base(path), true
+	return name, true
 }
 
 // NavigateFindCursor moves the active panel to the find dialog selection and
