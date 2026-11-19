@@ -423,13 +423,3 @@ func drawCarouselRowIconAndText(screen tcell.Screen, cp carouselColumnParams, rp
 		screen.SetContent(x, rp.Y, ' ', nil, rp.BlendCell(x-col.X))
 	}
 }
-
-// CursorIconKeyForTest exposes cursor icon theme keys for tests.
-func CursorIconKeyForTest(inactive, selected, fileListActive bool) string {
-	th := theme.Theme{}
-	return th.PanelListingCursorIconKey(theme.PanelListingCursorOpts{
-		FileListActive:   fileListActive && !inactive,
-		CarouselInactive: inactive,
-		Selected:         selected,
-	})
-}

@@ -453,14 +453,8 @@ func TestMouseMessagesListClickSelectsAndWheel(t *testing.T) {
 	app.openMessagesView()
 	selectedText := func() string { return app.model.MessageLog[app.model.MessagesView.Selected].Text }
 
-	x, y := screenTextCell(t, app, "meadow copied")
-	click(app, x, y, tcell.Button1)
-	if got := clipboard.LastSet(); got != "" {
-		t.Fatalf("clipboard = %q after a click, want nothing copied", got)
-	}
-
 	// A continuation row selects its message.
-	x, y = screenTextCell(t, app, "harbor continued")
+	x, y := screenTextCell(t, app, "harbor continued")
 	click(app, x, y, tcell.Button1)
 	if got := selectedText(); got != "harbor opened" {
 		t.Fatalf("continuation row selected %q, want its message", got)
@@ -470,6 +464,9 @@ func TestMouseMessagesListClickSelectsAndWheel(t *testing.T) {
 	click(app, x, y, tcell.Button1)
 	if got := selectedText(); got != "meadow copied" {
 		t.Fatalf("selected %q, want meadow copied", got)
+	}
+	if got := clipboard.LastSet(); got != "" {
+		t.Fatalf("clipboard = %q after clicks, want nothing copied", got)
 	}
 	app.handleMouse(mouseEv(x, y, tcell.WheelDown))
 	if got := selectedText(); got != "velvet deleted" {

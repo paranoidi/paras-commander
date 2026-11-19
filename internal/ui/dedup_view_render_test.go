@@ -1124,7 +1124,7 @@ func TestDedupTreeConnectorTwoRootsOnlyChildDir(t *testing.T) {
 	if imgPrefix != wantImg {
 		t.Fatalf("img prefix %q, want %q", imgPrefix, wantImg)
 	}
-	gutter, _ := dedupTreeGutter(styles, imgRow, tcell.StyleDefault, "", true)
+	gutter, _ := treeRowGutter(styles, imgRow.Value.Kind == DedupRowDir, imgRow.HasChildren, imgRow.Expanded, tcell.StyleDefault, "", true)
 	if gutter != "" {
 		t.Fatalf("file row gutter = %q, want empty", gutter)
 	}

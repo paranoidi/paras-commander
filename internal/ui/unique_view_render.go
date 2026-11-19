@@ -164,22 +164,23 @@ func drawUniqueTree(screen tcell.Screen, rect Rect, view *UniqueViewState, rows 
 		marked := !d.IsDir && view.Marked[d.Path]
 		fullyMarked := d.IsDir && markedUnder[d.Path] == d.Count
 		rowSelected := idx == view.Pane.Selected
+		selected := marked || fullyMarked
 
 		// Cursor, hover, selection and info columns follow the main file list (panelRowStyle).
 		lineStyle := base
-		if marked || fullyMarked {
+		if selected {
 			lineStyle = styles.PanelListingSelectedStyle(p.ChromeBlocked).Background(bg)
 		}
 		var cursorRow theme.PanelListingCursorRow
 		switch {
 		case rowSelected:
 			cursorRow = styles.PanelListingCursor(base, base, theme.PanelListingCursorOpts{
-				ChromeBlocked: p.ChromeBlocked, FileListActive: p.Focused, Selected: marked || fullyMarked,
+				ChromeBlocked: p.ChromeBlocked, FileListActive: p.Focused, Selected: selected,
 				RangePending: p.Focused && view.RangeAnchor != "",
 			})
 			lineStyle = cursorRow.Line
 		case !p.ChromeBlocked && p.Hover.Active && p.Hover.Row == idx:
-			cursorRow = styles.PanelListingHover(base, lineStyle, marked || fullyMarked)
+			cursorRow = styles.PanelListingHover(base, lineStyle, selected)
 			lineStyle = cursorRow.Line
 		}
 		cursorStyleKey := cursorRow.IconKey
@@ -188,13 +189,7 @@ func drawUniqueTree(screen tcell.Screen, rect Rect, view *UniqueViewState, rows 
 		primitive.Text(screen, cols.gapBeforeCountX, lineY, 1, "", lineStyle)
 
 		sizeText, countText := uniqueRowDetailTexts(d)
-		detailStyle := dim
-		switch {
-		case cursorStyleKey != "":
-			detailStyle = styles.PanelListingInfoStyle(lineStyle, cursorStyleKey, cursorRow.Info)
-		case marked || fullyMarked:
-			detailStyle = lineStyle
-		}
+		detailStyle := treeDetailStyle(styles, lineStyle, dim, cursorRow, selected)
 		primitive.Text(screen, cols.countColX, lineY, cols.countColW, fmt.Sprintf("%*s", cols.countColW, countText), detailStyle)
 		primitive.Text(screen, cols.countColX+cols.countColW, lineY, 1, "", lineStyle)
 		primitive.Text(screen, cols.sizeColX, lineY, cols.sizeColW, fmt.Sprintf("%*s", cols.sizeColW, sizeText), detailStyle)

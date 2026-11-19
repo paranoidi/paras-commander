@@ -347,14 +347,11 @@ func drawDedupTreePane(
 		drawDedupPathColumn(screen, styles, p, snap, d, entry, lineY, pathX, pathW, lineStyle, cursorStyleKey, chromeBlocked, hinted, p.Pane.Filter.Ranges(idx), rowSelected && p.Focused)
 		primitive.Text(screen, gapBeforeCountX, lineY, 1, "", lineStyle)
 
-		detailStyle := dim
-		switch {
-		case cursorRow.IconKey != "" && !flags.ownCursorStyle(p.Focused):
-			// The file list's info columns on the cursor or hovered row.
-			detailStyle = styles.PanelListingInfoStyle(lineStyle, cursorRow.IconKey, cursorRow.Info)
-		case rowSelected || kept || groupAllMarked || dirFullyMarked:
-			detailStyle = lineStyle
+		infoRow := cursorRow
+		if flags.ownCursorStyle(p.Focused) {
+			infoRow = theme.PanelListingCursorRow{} // its own cursor style colors the columns too
 		}
+		detailStyle := treeDetailStyle(styles, lineStyle, dim, infoRow, rowSelected || kept || groupAllMarked || dirFullyMarked)
 		drawDedupDetailColumns(screen, cols, d, lineY, lineStyle, detailStyle, innerRight)
 	}
 	drawAuxPanelBottomCenterLabel(screen, rect, legend, styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelectionSize, true, false))
@@ -380,8 +377,7 @@ func (f dedupRowFlags) ownCursorStyle(focused bool) bool {
 // hovered row, the file list's cursor treatment (theme.PanelListingCursorRow; zero elsewhere).
 func dedupRowStyle(styles theme.Theme, p dedupPaneParams, d DedupRowData, entry DedupRow, f dedupRowFlags, chromeBlocked, hovered bool, base tcell.Style, bg tcell.Color) (tcell.Style, theme.PanelListingCursorRow) {
 	rowBase := base
-	switch {
-	case dedupRowHinted(p, d, entry, f.RowSelected):
+	if dedupRowHinted(p, d, entry, f.RowSelected) {
 		rowBase = styles.PanelHint.Background(bg)
 	}
 	selected := f.Marked || f.DirFullyMarked
@@ -389,10 +385,10 @@ func dedupRowStyle(styles theme.Theme, p dedupPaneParams, d DedupRowData, entry 
 		cursor := styles.PanelListingCursor(rowBase, rowBase, theme.PanelListingCursorOpts{
 			ChromeBlocked: chromeBlocked, FileListActive: p.Focused, Selected: selected, RangePending: f.RangePending,
 		})
-		switch {
-		case f.ownCursorStyle(p.Focused) && f.Kept:
-			return styles.PanelDedupRowCursorKeep, cursor
-		case f.ownCursorStyle(p.Focused):
+		if f.ownCursorStyle(p.Focused) {
+			if f.Kept {
+				return styles.PanelDedupRowCursorKeep, cursor
+			}
 			return styles.PanelDedupRowCursorAllMarked, cursor
 		}
 		return cursor.Line, cursor
@@ -450,7 +446,7 @@ func dedupRowAbsPath(snap comparepkg.DedupSnapshot, d DedupRowData) string {
 // icon, matching panellist's job/pin-before-subtree suffix ordering.
 func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPaneParams, snap comparepkg.DedupSnapshot, d DedupRowData, entry DedupRow, lineY, pathX, pathW int, lineStyle tcell.Style, cursorStyleKey string, chromeBlocked, hinted bool, matchRanges []search.Range, matchCursor bool) {
 	connectorPrefix := dedupTreeConnectorPrefix(styles, entry)
-	gutter, gutterStyle := dedupTreeGutter(styles, entry, lineStyle, cursorStyleKey, chromeBlocked)
+	gutter, gutterStyle := treeRowGutter(styles, entry.Value.Kind == DedupRowDir, entry.HasChildren, entry.Expanded, lineStyle, cursorStyleKey, chromeBlocked)
 	prefix := connectorPrefix
 	if gutter != "" {
 		prefix += gutter + " "
@@ -661,14 +657,17 @@ func dedupViewTitle(snap comparepkg.DedupSnapshot, outside bool, ignoredEmpty, r
 	return title + ") "
 }
 
-func dedupTreeGutter(
-	styles theme.Theme,
-	entry DedupRow,
-	lineStyle tcell.Style,
-	cursorStyleKey string,
-	chromeBlocked bool,
-) (string, tcell.Style) {
-	return treeRowGutter(styles, entry.Value.Kind == DedupRowDir, entry.HasChildren, entry.Expanded, lineStyle, cursorStyleKey, chromeBlocked)
+// treeDetailStyle is a tree view's Size/Count column style (Duplicates, Unique files): the file
+// list's info columns on the cursor or hovered row (cursorRow set), lineStyle on an emphasized
+// (marked / kept) row, dim otherwise.
+func treeDetailStyle(styles theme.Theme, lineStyle, dim tcell.Style, cursorRow theme.PanelListingCursorRow, emphasized bool) tcell.Style {
+	switch {
+	case cursorRow.IconKey != "":
+		return styles.PanelListingInfoStyle(lineStyle, cursorRow.IconKey, cursorRow.Info)
+	case emphasized:
+		return lineStyle
+	}
+	return dim
 }
 
 // treeRowGutter is the expander of one tree row of the aux tree views (Dedup, Unique files).
@@ -708,7 +707,7 @@ func dedupConnectorPrefix(styles theme.Theme, depth int, lastChild bool, ancesto
 }
 
 func dedupTreePrefix(styles theme.Theme, row DedupRow) string {
-	gutter, _ := dedupTreeGutter(styles, row, tcell.StyleDefault, "", true)
+	gutter, _ := treeRowGutter(styles, row.Value.Kind == DedupRowDir, row.HasChildren, row.Expanded, tcell.StyleDefault, "", true)
 	connector := dedupTreeConnectorPrefix(styles, row)
 	if gutter == "" {
 		return connector
