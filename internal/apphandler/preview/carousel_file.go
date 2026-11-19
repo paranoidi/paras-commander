@@ -17,6 +17,9 @@ func (h *Handler) CloseCarouselFilePreview() {
 	h.cancelPreviewRun(previewTargetCarousel)
 	h.mu.Lock()
 	h.model.CarouselFilePreview = ui.FilePreviewState{}
+	// Partial list-nav paints reuse the draw snapshot without re-snapshotting; a stale one
+	// would flash the closed preview over the child listing during nav coalesce.
+	h.model.CarouselFilePreviewDraw = ui.FilePreviewState{}
 	h.mu.Unlock()
 	h.clearFilePreviewHold(previewTargetCarousel)
 	h.carouselFilePreviewLastFingerprint = ""

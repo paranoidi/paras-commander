@@ -58,3 +58,24 @@ func TestCaptureFilePreviewHoldFromDonePreview(t *testing.T) {
 		t.Fatalf("hold CombinedText = %q, want keep me", h.filePreviewHold.CombinedText)
 	}
 }
+
+// Partial list-nav paints reuse CarouselFilePreviewDraw without re-snapshotting, so closing the
+// carousel preview must drop the draw snapshot too or the old body flashes over the child listing.
+func TestCloseCarouselFilePreviewClearsDrawSnapshot(t *testing.T) {
+	h, _ := newTestHandler(t, 80, 24)
+
+	h.mu.Lock()
+	h.model.CarouselFilePreviewDraw = ui.FilePreviewState{
+		Open:         true,
+		Phase:        ui.FilePreviewPhaseDone,
+		Path:         "/tmp/lantern.txt",
+		CombinedText: "stale body",
+	}
+	h.mu.Unlock()
+
+	h.CloseCarouselFilePreview()
+
+	if h.model.CarouselFilePreviewDraw.Open {
+		t.Fatal("CarouselFilePreviewDraw.Open = true after close, want false")
+	}
+}
