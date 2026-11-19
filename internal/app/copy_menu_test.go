@@ -24,6 +24,10 @@ func testCopyMenuApp(t *testing.T) (*App, string) {
 	dir := t.TempDir()
 	filePath := filepath.Join(dir, "meadow.txt")
 	writeFile(t, filePath)
+	writeFile(t, filepath.Join(dir, "violet.png"))
+	if err := os.Mkdir(filepath.Join(dir, "canyon"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	screen := newScreen(t, 80, 50)
 	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return dir, nil },
@@ -273,20 +277,49 @@ func copyMenuItemByKey(app *App, key rune) ui.LeaderMenuItem {
 	return ui.LeaderMenuItem{}
 }
 
-func TestCopyMenuFileContentsOnlyInFullscreenTextPreview(t *testing.T) {
+func TestCopyMenuFileContentsBrowserCursor(t *testing.T) {
 	app, filePath := testCopyMenuApp(t)
 	if err := os.WriteFile(filePath, []byte("lantern harbor\nquiet orchard\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	cursorOn := func(name string) {
+		t.Helper()
+		for i := 0; i < app.model.Primary.VisibleEntryCount(); i++ {
+			if e, _, ok := app.model.Primary.VisibleEntry(i); ok && e.Name == name {
+				app.model.Primary.Cursor = i
+				return
+			}
+		}
+		t.Fatalf("no entry %q", name)
+	}
+	for _, name := range []string{"canyon", "violet.png"} {
+		cursorOn(name)
+		app.toggleCopyMenu()
+		if !copyMenuItemByKey(app, 'o').Disabled {
+			t.Fatalf("file contents row should be dimmed on %s", name)
+		}
+		app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModNone))
+		if got := clipboard.LastSet(); got != "" {
+			t.Fatalf("clipboard = %q on %s, want empty", got, name)
+		}
+	}
+	cursorOn("meadow.txt")
 	app.toggleCopyMenu()
-	if !copyMenuItemByKey(app, 'o').Disabled {
-		t.Fatal("file contents row should be dimmed in the browser")
+	if copyMenuItemByKey(app, 'o').Disabled {
+		t.Fatal("file contents row should be enabled on a text file in the browser")
 	}
 	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModNone))
-	if got := clipboard.LastSet(); got != "" {
-		t.Fatalf("clipboard = %q, want empty outside preview", got)
+	if got := clipboard.LastSet(); got != "lantern harbor\nquiet orchard\n" {
+		t.Fatalf("clipboard = %q", got)
 	}
+	clipboard.Reset()
+}
 
+func TestCopyMenuFileContentsFullscreenTextPreview(t *testing.T) {
+	app, filePath := testCopyMenuApp(t)
+	if err := os.WriteFile(filePath, []byte("lantern harbor\nquiet orchard\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	app.model.ViewMode = ui.ViewFilePreview
 	app.model.FullscreenFilePreview.Path = filePath
 	app.toggleCopyMenu()

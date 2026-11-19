@@ -8,12 +8,14 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/paranoidi/paras-commander/internal/archive"
 	"github.com/paranoidi/paras-commander/internal/clipboard"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/jobbridge"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/textutil"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -48,7 +50,8 @@ func (a *App) toggleCopyMenu() {
 			disabled = hasTarget && !gitAvailable(paths, dirPath)
 		}
 		if e.ActionID == keymap.ActionClipboardCopyFileContents {
-			disabled = !a.fullscreenTextPreviewOpen()
+			_, ok := a.fileContentsCopyTarget()
+			disabled = !ok
 		}
 		items = append(items, ui.LeaderMenuItem{Key: e.Key, Label: label, Disabled: disabled})
 		actions = append(actions, e.ActionID)
@@ -137,11 +140,30 @@ func gitAvailable(paths []string, dirPath string) bool {
 	return false
 }
 
-// fullscreenTextPreviewOpen reports whether the F3 fullscreen preview shows a
-// text file (not an image or a directory), the only place file contents copy.
-func (a *App) fullscreenTextPreviewOpen() bool {
-	fp := &a.model.FullscreenFilePreview
-	return a.model.ViewMode == ui.ViewFilePreview && fp.Path != "" && !fp.IsDir && fp.ImagePayload == ""
+// fileContentsCopyTarget is the file clipboard.copy-file-contents would copy: the text file shown in
+// the F3 fullscreen preview (not a directory, no image payload), or in the browser the active panel's
+// cursor entry when it is a regular local file that is neither media nor a listable archive. Name
+// based, so the menu's disabled state costs no IO; readTextFileForClipboard refuses binary and
+// oversized files at activation.
+func (a *App) fileContentsCopyTarget() (string, bool) {
+	switch a.model.ViewMode {
+	case ui.ViewFilePreview:
+		fp := &a.model.FullscreenFilePreview
+		return fp.Path, fp.Path != "" && !fp.IsDir && fp.ImagePayload == ""
+	case ui.ViewBrowser:
+		e, ok := a.activePanel().CurrentEntry()
+		if !ok || e.Name == ".." || e.Type != localfs.EntryFile {
+			return "", false
+		}
+		if loc, err := pathloc.Parse(e.Path); err != nil || !loc.IsLocal() {
+			return "", false
+		}
+		if localfs.IsMediaPath(e.Path) || archive.ListableName(e.Path) {
+			return "", false
+		}
+		return e.Path, true
+	}
+	return "", false
 }
 
 // readTextFileForClipboard reads path for clipboard.copy-file-contents, refusing
@@ -289,14 +311,14 @@ func (a *App) copyPreviewSelection(text string) {
 	a.setClipboardToast(text, done, ui.MessageUrgencySuccess)
 }
 
-// copyFileContentsToClipboard copies the fullscreen-previewed text file verbatim.
+// copyFileContentsToClipboard copies the previewed or cursor text file verbatim.
 // ponytail: synchronous read, bounded by DefaultMaxPreviewBytes like the preview itself.
 func (a *App) copyFileContentsToClipboard() {
-	if !a.fullscreenTextPreviewOpen() {
-		a.setTransientMessage("Copy: file contents only from the fullscreen text preview", ui.MessageUrgencyWarn)
+	path, ok := a.fileContentsCopyTarget()
+	if !ok {
+		a.setTransientMessage("Copy: no text file under the cursor", ui.MessageUrgencyWarn)
 		return
 	}
-	path := a.model.FullscreenFilePreview.Path
 	text, warn := readTextFileForClipboard(path)
 	if warn != "" {
 		a.setTransientMessage(warn, ui.MessageUrgencyWarn)
