@@ -155,8 +155,10 @@ func (a *App) mouseHit(layout ui.Layout, x, y int) (panelID, row int, ok bool) {
 		return 0, -1, false
 	}
 	p := a.panelByID(id)
-	if p.CarouselMode {
-		// ponytail: carousel columns have their own row layout; clicks only focus the panel.
+	if hit, carousel, ok := ui.CarouselEntryAt(file, &a.model, id, a.effectiveHideInactivePanel(), x, y); carousel {
+		if ok && hit.Column == 1 {
+			return id, hit.Index, true
+		}
 		return id, -1, true
 	}
 	top := ui.PanelListTop(file)
@@ -166,6 +168,56 @@ func (a *App) mouseHit(layout ui.Layout, x, y int) (panelID, row int, ok bool) {
 		}
 	}
 	return id, -1, true
+}
+
+// wheelCarouselSide scrolls the carousel parent or child column under the pointer by step rows,
+// without moving its cursor or the focus: the cached directory listing, or the child's file
+// preview (the active panel's only). It reports whether it did; otherwise the wheel falls through
+// to the panel's cursor.
+func (a *App) wheelCarouselSide(layout ui.Layout, x, y, step int) bool {
+	id, file, ok := a.mousePanelAt(layout, x, y)
+	if !ok {
+		return false
+	}
+	column, filePreview, ok := ui.CarouselColumnAt(file, &a.model, id, a.effectiveHideInactivePanel(), x, y)
+	if !ok || column == 1 {
+		return false
+	}
+	p := a.panelByID(id)
+	switch {
+	case filePreview:
+		return id == a.model.ActivePanel && a.previewCtrl.ScrollCarouselFilePreview(step)
+	case column == 0:
+		p.CarouselSideCache.Parent.ScrollBy(step, a.panelViewportRows(id))
+	default:
+		p.CarouselSideCache.Child.ScrollBy(step, a.panelViewportRows(id))
+	}
+	return true
+}
+
+// handleCarouselSideClick handles a press on a row of a carousel's parent or child column: a left
+// press goes to that directory with the cursor on the clicked entry, any other press only focuses
+// the panel.
+func (a *App) handleCarouselSideClick(layout ui.Layout, x, y int, pressed tcell.ButtonMask) (handled, rendered bool) {
+	if pressed&(tcell.Button1|tcell.Button2) == 0 {
+		return false, false
+	}
+	id, file, ok := a.mousePanelAt(layout, x, y)
+	if !ok {
+		return false, false
+	}
+	hit, _, ok := ui.CarouselEntryAt(file, &a.model, id, a.effectiveHideInactivePanel(), x, y)
+	if !ok || hit.Column == 1 {
+		return false, false
+	}
+	a.focusPanelByMouse(id)
+	if pressed&tcell.Button1 != 0 {
+		if err := a.navigatePanelToDirectory(id, hit.Dir, hit.Entry.Name); err != nil {
+			a.setErrorMessage("Navigate failed", err)
+		}
+	}
+	a.render()
+	return true, true
 }
 
 // panelTitleHit returns the panel and the title path segment under (x, y) (ui.PanelTitleSegmentAt).
@@ -602,12 +654,18 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 	if handled, rendered := a.handlePanelHeaderMouse(layout, x, y, pressed); handled {
 		return false, rendered
 	}
+	if handled, rendered := a.handleCarouselSideClick(layout, x, y, pressed); handled {
+		return false, rendered
+	}
 	id, row, ok := a.mouseHit(layout, x, y)
 	if !ok {
 		return false, a.wheelInactivePreview(layout, x, y, buttons)
 	}
 	switch step := wheelDelta(buttons, config.MouseWheelRows); {
 	case step != 0:
+		if a.wheelCarouselSide(layout, x, y, step) {
+			return false, true
+		}
 		// The wheel scrolls the panel under the pointer without taking focus.
 		if id != a.model.ActivePanel {
 			return false, a.scrollInactivePanel(id, step)
@@ -647,7 +705,7 @@ func (a *App) handlePanelHeadingRightClick(layout ui.Layout, x, y int, pressed t
 	if !ok {
 		return false
 	}
-	if _, _, onHeader := ui.PanelHeaderColumnAt(file, &a.model, id, x, y); y != file.Y && !onHeader {
+	if _, _, onHeader := ui.PanelHeaderColumnAt(file, &a.model, id, a.effectiveHideInactivePanel(), x, y); y != file.Y && !onHeader {
 		return false
 	}
 	a.focusPanelByMouse(id)
@@ -667,7 +725,7 @@ func (a *App) handlePanelHeaderMouse(layout ui.Layout, x, y int, pressed tcell.B
 	if !ok {
 		return false, false
 	}
-	col, onTitle, onHeader := ui.PanelHeaderColumnAt(file, &a.model, id, x, y)
+	col, onTitle, onHeader := ui.PanelHeaderColumnAt(file, &a.model, id, a.effectiveHideInactivePanel(), x, y)
 	if !onHeader {
 		return false, false
 	}

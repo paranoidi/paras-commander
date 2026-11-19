@@ -390,3 +390,22 @@ func TestListingSnapshotPageEmptyIsNoop(t *testing.T) {
 		t.Fatalf("paging an empty snapshot changed state: cursor=%d scroll=%d", snap.Cursor, snap.Scroll)
 	}
 }
+
+func TestListingSnapshotScrollByStepsRowsAndClamps(t *testing.T) {
+	snap := listingSnapshotWithEntries(20)
+	snap.Cursor = 3
+	const viewportRows = 5
+
+	snap.ScrollBy(3, viewportRows)
+	if snap.Cursor != 3 || snap.Scroll != 3 {
+		t.Fatalf("after +3: cursor=%d scroll=%d, want cursor=3 scroll=3", snap.Cursor, snap.Scroll)
+	}
+	snap.ScrollBy(100, viewportRows)
+	if snap.Scroll != 15 {
+		t.Fatalf("scroll = %d, want clamped to 15", snap.Scroll)
+	}
+	snap.ScrollBy(-100, viewportRows)
+	if snap.Scroll != 0 {
+		t.Fatalf("scroll = %d, want clamped to 0", snap.Scroll)
+	}
+}

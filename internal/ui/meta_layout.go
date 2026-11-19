@@ -219,14 +219,10 @@ func PanelMetaFitAt(file Rect, model *Model, panelID int, hideInactive bool) Pan
 	state := model.PanelForFileListRender(panelID)
 	cols := model.MetaResults[panelID]
 	fit := PanelMetaFit{Width: file.Width}
-	if state.CarouselMode {
-		rows := PanelListRows(file)
-		plan, ok := newCarouselPanelPlan(file, state, model.QuickViewDriverPanelID() >= 0, hideInactive, model.CarouselLayout, model.UseNerdfontIcons, model.PanelScrollbar, rows)
-		if ok {
-			fit.NameRoom = panelcarousel.CenterNameWidth(file, model.CarouselLayout, state, model.UseNerdfontIcons, plan.ShowChild, model.PanelScrollbar, rows, plan.FitWidths, 0)
-			fit.Drawn, _ = FitCarouselMetaColumns(file, model.CarouselLayout, state, model.UseNerdfontIcons, plan.ShowChild, model.PanelScrollbar, rows, plan.FitWidths, cols)
-			return fit
-		}
+	if l, ok := newCarouselHitLayout(file, model, panelID, hideInactive); ok {
+		fit.NameRoom = panelcarousel.CenterNameWidth(file, model.CarouselLayout, state, model.UseNerdfontIcons, l.plan.ShowChild, model.PanelScrollbar, l.rows, l.plan.FitWidths, 0)
+		fit.Drawn = l.metaLayouts
+		return fit
 	}
 	layoutRes := panelColumnLayout(file, state, PanelDisplayConfig{ShowIcons: model.UseNerdfontIcons, NarrowPanelsNameOnly: model.NarrowPanelsNameOnly})
 	fit.NameRoom = panelNameColumnWidth(layoutRes, layoutRes.Columns, false, 0)
@@ -240,8 +236,7 @@ func CarouselMeta(layouts []MetaColumnLayout, totalWidth int, styles theme.Theme
 		return panelcarousel.Meta{}
 	}
 	return panelcarousel.Meta{
-		Width:  totalWidth,
-		Header: MetaHeaderText(layouts),
+		Width: totalWidth,
 		Row: func(path string) string {
 			return MetaRowText(layouts, path)
 		},

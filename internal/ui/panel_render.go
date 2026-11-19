@@ -899,6 +899,10 @@ func drawPanelCarousel(screen tcell.Screen, p panelCarouselParams) bool {
 		Layout:                display.CarouselLayout,
 		MeasuredFitWidth:      measuredFitWidth,
 		Meta:                  meta,
+		CenterHeader: func(width int) string {
+			text, _ := carouselCenterHeader(width, state, metaLayouts, display.ShowIcons, display.CarouselLayout.ShowSize[1])
+			return text
+		},
 		JobMark: func(path string) (panellist.JobSuffix, string) {
 			return jobRowSuffix(path, display.JobMarks, panelStyle.Styles, false) // carousel has no index column
 		},

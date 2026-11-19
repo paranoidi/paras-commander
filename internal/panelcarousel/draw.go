@@ -52,6 +52,10 @@ type BodyParams struct {
 	Layout                Layout
 	MeasuredFitWidth      [3]int
 	Meta                  Meta
+	// CenterHeader builds the center column's header text for a text width (name, meta and size
+	// titles); the ui package supplies the classic list's header builder. Nil draws plain
+	// name and size titles.
+	CenterHeader func(width int) string
 	// FolderColor, when set, tints directory names in every column (nil = none).
 	FolderColor func(path string) (tcell.Color, bool)
 }
@@ -85,7 +89,6 @@ func drawCarouselHeader(screen tcell.Screen, hp carouselHeaderParams) {
 	p, cols, visibleRows := hp.Body, hp.Cols, hp.VisibleRows
 	headerY := p.Frame.Y + 1
 
-	centerName, centerSize := p.Center.NameColumnTitle(p.ShowIcons), p.Center.SizeColumnTitle()
 	sideNameTitle := listNameHeaderTitle(p.ShowIcons)
 	for i, col := range cols {
 		if col.Width <= 0 {
@@ -101,34 +104,30 @@ func drawCarouselHeader(screen tcell.Screen, hp carouselHeaderParams) {
 		case 2:
 			c, inactive = p.Child, true
 		}
-		hasLane := columnHasScrollbarLane(c, inactive, p.ShowChildColumn)
-		columnActive := p.FileListActive && c.Active && !inactive
-		showSB := columnActive || p.ScrollbarShowInactive
-		total, offset := columnListingMetrics(c, p.Center)
-		reserve := columnTextReserve(columnScrollbarReserve(hasLane, showSB, p.ScrollbarStyle, total, visibleRows, offset), i, p.ShowChildColumn)
-		listTextWidth := columnListTextWidth(col.Width, p.ShowIcons, reserve)
-		var showSize bool
-		switch i {
-		case 0:
-			showSize = p.Layout.ShowSize[0]
-		case 1:
-			showSize = p.Layout.ShowSize[1]
-		case 2:
-			showSize = p.Layout.ShowSize[2]
+		var hdrX, listW int
+		if i == 1 {
+			hdrX, listW = CenterHeaderOrigin(col, p.Center, p.ShowIcons, p.ShowChildColumn, p.FileListActive, p.ScrollbarShowInactive, p.ScrollbarStyle, visibleRows)
+		} else {
+			hasLane := columnHasScrollbarLane(c, inactive, p.ShowChildColumn)
+			showSB := p.ScrollbarShowInactive
+			total, offset := columnListingMetrics(c, p.Center)
+			reserve := columnTextReserve(columnScrollbarReserve(hasLane, showSB, p.ScrollbarStyle, total, visibleRows, offset), i, p.ShowChildColumn)
+			hdrX, listW = columnListContentOrigin(col.X, col.Width, p.ShowIcons, reserve)
 		}
+		showSize := p.Layout.ShowSize[i]
 		var hdr string
 		switch i {
 		case 1:
-			sizeTitle := centerSize
-			if !showSize {
-				sizeTitle = ""
+			if p.CenterHeader != nil {
+				hdr = p.CenterHeader(listW)
+			} else {
+				hdr = briefHeader(p.Center.NameColumnTitle(p.ShowIcons), p.Center.SizeColumnTitle(), listW, showSize, 0, "")
 			}
-			hdr = briefHeader(centerName, sizeTitle, listTextWidth, showSize, p.Meta.Width, p.Meta.Header)
 		case 0:
 			if !p.Parent.Populated {
 				continue
 			}
-			hdr = briefHeader(sideNameTitle, "Size", listTextWidth, showSize, 0, "")
+			hdr = briefHeader(sideNameTitle, "Size", listW, showSize, 0, "")
 		case 2:
 			if !p.ShowChildColumn {
 				continue
@@ -137,14 +136,13 @@ func drawCarouselHeader(screen tcell.Screen, hp carouselHeaderParams) {
 			// switching the child between file and directory never erases it (flicker) —
 			// the file preview paints its own title over it.
 			if p.ChildPreviewKind != ChildPreviewFile && p.Child.Populated {
-				hdr = briefHeader(sideNameTitle, "Size", listTextWidth, showSize, 0, "")
+				hdr = briefHeader(sideNameTitle, "Size", listW, showSize, 0, "")
 			}
 		}
 		hdrStyle := p.HeaderCarouselStyle
 		if i == 1 {
 			hdrStyle = p.HeaderStyle
 		}
-		hdrX, listW := columnListContentOrigin(col.X, col.Width, p.ShowIcons, reserve)
 		for x := col.X; x < hdrX; x++ {
 			screen.SetContent(x, headerY, ' ', nil, hdrStyle)
 		}
@@ -380,7 +378,7 @@ type carouselRowPaintState struct {
 	Entry         localfs.Entry
 	CursorKey     string
 	CursorInfo    tcell.Style // info columns' style on the cursor row
-	BarIconKey    string // Theme.DiskUsageBarIconKey of the row; applies to cells before FillCols
+	BarIconKey    string      // Theme.DiskUsageBarIconKey of the row; applies to cells before FillCols
 	FillCols      int
 	Sliver        bool        // disk-usage share under one cell: draw the sliver glyph in the left gutter
 	SliverStyle   tcell.Style // DiskUsageBarStyle of the row; only its background is used

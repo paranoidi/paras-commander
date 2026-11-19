@@ -589,8 +589,7 @@ func TestDrawBodyRendersMetaInCenterColumnOnly(t *testing.T) {
 	const metaHeader = "Status"
 	const metaVal = "ready"
 	meta := Meta{
-		Width:  len(metaHeader),
-		Header: metaHeader,
+		Width: len(metaHeader),
 		Row: func(path string) string {
 			if path == "/vol/lantern" {
 				return fmt.Sprintf("%-*s", len(metaHeader), metaVal)
@@ -611,6 +610,7 @@ func TestDrawBodyRendersMetaInCenterColumnOnly(t *testing.T) {
 		ShowChildColumn:     false,
 		Layout:              DefaultLayout(),
 		Meta:                meta,
+		CenterHeader:        func(int) string { return "Name  " + metaHeader },
 	})
 
 	cols := SplitColumns(frame, false, DefaultLayout(), [3]int{})

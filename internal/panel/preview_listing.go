@@ -20,20 +20,18 @@ type ListingSnapshot struct {
 // see PreviewCursorRecall), not a live selection the user is moving — paging just lets them look
 // further into the listing without changing that answer.
 func (s *ListingSnapshot) Page(delta, viewportRows int) {
+	s.ScrollBy(delta*max(viewportRows, 1), viewportRows)
+}
+
+// ScrollBy moves the visible window by rows (negative up), clamped to the listing; the single
+// implementation behind Page and the mouse wheel over a carousel side column. Like Page it leaves
+// Cursor untouched.
+func (s *ListingSnapshot) ScrollBy(rows, viewportRows int) {
 	if len(s.Entries) == 0 {
 		return
 	}
-	if viewportRows < 1 {
-		viewportRows = 1
-	}
-	maxOffset := max(len(s.Entries)-viewportRows, 0)
-	s.Scroll += delta * viewportRows
-	if s.Scroll < 0 {
-		s.Scroll = 0
-	}
-	if s.Scroll > maxOffset {
-		s.Scroll = maxOffset
-	}
+	maxOffset := max(len(s.Entries)-max(viewportRows, 1), 0)
+	s.Scroll = min(max(s.Scroll+rows, 0), maxOffset)
 }
 
 // SnapshotParent returns the cached parent-directory preview for carousel mode. It never touches

@@ -57,6 +57,16 @@ func (h *Handler) pageCarouselChildListing(pageDir int) {
 	p.CarouselSideCache.Child.Page(pageDir, h.host.ActiveViewportRows())
 }
 
+// ScrollCarouselFilePreview scrolls the carousel child column's file preview by delta rows (the
+// mouse wheel over it). It reports false when there is nothing scrollable.
+func (h *Handler) ScrollCarouselFilePreview(delta int) bool {
+	if !h.carouselFilePreviewScrollable() {
+		return false
+	}
+	h.carouselPreviewScrollBy(delta)
+	return true
+}
+
 func (h *Handler) scheduleCarouselPreviewDebounceTimer(gen uint64) {
 	// ok is false for plain directory targets, so the child-listing coalesce keeps the key-repeat delay.
 	path, _, ok := h.carouselFilePreviewWantPath()

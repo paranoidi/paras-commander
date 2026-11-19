@@ -18,9 +18,8 @@ import (
 // Meta is the center column's pre-laid-out meta segment (from ui.LayoutMetaColumns).
 // Width 0 means no meta columns are active.
 type Meta struct {
-	Width  int                      // total cells incl. inter-column gaps
-	Header string                   // padded header segment
-	Row    func(path string) string // padded row segment for an entry path
+	Width int                      // total cells incl. inter-column gaps
+	Row   func(path string) string // padded row segment for an entry path
 	// Alerts returns the alerting cells of an entry path's row segment.
 	Alerts func(path string) []panellist.MetaAlert
 }
@@ -135,6 +134,17 @@ func nameWidthFromRowText(rowTextWidth int, showSize bool, metaW int) int {
 		return 1
 	}
 	return nw
+}
+
+// CenterHeaderOrigin returns the screen x and cell width of the center column's header text in
+// col. DrawBody paints the header there and the ui hit test maps clicks over it, so both agree
+// cell for cell.
+func CenterHeaderOrigin(col geom.Rect, center panel.State, showIcons, showChild, fileListActive, scrollbarShowInactive bool, style uiscrollbar.Style, visibleRows int) (x, width int) {
+	c := Column{Kind: ColumnCenter, Populated: true, Active: true}
+	hasLane := columnHasScrollbarLane(c, false, showChild)
+	total, offset := columnListingMetrics(c, center)
+	reserve := columnTextReserve(columnScrollbarReserve(hasLane, fileListActive || scrollbarShowInactive, style, total, visibleRows, offset), 1, showChild)
+	return columnListContentOrigin(col.X, col.Width, showIcons, reserve)
 }
 
 func nameWidthForColumn(colWidth int, showIcons bool, scrollbarReserve int, showSize bool, metaW int) int {

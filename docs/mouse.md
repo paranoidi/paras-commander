@@ -26,7 +26,7 @@ In the file browser:
 
 A shortened element (`p` for `projects` in a narrow panel) opens the full directory it stands for. The path does not react while the panel's top border shows the quick filter or a quick-view directory.
 
-Panels in tree view behave the same as flat ones. A panel in carousel mode only takes focus on click, apart from its top border. Picking a column turns the sort dialog's disk-usage size ordering off, so it does not take over again; while that ordering is in effect, Size counts as the sorted column. A narrow name-only panel shows one header title, so a click anywhere on its header opens the dialog. While quick view or a file preview fills the inactive column, clicks there are ignored.
+Panels in tree view behave the same as flat ones. Panels in carousel mode are described in [Carousel view](#carousel-view). Picking a column turns the sort dialog's disk-usage size ordering off, so it does not take over again; while that ordering is in effect, Size counts as the sorted column. A narrow name-only panel shows one header title, so a click anywhere on its header opens the dialog. While quick view or a file preview fills the inactive column, clicks there are ignored.
 
 ### Drag select
 
@@ -38,7 +38,26 @@ Dragging with the right button unselects instead. The rows in between get a red 
 - The drag stays with the panel it started in, even when the pointer crosses into the other panel. The menus and the footer do not react until you release.
 - Any key press cancels the drag and selects nothing. Esc is the plain way out.
 - A long list can scroll while you drag, so the cursor then follows the pointer's movement and may not sit exactly under it.
-- A drag does not start in a panel in carousel mode, or from the path or the column header.
+- A drag does not start from the path, the column header or the parent and child columns of a carousel panel.
+
+### Carousel view
+
+A panel in carousel mode (parent, current and child columns) takes the same mouse input as the classic list, plus clicks in the side columns.
+
+| Action | Result |
+|---|---|
+| Left click on a row in the current (middle) column | Focuses the panel and moves its cursor to the row. |
+| Double click, drag, right click and right drag on a row in the current column | The same as in the classic list. |
+| Left click on a row in the parent column | Opens the parent directory with the cursor on the entry you clicked. |
+| Left click on a row in the child column (when it lists a directory) | Opens the directory under the cursor with the cursor on the entry you clicked. |
+| Left click on a column title in the current column (Name, Size, a meta column) | Sorts by that column, or reverses it when it is already the sorted one. The meta column you sort by shows its sort arrow. |
+| Left click elsewhere on the column header row | Opens the Sort order dialog. |
+| Right click on the top border or the column header row | Opens the [Columns](columns.md) dialog. |
+| Wheel over the current column | Moves the cursor by a few rows. |
+| Wheel over the parent or child column | Scrolls that column's listing by a few rows. Its highlighted entry and the focus do not change. |
+| Wheel over the child column showing a file preview | Scrolls the preview. |
+
+The parent and child column titles are not sortable, so a click on them opens the Sort order dialog like any other spot on the header row. A click on a child column showing a file preview only focuses the panel. When the panel is too narrow for the carousel it draws the classic list and behaves like it.
 
 In the menu bar and the footer:
 

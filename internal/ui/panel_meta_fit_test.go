@@ -119,7 +119,7 @@ func TestPanelHeaderColumnAtSkipsDroppedMetaColumn(t *testing.T) {
 	}
 	seen := map[string]bool{}
 	for x := 1; x < file.Width-1; x++ {
-		if c, onTitle, _ := PanelHeaderColumnAt(file, model, PrimaryPanel, x, file.Y+1); onTitle && c.MetaColumn != "" {
+		if c, onTitle, _ := PanelHeaderColumnAt(file, model, PrimaryPanel, false, x, file.Y+1); onTitle && c.MetaColumn != "" {
 			seen[c.MetaColumn] = true
 		}
 	}
