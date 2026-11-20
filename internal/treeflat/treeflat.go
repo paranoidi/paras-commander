@@ -23,7 +23,8 @@ type Row[T any] struct {
 	// LastChild is true when this node is the last among its siblings.
 	LastChild bool
 	// AncestorHasNext has length Depth-1. AncestorHasNext[i] is true when the
-	// ancestor at depth i+1 on the path to this row had younger siblings.
+	// ancestor at depth i+1 on the path to this row had younger siblings. The
+	// slice is shared between sibling rows: read it, never modify it.
 	AncestorHasNext []bool
 }
 
@@ -59,7 +60,6 @@ func Flatten[T any](roots []Node[T], expanded func(id string) bool) []Row[T] {
 			last := i == len(nodes)-1
 			hasKids := len(n.Children) > 0
 			open := isOpen(n)
-			continues := append([]bool(nil), parentContinues...)
 			out = append(out, Row[T]{
 				ID:              n.ID,
 				Value:           n.Value,
@@ -67,7 +67,7 @@ func Flatten[T any](roots []Node[T], expanded func(id string) bool) []Row[T] {
 				HasChildren:     hasKids,
 				Expanded:        open,
 				LastChild:       last,
-				AncestorHasNext: continues,
+				AncestorHasNext: parentContinues,
 			})
 			if open {
 				var childContinues []bool
@@ -80,6 +80,19 @@ func Flatten[T any](roots []Node[T], expanded func(id string) bool) []Row[T] {
 	}
 	walk(roots, 0, nil)
 	return out
+}
+
+// Walk visits every node depth-first, expanded or not, with its Flatten depth
+// (0 at the roots).
+func Walk[T any](roots []Node[T], fn func(n *Node[T], depth int)) {
+	var walk func(nodes []Node[T], depth int)
+	walk = func(nodes []Node[T], depth int) {
+		for i := range nodes {
+			fn(&nodes[i], depth)
+			walk(nodes[i].Children, depth+1)
+		}
+	}
+	walk(roots, 0)
 }
 
 // ExpandableIDs returns the IDs of every node that has children, in

@@ -6,8 +6,10 @@ import (
 )
 
 // DedupCache memoizes what only changes with the snapshot, the display toggles or
-// the marks: the built node tree (collapse state only affects the flatten), the
-// mark/kept directory sets and the list column widths. DedupViewState.Cache is a
+// the marks: the built node tree (collapse state only affects the flatten) with its
+// main-pane Size/Count column widths (over every node of the tree, not only the
+// visible rows, so expanding or collapsing never shifts the columns), the
+// mark/kept directory sets and the copies-pane column widths. DedupViewState.Cache is a
 // pointer so value copies of the view share it; a nil Cache computes directly.
 // Keys: the snapshot's Groups slice identity (&Groups[0] and len; the cache holds
 // the pointer, so the address cannot be reused), TreeDirs, SortByWasted,
@@ -19,7 +21,7 @@ type DedupCache struct {
 	tree      *dedupTree
 	marks     *dedupMarkSets
 	copyMarks *dedupCopyMarkSet
-	widths    [2]dedupWidths // main, copies
+	widths    dedupWidths // copies pane
 }
 
 // dedupGroupsKey identifies a snapshot's Groups slice by its first element.
@@ -48,6 +50,35 @@ type dedupTree struct {
 	ignoredEmpty int // files dropped by the ignore-empty filter
 	ids          []string
 	idsDone      bool
+	sizeW        int // Size column width over every node, see columnWidths
+	countW       int
+	widthsDone   bool
+}
+
+// columnWidths is the Size/Count column width over every node of the tree,
+// collapsed or not (so toggling a folder never changes the layout), computed
+// once per tree.
+func (t *dedupTree) columnWidths() (sizeW, countW int) {
+	if !t.widthsDone {
+		s, c := len([]rune(dedupListSizeTitle)), len([]rune(dedupListCountTitle))
+		treeflat.Walk(t.roots, func(n *treeflat.Node[DedupRowData], _ int) {
+			st, ct := dedupRowDetailTexts(n.Value)
+			s, c = max(s, len([]rune(st))), max(c, len([]rune(ct)))
+		})
+		t.sizeW, t.countW, t.widthsDone = max(s, 1), max(c, 1), true
+	}
+	return t.sizeW, t.countW
+}
+
+// DedupWalkNodes visits every node of the cached tree for snap/view depth-first,
+// expanded or not, with its row depth. Nothing is visited until the scan is done.
+func DedupWalkNodes(snap comparepkg.DedupSnapshot, view DedupViewState, fn func(id string, depth int, hasChildren bool)) {
+	if snap.Phase != comparepkg.DedupDone {
+		return
+	}
+	treeflat.Walk(dedupTreeFor(snap, view).roots, func(n *treeflat.Node[DedupRowData], depth int) {
+		fn(n.ID, depth, len(n.Children) > 0)
+	})
 }
 
 // expandableIDs lists the collapsible node IDs; callers must not modify the result.
@@ -157,15 +188,15 @@ type dedupWidths struct {
 	sizeW, countW int
 }
 
-// columnWidths is dedupListColumnWidths over all rows (so widths do not jitter on
-// scroll), computed once per row slice. slot 0 = main pane, 1 = copies pane.
+// columnWidths is dedupListColumnWidths over all rows of the copies pane (so
+// widths do not jitter on scroll), computed once per row slice.
 // ponytail: same &rows[0] and len means same content; true while row slices are
 // rebuilt wholesale and never edited in place.
-func (c *DedupCache) columnWidths(rows []DedupRow, slot int) (sizeW, countW int) {
+func (c *DedupCache) columnWidths(rows []DedupRow) (sizeW, countW int) {
 	if c == nil || len(rows) == 0 {
 		return dedupListColumnWidths(rows)
 	}
-	w := &c.widths[slot]
+	w := &c.widths
 	if len(w.rows) != len(rows) || &w.rows[0] != &rows[0] {
 		w.sizeW, w.countW = dedupListColumnWidths(rows)
 		w.rows = rows

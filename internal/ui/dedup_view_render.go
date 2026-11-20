@@ -279,11 +279,12 @@ func drawDedupTreePane(
 	headerY := rect.Y + 1
 	y := headerY + 1
 	headerStyle := layoutChrome.Chrome.Header
-	slot := 0
-	if p.CopiesPane {
-		slot = 1
+	var sizeW, countW int
+	if p.CopiesPane || view.Cache == nil || len(p.Rows) == 0 {
+		sizeW, countW = view.Cache.columnWidths(p.Rows)
+	} else {
+		sizeW, countW = dedupTreeFor(snap, view).columnWidths()
 	}
-	sizeW, countW := view.Cache.columnWidths(p.Rows, slot)
 	cols := dedupListColumnLayout(contentX, innerRight, sizeW, countW)
 	pathHeader := primitive.FitPathForWidth(p.Header, cols.pathW)
 	primitive.Text(screen, rect.X+1, headerY, rect.Width-2, "", headerStyle)

@@ -121,3 +121,16 @@ func TestFlattenEmptyStaysNil(t *testing.T) {
 		t.Fatalf("Flatten(empty) = %#v, want nil", got)
 	}
 }
+
+func TestWalkMatchesFlattenDepths(t *testing.T) {
+	want := map[string]int{}
+	for _, r := range Flatten(testTree(), nil) {
+		want[r.ID] = r.Depth
+	}
+	got := map[string]int{}
+	roots := testTree()
+	Walk(roots, func(n *Node[string], depth int) { got[n.ID] = depth })
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("Walk depths = %v, want %v", got, want)
+	}
+}

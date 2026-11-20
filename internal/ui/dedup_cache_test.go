@@ -105,11 +105,37 @@ func TestDedupCacheInvalidates(t *testing.T) {
 	}
 
 	// Column widths are cached per row slice and follow a replaced slice.
-	sizeW, countW := view.Cache.columnWidths(rows, 0)
+	sizeW, countW := view.Cache.columnWidths(rows)
 	if wantS, wantC := dedupListColumnWidths(rows); sizeW != wantS || countW != wantC {
 		t.Fatalf("widths = %d,%d want %d,%d", sizeW, countW, wantS, wantC)
 	}
-	if s, c := view.Cache.columnWidths(rows[:1], 0); s == 0 || c == 0 {
+	if s, c := view.Cache.columnWidths(rows[:1]); s == 0 || c == 0 {
 		t.Fatalf("widths for a shorter slice = %d,%d", s, c)
+	}
+}
+
+// TestDedupMainWidthsSurviveCollapse checks the main-pane widths belong to the
+// cached tree: a collapse toggle re-flattens but reuses the same computed widths.
+func TestDedupMainWidthsSurviveCollapse(t *testing.T) {
+	snap := comparepkg.DedupSnapshot{
+		Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{
+			dedupTestGroup(1, 10, "walnut/ember/quilt", "pepper/quilt"),
+		},
+	}
+	view := DedupViewState{TreeDirs: true, Cache: &DedupCache{}}
+	tree := dedupTreeFor(snap, view)
+	s, c := tree.columnWidths()
+	view.Main.SetCollapsed(tree.expandableIDs()[0], true)
+	if dedupTreeFor(snap, view) != tree {
+		t.Fatal("collapse toggle rebuilt the tree")
+	}
+	collapsed, _ := DedupRowsFromSnapshot(snap, view)
+	if s2, c2 := tree.columnWidths(); s2 != s || c2 != c || !tree.widthsDone {
+		t.Fatalf("widths changed: %d,%d -> %d,%d", s, c, s2, c2)
+	}
+	all, _ := DedupRowsFromSnapshot(snap, DedupViewState{TreeDirs: true})
+	if wantS, wantC := dedupListColumnWidths(all); s != wantS || c != wantC || len(collapsed) >= len(all) {
+		t.Fatalf("widths %d,%d want %d,%d over the fully expanded rows", s, c, wantS, wantC)
 	}
 }

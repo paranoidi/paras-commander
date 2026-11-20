@@ -1206,20 +1206,27 @@ func (h *Handler) CollapseAll() {
 func (h *Handler) ExpandAll() {
 	st := &h.model.DedupView
 	pane, _ := h.focusedPane()
-	var full []ui.DedupRow
+	type node struct {
+		id    string
+		depth int
+		kids  bool
+	}
+	var full []node
 	if st.FocusCopies {
 		sel, _ := h.paneRow(&st.Main, h.model.DedupList)
-		full = ui.DedupCopyRows(h.model.DedupSnapshot, sel, nil)
+		for _, r := range ui.DedupCopyRows(h.model.DedupSnapshot, sel, nil) {
+			full = append(full, node{r.ID, r.Depth, r.HasChildren})
+		}
 	} else {
-		view := *st
-		view.Main.Collapsed = nil
-		full, _ = ui.DedupRowsFromSnapshot(h.model.DedupSnapshot, view)
+		ui.DedupWalkNodes(h.model.DedupSnapshot, *st, func(id string, depth int, kids bool) {
+			full = append(full, node{id, depth, kids})
+		})
 	}
 	limit := panel.MaxExpandAllShallowDepth
 	for ; limit > 0; limit-- {
 		n := 0
 		for _, r := range full {
-			if r.Depth <= limit {
+			if r.depth <= limit {
 				n++
 			}
 		}
@@ -1229,11 +1236,11 @@ func (h *Handler) ExpandAll() {
 	}
 	pane.Collapsed = nil
 	for _, r := range full {
-		if r.HasChildren && r.Depth >= limit {
+		if r.kids && r.depth >= limit {
 			if pane.Collapsed == nil {
 				pane.Collapsed = map[string]bool{}
 			}
-			pane.Collapsed[r.ID] = true
+			pane.Collapsed[r.id] = true
 		}
 	}
 	switch {
