@@ -22,6 +22,10 @@ type State struct {
 	// Tree lists the rows as a folded directory tree instead of one flat row per path. The
 	// session-wide mode lives on the file panels' strips (ui.Model.SelectedStripTree).
 	Tree bool
+	// Collapsed holds the folder rows (by Path) folded shut in tree mode; CollapsedRev bumps
+	// on every change so callers can key row caches on it.
+	Collapsed    map[string]bool
+	CollapsedRev int
 }
 
 // Row is one strip row: a selected path, or (tree mode) a synthetic folder grouping them.
@@ -32,6 +36,8 @@ type Row struct {
 	// renderer fits Path relative to the base directory itself.
 	Display string
 	Group   bool
+	// Expanded is false for a tree-mode folder row that is collapsed.
+	Expanded bool
 	// Depth, LastChild and AncestorHasNext shape the tree connector (treeflat.Row semantics).
 	Depth           int
 	LastChild       bool
@@ -39,8 +45,9 @@ type Row struct {
 }
 
 // Rows lists paths as strip rows: one per path (flat), or a folded tree of their labels
-// relative to baseDir (tree; tilde-less absolute when baseDir does not contain the path).
-func Rows(paths []string, baseDir string, tree bool) []Row {
+// relative to baseDir (tree; tilde-less absolute when baseDir does not contain the path), with
+// the folders in collapsed hiding their children.
+func Rows(paths []string, baseDir string, tree bool, collapsed map[string]bool) []Row {
 	if !tree {
 		rows := make([]Row, len(paths))
 		for i, p := range paths {
@@ -56,11 +63,11 @@ func Rows(paths []string, baseDir string, tree bool) []Row {
 		}
 		labels[i] = filepath.ToSlash(label)
 	}
-	flat := treeflat.Flatten(treeflat.FromPaths(labels, paths), nil)
+	flat := treeflat.Flatten(treeflat.FromPaths(labels, paths), func(id string) bool { return !collapsed[id] })
 	rows := make([]Row, len(flat))
 	for i, r := range flat {
 		rows[i] = Row{
-			Path: r.Value.Path, Display: r.Value.Display, Group: r.Value.Group,
+			Path: r.Value.Path, Display: r.Value.Display, Group: r.Value.Group, Expanded: r.Expanded,
 			Depth: r.Depth, LastChild: r.LastChild, AncestorHasNext: r.AncestorHasNext,
 		}
 	}
@@ -253,4 +260,38 @@ func MapBasenameRangesToDisplay(display, absPath string, baseRanges []search.Ran
 		out[i] = search.Range{Start: r.Start + offset, End: r.End + offset}
 	}
 	return out
+}
+
+// Expand opens the collapsed folder row under the cursor. It reports whether the rows changed.
+func (s *State) Expand(rows []Row) bool {
+	if s.Cursor < 0 || s.Cursor >= len(rows) || !rows[s.Cursor].Group || !s.Collapsed[rows[s.Cursor].Path] {
+		return false
+	}
+	delete(s.Collapsed, rows[s.Cursor].Path)
+	s.CollapsedRev++
+	return true
+}
+
+// Collapse folds the open folder row under the cursor, or moves the cursor to the row's parent
+// folder (as the other tree views do). It reports whether the rows changed.
+func (s *State) Collapse(rows []Row) bool {
+	if s.Cursor < 0 || s.Cursor >= len(rows) {
+		return false
+	}
+	row := rows[s.Cursor]
+	if row.Group && row.Expanded {
+		if s.Collapsed == nil {
+			s.Collapsed = map[string]bool{}
+		}
+		s.Collapsed[row.Path] = true
+		s.CollapsedRev++
+		return true
+	}
+	for i := s.Cursor - 1; i >= 0; i-- {
+		if rows[i].Depth < row.Depth {
+			s.Cursor = i
+			break
+		}
+	}
+	return false
 }

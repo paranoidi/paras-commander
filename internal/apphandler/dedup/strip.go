@@ -32,6 +32,16 @@ func (h *Handler) ToggleStripTree() {
 	st.Strip.Clamp(len(rows), 0)
 }
 
+// ExpandStripRow opens the collapsed tree-mode folder row under the strip cursor.
+func (h *Handler) ExpandStripRow() {
+	h.model.DedupView.Strip.Expand(h.stripRows())
+}
+
+// CollapseStripRow folds the folder row under the strip cursor, or moves to its parent folder.
+func (h *Handler) CollapseStripRow() {
+	h.model.DedupView.Strip.Collapse(h.stripRows())
+}
+
 // ToggleStripFocus focuses the Selected strip, or returns focus to the main tree when it
 // already has it. It reports false when nothing is marked (no strip to focus).
 func (h *Handler) ToggleStripFocus() bool {

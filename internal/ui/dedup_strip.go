@@ -31,6 +31,7 @@ type dedupMarkedPaths struct {
 	paths    []string
 	rows     []selstrip.Row
 	rowsTree bool
+	rowsRev  int // Strip.CollapsedRev the rows were built with
 	rowsOK   bool
 }
 
@@ -57,12 +58,12 @@ func DedupMarkedPaths(view DedupViewState) []string {
 func DedupStripRows(snap comparepkg.DedupSnapshot, view DedupViewState, tree bool) []selstrip.Row {
 	paths := DedupMarkedPaths(view)
 	c := view.Cache
-	if c != nil && c.marked.rowsOK && c.marked.rowsTree == tree && c.marked.rev == view.MarksRev && c.marked.n == len(view.Marked) {
+	if c != nil && c.marked.rowsOK && c.marked.rowsTree == tree && c.marked.rowsRev == view.Strip.CollapsedRev && c.marked.rev == view.MarksRev && c.marked.n == len(view.Marked) {
 		return c.marked.rows
 	}
-	rows := selstrip.Rows(paths, snap.EffectiveDisplayRoot().String(), tree)
+	rows := selstrip.Rows(paths, snap.EffectiveDisplayRoot().String(), tree, view.Strip.Collapsed)
 	if c != nil {
-		c.marked.rows, c.marked.rowsTree, c.marked.rowsOK = rows, tree, true
+		c.marked.rows, c.marked.rowsTree, c.marked.rowsRev, c.marked.rowsOK = rows, tree, view.Strip.CollapsedRev, true
 	}
 	return rows
 }

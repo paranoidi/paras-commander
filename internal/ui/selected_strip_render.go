@@ -164,6 +164,9 @@ func drawSelectedStrip(
 			icon, iconFG := string(mark), styles.PanelRowIconForeground(cursorStyleKey, markSource)
 			if row.Group {
 				icon = styles.FolderIcon(theme.FolderIconDefault)
+				if row.Expanded {
+					icon = styles.FolderIcon(theme.FolderIconOpen)
+				}
 				iconFG = styles.FolderIconForeground(theme.FolderIconDefault, cursorStyleKey, folderRowStyle)
 			}
 			prefix = " " + connector + icon + " "

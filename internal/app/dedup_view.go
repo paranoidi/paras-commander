@@ -483,6 +483,10 @@ func (a *App) handleDedupStripKey(action string, event *tcell.EventKey) bool {
 		c.RevealStripRow()
 	case keymap.ActionPanelSelectedToggleTree:
 		c.ToggleStripTree()
+	case keymap.ActionDedupToggleNode:
+		c.ExpandStripRow()
+	case keymap.ActionDedupCollapse:
+		c.CollapseStripRow()
 	case keymap.ActionPanelRefresh, keymap.ActionDedupToggleSort, keymap.ActionDedupToggleEmpty,
 		keymap.ActionDedupFilterDialog, keymap.ActionDedupToggleTree, keymap.ActionDedupHashPotential,
 		keymap.ActionPanelSelectGroup, keymap.ActionPanelUnselectGroup, keymap.ActionFileDelete,

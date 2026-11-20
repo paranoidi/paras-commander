@@ -31,7 +31,7 @@ func TestClampKeepsCursorVisible(t *testing.T) {
 }
 
 func TestRememberRestore(t *testing.T) {
-	paths := Rows([]string{"/tmp/meadow/bravo.txt", "/tmp/meadow/crystal.txt"}, "/tmp", false)
+	paths := Rows([]string{"/tmp/meadow/bravo.txt", "/tmp/meadow/crystal.txt"}, "/tmp", false, nil)
 	s := State{Cursor: 1}
 	s.Remember(paths)
 	s.Cursor = 0
@@ -59,7 +59,7 @@ func TestMapBasenameRangesToDisplay(t *testing.T) {
 }
 
 func TestRowsTreeFoldsChain(t *testing.T) {
-	rows := Rows([]string{"/tmp/meadow/foo/bar/asdf/crystal.txt"}, "/tmp/meadow", true)
+	rows := Rows([]string{"/tmp/meadow/foo/bar/asdf/crystal.txt"}, "/tmp/meadow", true, nil)
 	if len(rows) != 2 {
 		t.Fatalf("rows = %+v, want folder + file", rows)
 	}
@@ -69,7 +69,30 @@ func TestRowsTreeFoldsChain(t *testing.T) {
 	if rows[1].Group || rows[1].Display != "crystal.txt" || rows[1].Depth != 1 || !rows[1].LastChild {
 		t.Fatalf("file row = %+v", rows[1])
 	}
-	if flat := Rows([]string{"/tmp/meadow/foo/bar/asdf/crystal.txt"}, "/tmp/meadow", false); len(flat) != 1 || flat[0].Group {
+	if flat := Rows([]string{"/tmp/meadow/foo/bar/asdf/crystal.txt"}, "/tmp/meadow", false, nil); len(flat) != 1 || flat[0].Group {
 		t.Fatalf("flat rows = %+v", flat)
+	}
+}
+
+func TestCollapseExpand(t *testing.T) {
+	paths := []string{"/tmp/meadow/lantern/bravo.txt", "/tmp/meadow/lantern/crystal.txt", "/tmp/meadow/willow.txt"}
+	var s State
+	rows := Rows(paths, "/tmp/meadow", true, s.Collapsed)
+	if len(rows) != 4 || !rows[0].Group || !rows[0].Expanded {
+		t.Fatalf("rows = %+v, want open folder lantern + 2 files + willow", rows)
+	}
+	s.Cursor = 2 // crystal.txt: Collapse jumps to the parent folder
+	if s.Collapse(rows) || s.Cursor != 0 {
+		t.Fatalf("collapse on file: cursor = %d, want 0 and no row change", s.Cursor)
+	}
+	if !s.Collapse(rows) {
+		t.Fatal("collapse on open folder reported no change")
+	}
+	rows = Rows(paths, "/tmp/meadow", true, s.Collapsed)
+	if len(rows) != 2 || rows[0].Expanded {
+		t.Fatalf("collapsed rows = %+v, want closed lantern + willow", rows)
+	}
+	if !s.Expand(rows) || len(Rows(paths, "/tmp/meadow", true, s.Collapsed)) != 4 {
+		t.Fatal("expand did not reopen lantern")
 	}
 }

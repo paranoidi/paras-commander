@@ -1990,9 +1990,9 @@ func (s *State) SelectedStripPaths() []string {
 func (s *State) SelectedStripRows() []selstrip.Row {
 	s.ensureSelectionDerived()
 	c := &s.selDerivedCache
-	if !c.stripRowsBuilt || c.stripRowsTree != s.Strip.Tree {
-		c.stripRows = selstrip.Rows(c.stripPaths, s.Path.String(), s.Strip.Tree)
-		c.stripRowsBuilt, c.stripRowsTree = true, s.Strip.Tree
+	if !c.stripRowsBuilt || c.stripRowsTree != s.Strip.Tree || c.stripRowsRev != s.Strip.CollapsedRev {
+		c.stripRows = selstrip.Rows(c.stripPaths, s.Path.String(), s.Strip.Tree, s.Strip.Collapsed)
+		c.stripRowsBuilt, c.stripRowsTree, c.stripRowsRev = true, s.Strip.Tree, s.Strip.CollapsedRev
 	}
 	return c.stripRows
 }

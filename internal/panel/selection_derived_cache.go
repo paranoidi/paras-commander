@@ -17,6 +17,7 @@ type selectionDerivedCache struct {
 	stripRows        []selstrip.Row // stripPaths as strip rows (flat or tree per Strip.Tree)
 	stripRowsBuilt   bool
 	stripRowsTree    bool
+	stripRowsRev     int // Strip.CollapsedRev the rows were built with
 	prunedRoots      []string
 	subtreeAncestors map[string]bool
 }
