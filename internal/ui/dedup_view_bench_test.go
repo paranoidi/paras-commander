@@ -31,7 +31,7 @@ func BenchmarkDrawDedupViewLargeList(b *testing.B) {
 		Secondary: Rect{X: 60, Y: 1, Width: 60, Height: 36},
 	}
 	view := DedupViewState{Main: DedupPane{Selected: 1}, Marked: map[string]bool{}}
-	copies := DedupCopyRows(snap, list[1], nil)
+	copies := DedupCopyRows(snap, list[1], nil, nil)
 	styles := theme.Default()
 
 	b.ResetTimer()
@@ -99,7 +99,7 @@ func BenchmarkDedupCopyRowsTwinDirs(b *testing.B) {
 	list, _ := DedupRowsFromSnapshot(snap, DedupViewState{TreeDirs: true})
 	sel := -1
 	for i, r := range list {
-		if r.Value.Kind == DedupRowDir && DedupTwinDirs(snap, r.Value.DirRel) != nil {
+		if r.Value.Kind == DedupRowDir && DedupTwinDirs(snap, r.Value.DirRel, nil) != nil {
 			sel = i
 			break
 		}
@@ -107,10 +107,11 @@ func BenchmarkDedupCopyRowsTwinDirs(b *testing.B) {
 	if sel < 0 {
 		b.Fatal("no duplicate-dir row")
 	}
+	cache := &DedupCache{}
 	b.ReportAllocs()
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		DedupCopyRows(snap, list[sel], nil)
+	for b.Loop() {
+		DedupCopyRows(snap, list[sel], nil, cache)
 	}
 }
 
@@ -123,7 +124,7 @@ func benchDrawDedupExpanded(b *testing.B, treeDirs bool) {
 	}
 	view.MarksRev++
 	list, _ := DedupRowsFromSnapshot(snap, view)
-	copies := DedupCopyRows(snap, list[3], nil)
+	copies := DedupCopyRows(snap, list[3], nil, nil)
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		b.Fatal(err)
@@ -141,3 +142,32 @@ func benchDrawDedupExpanded(b *testing.B, treeDirs bool) {
 
 func BenchmarkDrawDedupExpandedDirs(b *testing.B)   { benchDrawDedupExpanded(b, true) }
 func BenchmarkDrawDedupExpandedGroups(b *testing.B) { benchDrawDedupExpanded(b, false) }
+
+// BenchmarkDedupCopyRowsSmallTwinDirInLargeSnapshot is one cursor move onto a
+// content twin dir holding three files, in a 40k-group snapshot with thousands
+// of other dir groups.
+func BenchmarkDedupCopyRowsSmallTwinDirInLargeSnapshot(b *testing.B) {
+	snap := dedupNestedBenchSnapshot(40000)
+	var smallFiles []comparepkg.DedupFile
+	for _, rel := range []string{"twin_alpha/a.dat", "twin_alpha/b.dat", "twin_alpha/c.dat", "twin_beta/a.dat", "twin_beta/b.dat", "twin_beta/c.dat"} {
+		smallFiles = append(smallFiles, comparepkg.DedupFile{Rel: rel, Abs: pathloc.MustParse("/scan/root/" + rel)})
+	}
+	for i := range 3 {
+		snap.Groups = append(snap.Groups, comparepkg.DedupGroup{Hash: [32]byte{9, byte(i)}, Size: 100, Files: []comparepkg.DedupFile{smallFiles[i], smallFiles[i+3]}})
+	}
+	for i := range 2000 {
+		a, c := fmt.Sprintf("filler/%04d_a", i), fmt.Sprintf("filler/%04d_b", i)
+		snap.DirGroups = append(snap.DirGroups, comparepkg.DedupDirGroup{Kind: comparepkg.DirContent, Size: 1, Files: 1, Rels: []string{a, c}, Hidden: []bool{false, false}})
+	}
+	snap.DirGroups = append(snap.DirGroups, comparepkg.DedupDirGroup{Kind: comparepkg.DirContent, Size: 300, Files: 3, Rels: []string{"twin_alpha", "twin_beta"}, Hidden: []bool{false, false}})
+	cache := &DedupCache{}
+	sel := DedupRow{Value: &DedupRowData{Kind: DedupRowDir, DirRel: "twin_alpha"}}
+	if n := len(DedupCopyRows(snap, sel, nil, cache)); n != 4 {
+		b.Fatalf("rows = %d, want 4", n)
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		DedupCopyRows(snap, sel, nil, cache)
+	}
+}

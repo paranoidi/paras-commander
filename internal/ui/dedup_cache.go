@@ -1,6 +1,11 @@
 package ui
 
 import (
+	"iter"
+	"slices"
+	"sort"
+	"strings"
+
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/treeflat"
 )
@@ -16,12 +21,14 @@ import (
 // IgnoreEmpty and DedupViewState.GroupFilterRev for the tree; the same slice
 // identity plus DedupViewState.MarksRev for the mark sets. Whoever assigns
 // GroupFilter bumps GroupFilterRev, whoever changes Marked or Kept bumps MarksRev.
-// Used from the UI goroutine only.
+// The snapshot index (dedupIndex) is keyed by the Groups and DirGroups slice
+// identities. Used from the UI goroutine only.
 type DedupCache struct {
 	tree      *dedupTree
 	marks     *dedupMarkSets
 	copyMarks *dedupCopyMarkSet
 	widths    dedupWidths // copies pane
+	index     *dedupIndex
 }
 
 // dedupGroupsKey identifies a snapshot's Groups slice by its first element.
@@ -47,7 +54,7 @@ type dedupTreeKey struct {
 type dedupTree struct {
 	key          dedupTreeKey
 	roots        []treeflat.Node[*DedupRowData]
-	ignoredEmpty int // files dropped by the ignore-empty filter
+	ignoredEmpty int      // files dropped by the ignore-empty filter
 	ids          []string // expandable node IDs, depth-first, see walkOnce
 	idDepths     []int    // depth of each ids entry
 	depthCounts  []int    // node count per depth, expanded or not
@@ -131,7 +138,15 @@ func dedupTreeFor(snap comparepkg.DedupSnapshot, view DedupViewState) *dedupTree
 		idxs = append(idxs, i)
 	}
 	if view.TreeDirs {
-		t.roots = dedupDirRoots(snap, idxs, nil)
+		t.roots = dedupDirRoots(snap, dedupIndexFor(snap, c).marks, func(yield func(int, comparepkg.DedupFile) bool) {
+			for _, gi := range idxs {
+				for _, f := range snap.Groups[gi].Files {
+					if !yield(gi, f) {
+						return
+					}
+				}
+			}
+		})
 	} else {
 		t.roots = dedupGroupRoots(snap, idxs, view.SortByWasted)
 	}
@@ -218,4 +233,110 @@ func (c *DedupCache) columnWidths(rows []DedupRow) (sizeW, countW int) {
 		w.rows = rows
 	}
 	return w.sizeW, w.countW
+}
+
+// dedupDirGroupsKey identifies a snapshot's DirGroups slice by its first element.
+type dedupDirGroupsKey struct {
+	first *comparepkg.DedupDirGroup
+	n     int
+}
+
+// dedupIndex holds what the copies pane and tree look up per snapshot: the
+// member-dir marker map (the single source for "which dir group is dirRel in",
+// an exact group wins over a content group) and, built on first use, every
+// file sorted by Rel so the files under a directory form one contiguous range.
+type dedupIndex struct {
+	groups    dedupGroupsKey
+	dirGroups dedupDirGroupsKey
+	marks     map[string]dedupDirMark // member dir rel -> marker; nil without dir groups
+	files     []dedupFileRef          // sorted by rel; built by sortedFiles
+	filesDone bool
+}
+
+type dedupFileRef struct {
+	rel    string
+	gi, fi int // snap.Groups[gi].Files[fi]
+}
+
+// dedupIndexFor returns the snapshot index, reusing the cached one while the
+// Groups and DirGroups slices are the same; a nil cache builds a fresh one.
+func dedupIndexFor(snap comparepkg.DedupSnapshot, c *DedupCache) *dedupIndex {
+	key := dedupIndex{groups: dedupGroupsID(snap.Groups)}
+	if len(snap.DirGroups) > 0 {
+		key.dirGroups = dedupDirGroupsKey{&snap.DirGroups[0], len(snap.DirGroups)}
+	}
+	if c != nil && c.index != nil && c.index.groups == key.groups && c.index.dirGroups == key.dirGroups {
+		return c.index
+	}
+	// ponytail: zero-size dir groups need no IgnoreEmpty check; their zero-byte files are hidden then, so no row exists.
+	if len(snap.DirGroups) > 0 {
+		key.marks = map[string]dedupDirMark{}
+		for gi, g := range snap.DirGroups {
+			for i, r := range g.Rels {
+				if m, ok := key.marks[r]; !ok || (m.kind == comparepkg.DirContent && g.Kind == comparepkg.DirExact) {
+					key.marks[r] = dedupDirMark{kind: g.Kind, hidden: g.Hidden[i], group: gi}
+				}
+			}
+		}
+	}
+	idx := &key
+	if c != nil {
+		c.index = idx
+	}
+	return idx
+}
+
+// filesUnder yields every file (with its group index) inside any of the dirs,
+// once each: a dir nested under another listed dir adds nothing, and "" is the
+// whole snapshot. Only the matching ranges of the sorted file index are visited.
+func (x *dedupIndex) filesUnder(snap comparepkg.DedupSnapshot, dirs []string) iter.Seq2[int, comparepkg.DedupFile] {
+	if !x.filesDone {
+		for gi, g := range snap.Groups {
+			for fi, f := range g.Files {
+				x.files = append(x.files, dedupFileRef{f.Rel, gi, fi})
+			}
+		}
+		slices.SortFunc(x.files, func(a, b dedupFileRef) int { return strings.Compare(a.rel, b.rel) })
+		x.filesDone = true
+	}
+	set := make(map[string]bool, len(dirs))
+	for _, d := range dirs {
+		set[d] = true
+	}
+	return func(yield func(int, comparepkg.DedupFile) bool) {
+		if set[""] {
+			for _, r := range x.files {
+				if !yield(r.gi, snap.Groups[r.gi].Files[r.fi]) {
+					return
+				}
+			}
+			return
+		}
+		for _, d := range dirs {
+			if dedupHasListedAncestor(set, d) {
+				continue
+			}
+			prefix := d + "/"
+			i := sort.Search(len(x.files), func(i int) bool { return x.files[i].rel >= prefix })
+			for ; i < len(x.files) && strings.HasPrefix(x.files[i].rel, prefix); i++ {
+				r := x.files[i]
+				if !yield(r.gi, snap.Groups[r.gi].Files[r.fi]) {
+					return
+				}
+			}
+		}
+	}
+}
+
+// dedupHasListedAncestor reports whether a strict ancestor dir of rel is in set.
+func dedupHasListedAncestor(set map[string]bool, rel string) bool {
+	for {
+		i := strings.LastIndexByte(rel, '/')
+		if i < 0 {
+			return false
+		}
+		if rel = rel[:i]; set[rel] {
+			return true
+		}
+	}
 }

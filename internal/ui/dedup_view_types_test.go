@@ -345,7 +345,7 @@ func TestDedupCopyRowsCompactSingleDirChains(t *testing.T) {
 	}
 	rows, _ := DedupRowsFromSnapshot(snap, DedupViewState{IgnoreEmpty: true, TreeDirs: true})
 	sel := rows[DedupRowIndexByID(rows, "/root/copper")]
-	copies := DedupCopyRows(snap, sel, nil)
+	copies := DedupCopyRows(snap, sel, nil, nil)
 	if len(copies) != 2 || copies[0].Value.Display != "orchard/meadow" || copies[0].ID != "d:orchard/meadow" {
 		t.Fatalf("copies = %+v, want combined orchard/meadow row and its file", copies)
 	}
@@ -454,7 +454,7 @@ func TestDedupCopyRows(t *testing.T) {
 
 	// Selection on the first group's header: copies pane shows the OTHER two
 	// copies as a directory tree, excluding the selected file itself.
-	copies := DedupCopyRows(snap, rows[0], nil)
+	copies := DedupCopyRows(snap, rows[0], nil, nil)
 	var files []string
 	for _, r := range copies {
 		if r.Value.Kind == DedupRowFile {
@@ -479,7 +479,7 @@ func TestDedupCopyRows(t *testing.T) {
 			break
 		}
 	}
-	if got := DedupCopyRows(snap, dirRow, nil); got != nil {
+	if got := DedupCopyRows(snap, dirRow, nil, nil); got != nil {
 		t.Fatalf("copies for dir row = %v, want nil", got)
 	}
 }

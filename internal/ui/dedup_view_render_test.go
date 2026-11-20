@@ -296,7 +296,7 @@ func TestDrawDedupViewUnfocusedKeptCursorRowUsesInactiveCursor(t *testing.T) {
 		}},
 	}
 	list, _ := DedupRowsFromSnapshot(snap, DedupViewState{IgnoreEmpty: true})
-	copies := DedupCopyRows(snap, list[0], nil)
+	copies := DedupCopyRows(snap, list[0], nil, nil)
 	view := DedupViewState{
 		// Keeping A marks its copy B for deletion: the copies-pane cursor sits on a marked row.
 		Kept:   map[string]bool{absA.String(): true},
@@ -1176,7 +1176,7 @@ func TestDrawDedupViewCopiesPaneDirUsesSelectionStyleWhenFullyMarked(t *testing.
 			break
 		}
 	}
-	copies := DedupCopyRows(snap, mainSel, nil)
+	copies := DedupCopyRows(snap, mainSel, nil, nil)
 	view := DedupViewState{
 		IgnoreEmpty: true,
 		TreeDirs:    true,
@@ -1710,7 +1710,7 @@ func TestDedupCopyRowsForDuplicateDir(t *testing.T) {
 	}
 	list, _ := DedupRowsFromSnapshot(snap, DedupViewState{TreeDirs: true})
 	sel := list[DedupRowIndexByID(list, "d:harbor")]
-	rows := DedupCopyRows(snap, sel, nil)
+	rows := DedupCopyRows(snap, sel, nil, nil)
 	var got []string
 	for _, r := range rows {
 		got = append(got, r.ID)
@@ -1719,7 +1719,7 @@ func TestDedupCopyRowsForDuplicateDir(t *testing.T) {
 	if !slices.Equal(got, want) {
 		t.Fatalf("copy rows = %v, want %v", got, want)
 	}
-	if rows := DedupCopyRows(snap, list[DedupRowIndexByID(list, "d:orchard")], nil); rows != nil {
+	if rows := DedupCopyRows(snap, list[DedupRowIndexByID(list, "d:orchard")], nil, nil); rows != nil {
 		t.Fatalf("non-duplicate dir copy rows = %v, want nil", rows)
 	}
 }

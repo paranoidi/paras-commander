@@ -770,7 +770,7 @@ func (h *Handler) syncCopies() {
 	}
 	st.SourceRow, st.SourceStale = st.Main.Selected, false
 	sel, _ := h.paneRow(&st.Main, h.model.DedupList)
-	h.model.DedupCopiesList = ui.DedupCopyRows(h.model.DedupSnapshot, sel, st.Copies.Collapsed)
+	h.model.DedupCopiesList = ui.DedupCopyRows(h.model.DedupSnapshot, sel, st.Copies.Collapsed, st.Cache)
 	h.refilterPane(&st.Copies, h.model.DedupCopiesList)
 	if i := ui.DedupRowIndexByID(h.model.DedupCopiesList, prevID); i >= 0 {
 		st.Copies.Selected = i
@@ -1049,7 +1049,7 @@ func (h *Handler) resyncFocused() {
 	if st.FocusCopies {
 		sel, _ := h.paneRow(&st.Main, h.model.DedupList)
 		prev, _ := h.paneRow(&st.Copies, h.model.DedupCopiesList)
-		h.model.DedupCopiesList = ui.DedupCopyRows(h.model.DedupSnapshot, sel, st.Copies.Collapsed)
+		h.model.DedupCopiesList = ui.DedupCopyRows(h.model.DedupSnapshot, sel, st.Copies.Collapsed, st.Cache)
 		if i := ui.DedupRowIndexByID(h.model.DedupCopiesList, prev.ID); i >= 0 {
 			st.Copies.Selected = i
 		}
@@ -1184,7 +1184,7 @@ func (h *Handler) CollapseAll() {
 	var ids []string
 	if st.FocusCopies {
 		sel, _ := h.paneRow(&st.Main, h.model.DedupList)
-		ids = ui.DedupCopyExpandableIDs(h.model.DedupSnapshot, sel)
+		ids = ui.DedupCopyExpandableIDs(h.model.DedupSnapshot, sel, st.Cache)
 	} else {
 		ids = ui.DedupExpandableIDs(h.model.DedupSnapshot, *st)
 	}
@@ -1211,7 +1211,7 @@ func (h *Handler) ExpandAll() {
 	var depths []int
 	if st.FocusCopies {
 		sel, _ := h.paneRow(&st.Main, h.model.DedupList)
-		for _, r := range ui.DedupCopyRows(h.model.DedupSnapshot, sel, nil) {
+		for _, r := range ui.DedupCopyRows(h.model.DedupSnapshot, sel, nil, st.Cache) {
 			for r.Depth >= len(counts) {
 				counts = append(counts, 0)
 			}
