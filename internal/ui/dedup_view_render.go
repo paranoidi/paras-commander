@@ -144,11 +144,6 @@ func drawDedupView(
 		emptyText = "No copies outside " + rootHeader
 	}
 	sets := dedupMarkSetsFor(snap, view)
-	markedDirs, dangerMarkedDirs, keptDirs := sets.marked, sets.danger, sets.kept
-	var treeFullyMarkedDirs map[string]bool
-	if view.TreeDirs {
-		treeFullyMarkedDirs = sets.treeFull
-	}
 	var copyFullyMarkedDirs map[string]bool
 	if sel, ok := dedupRowAt(list, view.SourceRow); ok && sel.Value.Kind == DedupRowFile {
 		copyFullyMarkedDirs = dedupCopyFullyMarkedFor(snap, view, sel)
@@ -163,23 +158,21 @@ func drawDedupView(
 		mainAnchor, copiesAnchor = "", view.RangeAnchor
 	}
 	drawDedupTreePane(screen, layout.Primary, dedupPaneParams{
-		Title:            dedupViewTitle(snap, view.OutsideOf != "", view.IgnoredEmptyCount, view.RecheckPercent()),
-		EndLabel:         panelSelectionSizePadded(dedupEndLabel(view)),
-		Header:           rootHeader,
-		Rows:             list,
-		Pane:             view.Main,
-		Focused:          !view.FocusCopies && !view.FocusPanel,
-		RangePending:     !view.FocusCopies && !view.FocusPanel && view.RangeAnchor != "",
-		EmptyText:        emptyText,
-		ActiveGroup:      activeGroup,
-		HintDirs:         hintDirs,
-		TwinDirs:         twinDirs,
-		FullyMarkedDirs:  treeFullyMarkedDirs,
-		MarkedDirs:       markedDirs,
-		DangerMarkedDirs: dangerMarkedDirs,
-		KeptDirs:         keptDirs,
-		RowMarks:         withRangeAnchor(rowMarks, mainAnchor),
-		Hover:            dedupPaneHover(hover, false),
+		Title:        dedupViewTitle(snap, view.OutsideOf != "", view.IgnoredEmptyCount, view.RecheckPercent()),
+		EndLabel:     panelSelectionSizePadded(dedupEndLabel(view)),
+		Header:       rootHeader,
+		Rows:         list,
+		Pane:         view.Main,
+		Focused:      !view.FocusCopies && !view.FocusPanel,
+		RangePending: !view.FocusCopies && !view.FocusPanel && view.RangeAnchor != "",
+		EmptyText:    emptyText,
+		ActiveGroup:  activeGroup,
+		HintDirs:     hintDirs,
+		TwinDirs:     twinDirs,
+		TreeFullDirs: view.TreeDirs,
+		Marks:        sets,
+		RowMarks:     withRangeAnchor(rowMarks, mainAnchor),
+		Hover:        dedupPaneHover(hover, false),
 	}, snap, view, styles, chromeBlocked)
 
 	copiesHeader := ""
@@ -196,21 +189,19 @@ func drawDedupView(
 	}
 	copiesRect, _ := DedupSecondaryRects(layout.Secondary)
 	drawDedupTreePane(screen, copiesRect, dedupPaneParams{
-		Title:            " Copies ",
-		Header:           copiesHeader,
-		Rows:             copies,
-		Pane:             view.Copies,
-		Focused:          view.FocusCopies && !view.FocusPanel,
-		RangePending:     view.FocusCopies && !view.FocusPanel && view.RangeAnchor != "",
-		EmptyText:        copiesEmpty,
-		ActiveGroup:      -1,
-		CopiesPane:       true,
-		FullyMarkedDirs:  copyFullyMarkedDirs,
-		MarkedDirs:       markedDirs,
-		DangerMarkedDirs: dangerMarkedDirs,
-		KeptDirs:         keptDirs,
-		RowMarks:         withRangeAnchor(rowMarks, copiesAnchor),
-		Hover:            dedupPaneHover(hover, true),
+		Title:           " Copies ",
+		Header:          copiesHeader,
+		Rows:            copies,
+		Pane:            view.Copies,
+		Focused:         view.FocusCopies && !view.FocusPanel,
+		RangePending:    view.FocusCopies && !view.FocusPanel && view.RangeAnchor != "",
+		EmptyText:       copiesEmpty,
+		ActiveGroup:     -1,
+		CopiesPane:      true,
+		FullyMarkedDirs: copyFullyMarkedDirs,
+		Marks:           sets,
+		RowMarks:        withRangeAnchor(rowMarks, copiesAnchor),
+		Hover:           dedupPaneHover(hover, true),
 	}, snap, view, styles, chromeBlocked)
 }
 
@@ -223,24 +214,23 @@ func dedupRowAt(rows []DedupRow, idx int) (DedupRow, bool) {
 
 // dedupPaneParams bundles per-pane rendering inputs for drawDedupTreePane.
 type dedupPaneParams struct {
-	Title            string
-	EndLabel         string
-	Header           string
-	Rows             []DedupRow
-	Pane             DedupPane
-	Focused          bool
-	EmptyText        string
-	ActiveGroup      int
-	HintDirs         map[string]bool     // dirs mode: DirRel keys whose subtree contains ActiveGroup or a twin dir (collapsed-folder hint)
-	TwinDirs         map[string]bool     // dirs mode: duplicate-directory twins of the cursor folder (always hinted)
-	CopiesPane       bool                // copies pane: dir rows can show fully-marked copy styling
-	FullyMarkedDirs  map[string]bool     // DirRel keys whose entire descendant duplicate subtree is marked
-	MarkedDirs       map[string]bool     // DirRel keys of dirs whose subtree has a marked file
-	DangerMarkedDirs map[string]bool     // DirRel keys of dirs whose subtree has a fully-marked group
-	KeptDirs         map[string]bool     // DirRel keys of dirs whose subtree has a kept file
-	RangePending     bool                // focused pane with a pending range-select anchor: cursor row uses panel.row.cursor.range
-	RowMarks         dialog.RowMarksFunc // resolves the pin/in-progress-job trailing marks for one row's absolute path
-	Hover            ListRowHover        // row under the mouse pointer in this pane (jobs.row.hover unless it is the cursor row)
+	Title           string
+	EndLabel        string
+	Header          string
+	Rows            []DedupRow
+	Pane            DedupPane
+	Focused         bool
+	EmptyText       string
+	ActiveGroup     int
+	HintDirs        map[string]bool     // dirs mode: DirRel keys whose subtree contains ActiveGroup or a twin dir (collapsed-folder hint)
+	TwinDirs        map[string]bool     // dirs mode: duplicate-directory twins of the cursor folder (always hinted)
+	CopiesPane      bool                // copies pane: dir rows can show fully-marked copy styling
+	FullyMarkedDirs map[string]bool     // copies pane: DirRel keys whose entire descendant copy subtree is marked
+	TreeFullDirs    bool                // tree pane: dir rows whose whole file subtree is marked (Marks.full) show fully-marked styling
+	Marks           *dedupMarkSets      // snapshot-wide per-dir marked/kept/danger counters; nil answers false
+	RangePending    bool                // focused pane with a pending range-select anchor: cursor row uses panel.row.cursor.range
+	RowMarks        dialog.RowMarksFunc // resolves the pin/in-progress-job trailing marks for one row's absolute path
+	Hover           ListRowHover        // row under the mouse pointer in this pane (jobs.row.hover unless it is the cursor row)
 }
 
 // dedupPaneHover is hover when it is on the pane (copies selects the Copies pane), else none.
@@ -328,7 +318,7 @@ func drawDedupTreePane(
 		rowSelected := idx == p.Pane.Selected
 		groupAllMarked := d.Kind == DedupRowFile && d.GroupIdx >= 0 && d.GroupIdx < len(snap.Groups) &&
 			DedupGroupFullyMarked(snap.Groups[d.GroupIdx], view.Marked)
-		dirFullyMarked := d.Kind == DedupRowDir && p.FullyMarkedDirs[d.DirRel]
+		dirFullyMarked := d.Kind == DedupRowDir && (p.FullyMarkedDirs[d.DirRel] || (p.TreeFullDirs && p.Marks.full(d.DirRel)))
 
 		flags := dedupRowFlags{
 			RowSelected:    rowSelected,
@@ -455,8 +445,8 @@ func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPanePar
 	if gutter != "" {
 		prefix += gutter + " "
 	}
-	keptSubtree := d.Kind == DedupRowDir && p.KeptDirs[d.DirRel]
-	subtreeMark := keptSubtree || (d.Kind == DedupRowDir && p.MarkedDirs[d.DirRel])
+	keptSubtree := d.Kind == DedupRowDir && p.Marks.kept(d.DirRel)
+	subtreeMark := keptSubtree || (d.Kind == DedupRowDir && p.Marks.marked(d.DirRel))
 	marks := dialog.RowMarks{}
 	if p.RowMarks != nil {
 		marks = p.RowMarks(dedupRowAbsPath(snap, d))
@@ -509,7 +499,7 @@ func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPanePar
 		switch {
 		case keptSubtree:
 			base, icon = styles.PanelDedupRowMarkKeepSubtree, styles.IconDedupKeep()
-		case p.DangerMarkedDirs[d.DirRel]:
+		case p.Marks.danger(d.DirRel):
 			base = styles.PanelDedupRowAllMarked
 		case chromeBlocked:
 			base = styles.PanelBlockedRowSelected
@@ -598,9 +588,9 @@ func dedupRowLegend(styles theme.Theme, p dedupPaneParams, snap comparepkg.Dedup
 	}
 	if d.Kind == DedupRowDir {
 		switch {
-		case p.KeptDirs[d.DirRel]:
+		case p.Marks.kept(d.DirRel):
 			add(styles.IconDedupKeep(), dedupLegendKeptSubtree)
-		case p.MarkedDirs[d.DirRel]:
+		case p.Marks.marked(d.DirRel):
 			add(styles.IconFilelistSelectionSubtree(), dedupLegendMarkedSubtree)
 		}
 	}

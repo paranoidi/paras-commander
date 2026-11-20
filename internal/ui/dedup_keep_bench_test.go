@@ -7,8 +7,19 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
-// BenchmarkDrawDedupAfterKeep is the first frame after a keep: MarksRev changed.
+// BenchmarkDrawDedupAfterKeep is the first frame after a keep that went through
+// NoteMarkChange (the handler's path): the counters move by one file.
 func BenchmarkDrawDedupAfterKeep(b *testing.B) {
+	benchDrawDedupAfterKeep(b, true)
+}
+
+// BenchmarkDrawDedupAfterRecount is the first frame after a MarksRev bump nobody
+// noted (bulk resets): the counters are recounted from the marks.
+func BenchmarkDrawDedupAfterRecount(b *testing.B) {
+	benchDrawDedupAfterKeep(b, false)
+}
+
+func benchDrawDedupAfterKeep(b *testing.B, noted bool) {
 	snap := dedupNestedBenchSnapshot(40000)
 	view := DedupViewState{TreeDirs: true, IgnoreEmpty: true, Cache: &DedupCache{}, Marked: map[string]bool{}, Kept: map[string]bool{}}
 	for g := 0; g < len(snap.Groups); g += 3 {
@@ -30,8 +41,19 @@ func BenchmarkDrawDedupAfterKeep(b *testing.B) {
 	styles := theme.Default()
 	b.ReportAllocs()
 	b.ResetTimer()
+	keepAbs := snap.Groups[1].Files[0].Abs.String()
 	for b.Loop() {
-		view.MarksRev++
+		if noted {
+			on := !view.Kept[keepAbs]
+			if on {
+				view.Kept[keepAbs] = true
+			} else {
+				delete(view.Kept, keepAbs)
+			}
+			view.NoteMarkChange(snap, keepAbs, true, on)
+		} else {
+			view.MarksRev++
+		}
 		drawDedupView(screen, layout, view, snap, list, copies, styles, false, "", SplitHorizontal, nil, ListRowHover{})
 	}
 }

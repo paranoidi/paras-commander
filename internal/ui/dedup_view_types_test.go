@@ -19,6 +19,22 @@ func dedupTestGroup(hashByte byte, size int64, rels ...string) comparepkg.DedupG
 	return g
 }
 
+// dedupMarkDirs lists the snapshot dirs for which the named counter lookup (marked,
+// danger, kept, full) is true; nil when none.
+func dedupMarkDirs(m *dedupMarkSets, kind string) map[string]bool {
+	has := map[string]func(string) bool{"marked": m.marked, "danger": m.danger, "kept": m.kept, "full": m.full}[kind]
+	var out map[string]bool
+	for rel := range m.t.ids {
+		if has(rel) {
+			if out == nil {
+				out = map[string]bool{}
+			}
+			out[rel] = true
+		}
+	}
+	return out
+}
+
 func TestDedupCollapsedSet(t *testing.T) {
 	got := DedupCollapsedSet([]string{"d:meadow", "g:01"})
 	if len(got) != 2 || !got["d:meadow"] || !got["g:01"] {
@@ -616,10 +632,10 @@ func TestDedupMarkSetsMarked(t *testing.T) {
 			dedupTestGroup(1, 10, "meadow/copper/anchor", "harbor/anchor"),
 		},
 	}
-	if got := dedupMarkSetsFor(snap, DedupViewState{}).marked; got != nil {
+	if got := dedupMarkDirs(dedupMarkSetsFor(snap, DedupViewState{}), "marked"); got != nil {
 		t.Fatalf("no marks = %v, want nil", got)
 	}
-	got := dedupMarkSetsFor(snap, DedupViewState{Marked: map[string]bool{"/root/meadow/copper/anchor": true}}).marked
+	got := dedupMarkDirs(dedupMarkSetsFor(snap, DedupViewState{Marked: map[string]bool{"/root/meadow/copper/anchor": true}}), "marked")
 	if len(got) != 2 || !got["meadow"] || !got["meadow/copper"] {
 		t.Fatalf("marked dirs = %v, want exactly meadow + meadow/copper", got)
 	}
@@ -632,18 +648,18 @@ func TestDedupMarkSetsDanger(t *testing.T) {
 			dedupTestGroup(1, 10, "meadow/copper/anchor", "harbor/anchor"),
 		},
 	}
-	if got := dedupMarkSetsFor(snap, DedupViewState{}).danger; got != nil {
+	if got := dedupMarkDirs(dedupMarkSetsFor(snap, DedupViewState{}), "danger"); got != nil {
 		t.Fatalf("no marks = %v, want nil", got)
 	}
 	partial := map[string]bool{"/root/meadow/copper/anchor": true}
-	if got := dedupMarkSetsFor(snap, DedupViewState{Marked: partial}).danger; len(got) != 0 {
+	if got := dedupMarkDirs(dedupMarkSetsFor(snap, DedupViewState{Marked: partial}), "danger"); len(got) != 0 {
 		t.Fatalf("partial mark danger dirs = %v, want none", got)
 	}
 	full := map[string]bool{
 		"/root/meadow/copper/anchor": true,
 		"/root/harbor/anchor":        true,
 	}
-	got := dedupMarkSetsFor(snap, DedupViewState{Marked: full}).danger
+	got := dedupMarkDirs(dedupMarkSetsFor(snap, DedupViewState{Marked: full}), "danger")
 	if len(got) != 3 || !got["meadow"] || !got["meadow/copper"] || !got["harbor"] {
 		t.Fatalf("fully marked danger dirs = %v, want meadow + meadow/copper + harbor", got)
 	}
@@ -771,11 +787,11 @@ func TestDedupMarkSetsKept(t *testing.T) {
 			dedupTestGroup(1, 10, "meadow/copper/anchor", "harbor/anchor"),
 		},
 	}
-	got := dedupMarkSetsFor(snap, DedupViewState{Kept: kept}).kept
+	got := dedupMarkDirs(dedupMarkSetsFor(snap, DedupViewState{Kept: kept}), "kept")
 	if len(got) != 3 || !got["meadow"] || !got["meadow/copper"] || !got["harbor"] {
 		t.Fatalf("kept dirs = %v, want meadow + meadow/copper + harbor", got)
 	}
-	if dedupMarkSetsFor(snap, DedupViewState{}).kept != nil {
+	if dedupMarkDirs(dedupMarkSetsFor(snap, DedupViewState{}), "kept") != nil {
 		t.Fatal("nil kept should return nil dir set")
 	}
 }
@@ -858,7 +874,7 @@ func TestDedupMarkSetsTreeFull(t *testing.T) {
 		},
 	}
 	partial := map[string]bool{"/root/meadow/lantern.txt": true}
-	got := dedupMarkSetsFor(snap, DedupViewState{Marked: partial}).treeFull
+	got := dedupMarkDirs(dedupMarkSetsFor(snap, DedupViewState{Marked: partial}), "full")
 	if len(got) != 0 {
 		t.Fatalf("partial marks = %v, want none fully marked", got)
 	}
@@ -866,7 +882,7 @@ func TestDedupMarkSetsTreeFull(t *testing.T) {
 		"/root/meadow/lantern.txt": true,
 		"/root/meadow/beacon.txt":  true,
 	}
-	got = dedupMarkSetsFor(snap, DedupViewState{Marked: fullMeadow}).treeFull
+	got = dedupMarkDirs(dedupMarkSetsFor(snap, DedupViewState{Marked: fullMeadow}), "full")
 	if len(got) != 1 || !got["meadow"] {
 		t.Fatalf("meadow fully marked = %v, want only meadow", got)
 	}
@@ -877,7 +893,7 @@ func TestDedupMarkSetsTreeFull(t *testing.T) {
 		"/root/orchard/lantern.txt": true,
 		"/root/orchard/beacon.txt":  true,
 	}
-	got = dedupMarkSetsFor(snap, DedupViewState{Marked: fullAll}).treeFull
+	got = dedupMarkDirs(dedupMarkSetsFor(snap, DedupViewState{Marked: fullAll}), "full")
 	if len(got) != 2 || !got["meadow"] || !got["orchard"] {
 		t.Fatalf("all files marked = %v, want meadow + orchard", got)
 	}

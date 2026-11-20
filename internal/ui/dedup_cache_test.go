@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"fmt"
+	"math/rand"
 	"slices"
 	"testing"
 
@@ -85,22 +87,22 @@ func TestDedupCacheInvalidates(t *testing.T) {
 	}
 
 	// Mark sets follow MarksRev.
-	if got := dedupMarkSetsFor(snap, view).marked; got != nil {
+	if got := dedupMarkDirs(dedupMarkSetsFor(snap, view), "marked"); got != nil {
 		t.Fatalf("no marks: dirs = %v, want nil", got)
 	}
 	view.Marked = map[string]bool{"/root/walnut/ember/quilt": true}
 	view.MarksRev++
-	if got := dedupMarkSetsFor(snap, view).marked; !got["walnut"] || !got["walnut/ember"] || len(got) != 2 {
+	if got := dedupMarkDirs(dedupMarkSetsFor(snap, view), "marked"); !got["walnut"] || !got["walnut/ember"] || len(got) != 2 {
 		t.Fatalf("after mark: dirs = %v, want walnut + walnut/ember", got)
 	}
 	view.Kept = map[string]bool{"/root/harbor/anchor": true}
 	view.MarksRev++
-	if got := dedupMarkSetsFor(snap, view).kept; !got["harbor"] {
+	if got := dedupMarkDirs(dedupMarkSetsFor(snap, view), "kept"); !got["harbor"] {
 		t.Fatalf("after keep: kept dirs = %v, want harbor", got)
 	}
 	view.Marked, view.Kept = nil, nil
 	view.MarksRev++
-	if got := dedupMarkSetsFor(snap, view).marked; got != nil {
+	if got := dedupMarkDirs(dedupMarkSetsFor(snap, view), "marked"); got != nil {
 		t.Fatalf("after clear: dirs = %v, want nil", got)
 	}
 
@@ -160,5 +162,84 @@ func TestDedupCacheSharesRowPayloads(t *testing.T) {
 		if i < 0 || a[i].Value != rb.Value {
 			t.Fatalf("row %q payload not shared between flattens", rb.ID)
 		}
+	}
+}
+
+// TestDedupMarkSetsIncrementalMatchesRecount applies random mark/keep changes through
+// NoteMarkChange and compares every dir's four answers with a fresh recount after each.
+func TestDedupMarkSetsIncrementalMatchesRecount(t *testing.T) {
+	rng := rand.New(rand.NewSource(7))
+	words := []string{"meadow", "copper", "anchor", "harbor", "walnut", "ember", "quilt", "lantern", "orchard", "beacon", "willow", "pebble"}
+	snap := comparepkg.DedupSnapshot{Phase: comparepkg.DedupDone}
+	var abs []string
+	for g := range 14 {
+		var rels []string
+		for range 2 + rng.Intn(3) {
+			rel := fmt.Sprintf("%s-%d", words[rng.Intn(len(words))], rng.Intn(1000))
+			for range rng.Intn(4) { // 0..3 nested dirs
+				rel = words[rng.Intn(4)] + "/" + rel
+			}
+			rels = append(rels, rel)
+			abs = append(abs, "/root/"+rel)
+		}
+		snap.Groups = append(snap.Groups, dedupTestGroup(byte(g+1), 10, rels...))
+	}
+	abs = append(abs, "/root/outside/stranger") // not in the snapshot
+
+	view := DedupViewState{Cache: &DedupCache{}, Marked: map[string]bool{}, Kept: map[string]bool{}}
+	same := func(step int) {
+		t.Helper()
+		got := dedupMarkSetsFor(snap, view)
+		want := dedupMarkSetsFor(snap, DedupViewState{Marked: view.Marked, Kept: view.Kept}) // nil Cache: fresh recount
+		for rel := range want.t.ids {
+			if got.marked(rel) != want.marked(rel) || got.danger(rel) != want.danger(rel) ||
+				got.kept(rel) != want.kept(rel) || got.full(rel) != want.full(rel) {
+				t.Fatalf("step %d dir %q: incremental m=%v d=%v k=%v f=%v, recount m=%v d=%v k=%v f=%v", step, rel,
+					got.marked(rel), got.danger(rel), got.kept(rel), got.full(rel),
+					want.marked(rel), want.danger(rel), want.kept(rel), want.full(rel))
+			}
+		}
+		for gi := range snap.Groups {
+			if got.groupMarked[gi] != want.groupMarked[gi] {
+				t.Fatalf("step %d group %d: marked members %d, recount %d", step, gi, got.groupMarked[gi], want.groupMarked[gi])
+			}
+		}
+	}
+	same(0)
+	base := view.Cache.marks
+	sawDanger, sawFull := false, false
+	for step := 1; step <= 600; step++ {
+		a, keep, on := abs[rng.Intn(len(abs))], rng.Intn(3) == 0, rng.Intn(100) < 65
+		set := view.Marked
+		if keep {
+			set = view.Kept
+		}
+		if set[a] == on {
+			continue
+		}
+		if on {
+			set[a] = true
+		} else {
+			delete(set, a)
+		}
+		if step%97 == 0 { // a writer that only bumps MarksRev: counters go stale, the next draw recounts
+			view.MarksRev++
+			same(step)
+			if view.Cache.marks == base {
+				t.Fatal("bump without NoteMarkChange must recount")
+			}
+			base = view.Cache.marks
+			continue
+		}
+		view.NoteMarkChange(snap, a, keep, on)
+		same(step)
+		if view.Cache.marks != base {
+			t.Fatalf("step %d: NoteMarkChange recounted instead of updating in place", step)
+		}
+		sawDanger = sawDanger || dedupMarkDirs(view.Cache.marks, "danger") != nil
+		sawFull = sawFull || dedupMarkDirs(view.Cache.marks, "full") != nil
+	}
+	if !sawDanger || !sawFull {
+		t.Fatalf("sequence never reached a fully-marked group (%v) or dir (%v)", sawDanger, sawFull)
 	}
 }

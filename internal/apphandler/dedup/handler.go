@@ -1467,17 +1467,17 @@ func (h *Handler) setMark(absKey string, size int64, on bool) {
 		st.Marked[absKey] = true
 		st.MarkedCount++
 		st.MarkedReclaimBytes += size
-		st.MarksRev++
+		st.NoteMarkChange(h.model.DedupSnapshot, absKey, false, true)
 	case !on && st.Marked[absKey]:
 		delete(st.Marked, absKey)
 		st.MarkedCount--
 		st.MarkedReclaimBytes -= size
-		st.MarksRev++
+		st.NoteMarkChange(h.model.DedupSnapshot, absKey, false, false)
 	}
 }
 
 // setKept adds/removes one file's keep designation. Every change to Kept goes
-// through here (or resetMarked) so MarksRev invalidates the cached dir sets.
+// through here (or resetMarks) so the cached dir counters follow or recount.
 func (h *Handler) setKept(absKey string, on bool) {
 	st := &h.model.DedupView
 	if st.Kept[absKey] == on {
@@ -1491,7 +1491,7 @@ func (h *Handler) setKept(absKey string, on bool) {
 	} else {
 		delete(st.Kept, absKey)
 	}
-	st.MarksRev++
+	st.NoteMarkChange(h.model.DedupSnapshot, absKey, true, on)
 }
 
 // resetMarked drops every delete mark (not the keeps) and their totals.
