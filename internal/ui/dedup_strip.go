@@ -33,30 +33,34 @@ func DedupMainRects(primary Rect, model *Model) (tree, strip Rect) {
 // appends to it while jrev (the MarksRev the journal runs up to) equals the revision before
 // the bump, anything else drops it (jok false) and the next use rebuilds from view.Marked.
 type dedupMarkedPaths struct {
-	rev, n int
-	paths  []string
-	gen    int // bumped whenever paths changes, the rows' key
+	rev   int
+	paths []string
+	gen   int // bumped whenever paths changes, the rows' key
 
 	journal map[string]bool // abs -> marked now, for the files changed since rev
 	jrev    int
 	jok     bool
 
-	tree       *treeflat.PathTree // labels of paths, kept in step with them; nil: built on the next tree-mode use
-	treeBase   string
-	treeGroups dedupGroupsKey
+	tree    *treeflat.PathTree // labels of paths, kept in step with them; nil: built on the next tree-mode use
+	treeKey dedupStripTreeKey
 
 	rows    []selstrip.Row
 	rowsKey dedupStripKey
 	rowsOK  bool
 }
 
-// dedupStripKey is what the cached rows were built from; base and groups only matter in tree mode.
+// dedupStripKey is what the cached rows were built from; treeKey only matters in tree mode.
 type dedupStripKey struct {
 	gen          int
 	tree         bool
 	collapsedRev int
-	base         string
-	groups       dedupGroupsKey
+	treeKey      dedupStripTreeKey
+}
+
+// dedupStripTreeKey is what the label tree was built for: the label base and the snapshot.
+type dedupStripTreeKey struct {
+	base   string
+	groups dedupGroupsKey
 }
 
 // dedupJournalTooBig reports whether k journaled changes over n paths are not worth applying
@@ -80,7 +84,7 @@ func (m *dedupMarkedPaths) note(old, now int, absKey string, keep, on bool) {
 		m.journal = map[string]bool{}
 	}
 	m.journal[absKey] = on
-	if dedupJournalTooBig(len(m.journal), m.n) {
+	if dedupJournalTooBig(len(m.journal), len(m.paths)) {
 		m.jok, m.journal = false, nil
 	}
 }
@@ -88,7 +92,7 @@ func (m *dedupMarkedPaths) note(old, now int, absKey string, keep, on bool) {
 // replay moves paths (and tree) to marks revision rev by the journal, in O(n + k log k) for k
 // changes; false when the journal does not cover rev or does not add up (the caller rebuilds).
 func (m *dedupMarkedPaths) replay(rev, marked int) bool {
-	if m.paths == nil || !m.jok || m.jrev != rev || dedupJournalTooBig(len(m.journal), m.n) {
+	if m.paths == nil || !m.jok || m.jrev != rev || dedupJournalTooBig(len(m.journal), len(m.paths)) {
 		return false
 	}
 	if len(m.journal) > 0 {
@@ -122,14 +126,14 @@ func (m *dedupMarkedPaths) replay(rev, marked int) bool {
 		}
 		if m.tree != nil {
 			for _, e := range edits {
-				if label := selstrip.Label(m.treeBase, e.p); e.on {
+				if label := selstrip.Label(m.treeKey.base, e.p); e.on {
 					m.tree.Add(label, e.p)
 				} else {
 					m.tree.Remove(label)
 				}
 			}
 		}
-		m.paths, m.n = out, len(out)
+		m.paths = out
 		m.gen++
 		clear(m.journal)
 	}
@@ -144,7 +148,7 @@ func DedupMarkedPaths(view DedupViewState) []string {
 	c := view.Cache
 	if c != nil {
 		m := &c.marked
-		if m.paths != nil && m.rev == view.MarksRev && m.n == len(view.Marked) {
+		if m.paths != nil && m.rev == view.MarksRev && len(m.paths) == len(view.Marked) {
 			return m.paths
 		}
 		if m.replay(view.MarksRev, len(view.Marked)) {
@@ -157,7 +161,7 @@ func DedupMarkedPaths(view DedupViewState) []string {
 	}
 	slices.Sort(paths)
 	if c != nil {
-		c.marked = dedupMarkedPaths{rev: view.MarksRev, n: len(paths), paths: paths, gen: c.marked.gen + 1, jok: true, jrev: view.MarksRev}
+		c.marked = dedupMarkedPaths{rev: view.MarksRev, paths: paths, gen: c.marked.gen + 1, jok: true, jrev: view.MarksRev}
 	}
 	return paths
 }
@@ -175,25 +179,34 @@ func DedupStripRows(snap comparepkg.DedupSnapshot, view DedupViewState, tree boo
 	m := &c.marked
 	key := dedupStripKey{gen: m.gen, tree: tree, collapsedRev: view.Strip.CollapsedRev}
 	if tree {
-		key.base, key.groups = base, dedupGroupsID(snap.Groups)
+		key.treeKey = dedupStripTreeKey{base, dedupGroupsID(snap.Groups)}
 	}
 	if m.rowsOK && m.rowsKey == key {
 		return m.rows
 	}
-	if !tree {
-		m.rows = selstrip.FlatRows(paths)
+	if tree {
+		m.rows = selstrip.TreeRows(DedupStripTreeNodes(snap, view), view.Strip.Collapsed)
 	} else {
-		if m.tree == nil || m.treeBase != key.base || m.treeGroups != key.groups {
-			labels := make([]string, len(paths))
-			for i, p := range paths {
-				labels[i] = selstrip.Label(base, p)
-			}
-			m.tree, m.treeBase, m.treeGroups = treeflat.NewPathTree(labels, paths), key.base, key.groups
-		}
-		m.rows = selstrip.TreeRows(m.tree.Nodes(), view.Strip.Collapsed)
+		m.rows = selstrip.FlatRows(paths)
 	}
 	m.rowsKey, m.rowsOK = key, true
 	return m.rows
+}
+
+// DedupStripTreeNodes returns the full label tree of the marked paths (every folder open),
+// cached and moved with the marks. Shared with the cache: read only.
+func DedupStripTreeNodes(snap comparepkg.DedupSnapshot, view DedupViewState) []treeflat.Node[treeflat.PathNode] {
+	paths := DedupMarkedPaths(view)
+	key := dedupStripTreeKey{snap.EffectiveDisplayRoot().String(), dedupGroupsID(snap.Groups)}
+	c := view.Cache
+	if c == nil {
+		return selstrip.NewTree(paths, key.base).Nodes()
+	}
+	m := &c.marked
+	if m.tree == nil || m.treeKey != key {
+		m.tree, m.treeKey = selstrip.NewTree(paths, key.base), key
+	}
+	return m.tree.Nodes()
 }
 
 // drawDedupStrip paints the Selected strip of marked files.

@@ -790,20 +790,18 @@ func (a *App) tryDispatchSelectedStrip(actionID string) bool {
 	case keymap.ActionPanelTreeCollapse:
 		p.Strip.Collapse(p.SelectedStripRows())
 		p.EnsureSelectedStripCursorVisible(vr)
-	case keymap.ActionPanelTreeCollapseAll:
-		p.Strip.CollapseLevel(p.SelectedStripRows())
-		p.RestoreStripCursor()
-		p.EnsureSelectedStripCursorVisible(vr)
-	case keymap.ActionPanelTreeCollapseAllFull:
-		p.Strip.CollapseAll(p.SelectedStripPaths(), p.Path.String(), p.SelectedStripRows())
-		p.RestoreStripCursor()
-		p.EnsureSelectedStripCursorVisible(vr)
-	case keymap.ActionPanelTreeExpandAllShallow:
-		p.Strip.ExpandLevel(p.SelectedStripRows())
-		p.RestoreStripCursor()
-		p.EnsureSelectedStripCursorVisible(vr)
-	case keymap.ActionPanelTreeExpandAllFull:
-		p.Strip.ExpandAll(p.SelectedStripRows())
+	case keymap.ActionPanelTreeCollapseAll, keymap.ActionPanelTreeCollapseAllFull,
+		keymap.ActionPanelTreeExpandAllShallow, keymap.ActionPanelTreeExpandAllFull:
+		switch rows := p.SelectedStripRows(); actionID {
+		case keymap.ActionPanelTreeCollapseAll:
+			p.Strip.CollapseLevel(rows)
+		case keymap.ActionPanelTreeCollapseAllFull:
+			p.Strip.CollapseAll(p.SelectedStripTreeNodes(), rows)
+		case keymap.ActionPanelTreeExpandAllShallow:
+			p.Strip.ExpandLevel(rows)
+		default:
+			p.Strip.ExpandAll(rows)
+		}
 		p.RestoreStripCursor()
 		p.EnsureSelectedStripCursorVisible(vr)
 	case keymap.ActionAppUserMenu:

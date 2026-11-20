@@ -628,41 +628,30 @@ func DedupGroupFilesUnderDir(g comparepkg.DedupGroup, dirRel string) []comparepk
 // DedupSnapshotFilesUnderDir returns, for each visible group index (groupVisible:
 // ignore-empty and group filter), the files in that group whose Rel path is under
 // dirRel, in the group's file order. Used for main-pane folder keep/mark, so hidden
-// groups are never touched. With a view.Cache it reads the contiguous range of the
-// snapshot's Rel-sorted file index instead of scanning every group.
+// groups are never touched. It reads the contiguous range of the snapshot's Rel-sorted
+// file index (cached on view.Cache) instead of scanning every group.
 func DedupSnapshotFilesUnderDir(snap comparepkg.DedupSnapshot, view DedupViewState, dirRel string) map[int][]comparepkg.DedupFile {
 	out := map[int][]comparepkg.DedupFile{}
-	if view.Cache == nil {
-		for gi, g := range snap.Groups {
-			if !view.groupVisible(g) {
-				continue
-			}
-			if files := DedupGroupFilesUnderDir(g, dirRel); len(files) > 0 {
-				out[gi] = files
-			}
-		}
-	} else {
-		x := dedupIndexFor(snap, view.Cache)
-		x.sortFiles(snap)
-		seen := make([]bool, len(snap.Groups))
-		add := func(from int, in func(rel string) bool) {
-			for i := from; i < len(x.files) && in(x.files[i].rel); i++ {
-				// the group's own scan keeps its file order
-				if gi := x.files[i].gi; !seen[gi] {
-					seen[gi] = true
-					if view.groupVisible(snap.Groups[gi]) {
-						out[gi] = DedupGroupFilesUnderDir(snap.Groups[gi], dirRel)
-					}
+	x := dedupIndexFor(snap, view.Cache)
+	x.sortFiles(snap)
+	seen := map[int]bool{}
+	add := func(from int, in func(rel string) bool) {
+		for i := from; i < len(x.files) && in(x.files[i].rel); i++ {
+			// the group's own scan keeps its file order
+			if gi := x.files[i].gi; !seen[gi] {
+				seen[gi] = true
+				if view.groupVisible(snap.Groups[gi]) {
+					out[gi] = DedupGroupFilesUnderDir(snap.Groups[gi], dirRel)
 				}
 			}
 		}
-		if dirRel == "" {
-			add(0, func(string) bool { return true })
-		} else {
-			add(x.lowerBound(dirRel), func(rel string) bool { return rel == dirRel })
-			prefix := dirRel + "/"
-			add(x.lowerBound(prefix), func(rel string) bool { return strings.HasPrefix(rel, prefix) })
-		}
+	}
+	if dirRel == "" {
+		add(0, func(string) bool { return true })
+	} else {
+		add(x.lowerBound(dirRel), func(rel string) bool { return rel == dirRel })
+		prefix := dirRel + "/"
+		add(x.lowerBound(prefix), func(rel string) bool { return strings.HasPrefix(rel, prefix) })
 	}
 	if len(out) == 0 {
 		return nil
@@ -689,17 +678,27 @@ func dedupTwinDirSets(snap comparepkg.DedupSnapshot, dirRel string, cache *Dedup
 	return twins, ancestors
 }
 
+// settledSource is the source row of list while it is settled: false while a held nav key has
+// moved the cursor off it (SourceStale), when every cursor-derived decoration is deferred.
+func (s DedupViewState) settledSource(list []DedupRow) (DedupRow, bool) {
+	if s.SourceStale {
+		return dedupRowAt(nil, -1)
+	}
+	return dedupRowAt(list, s.SourceRow)
+}
+
 // DedupCursorHintDirs returns the dirs (DirRel) holding the cursor row's related
 // copies (hint: every ancestor, i.e. the folders to expand to show them) and,
 // for a dir cursor, its twin dirs. Dirs mode only; nils otherwise.
 func DedupCursorHintDirs(snap comparepkg.DedupSnapshot, view DedupViewState, list []DedupRow) (hint, twins map[string]bool) {
-	if !view.TreeDirs || view.SourceStale || view.SourceRow < 0 || view.SourceRow >= len(list) {
+	sel, ok := view.settledSource(list)
+	if !view.TreeDirs || !ok {
 		return nil, nil
 	}
-	if g := list[view.SourceRow].Value.GroupIdx; g >= 0 && g < len(snap.Groups) {
+	if g := sel.Value.GroupIdx; g >= 0 && g < len(snap.Groups) {
 		hint = dedupGroupDirSet(snap.Groups[g])
 	}
-	if sel := list[view.SourceRow]; sel.Value.Kind == DedupRowDir {
+	if sel.Value.Kind == DedupRowDir {
 		twins, hint = dedupTwinDirSets(snap, sel.Value.DirRel, view.Cache)
 	}
 	return hint, twins

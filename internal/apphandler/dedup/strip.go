@@ -51,7 +51,7 @@ func (h *Handler) FoldStripRows(action string) {
 	case keymap.ActionPanelTreeCollapseAll:
 		st.Strip.CollapseLevel(rows)
 	case keymap.ActionDedupCollapseAll:
-		st.Strip.CollapseAll(ui.DedupMarkedPaths(*st), h.model.DedupSnapshot.EffectiveDisplayRoot().String(), rows)
+		st.Strip.CollapseAll(ui.DedupStripTreeNodes(h.model.DedupSnapshot, *st), rows)
 	case keymap.ActionPanelTreeExpandAllShallow:
 		st.Strip.ExpandLevel(rows)
 	case keymap.ActionDedupExpandAll:
@@ -127,20 +127,14 @@ func (h *Handler) UnmarkStripRow() {
 	h.unmarkWhere(func(p string) bool { return strings.HasPrefix(p, prefix) })
 }
 
-// unmarkWhere clears the delete mark of every marked file whose path matches.
+// unmarkWhere clears the delete mark of every marked file whose path matches; a mark no longer
+// in the snapshot has no reclaim bytes to adjust.
 func (h *Handler) unmarkWhere(match func(path string) bool) {
 	st := &h.model.DedupView
-	for _, g := range h.model.DedupSnapshot.Groups {
-		for _, f := range g.Files {
-			if p := f.Abs.String(); st.Marked[p] && match(p) {
-				h.setMark(p, g.Size, false)
-			}
-		}
-	}
-	// Marks not in the snapshot any more: drop them with no reclaim bytes to adjust.
 	for p := range st.Marked {
 		if match(p) {
-			h.setMark(p, 0, false)
+			size, _ := ui.DedupFileGroupSize(h.model.DedupSnapshot, *st, p)
+			h.setMark(p, size, false)
 		}
 	}
 }

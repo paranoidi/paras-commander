@@ -15,6 +15,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
+	"github.com/paranoidi/paras-commander/internal/ui/geom"
 )
 
 const (
@@ -85,7 +86,7 @@ func dedupListHeader(pathW, sizeW, countW int, pathLabel string) string {
 // DedupSecondaryRects splits the dedup view's secondary column into the Copies pane and a
 // browse panel below it. Single source for drawing, visible-row counts, and browse-panel metrics.
 func DedupSecondaryRects(sec Rect) (copies, browse Rect) {
-	top := sec.Height / 2
+	top, _ := geom.SplitLowerPercent(sec.Height, 50)
 	copies = Rect{X: sec.X, Y: sec.Y, Width: sec.Width, Height: top}
 	browse = Rect{X: sec.X, Y: sec.Y + top, Width: sec.Width, Height: sec.Height - top}
 	return copies, browse
@@ -149,8 +150,8 @@ func drawDedupView(
 		copyFullyMarkedDirs = dedupCopyFullyMarkedFor(snap, view, sel)
 	}
 	activeGroup := -1
-	if !view.SourceStale && view.SourceRow >= 0 && view.SourceRow < len(list) {
-		activeGroup = list[view.SourceRow].Value.GroupIdx
+	if src, ok := view.settledSource(list); ok {
+		activeGroup = src.Value.GroupIdx
 	}
 	hintDirs, twinDirs := DedupCursorHintDirs(snap, view, list)
 	mainAnchor, copiesAnchor := view.RangeAnchor, ""
@@ -316,8 +317,7 @@ func drawDedupTreePane(
 		kept := d.Kind == DedupRowFile && view.Kept[d.AbsKey]
 		marked := d.Kind == DedupRowFile && view.Marked[d.AbsKey] && !kept
 		rowSelected := idx == p.Pane.Selected
-		groupAllMarked := d.Kind == DedupRowFile && d.GroupIdx >= 0 && d.GroupIdx < len(snap.Groups) &&
-			DedupGroupFullyMarked(snap.Groups[d.GroupIdx], view.Marked)
+		groupAllMarked := d.Kind == DedupRowFile && p.Marks.groupFull(snap, d.GroupIdx, view.Marked)
 		dirFullyMarked := d.Kind == DedupRowDir && (p.FullyMarkedDirs[d.DirRel] || (p.TreeFullDirs && p.Marks.full(d.DirRel)))
 
 		flags := dedupRowFlags{

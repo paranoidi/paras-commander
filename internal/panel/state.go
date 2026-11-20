@@ -1991,10 +1991,25 @@ func (s *State) SelectedStripRows() []selstrip.Row {
 	s.ensureSelectionDerived()
 	c := &s.selDerivedCache
 	if !c.stripRowsBuilt || c.stripRowsTree != s.Strip.Tree || c.stripRowsRev != s.Strip.CollapsedRev {
-		c.stripRows = selstrip.Rows(c.stripPaths, s.Path.String(), s.Strip.Tree, s.Strip.Collapsed)
+		if s.Strip.Tree {
+			c.stripRows = selstrip.TreeRows(s.SelectedStripTreeNodes(), s.Strip.Collapsed)
+		} else {
+			c.stripRows = selstrip.FlatRows(c.stripPaths)
+		}
 		c.stripRowsBuilt, c.stripRowsTree, c.stripRowsRev = true, s.Strip.Tree, s.Strip.CollapsedRev
 	}
 	return c.stripRows
+}
+
+// SelectedStripTreeNodes returns the full label tree of the strip paths (every folder open),
+// cached until the paths change; folding re-flattens it without relabelling. Shared: read only.
+func (s *State) SelectedStripTreeNodes() []treeflat.Node[treeflat.PathNode] {
+	s.ensureSelectionDerived()
+	c := &s.selDerivedCache
+	if c.stripTree == nil {
+		c.stripTree = selstrip.NewTree(c.stripPaths, s.Path.String())
+	}
+	return c.stripTree.Nodes()
 }
 
 // SelectedStripCount is the number of rows in the selections sub-pane for the current directory.
@@ -2067,8 +2082,8 @@ func (s *State) unselectPath(p string) {
 	s.removePathFromSelectedStripOrder(p)
 }
 
-// UnselectUnder deselects every selected path below dir and returns how many it removed.
-func (s *State) UnselectUnder(dir string) int {
+// UnselectUnder deselects every selected path below dir.
+func (s *State) UnselectUnder(dir string) {
 	var under []string
 	for p, on := range s.SelectedPaths {
 		if on && isStrictPathDescendant(dir, p) {
@@ -2078,7 +2093,6 @@ func (s *State) UnselectUnder(dir string) int {
 	for _, p := range under {
 		s.unselectPath(p)
 	}
-	return len(under)
 }
 
 // SelectVisibleEntry moves the cursor onto the row named name in this panel's directory. In tree

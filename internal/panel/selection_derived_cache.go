@@ -7,6 +7,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/selstrip"
+	"github.com/paranoidi/paras-commander/internal/treeflat"
 )
 
 type selectionDerivedCache struct {
@@ -14,7 +15,8 @@ type selectionDerivedCache struct {
 	path             string
 	gen              uint64
 	stripPaths       []string
-	stripRows        []selstrip.Row // stripPaths as strip rows (flat or tree per Strip.Tree)
+	stripTree        *treeflat.PathTree // labels of stripPaths; nil: built on the next tree-mode use
+	stripRows        []selstrip.Row     // stripPaths as strip rows (flat or tree per Strip.Tree)
 	stripRowsBuilt   bool
 	stripRowsTree    bool
 	stripRowsRev     int // Strip.CollapsedRev the rows were built with
@@ -113,7 +115,7 @@ func (s *State) patchSelectionDerivedAfterRemove(path string, wasDir bool) {
 	if !s.StripForced && !selectionsOutsideDir(s.SelectedPaths, cur) {
 		// Last out-of-directory selection gone: strip hides.
 		s.selDerivedCache.stripPaths = nil
-		s.selDerivedCache.stripRowsBuilt = false
+		s.selDerivedCache.dropStripRows()
 	}
 	s.patchPrunedRootsAfterRemove(path, wasDir)
 	s.selDerivedCache.gen = s.selectionDerivedGen
@@ -183,7 +185,7 @@ func (s *State) appendStripPathIfNeeded(path string) {
 	}
 	s.selDerivedCache.stripPaths = append(s.selDerivedCache.stripPaths, path)
 	sort.Strings(s.selDerivedCache.stripPaths)
-	s.selDerivedCache.stripRowsBuilt = false
+	s.selDerivedCache.dropStripRows()
 }
 
 func (s *State) removeStripPath(path string) {
@@ -197,7 +199,7 @@ func (s *State) removeStripPath(path string) {
 		}
 	}
 	s.selDerivedCache.stripPaths = out
-	s.selDerivedCache.stripRowsBuilt = false
+	s.selDerivedCache.dropStripRows()
 }
 
 func (s *State) patchPrunedRootsAfterAdd(path string, isDir bool) {
@@ -517,4 +519,9 @@ func (s *State) BulkAddSelections(paths []string, isDir func(string) bool) bool 
 	s.recomputeSelectionListedBytes()
 	s.invalidateSelectionDerivedFull()
 	return removed
+}
+
+// dropStripRows forgets the rows and tree built from stripPaths after the paths change.
+func (c *selectionDerivedCache) dropStripRows() {
+	c.stripRowsBuilt, c.stripTree = false, nil
 }

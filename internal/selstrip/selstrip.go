@@ -51,11 +51,17 @@ func Rows(paths []string, baseDir string, tree bool, collapsed map[string]bool) 
 	if !tree {
 		return FlatRows(paths)
 	}
+	return TreeRows(NewTree(paths, baseDir).Nodes(), collapsed)
+}
+
+// NewTree builds the label tree of paths relative to baseDir (see Label); the source of every
+// strip tree, so cached trees and fresh ones agree.
+func NewTree(paths []string, baseDir string) *treeflat.PathTree {
 	labels := make([]string, len(paths))
 	for i, p := range paths {
 		labels[i] = Label(baseDir, p)
 	}
-	return TreeRows(treeflat.FromPaths(labels, paths), collapsed)
+	return treeflat.NewPathTree(labels, paths)
 }
 
 // FlatRows is one row per path.
@@ -140,11 +146,6 @@ func (s *State) Clamp(n, vr int) {
 
 // Move shifts the cursor by delta and keeps it visible.
 func (s *State) Move(delta, n, vr int) {
-	if n == 0 {
-		s.Cursor = 0
-		s.Scroll = 0
-		return
-	}
 	s.Cursor += delta
 	s.Clamp(n, vr)
 }
@@ -341,16 +342,18 @@ func (s *State) CollapseLevel(rows []Row) {
 	s.collapse(rows, func(r Row) bool { return r.Group && r.Expanded && r.Depth == deepest }, false)
 }
 
-// CollapseAll folds every folder of the tree over paths (rows is the visible list), leaving
-// only the top-level rows.
-func (s *State) CollapseAll(paths []string, baseDir string, rows []Row) {
+// CollapseAll folds every folder of the tree (nodes, the full tree the visible rows come from),
+// leaving only the top-level rows.
+func (s *State) CollapseAll(nodes []treeflat.Node[treeflat.PathNode], rows []Row) {
 	if !hasGroup(rows) {
 		return
 	}
 	s.collapse(rows, func(Row) bool { return false }, true)
-	for _, r := range Rows(paths, baseDir, true, nil) {
-		if r.Group && !s.Collapsed[r.Path] {
-			s.Collapsed[r.Path] = true
+	// Group nodes always have children and selected leaves never do: the expandable IDs are
+	// exactly the folder paths.
+	for _, id := range treeflat.ExpandableIDs(nodes) {
+		if !s.Collapsed[id] {
+			s.Collapsed[id] = true
 			s.CollapsedRev++
 		}
 	}

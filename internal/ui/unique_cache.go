@@ -80,15 +80,10 @@ func (sh *uniqueShown) tree(s *UniqueViewState) []treeflat.Node[*UniqueRowData] 
 func (s *UniqueViewState) uniqueColumnWidths() (sizeW, countW int) {
 	sh := s.shown()
 	if !sh.widthsDone {
-		var walk func([]treeflat.Node[*UniqueRowData])
-		walk = func(nodes []treeflat.Node[*UniqueRowData]) {
-			for i := range nodes {
-				size, count := uniqueRowDetailTexts(nodes[i].Value)
-				sh.sizeW, sh.countW = max(sh.sizeW, len([]rune(size))), max(sh.countW, len([]rune(count)))
-				walk(nodes[i].Children)
-			}
-		}
-		walk(sh.tree(s))
+		treeflat.Walk(sh.tree(s), func(n *treeflat.Node[*UniqueRowData], _ int) {
+			size, count := uniqueRowDetailTexts(n.Value)
+			sh.sizeW, sh.countW = max(sh.sizeW, len([]rune(size))), max(sh.countW, len([]rune(count)))
+		})
 		sh.widthsDone = true
 	}
 	return sh.sizeW, sh.countW

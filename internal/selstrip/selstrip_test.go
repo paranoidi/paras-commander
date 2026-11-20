@@ -120,7 +120,7 @@ func TestBulkFold(t *testing.T) {
 	if got := strings.Join(names(), ","); got != "lantern,ember,delta.txt,willow.txt" || s.Cursor != 1 {
 		t.Fatalf("collapse level: %s cursor %d, want ember folded and cursor on it", got, s.Cursor)
 	}
-	s.CollapseAll(paths, base, rows())
+	s.CollapseAll(NewTree(paths, base).Nodes(), rows())
 	s.Restore(rows())
 	if got := strings.Join(names(), ","); got != "lantern,willow.txt" || s.Cursor != 0 {
 		t.Fatalf("collapse all: %s cursor %d", got, s.Cursor)
@@ -135,7 +135,7 @@ func TestBulkFold(t *testing.T) {
 		t.Fatalf("expand all: %d rows cursor %d", len(rows()), s.Cursor)
 	}
 	flat := Rows(paths, base, false, nil)
-	s.CollapseAll(paths, base, flat)
+	s.CollapseAll(NewTree(paths, base).Nodes(), flat)
 	if len(s.Collapsed) != 0 {
 		t.Fatal("bulk fold must ignore a flat list")
 	}
