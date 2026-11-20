@@ -1,6 +1,7 @@
 package treeflat
 
 import (
+	"reflect"
 	"slices"
 	"testing"
 )
@@ -82,5 +83,36 @@ func TestFromPathsGroupPath(t *testing.T) {
 	nodes = FromPaths([]string{"foo/a/x.txt", "foo/b/y.txt"}, []string{"/base/foo/a/x.txt", "/base/foo/b/y.txt"})
 	if got := nodes[0].Value.Path; got != "/base/foo" {
 		t.Fatalf("shared group path = %q", got)
+	}
+}
+
+// Sorted labels take the no-map path; shuffled ones the map path. Both build the same tree,
+// including names that sort between a directory and its contents ("foo.txt" vs "foo/x").
+func TestFromPathsSortedMatchesUnsorted(t *testing.T) {
+	labels := []string{
+		"meadow", "meadow.txt", "meadow/anchor/one.bin", "meadow/anchor/two.bin", "meadow/lantern.bin",
+		"orchard/ember/deep/one.bin", "orchard/ember/two.bin", "orchard/ember-x/three.bin", "orchard/walnut.bin", "quilt.bin",
+	}
+	build := func(ls []string) []Node[PathNode] {
+		ids := make([]string, len(ls))
+		for i, l := range ls {
+			ids[i] = "/base/" + l
+		}
+		return FromPaths(ls, ids)
+	}
+	sorted := slices.Clone(labels)
+	slices.Sort(sorted)
+	if slices.IsSortedFunc(sorted, componentCmp) {
+		t.Fatal("test input should not be component-sorted, to cover the fallback")
+	}
+	slices.SortFunc(sorted, componentCmp)
+	want := build(sorted)
+	shuffled := slices.Clone(sorted)
+	slices.Reverse(shuffled)
+	shuffled[0], shuffled[3] = shuffled[3], shuffled[0]
+	for name, ls := range map[string][]string{"plain-sorted": func() []string { s := slices.Clone(labels); slices.Sort(s); return s }(), "shuffled": shuffled} {
+		if got := build(ls); !reflect.DeepEqual(got, want) {
+			t.Fatalf("%s: tree differs\n got %q\nwant %q", name, shape(got), shape(want))
+		}
 	}
 }

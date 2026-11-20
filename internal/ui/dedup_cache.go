@@ -19,12 +19,14 @@ import (
 // Keys: the snapshot's Groups slice identity (&Groups[0] and len; the cache holds
 // the pointer, so the address cannot be reused), TreeDirs, SortByWasted,
 // IgnoreEmpty and DedupViewState.GroupFilterRev for the tree; the same slice
-// identity plus DedupViewState.MarksRev for the mark sets. Whoever assigns
+// identity plus DedupViewState.MarksRev for the mark sets (counted over a dir table
+// keyed by the identity alone). Whoever assigns
 // GroupFilter bumps GroupFilterRev, whoever changes Marked or Kept bumps MarksRev.
 // The snapshot index (dedupIndex) is keyed by the Groups and DirGroups slice
 // identities. Used from the UI goroutine only.
 type DedupCache struct {
 	tree      *dedupTree
+	dirs      *dedupDirTable
 	marks     *dedupMarkSets
 	copyMarks *dedupCopyMarkSet
 	widths    dedupWidths // copies pane
@@ -157,28 +159,146 @@ func dedupTreeFor(snap comparepkg.DedupSnapshot, view DedupViewState) *dedupTree
 	return t
 }
 
-// dedupMarkSets are the snapshot-wide directory sets the tree rows are painted from.
+// dedupMarkSets are the snapshot-wide directory sets the tree rows are painted from:
+// dirs holding a marked file, dirs holding a file of a fully-marked group, dirs holding
+// a kept file, and dirs whose whole file subtree is marked.
 type dedupMarkSets struct {
 	groups                         dedupGroupsKey
 	rev                            int
 	marked, danger, kept, treeFull map[string]bool
 }
 
-// dedupMarkSetsFor returns the mark/kept dir sets, recomputed only when the
-// snapshot groups or MarksRev change.
+// dedupDirTable numbers every ancestor dir of every snapshot file so the mark sets are
+// counted over int ids instead of hashing each ancestor path per file.
+type dedupDirTable struct {
+	groups dedupGroupsKey
+	rels   []string // dir id -> rel
+	parent []int32  // dir id -> parent dir id, -1 for a top-level dir
+	total  []int32  // dir id -> files below it
+	leaf   []int32  // file's own dir id (-1: none), all groups' files concatenated
+	start  []int    // leaf offset of each group's first file
+}
+
+// ponytail: same &Groups[0] and len means same files, true while snapshots are rebuilt
+// wholesale and never edited in place; edit-in-place needs the table dropped.
+func newDedupDirTable(snap comparepkg.DedupSnapshot) *dedupDirTable {
+	t := &dedupDirTable{groups: dedupGroupsID(snap.Groups), start: make([]int, 0, len(snap.Groups))}
+	ids := map[string]int32{}
+	var intern func(rel string) int32
+	intern = func(rel string) int32 {
+		if id, ok := ids[rel]; ok {
+			return id
+		}
+		p := int32(-1)
+		if i := strings.LastIndexByte(rel, '/'); i >= 0 {
+			p = intern(rel[:i])
+		}
+		id := int32(len(t.rels))
+		ids[rel] = id
+		t.rels, t.parent, t.total = append(t.rels, rel), append(t.parent, p), append(t.total, 0)
+		return id
+	}
+	for _, g := range snap.Groups {
+		t.start = append(t.start, len(t.leaf))
+		for _, f := range g.Files {
+			d := int32(-1)
+			if i := strings.LastIndexByte(f.Rel, '/'); i >= 0 {
+				d = intern(f.Rel[:i])
+			}
+			t.leaf = append(t.leaf, d)
+			for ; d >= 0; d = t.parent[d] {
+				t.total[d]++
+			}
+		}
+	}
+	return t
+}
+
+// dirSet is the rels of the dirs for which in is true, as a non-nil map sized up front.
+func (t *dedupDirTable) dirSet(in func(d int) bool) map[string]bool {
+	n := 0
+	for d := range t.rels {
+		if in(d) {
+			n++
+		}
+	}
+	out := make(map[string]bool, n)
+	for d, rel := range t.rels {
+		if in(d) {
+			out[rel] = true
+		}
+	}
+	return out
+}
+
+// dedupMarkSetsFor returns the mark/kept dir sets, recomputed (in one pass over every
+// snapshot file, visible or not) only when the snapshot groups or MarksRev change.
 func dedupMarkSetsFor(snap comparepkg.DedupSnapshot, view DedupViewState) *dedupMarkSets {
 	id := dedupGroupsID(snap.Groups)
 	c := view.Cache
 	if c != nil && c.marks != nil && c.marks.groups == id && c.marks.rev == view.MarksRev {
 		return c.marks
 	}
-	m := &dedupMarkSets{
-		groups:   id,
-		rev:      view.MarksRev,
-		marked:   dedupMarkedDirSet(snap, view.Marked),
-		danger:   dedupDangerMarkedDirSet(snap, view.Marked),
-		kept:     dedupKeptDirSet(snap, view.Kept),
-		treeFull: dedupSnapshotFullyMarkedDirSet(snap, view.Marked),
+	var t *dedupDirTable
+	if c != nil && c.dirs != nil && c.dirs.groups == id {
+		t = c.dirs
+	} else {
+		t = newDedupDirTable(snap)
+		if c != nil {
+			c.dirs = t
+		}
+	}
+	m := &dedupMarkSets{groups: id, rev: view.MarksRev}
+	hasMarked, hasKept := len(view.Marked) > 0, len(view.Kept) > 0
+	n := len(t.rels)
+	var markedN []int32 // marked files below each dir
+	var dangerF, keptF []bool
+	if hasMarked {
+		markedN, dangerF = make([]int32, n), make([]bool, n)
+	}
+	if hasKept {
+		keptF = make([]bool, n)
+	}
+	for gi, g := range snap.Groups {
+		if !hasMarked && !hasKept {
+			break
+		}
+		leaf := t.leaf[t.start[gi]:]
+		allMarked := hasMarked && len(g.Files) > 0
+		for fi, f := range g.Files {
+			abs := f.Abs.String()
+			if hasMarked {
+				if view.Marked[abs] {
+					for d := leaf[fi]; d >= 0; d = t.parent[d] {
+						markedN[d]++
+					}
+				} else {
+					allMarked = false
+				}
+			}
+			if hasKept && view.Kept[abs] {
+				for d := leaf[fi]; d >= 0 && !keptF[d]; d = t.parent[d] {
+					keptF[d] = true
+				}
+			}
+		}
+		if allMarked {
+			for fi := range g.Files {
+				for d := leaf[fi]; d >= 0 && !dangerF[d]; d = t.parent[d] {
+					dangerF[d] = true
+				}
+			}
+		}
+	}
+	if hasMarked {
+		m.marked = t.dirSet(func(d int) bool { return markedN[d] > 0 })
+		m.danger = t.dirSet(func(d int) bool { return dangerF[d] })
+		if m.treeFull = t.dirSet(func(d int) bool { return markedN[d] > 0 && markedN[d] == t.total[d] }); len(m.treeFull) == 0 {
+			m.treeFull = nil
+		}
+	}
+	if hasKept {
+		m.kept = t.dirSet(func(d int) bool { return keptF[d] })
 	}
 	if c != nil {
 		c.marks = m
@@ -287,19 +407,30 @@ func dedupIndexFor(snap comparepkg.DedupSnapshot, c *DedupCache) *dedupIndex {
 	return idx
 }
 
+// sortFiles builds files, once.
+func (x *dedupIndex) sortFiles(snap comparepkg.DedupSnapshot) {
+	if x.filesDone {
+		return
+	}
+	for gi, g := range snap.Groups {
+		for fi, f := range g.Files {
+			x.files = append(x.files, dedupFileRef{f.Rel, gi, fi})
+		}
+	}
+	slices.SortFunc(x.files, func(a, b dedupFileRef) int { return strings.Compare(a.rel, b.rel) })
+	x.filesDone = true
+}
+
+// lowerBound is the first position in files (sortFiles first) whose rel is >= rel.
+func (x *dedupIndex) lowerBound(rel string) int {
+	return sort.Search(len(x.files), func(i int) bool { return x.files[i].rel >= rel })
+}
+
 // filesUnder yields every file (with its group index) inside any of the dirs,
 // once each: a dir nested under another listed dir adds nothing, and "" is the
 // whole snapshot. Only the matching ranges of the sorted file index are visited.
 func (x *dedupIndex) filesUnder(snap comparepkg.DedupSnapshot, dirs []string) iter.Seq2[int, comparepkg.DedupFile] {
-	if !x.filesDone {
-		for gi, g := range snap.Groups {
-			for fi, f := range g.Files {
-				x.files = append(x.files, dedupFileRef{f.Rel, gi, fi})
-			}
-		}
-		slices.SortFunc(x.files, func(a, b dedupFileRef) int { return strings.Compare(a.rel, b.rel) })
-		x.filesDone = true
-	}
+	x.sortFiles(snap)
 	set := make(map[string]bool, len(dirs))
 	for _, d := range dirs {
 		set[d] = true
@@ -318,7 +449,7 @@ func (x *dedupIndex) filesUnder(snap comparepkg.DedupSnapshot, dirs []string) it
 				continue
 			}
 			prefix := d + "/"
-			i := sort.Search(len(x.files), func(i int) bool { return x.files[i].rel >= prefix })
+			i := x.lowerBound(prefix)
 			for ; i < len(x.files) && strings.HasPrefix(x.files[i].rel, prefix); i++ {
 				r := x.files[i]
 				if !yield(r.gi, snap.Groups[r.gi].Files[r.fi]) {

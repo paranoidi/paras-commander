@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -608,41 +609,41 @@ func TestDedupGroupFullyMarked(t *testing.T) {
 	}
 }
 
-func TestDedupMarkedDirSet(t *testing.T) {
+func TestDedupMarkSetsMarked(t *testing.T) {
 	snap := comparepkg.DedupSnapshot{
 		Phase: comparepkg.DedupDone,
 		Groups: []comparepkg.DedupGroup{
 			dedupTestGroup(1, 10, "meadow/copper/anchor", "harbor/anchor"),
 		},
 	}
-	if got := dedupMarkedDirSet(snap, nil); got != nil {
+	if got := dedupMarkSetsFor(snap, DedupViewState{}).marked; got != nil {
 		t.Fatalf("no marks = %v, want nil", got)
 	}
-	got := dedupMarkedDirSet(snap, map[string]bool{"/root/meadow/copper/anchor": true})
+	got := dedupMarkSetsFor(snap, DedupViewState{Marked: map[string]bool{"/root/meadow/copper/anchor": true}}).marked
 	if len(got) != 2 || !got["meadow"] || !got["meadow/copper"] {
 		t.Fatalf("marked dirs = %v, want exactly meadow + meadow/copper", got)
 	}
 }
 
-func TestDedupDangerMarkedDirSet(t *testing.T) {
+func TestDedupMarkSetsDanger(t *testing.T) {
 	snap := comparepkg.DedupSnapshot{
 		Phase: comparepkg.DedupDone,
 		Groups: []comparepkg.DedupGroup{
 			dedupTestGroup(1, 10, "meadow/copper/anchor", "harbor/anchor"),
 		},
 	}
-	if got := dedupDangerMarkedDirSet(snap, nil); got != nil {
+	if got := dedupMarkSetsFor(snap, DedupViewState{}).danger; got != nil {
 		t.Fatalf("no marks = %v, want nil", got)
 	}
 	partial := map[string]bool{"/root/meadow/copper/anchor": true}
-	if got := dedupDangerMarkedDirSet(snap, partial); len(got) != 0 {
+	if got := dedupMarkSetsFor(snap, DedupViewState{Marked: partial}).danger; len(got) != 0 {
 		t.Fatalf("partial mark danger dirs = %v, want none", got)
 	}
 	full := map[string]bool{
 		"/root/meadow/copper/anchor": true,
 		"/root/harbor/anchor":        true,
 	}
-	got := dedupDangerMarkedDirSet(snap, full)
+	got := dedupMarkSetsFor(snap, DedupViewState{Marked: full}).danger
 	if len(got) != 3 || !got["meadow"] || !got["meadow/copper"] || !got["harbor"] {
 		t.Fatalf("fully marked danger dirs = %v, want meadow + meadow/copper + harbor", got)
 	}
@@ -736,7 +737,30 @@ func TestDedupSnapshotFilesUnderDir(t *testing.T) {
 	}
 }
 
-func TestDedupKeptDirSet(t *testing.T) {
+// The cached (index range) and uncached (scan) paths agree, including names that sort
+// between a dir and its contents and a group's files listed out of Rel order.
+func TestDedupSnapshotFilesUnderDirCachedMatchesScan(t *testing.T) {
+	snap := comparepkg.DedupSnapshot{
+		Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{
+			dedupTestGroup(1, 100, "meadow/lantern.txt", "meadow-x/beacon.txt", "meadow", "meadow.txt", "meadow/copper/anchor"),
+			dedupTestGroup(2, 50, "orchard/beacon.txt", "meadow/beacon.txt"),
+			dedupTestGroup(3, 0, "meadow/hollow.txt", "orchard/hollow.txt"),
+		},
+	}
+	for _, view := range []DedupViewState{{}, {IgnoreEmpty: true}} {
+		for _, dir := range []string{"", "meadow", "meadow/copper", "orchard", "missing", "meadow-x"} {
+			want := DedupSnapshotFilesUnderDir(snap, view, dir)
+			view.Cache = &DedupCache{}
+			if got := DedupSnapshotFilesUnderDir(snap, view, dir); !reflect.DeepEqual(got, want) {
+				t.Fatalf("dir %q ignoreEmpty=%v: cached %v, scan %v", dir, view.IgnoreEmpty, got, want)
+			}
+			view.Cache = nil
+		}
+	}
+}
+
+func TestDedupMarkSetsKept(t *testing.T) {
 	kept := map[string]bool{
 		"/root/meadow/copper/anchor": true,
 		"/root/harbor/anchor":        true,
@@ -747,11 +771,11 @@ func TestDedupKeptDirSet(t *testing.T) {
 			dedupTestGroup(1, 10, "meadow/copper/anchor", "harbor/anchor"),
 		},
 	}
-	got := dedupKeptDirSet(snap, kept)
+	got := dedupMarkSetsFor(snap, DedupViewState{Kept: kept}).kept
 	if len(got) != 3 || !got["meadow"] || !got["meadow/copper"] || !got["harbor"] {
 		t.Fatalf("kept dirs = %v, want meadow + meadow/copper + harbor", got)
 	}
-	if dedupKeptDirSet(snap, nil) != nil {
+	if dedupMarkSetsFor(snap, DedupViewState{}).kept != nil {
 		t.Fatal("nil kept should return nil dir set")
 	}
 }
@@ -825,7 +849,7 @@ func TestDedupCopyPaneFullyMarkedDirSet(t *testing.T) {
 	}
 }
 
-func TestDedupSnapshotFullyMarkedDirSet(t *testing.T) {
+func TestDedupMarkSetsTreeFull(t *testing.T) {
 	snap := comparepkg.DedupSnapshot{
 		Phase: comparepkg.DedupDone,
 		Groups: []comparepkg.DedupGroup{
@@ -834,7 +858,7 @@ func TestDedupSnapshotFullyMarkedDirSet(t *testing.T) {
 		},
 	}
 	partial := map[string]bool{"/root/meadow/lantern.txt": true}
-	got := dedupSnapshotFullyMarkedDirSet(snap, partial)
+	got := dedupMarkSetsFor(snap, DedupViewState{Marked: partial}).treeFull
 	if len(got) != 0 {
 		t.Fatalf("partial marks = %v, want none fully marked", got)
 	}
@@ -842,7 +866,7 @@ func TestDedupSnapshotFullyMarkedDirSet(t *testing.T) {
 		"/root/meadow/lantern.txt": true,
 		"/root/meadow/beacon.txt":  true,
 	}
-	got = dedupSnapshotFullyMarkedDirSet(snap, fullMeadow)
+	got = dedupMarkSetsFor(snap, DedupViewState{Marked: fullMeadow}).treeFull
 	if len(got) != 1 || !got["meadow"] {
 		t.Fatalf("meadow fully marked = %v, want only meadow", got)
 	}
@@ -853,7 +877,7 @@ func TestDedupSnapshotFullyMarkedDirSet(t *testing.T) {
 		"/root/orchard/lantern.txt": true,
 		"/root/orchard/beacon.txt":  true,
 	}
-	got = dedupSnapshotFullyMarkedDirSet(snap, fullAll)
+	got = dedupMarkSetsFor(snap, DedupViewState{Marked: fullAll}).treeFull
 	if len(got) != 2 || !got["meadow"] || !got["orchard"] {
 		t.Fatalf("all files marked = %v, want meadow + orchard", got)
 	}

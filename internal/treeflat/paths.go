@@ -1,7 +1,7 @@
 package treeflat
 
 import (
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -25,17 +25,43 @@ type pathTrie struct {
 	below  int    // components between this node and that leaf
 }
 
-func (t *pathTrie) child(name string) *pathTrie {
-	if k := t.byName[name]; k != nil {
+// child returns t's kid called name. sorted means the labels arrive in
+// componentCmp order, so a kid's labels are contiguous and only the last kid can match.
+func (t *pathTrie) child(name string, sorted bool) *pathTrie {
+	if sorted {
+		if n := len(t.kids); n > 0 && t.kids[n-1].name == name {
+			return t.kids[n-1]
+		}
+	} else if k := t.byName[name]; k != nil {
 		return k
 	}
-	if t.byName == nil {
-		t.byName = map[string]*pathTrie{}
-	}
 	k := &pathTrie{name: name}
-	t.byName[name] = k
+	if !sorted {
+		if t.byName == nil {
+			t.byName = map[string]*pathTrie{}
+		}
+		t.byName[name] = k
+	}
 	t.kids = append(t.kids, k)
 	return k
+}
+
+// componentCmp orders labels component by component ("/" sorts below every other byte),
+// which keeps all labels below one directory contiguous. Plain string order does not
+// ("foo/x" sorts after "foo.txt" but "foo" and "foo/x" are one directory).
+func componentCmp(a, b string) int {
+	for i := 0; i < len(a) && i < len(b); i++ {
+		if a[i] != b[i] {
+			if a[i] == '/' {
+				return -1
+			}
+			if b[i] == '/' {
+				return 1
+			}
+			return int(a[i]) - int(b[i])
+		}
+	}
+	return len(a) - len(b)
 }
 
 // FromPaths builds a folded directory tree from "/"-separated labels (ids[i] identifies
@@ -43,39 +69,52 @@ func (t *pathTrie) child(name string) *pathTrie {
 // path). A synthetic directory whose only child is another synthetic directory folds into it, so
 // a lone "foo/bar/asdf/file.txt" is the node "foo/bar/asdf" with the single child "file.txt".
 // A label that is itself supplied (a selected directory) is a leaf, never a Group. Siblings sort
-// directories first, then by name. Node IDs are the node's Path.
+// directories first, then by name. Node IDs are the node's Path. Labels already in component
+// order (the usual case for sorted paths) skip the per-node name map.
 func FromPaths(labels, ids []string) []Node[PathNode] {
 	root := &pathTrie{}
+	sorted := slices.IsSortedFunc(labels, componentCmp)
 	for i, label := range labels {
-		parts := strings.Split(label, "/")
-		if parts[0] == "" && len(parts) > 1 { // absolute label: keep the root slash on the first component
-			parts = parts[1:]
-			parts[0] = "/" + parts[0]
+		// components: an absolute label keeps its root slash on the first component
+		below := strings.Count(label, "/")
+		if !strings.HasPrefix(label, "/") {
+			below++
 		}
-		root.child(parts[0]).mark(parts[1:], ids[i], len(parts)-1)
+		below--
+		t, pos, search := root, 0, 0
+		if strings.HasPrefix(label, "/") {
+			search = 1
+		}
+		for {
+			end := len(label)
+			j := strings.IndexByte(label[search:], '/')
+			if j >= 0 {
+				end = search + j
+			}
+			t = t.child(label[pos:end], sorted)
+			if t.any == "" {
+				t.any, t.below = ids[i], below
+			}
+			if j < 0 {
+				t.leaf, t.id = true, ids[i]
+				break
+			}
+			pos, search, below = end+1, end+1, below-1
+		}
 	}
 	return root.nodes()
 }
 
-// mark records id below t, which is below components away from the leaf at the end of rest.
-func (t *pathTrie) mark(rest []string, id string, below int) {
-	if t.any == "" {
-		t.any, t.below = id, below
-	}
-	if len(rest) == 0 {
-		t.leaf, t.id = true, id
-		return
-	}
-	t.child(rest[0]).mark(rest[1:], id, below-1)
-}
-
 func (t *pathTrie) nodes() []Node[PathNode] {
-	kids := append([]*pathTrie(nil), t.kids...)
-	sort.SliceStable(kids, func(i, j int) bool {
-		if di, dj := len(kids[i].kids) > 0, len(kids[j].kids) > 0; di != dj {
-			return di
+	kids := t.kids // each trie node is expanded once, so sorting in place is safe
+	slices.SortStableFunc(kids, func(a, b *pathTrie) int {
+		if da, db := len(a.kids) > 0, len(b.kids) > 0; da != db {
+			if da {
+				return -1
+			}
+			return 1
 		}
-		return kids[i].name < kids[j].name
+		return strings.Compare(a.name, b.name)
 	})
 	out := make([]Node[PathNode], len(kids))
 	for i, k := range kids {
