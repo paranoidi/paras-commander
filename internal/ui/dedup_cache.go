@@ -21,7 +21,9 @@ import (
 // IgnoreEmpty and DedupViewState.GroupFilterRev for the tree; the same slice
 // identity plus DedupViewState.MarksRev for the mark counters (kept over a dir table
 // keyed by the identity alone; DedupViewState.NoteMarkChange moves them for one file,
-// any other MarksRev bump makes the next draw recount). Whoever assigns
+// any other MarksRev bump makes the next draw recount; the Selected strip's sorted paths
+// and label tree follow the same way through a journal of the changed files, see
+// dedupMarkedPaths). Whoever assigns
 // GroupFilter bumps GroupFilterRev, whoever changes Marked or Kept bumps MarksRev.
 // The snapshot index (dedupIndex) is keyed by the Groups and DirGroups slice
 // identities. Used from the UI goroutine only.
@@ -350,6 +352,9 @@ func (s *DedupViewState) NoteMarkChange(snap comparepkg.DedupSnapshot, absKey st
 	old := s.MarksRev
 	s.MarksRev++
 	c := s.Cache
+	if c != nil {
+		c.marked.note(old, s.MarksRev, absKey, keep, on)
+	}
 	if c == nil || c.marks == nil || c.marks.groups != dedupGroupsID(snap.Groups) || c.marks.rev != old {
 		return
 	}

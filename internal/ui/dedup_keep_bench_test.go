@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
@@ -58,17 +59,59 @@ func benchDrawDedupAfterKeep(b *testing.B, noted bool) {
 	}
 }
 
-// BenchmarkDedupStripAfterKeep is the Selected strip rebuild after a keep (tree mode).
-func BenchmarkDedupStripAfterKeep(b *testing.B) {
-	snap := dedupNestedBenchSnapshot(40000)
+// dedupStripBenchView marks two files of every third group of the nested snapshot and builds
+// the strip once, so a benchmark loop starts from a warm cache.
+func dedupStripBenchView(snap comparepkg.DedupSnapshot) DedupViewState {
 	view := DedupViewState{Cache: &DedupCache{}, Marked: map[string]bool{}}
 	for g := 0; g < len(snap.Groups); g += 3 {
 		view.Marked[snap.Groups[g].Files[1].Abs.String()] = true
 		view.Marked[snap.Groups[g].Files[2].Abs.String()] = true
 	}
+	DedupStripRows(snap, view, true)
+	return view
+}
+
+// BenchmarkDedupStripFullRebuild is the Selected strip rebuild after a MarksRev bump nobody
+// noted (bulk resets): every mark is sorted, labelled and put into a new tree.
+func BenchmarkDedupStripFullRebuild(b *testing.B) {
+	snap := dedupNestedBenchSnapshot(40000)
+	view := dedupStripBenchView(snap)
 	b.ReportAllocs()
 	for b.Loop() {
 		view.MarksRev++
+		DedupStripRows(snap, view, true)
+	}
+}
+
+// BenchmarkDedupStripOneMark is the strip rebuild after one mark toggled through
+// NoteMarkChange (the handler's path), tree mode.
+func BenchmarkDedupStripOneMark(b *testing.B) {
+	benchDedupStripMarks(b, 1)
+}
+
+// BenchmarkDedupStripBatch is the strip rebuild after 1000 files toggled through NoteMarkChange.
+func BenchmarkDedupStripBatch(b *testing.B) {
+	benchDedupStripMarks(b, 1000)
+}
+
+func benchDedupStripMarks(b *testing.B, n int) {
+	snap := dedupNestedBenchSnapshot(40000)
+	view := dedupStripBenchView(snap)
+	var abs []string
+	for g := 1; len(abs) < n; g += 3 {
+		abs = append(abs, snap.Groups[g].Files[0].Abs.String())
+	}
+	b.ReportAllocs()
+	for b.Loop() {
+		for _, p := range abs {
+			on := !view.Marked[p]
+			if on {
+				view.Marked[p] = true
+			} else {
+				delete(view.Marked, p)
+			}
+			view.NoteMarkChange(snap, p, false, on)
+		}
 		DedupStripRows(snap, view, true)
 	}
 }

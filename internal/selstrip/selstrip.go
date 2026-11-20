@@ -49,21 +49,38 @@ type Row struct {
 // the folders in collapsed hiding their children.
 func Rows(paths []string, baseDir string, tree bool, collapsed map[string]bool) []Row {
 	if !tree {
-		rows := make([]Row, len(paths))
-		for i, p := range paths {
-			rows[i] = Row{Path: p}
-		}
-		return rows
+		return FlatRows(paths)
 	}
 	labels := make([]string, len(paths))
 	for i, p := range paths {
-		label, err := filepath.Rel(baseDir, p)
-		if err != nil {
-			label = p
-		}
-		labels[i] = filepath.ToSlash(label)
+		labels[i] = Label(baseDir, p)
 	}
-	flat := treeflat.Flatten(treeflat.FromPaths(labels, paths), func(id string) bool { return !collapsed[id] })
+	return TreeRows(treeflat.FromPaths(labels, paths), collapsed)
+}
+
+// FlatRows is one row per path.
+func FlatRows(paths []string) []Row {
+	rows := make([]Row, len(paths))
+	for i, p := range paths {
+		rows[i] = Row{Path: p}
+	}
+	return rows
+}
+
+// Label is p's tree label: its "/"-separated path relative to baseDir, or p itself when
+// that cannot be expressed. The single source of the labels fed to treeflat.PathTree.
+func Label(baseDir, p string) string {
+	label, err := filepath.Rel(baseDir, p)
+	if err != nil {
+		label = p
+	}
+	return filepath.ToSlash(label)
+}
+
+// TreeRows flattens a path tree (labels from Label, ids the paths) into strip rows, with the
+// folders in collapsed hiding their children.
+func TreeRows(nodes []treeflat.Node[treeflat.PathNode], collapsed map[string]bool) []Row {
+	flat := treeflat.Flatten(nodes, func(id string) bool { return !collapsed[id] })
 	rows := make([]Row, len(flat))
 	for i, r := range flat {
 		rows[i] = Row{

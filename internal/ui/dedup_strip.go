@@ -2,6 +2,7 @@ package ui
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
@@ -24,23 +25,131 @@ func DedupMainRects(primary Rect, model *Model) (tree, strip Rect) {
 	})
 }
 
-// dedupMarkedPaths is the sorted marked paths of one marks revision, and the strip rows built
-// from them for one tree mode.
+// dedupMarkedPaths is the Selected strip's cache: the sorted marked paths, the label tree over
+// them and the strip rows built from either.
+//
+// paths reflect MarksRev rev. A journal of the per-file changes since then lets the next use
+// move paths (and tree) by just those files instead of resorting every mark: NoteMarkChange
+// appends to it while jrev (the MarksRev the journal runs up to) equals the revision before
+// the bump, anything else drops it (jok false) and the next use rebuilds from view.Marked.
 type dedupMarkedPaths struct {
-	rev, n   int
-	paths    []string
-	rows     []selstrip.Row
-	rowsTree bool
-	rowsRev  int // Strip.CollapsedRev the rows were built with
-	rowsOK   bool
+	rev, n int
+	paths  []string
+	gen    int // bumped whenever paths changes, the rows' key
+
+	journal map[string]bool // abs -> marked now, for the files changed since rev
+	jrev    int
+	jok     bool
+
+	tree       *treeflat.PathTree // labels of paths, kept in step with them; nil: built on the next tree-mode use
+	treeBase   string
+	treeGroups dedupGroupsKey
+
+	rows    []selstrip.Row
+	rowsKey dedupStripKey
+	rowsOK  bool
 }
 
-// DedupMarkedPaths returns the marked paths in sorted order, cached per MarksRev. The slice is
-// shared with the cache: callers must not modify it.
+// dedupStripKey is what the cached rows were built from; base and groups only matter in tree mode.
+type dedupStripKey struct {
+	gen          int
+	tree         bool
+	collapsedRev int
+	base         string
+	groups       dedupGroupsKey
+}
+
+// dedupJournalTooBig reports whether k journaled changes over n paths are not worth applying
+// one by one.
+// ponytail: fixed crossover (a full resort costs about what 1/8 of the marks cost to merge and
+// re-label); retune with BenchmarkDedupStripBatch if the numbers move.
+func dedupJournalTooBig(k, n int) bool { return k > 64 && k*8 > n }
+
+// note records one change from NoteMarkChange: old and now are MarksRev before and after it.
+// A keep (not a mark) only keeps the journal in step with the revision.
+func (m *dedupMarkedPaths) note(old, now int, absKey string, keep, on bool) {
+	if m.paths == nil || !m.jok || m.jrev != old {
+		m.jok, m.journal = false, nil
+		return
+	}
+	m.jrev = now
+	if keep {
+		return
+	}
+	if m.journal == nil {
+		m.journal = map[string]bool{}
+	}
+	m.journal[absKey] = on
+	if dedupJournalTooBig(len(m.journal), m.n) {
+		m.jok, m.journal = false, nil
+	}
+}
+
+// replay moves paths (and tree) to marks revision rev by the journal, in O(n + k log k) for k
+// changes; false when the journal does not cover rev or does not add up (the caller rebuilds).
+func (m *dedupMarkedPaths) replay(rev, marked int) bool {
+	if m.paths == nil || !m.jok || m.jrev != rev || dedupJournalTooBig(len(m.journal), m.n) {
+		return false
+	}
+	if len(m.journal) > 0 {
+		type edit struct {
+			p  string
+			on bool
+		}
+		edits := make([]edit, 0, len(m.journal))
+		for p, on := range m.journal {
+			edits = append(edits, edit{p, on})
+		}
+		slices.SortFunc(edits, func(a, b edit) int { return strings.Compare(a.p, b.p) })
+		// Each edit replaces the old entry equal to its path (if any) by that path when it is
+		// marked now: the untouched stretches between them are copied wholesale.
+		out := make([]string, 0, len(m.paths)+len(edits))
+		pos := 0
+		for _, e := range edits {
+			i, found := slices.BinarySearch(m.paths[pos:], e.p)
+			out = append(out, m.paths[pos:pos+i]...)
+			pos += i
+			if found {
+				pos++
+			}
+			if e.on {
+				out = append(out, e.p)
+			}
+		}
+		out = append(out, m.paths[pos:]...)
+		if len(out) != marked {
+			return false
+		}
+		if m.tree != nil {
+			for _, e := range edits {
+				if label := selstrip.Label(m.treeBase, e.p); e.on {
+					m.tree.Add(label, e.p)
+				} else {
+					m.tree.Remove(label)
+				}
+			}
+		}
+		m.paths, m.n = out, len(out)
+		m.gen++
+		clear(m.journal)
+	}
+	m.rev, m.jrev = rev, rev
+	return true
+}
+
+// DedupMarkedPaths returns the marked paths in sorted order, cached per MarksRev and moved by
+// the noted changes (see dedupMarkedPaths) rather than resorted. The slice is shared with the
+// cache: callers must not modify it.
 func DedupMarkedPaths(view DedupViewState) []string {
 	c := view.Cache
-	if c != nil && c.marked.paths != nil && c.marked.rev == view.MarksRev && c.marked.n == len(view.Marked) {
-		return c.marked.paths
+	if c != nil {
+		m := &c.marked
+		if m.paths != nil && m.rev == view.MarksRev && m.n == len(view.Marked) {
+			return m.paths
+		}
+		if m.replay(view.MarksRev, len(view.Marked)) {
+			return m.paths
+		}
 	}
 	paths := make([]string, 0, len(view.Marked))
 	for p := range view.Marked {
@@ -48,24 +157,43 @@ func DedupMarkedPaths(view DedupViewState) []string {
 	}
 	slices.Sort(paths)
 	if c != nil {
-		c.marked = dedupMarkedPaths{rev: view.MarksRev, n: len(view.Marked), paths: paths}
+		c.marked = dedupMarkedPaths{rev: view.MarksRev, n: len(paths), paths: paths, gen: c.marked.gen + 1, jok: true, jrev: view.MarksRev}
 	}
 	return paths
 }
 
 // DedupStripRows returns the strip's rows: the marked paths, flat or as a folded tree (tree),
-// cached per marks revision. The slice is shared with the cache: callers must not modify it.
+// cached per change of the marked paths. The slice is shared with the cache: callers must not
+// modify it.
 func DedupStripRows(snap comparepkg.DedupSnapshot, view DedupViewState, tree bool) []selstrip.Row {
 	paths := DedupMarkedPaths(view)
+	base := snap.EffectiveDisplayRoot().String()
 	c := view.Cache
-	if c != nil && c.marked.rowsOK && c.marked.rowsTree == tree && c.marked.rowsRev == view.Strip.CollapsedRev && c.marked.rev == view.MarksRev && c.marked.n == len(view.Marked) {
-		return c.marked.rows
+	if c == nil {
+		return selstrip.Rows(paths, base, tree, view.Strip.Collapsed)
 	}
-	rows := selstrip.Rows(paths, snap.EffectiveDisplayRoot().String(), tree, view.Strip.Collapsed)
-	if c != nil {
-		c.marked.rows, c.marked.rowsTree, c.marked.rowsRev, c.marked.rowsOK = rows, tree, view.Strip.CollapsedRev, true
+	m := &c.marked
+	key := dedupStripKey{gen: m.gen, tree: tree, collapsedRev: view.Strip.CollapsedRev}
+	if tree {
+		key.base, key.groups = base, dedupGroupsID(snap.Groups)
 	}
-	return rows
+	if m.rowsOK && m.rowsKey == key {
+		return m.rows
+	}
+	if !tree {
+		m.rows = selstrip.FlatRows(paths)
+	} else {
+		if m.tree == nil || m.treeBase != key.base || m.treeGroups != key.groups {
+			labels := make([]string, len(paths))
+			for i, p := range paths {
+				labels[i] = selstrip.Label(base, p)
+			}
+			m.tree, m.treeBase, m.treeGroups = treeflat.NewPathTree(labels, paths), key.base, key.groups
+		}
+		m.rows = selstrip.TreeRows(m.tree.Nodes(), view.Strip.Collapsed)
+	}
+	m.rowsKey, m.rowsOK = key, true
+	return m.rows
 }
 
 // drawDedupStrip paints the Selected strip of marked files.

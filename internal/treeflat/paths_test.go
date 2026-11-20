@@ -1,8 +1,11 @@
 package treeflat
 
 import (
+	"maps"
+	"math/rand"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -114,5 +117,88 @@ func TestFromPathsSortedMatchesUnsorted(t *testing.T) {
 		if got := build(ls); !reflect.DeepEqual(got, want) {
 			t.Fatalf("%s: tree differs\n got %q\nwant %q", name, shape(got), shape(want))
 		}
+	}
+}
+
+// The incrementally edited tree equals FromPaths over the same label set after every change,
+// whatever order FromPaths gets the labels in.
+func TestPathTreeMatchesFromPaths(t *testing.T) {
+	words := []string{"meadow", "anchor", "lantern", "orchard", "ember", "walnut", "quilt", "harbor", "fjord", "cedar"}
+	rng := rand.New(rand.NewSource(7))
+	idOf := func(label string) string {
+		if strings.HasPrefix(label, "/") {
+			return label
+		}
+		return "/base/" + label
+	}
+	randLabel := func() string {
+		parts := make([]string, 1+rng.Intn(5))
+		for i := range parts {
+			parts[i] = words[rng.Intn(len(words))]
+			if i == len(parts)-1 && rng.Intn(3) == 0 {
+				parts[i] += ".bin"
+			}
+		}
+		l := strings.Join(parts, "/")
+		if rng.Intn(5) == 0 {
+			l = "/" + l
+		}
+		return l
+	}
+	var tree PathTree
+	set := map[string]bool{}
+	check := func(step int) {
+		// every node's representative leaf must still exist
+		var walk func(n *pathTrie)
+		walk = func(n *pathTrie) {
+			for _, k := range n.kids {
+				if !set[strings.TrimPrefix(k.any, "/base/")] {
+					t.Fatalf("step %d: node %q represents removed leaf %q", step, k.name, k.any)
+				}
+				walk(k)
+			}
+		}
+		if tree.root != nil {
+			walk(tree.root)
+		}
+		labels := make([]string, 0, len(set))
+		for l := range set {
+			labels = append(labels, l)
+		}
+		for name, order := range map[string]func(){
+			"sorted": func() { slices.SortFunc(labels, componentCmp) },
+			"shuffled": func() {
+				slices.Sort(labels)
+				rng.Shuffle(len(labels), func(i, j int) { labels[i], labels[j] = labels[j], labels[i] })
+			},
+		} {
+			order()
+			ids := make([]string, len(labels))
+			for i, l := range labels {
+				ids[i] = idOf(l)
+			}
+			if got, want := tree.Nodes(), FromPaths(labels, ids); !reflect.DeepEqual(got, want) {
+				t.Fatalf("step %d (%s): tree differs\n got %q\nwant %q", step, name, shape(got), shape(want))
+			}
+		}
+	}
+	for step := range 600 {
+		l := randLabel()
+		switch {
+		case len(set) == 0 || len(set) < 40 && rng.Intn(5) < 3:
+			if !set[l] {
+				set[l] = true
+				tree.Add(l, idOf(l))
+			}
+		case rng.Intn(4) == 0:
+			tree.Remove(l) // usually absent or a plain directory: no change unless it is a leaf
+			delete(set, l)
+		default:
+			labels := slices.Sorted(maps.Keys(set))
+			victim := labels[rng.Intn(len(labels))]
+			tree.Remove(victim)
+			delete(set, victim)
+		}
+		check(step)
 	}
 }

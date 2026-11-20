@@ -3,10 +3,13 @@ package ui
 import (
 	"fmt"
 	"math/rand"
+	"reflect"
 	"slices"
+	"strings"
 	"testing"
 
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // dedupRowIDs lists the node IDs of rows.
@@ -241,5 +244,91 @@ func TestDedupMarkSetsIncrementalMatchesRecount(t *testing.T) {
 	}
 	if !sawDanger || !sawFull {
 		t.Fatalf("sequence never reached a fully-marked group (%v) or dir (%v)", sawDanger, sawFull)
+	}
+}
+
+// TestDedupStripIncrementalMatchesFresh applies random mark changes through NoteMarkChange
+// (interleaved with keep notes, batches the journal gives up on and MarksRev bumps nobody
+// noted) and compares the strip's sorted paths and rows, flat and tree with some folders
+// collapsed, with a fresh cache after each check.
+func TestDedupStripIncrementalMatchesFresh(t *testing.T) {
+	rng := rand.New(rand.NewSource(11))
+	words := []string{"meadow", "copper", "anchor", "harbor", "walnut", "ember", "quilt", "lantern", "orchard", "beacon"}
+	snap := comparepkg.DedupSnapshot{Root: pathloc.MustParse("/scan/root"), Phase: comparepkg.DedupDone}
+	var pool []string
+	for i := range 400 {
+		p := fmt.Sprintf("/scan/root/%s-%d", words[rng.Intn(len(words))], i)
+		for range rng.Intn(5) {
+			p = "/scan/root/" + words[rng.Intn(4)] + strings.TrimPrefix(p, "/scan/root")
+		}
+		if i%50 == 0 {
+			p = "/elsewhere" + p // outside the base dir: absolute label
+		}
+		pool = append(pool, p)
+	}
+	view := DedupViewState{Cache: &DedupCache{}, Marked: map[string]bool{}, Kept: map[string]bool{}}
+	flip := func(noted bool) {
+		p := pool[rng.Intn(len(pool))]
+		if rng.Intn(4) == 0 { // a keep: leaves the marks alone
+			on := !view.Kept[p]
+			if on {
+				view.Kept[p] = true
+			} else {
+				delete(view.Kept, p)
+			}
+			view.NoteMarkChange(snap, p, true, on)
+			return
+		}
+		on := !view.Marked[p]
+		if on {
+			view.Marked[p] = true
+		} else {
+			delete(view.Marked, p)
+		}
+		if noted {
+			view.NoteMarkChange(snap, p, false, on)
+		} else {
+			view.MarksRev++
+		}
+	}
+	incremental := 0
+	for step := range 500 {
+		burst := 1 + rng.Intn(3)
+		if rng.Intn(25) == 0 {
+			burst = 150 // more than the journal keeps
+		}
+		for range burst {
+			flip(rng.Intn(20) != 0)
+		}
+		if rng.Intn(3) == 0 {
+			continue // let the journal grow over several changes
+		}
+		if rng.Intn(4) == 0 { // fold a random folder, or none
+			view.Strip.Collapsed = nil
+			if rows := DedupStripRows(snap, view, true); len(rows) > 0 {
+				if r := rows[rng.Intn(len(rows))]; r.Group {
+					view.Strip.Collapsed = map[string]bool{r.Path: true}
+				}
+			}
+			view.Strip.CollapsedRev++
+		}
+		m := view.Cache.marked
+		ready := m.paths != nil && m.jok && m.jrev == view.MarksRev // served by replay, not a rebuild
+		fresh := DedupViewState{Cache: &DedupCache{}, Marked: view.Marked, Strip: view.Strip}
+		if got, want := DedupMarkedPaths(view), DedupMarkedPaths(fresh); !slices.Equal(got, want) {
+			t.Fatalf("step %d: paths differ\n got %q\nwant %q", step, got, want)
+		}
+		if ready && view.Cache.marked.gen != m.gen {
+			incremental++
+		}
+		for _, tree := range []bool{true, false} {
+			got, want := DedupStripRows(snap, view, tree), DedupStripRows(snap, fresh, tree)
+			if !reflect.DeepEqual(got, want) {
+				t.Fatalf("step %d tree=%v: rows differ\n got %v\nwant %v", step, tree, got, want)
+			}
+		}
+	}
+	if incremental == 0 {
+		t.Fatal("no check was served from the journal")
 	}
 }
