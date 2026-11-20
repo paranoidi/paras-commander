@@ -102,18 +102,12 @@ type State struct {
 	selDerivedCache     selectionDerivedCache
 	// selectionHasDirs is true when any selected path is a directory (avoids stat scans on bulk file sets).
 	selectionHasDirs bool
-	// SelectedStripOrder lists selected paths that belong in the bottom “selections” strip:
-	// off-current-directory order is tracked here; on chdir into dir D those paths are removed;
-	// on chdir away from D, selected paths under D are appended (deduped).
-	SelectedStripOrder []string
 	// Strip is the selected strip's cursor, scroll and quick filter. Strip.CursorPath is the
 	// last focused row path (restores the cursor on re-focus); cleared by ClearSelection and
 	// carried by the stash (SelectionStashStripCursorPath).
 	Strip selstrip.State
 	// SelectionStashPaths holds stashed selection paths (empty/nil = no stash).
 	SelectionStashPaths []string
-	// SelectionStashStripOrder mirrors SelectedStripOrder at stash time.
-	SelectionStashStripOrder []string
 	// SelectionStashStripCursorPath is Strip.CursorPath at stash time.
 	SelectionStashStripCursorPath string
 	ShowHidden                    bool
@@ -669,7 +663,6 @@ func (s *State) TogglePathSelection(path string) (selected bool, conflictsRemove
 	isDir := s.selectedPathIsDirectory(path)
 	if s.SelectedPaths != nil && s.SelectedPaths[path] {
 		s.applySelectionRemove(path, isDir)
-		s.removePathFromSelectedStripOrder(path)
 		s.normalizeSelectedStripCursor()
 		return false, false
 	}
@@ -694,7 +687,6 @@ func (s *State) ToggleSelection() (selected bool, conflictsRemoved bool) {
 	if s.SelectedPaths[entry.Path] {
 		wasDir := entry.IsDir()
 		s.applySelectionRemove(entry.Path, wasDir)
-		s.removePathFromSelectedStripOrder(entry.Path)
 		s.normalizeSelectedStripCursor()
 		return false, false
 	}
@@ -765,7 +757,6 @@ func (s *State) UnselectPendingRange() (removed int) {
 			continue
 		}
 		s.applySelectionRemove(e.Path, s.selectedPathIsDirectory(e.Path))
-		s.removePathFromSelectedStripOrder(e.Path)
 		removed++
 	}
 	s.normalizeSelectedStripCursor()
@@ -1922,60 +1913,7 @@ func (s *State) notifyChdir(oldPath, newPath pathloc.Path) {
 	if oldC == newC {
 		return
 	}
-	if oldC != "" {
-		s.appendLeftBehindSelectionsToStripOrder(oldC)
-	}
-	if newC != "" {
-		s.stripSelectionsOrderForEnteredDir(newC)
-	}
 	s.normalizeSelectedStripCursor()
-}
-
-func (s *State) appendLeftBehindSelectionsToStripOrder(leftDir string) {
-	if len(s.SelectedPaths) == 0 {
-		return
-	}
-	batch := make([]string, 0)
-	for p := range s.SelectedPaths {
-		if cleanPathString(filepath.Dir(p)) == leftDir {
-			batch = append(batch, p)
-		}
-	}
-	if len(batch) == 0 {
-		return
-	}
-	sort.Strings(batch)
-	for _, p := range batch {
-		s.removePathFromSelectedStripOrder(p)
-		s.SelectedStripOrder = append(s.SelectedStripOrder, p)
-	}
-}
-
-func (s *State) stripSelectionsOrderForEnteredDir(dir string) {
-	if len(s.SelectedStripOrder) == 0 {
-		return
-	}
-	out := s.SelectedStripOrder[:0]
-	for _, p := range s.SelectedStripOrder {
-		if cleanPathString(filepath.Dir(p)) == dir {
-			continue
-		}
-		out = append(out, p)
-	}
-	s.SelectedStripOrder = out
-}
-
-func (s *State) removePathFromSelectedStripOrder(path string) {
-	if len(s.SelectedStripOrder) == 0 {
-		return
-	}
-	out := s.SelectedStripOrder[:0]
-	for _, p := range s.SelectedStripOrder {
-		if p != path {
-			out = append(out, p)
-		}
-	}
-	s.SelectedStripOrder = out
 }
 
 // SelectedStripPaths returns all selected paths shown in the selections sub-pane.
@@ -2079,7 +2017,6 @@ func (s *State) ToggleOrRemoveStripSelection() bool {
 
 func (s *State) unselectPath(p string) {
 	s.applySelectionRemove(p, s.selectedPathIsDirectory(p))
-	s.removePathFromSelectedStripOrder(p)
 }
 
 // UnselectUnder deselects every selected path below dir.
@@ -2274,7 +2211,6 @@ func (s *State) InvertSelection() {
 	}
 	if len(newSel) == 0 {
 		s.clearSelectionState()
-		s.SelectedStripOrder = rebuildSelectedStripOrderAfterBulk(s.SelectedStripOrder, nil)
 		s.invalidateSelectionDerivedFull()
 	} else {
 		s.SelectedPaths = newSel
@@ -2285,36 +2221,14 @@ func (s *State) InvertSelection() {
 			s.SelectedDirPaths = nil
 		}
 		s.recomputeSelectionListedBytes()
-		s.SelectedStripOrder = rebuildSelectedStripOrderAfterBulk(s.SelectedStripOrder, newSel)
 		s.invalidateSelectionDerivedFull()
 	}
 	s.normalizeSelectedStripCursor()
 }
 
-func rebuildSelectedStripOrderAfterBulk(stripOrder []string, selected map[string]bool) []string {
-	if len(stripOrder) == 0 {
-		return nil
-	}
-	if selected == nil {
-		return nil
-	}
-	out := make([]string, 0, len(stripOrder))
-	for _, p := range stripOrder {
-		if selected[p] {
-			out = append(out, p)
-		}
-	}
-	if len(out) == 0 {
-		return nil
-	}
-	return out
-}
-
-// ClearSelection removes all tagged paths on this panel (any directory) and clears the
-// selected strip order.
+// ClearSelection removes all tagged paths on this panel (any directory).
 func (s *State) ClearSelection() {
 	s.clearSelectionState()
-	s.SelectedStripOrder = nil
 	s.Strip.CursorPath = ""
 	s.invalidateSelectionDerivedFull()
 	s.normalizeSelectedStripCursor()
@@ -2432,7 +2346,6 @@ func (s *State) UnselectGroup(spec FilterSpec, meta GroupSelectMeta) (bool, erro
 			continue
 		}
 		s.applySelectionRemove(path, isDir[path])
-		s.removePathFromSelectedStripOrder(path)
 	}
 	s.normalizeSelectedStripCursor()
 	return true, nil

@@ -39,9 +39,8 @@ func TestSelectedStripMarkOnFileRow(t *testing.T) {
 	screen.SetSize(width, height)
 	rect := Rect{X: 0, Y: 0, Width: width, Height: height}
 	state := panel.State{
-		Path:               pathloc.MustParse(sub),
-		SelectedStripOrder: []string{filePath},
-		SelectedPaths:      map[string]bool{filePath: true},
+		Path:          pathloc.MustParse(sub),
+		SelectedPaths: map[string]bool{filePath: true},
 	}
 
 	drawBrowserSelectedStrip(screen, rect, state, false, false, SelectedStripOpts{
@@ -100,9 +99,8 @@ func TestSelectedStripMarkOnCursorRow(t *testing.T) {
 	screen.SetSize(width, height)
 	rect := Rect{X: 0, Y: 0, Width: width, Height: height}
 	state := panel.State{
-		Path:               pathloc.MustParse(sub),
-		SelectedStripOrder: []string{filePath},
-		SelectedPaths:      map[string]bool{filePath: true},
+		Path:          pathloc.MustParse(sub),
+		SelectedPaths: map[string]bool{filePath: true},
 	}
 
 	drawBrowserSelectedStrip(screen, rect, state, true, false, SelectedStripOpts{
@@ -154,9 +152,8 @@ func TestSelectedStripViMotionBorderColor(t *testing.T) {
 	screen.SetSize(width, height)
 	rect := Rect{X: 0, Y: 0, Width: width, Height: height}
 	state := panel.State{
-		Path:               pathloc.MustParse(sub),
-		SelectedStripOrder: []string{filePath},
-		SelectedPaths:      map[string]bool{filePath: true},
+		Path:          pathloc.MustParse(sub),
+		SelectedPaths: map[string]bool{filePath: true},
 	}
 
 	drawBrowserSelectedStrip(screen, rect, state, true, false, SelectedStripOpts{
@@ -210,9 +207,8 @@ func TestSelectedStripTitleShowsMultiLocationIcon(t *testing.T) {
 	}
 
 	multiState := panel.State{
-		Path:               pathloc.MustParse(alpha),
-		SelectedStripOrder: []string{alphaFile, bravoFile},
-		SelectedPaths:      map[string]bool{alphaFile: true, bravoFile: true},
+		Path:          pathloc.MustParse(alpha),
+		SelectedPaths: map[string]bool{alphaFile: true, bravoFile: true},
 	}
 	drawBrowserSelectedStrip(screen, rect, multiState, true, false, opts)
 	icon := styles.IconSelectedMultiLocation()
@@ -229,9 +225,8 @@ func TestSelectedStripTitleShowsMultiLocationIcon(t *testing.T) {
 		screen.SetContent(x, rect.Y, ' ', nil, tcell.StyleDefault)
 	}
 	singleState := panel.State{
-		Path:               pathloc.MustParse(alpha),
-		SelectedStripOrder: []string{alphaFile},
-		SelectedPaths:      map[string]bool{alphaFile: true},
+		Path:          pathloc.MustParse(alpha),
+		SelectedPaths: map[string]bool{alphaFile: true},
 	}
 	drawBrowserSelectedStrip(screen, rect, singleState, true, false, opts)
 	if rowContainsText(screen, rect.Y, rect.X, rect.X+rect.Width, icon) {

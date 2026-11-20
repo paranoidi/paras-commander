@@ -379,9 +379,6 @@ func (s *State) resolveSelectionConflicts(path string, addedIsDir bool) bool {
 	if len(removed) == 0 {
 		return false
 	}
-	for _, p := range removed {
-		s.removePathFromSelectedStripOrder(p)
-	}
 	if len(s.SelectedPaths) == 0 {
 		s.clearSelectionState()
 	}

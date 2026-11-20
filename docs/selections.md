@@ -31,7 +31,7 @@ Patterns can be saved and loaded (`F5` / `F2`) and recalled from the session his
 
 ## Selected strip
 
-When selected paths lie outside the current directory, a Selected strip lists them under (or beside) the panel with paths relative to the common root. A bottom-border label shows `N item(s) (size)`; sizes of selected directories are computed in the background (see [Disk usage](disk-usage.md)), and an icon on the strip's border marks a selection that spans several locations.
+When selected paths lie outside the current directory, a Selected strip lists them, sorted by path, under (or beside) the panel with paths relative to the common root. A bottom-border label shows `N item(s) (size)`; sizes of selected directories are computed in the background (see [Disk usage](disk-usage.md)), and an icon on the strip's border marks a selection that spans several locations.
 
 | Key | Action |
 |---|---|

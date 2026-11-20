@@ -591,16 +591,12 @@ func TestConfirmCopyClearsCrossDirectorySelections(t *testing.T) {
 	hereTxt := filepath.Join(here, "here.txt")
 	otherTxt := filepath.Join(other, "other.txt")
 	p.SelectedPaths = map[string]bool{hereTxt: true, otherTxt: true}
-	p.SelectedStripOrder = []string{otherTxt}
 
 	app.dialogCtrl.OpenCopyDialog()
 	app.dialogCtrl.ConfirmCopy()
 
 	if p.SelectedPaths != nil {
 		t.Fatalf("expected all queued sources removed from selection, got %#v", p.SelectedPaths)
-	}
-	if len(p.SelectedStripOrder) != 0 {
-		t.Fatalf("expected selected strip order cleared, got %v", p.SelectedStripOrder)
 	}
 	if len(app.jobState.AllJobs()) != 1 {
 		t.Fatalf("expected one job, got %d", len(app.jobState.AllJobs()))
@@ -640,16 +636,12 @@ func TestConfirmMoveClearsCrossDirectorySelections(t *testing.T) {
 	hereTxt := filepath.Join(here, "here.txt")
 	otherTxt := filepath.Join(other, "other.txt")
 	p.SelectedPaths = map[string]bool{hereTxt: true, otherTxt: true}
-	p.SelectedStripOrder = []string{otherTxt}
 
 	app.dialogCtrl.OpenMoveDialog()
 	app.dialogCtrl.ConfirmCopy()
 
 	if p.SelectedPaths != nil {
 		t.Fatalf("expected all queued sources removed from selection, got %#v", p.SelectedPaths)
-	}
-	if len(p.SelectedStripOrder) != 0 {
-		t.Fatalf("expected selected strip order cleared, got %v", p.SelectedStripOrder)
 	}
 	if len(app.jobState.AllJobs()) != 1 {
 		t.Fatalf("expected one job, got %d", len(app.jobState.AllJobs()))

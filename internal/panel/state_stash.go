@@ -23,7 +23,7 @@ func (s State) SelectedPathCount() int {
 }
 
 // StashSaveFromSelection moves the current selection into the stash and clears live selection.
-// A non-empty stash is merged with the selection (stash strip order first). Returns false when
+// A non-empty stash is merged with the selection. Returns false when
 // there is nothing to stash.
 func (s *State) StashSaveFromSelection() bool {
 	if len(s.SelectedPaths) == 0 {
@@ -33,7 +33,6 @@ func (s *State) StashSaveFromSelection() bool {
 	paths := slices.AppendSeq(slices.Clone(s.SelectionStashPaths), maps.Keys(s.SelectedPaths))
 	slices.Sort(paths)
 	s.SelectionStashPaths = slices.Compact(paths)
-	s.SelectionStashStripOrder = uniqueConcat(s.SelectionStashStripOrder, s.SelectedStripOrder)
 	if !hadStash || s.SelectionStashStripCursorPath == "" {
 		s.SelectionStashStripCursorPath = s.Strip.CursorPath
 	}
@@ -44,15 +43,13 @@ func (s *State) StashSaveFromSelection() bool {
 // StashClear removes any stashed selection on this panel.
 func (s *State) StashClear() {
 	s.SelectionStashPaths = nil
-	s.SelectionStashStripOrder = nil
 	s.SelectionStashStripCursorPath = ""
 }
 
-// ApplySelectionSnapshot replaces the live selection with paths and strip order.
+// ApplySelectionSnapshot replaces the live selection with paths.
 // Paths that no longer exist on disk are omitted (stash restore).
-func (s *State) ApplySelectionSnapshot(paths, stripOrder []string, cursorPath string) {
+func (s *State) ApplySelectionSnapshot(paths []string, cursorPath string) {
 	s.clearSelectionState()
-	s.SelectedStripOrder = nil
 	s.Strip.CursorPath = cursorPath
 	paths = filterExistingSelectionPaths(paths)
 	if len(paths) == 0 {
@@ -66,19 +63,13 @@ func (s *State) ApplySelectionSnapshot(paths, stripOrder []string, cursorPath st
 	}
 	s.rebuildSelectedDirPaths()
 	s.recomputeSelectionListedBytes()
-	filteredStrip := filterSelectedStripOrder(stripOrder, s.SelectedPaths)
-	if len(filteredStrip) != len(stripOrder) {
-		s.SelectedStripOrder = nil
-	} else {
-		s.SelectedStripOrder = filteredStrip
-	}
 	s.invalidateSelectionDerivedFull()
 	s.normalizeSelectedStripCursor()
 }
 
-// MergeSelectionSnapshot unions stash paths and strip order into the live selection.
+// MergeSelectionSnapshot unions stash paths into the live selection.
 // Paths that no longer exist on disk are omitted (stash restore).
-func (s *State) MergeSelectionSnapshot(paths, stripOrder []string, cursorPath string) {
+func (s *State) MergeSelectionSnapshot(paths []string, cursorPath string) {
 	paths = filterExistingSelectionPaths(paths)
 	if len(paths) == 0 {
 		return
@@ -91,27 +82,6 @@ func (s *State) MergeSelectionSnapshot(paths, stripOrder []string, cursorPath st
 	}
 	for _, p := range paths {
 		s.SelectedPaths[p] = true
-	}
-	seen := make(map[string]bool, len(s.SelectedStripOrder)+len(stripOrder))
-	merged := make([]string, 0, len(s.SelectedStripOrder)+len(stripOrder))
-	for _, p := range s.SelectedStripOrder {
-		if seen[p] || s.SelectedPaths == nil || !s.SelectedPaths[p] {
-			continue
-		}
-		merged = append(merged, p)
-		seen[p] = true
-	}
-	for _, p := range stripOrder {
-		if seen[p] || s.SelectedPaths == nil || !s.SelectedPaths[p] {
-			continue
-		}
-		merged = append(merged, p)
-		seen[p] = true
-	}
-	if len(merged) == 0 {
-		s.SelectedStripOrder = nil
-	} else {
-		s.SelectedStripOrder = merged
 	}
 	s.rebuildSelectedDirPaths()
 	s.recomputeSelectionListedBytes()
@@ -133,39 +103,6 @@ func filterExistingSelectionPaths(paths []string) []string {
 			continue
 		}
 		out = append(out, p)
-	}
-	return out
-}
-
-func filterSelectedStripOrder(stripOrder []string, selected map[string]bool) []string {
-	if len(stripOrder) == 0 || len(selected) == 0 {
-		return nil
-	}
-	out := make([]string, 0, len(stripOrder))
-	for _, p := range stripOrder {
-		p = cleanPathString(p)
-		if p != "" && selected[p] {
-			out = append(out, p)
-		}
-	}
-	if len(out) == 0 {
-		return nil
-	}
-	return out
-}
-
-// uniqueConcat concatenates lists in order, keeping each path's first occurrence (nil when
-// all are empty).
-func uniqueConcat(lists ...[]string) []string {
-	var out []string
-	seen := make(map[string]bool)
-	for _, l := range lists {
-		for _, p := range l {
-			if !seen[p] {
-				seen[p] = true
-				out = append(out, p)
-			}
-		}
 	}
 	return out
 }

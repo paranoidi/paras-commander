@@ -174,7 +174,6 @@ func TestNavigateFromSelectedStripSFTPDirectory(t *testing.T) {
 	dir := "sftp://user@example.com/meadow"
 	left.SelectedPaths = map[string]bool{dir: true}
 	left.SelectedDirPaths = map[string]bool{dir: true}
-	left.SelectedStripOrder = []string{dir}
 	app.model.ActiveSubFocus = ui.SubFocusSelectedStrip
 	left.Strip.Cursor = 0
 
@@ -201,7 +200,6 @@ func TestNavigateFromSelectedStripSFTPFile(t *testing.T) {
 	file := "sftp://user@example.com/meadow/ember.txt"
 	parent := "sftp://user@example.com/meadow"
 	left.SelectedPaths = map[string]bool{file: true}
-	left.SelectedStripOrder = []string{file}
 	app.model.ActiveSubFocus = ui.SubFocusSelectedStrip
 	left.Strip.Cursor = 0
 
@@ -226,7 +224,6 @@ func TestSyncFollowTargetPathSFTPStripRow(t *testing.T) {
 	file := "sftp://user@example.com/meadow/ember.txt"
 	left.SelectedPaths = map[string]bool{dir: true, file: true}
 	left.SelectedDirPaths = map[string]bool{dir: true}
-	left.SelectedStripOrder = []string{dir, file}
 	app.model.ActiveSubFocus = ui.SubFocusSelectedStrip
 
 	left.Strip.Cursor = 0

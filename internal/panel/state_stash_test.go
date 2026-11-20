@@ -28,7 +28,7 @@ func TestStashSaveFromSelectionAndRestore(t *testing.T) {
 	if s.SelectedPathCount() != 0 {
 		t.Fatalf("live selection should be cleared, got %d", s.SelectedPathCount())
 	}
-	s.ApplySelectionSnapshot(s.SelectionStashPaths, s.SelectionStashStripOrder, "")
+	s.ApplySelectionSnapshot(s.SelectionStashPaths, "")
 	s.StashClear()
 	if s.SelectedPathCount() != 2 {
 		t.Fatalf("restored count = %d, want 2", s.SelectedPathCount())
@@ -47,15 +47,12 @@ func TestApplySelectionSnapshotSkipsMissingPaths(t *testing.T) {
 	}
 	gone := filepath.Join(dir, "gone.txt")
 	s := &State{}
-	s.ApplySelectionSnapshot([]string{keep, gone}, []string{gone, keep}, "")
+	s.ApplySelectionSnapshot([]string{keep, gone}, "")
 	if s.SelectedPathCount() != 1 {
 		t.Fatalf("count = %d, want 1", s.SelectedPathCount())
 	}
 	if !s.SelectedPaths[keep] {
 		t.Fatalf("paths = %v", s.SelectedPaths)
-	}
-	if len(s.SelectedStripOrder) != 0 {
-		t.Fatalf("strip order should omit missing paths, got %v", s.SelectedStripOrder)
 	}
 }
 
@@ -78,7 +75,7 @@ func TestMergeSelectionSnapshot(t *testing.T) {
 		}
 	}
 	s := &State{SelectedPaths: map[string]bool{keep: true}}
-	s.MergeSelectionSnapshot([]string{newPath, keep}, nil, "")
+	s.MergeSelectionSnapshot([]string{newPath, keep}, "")
 	if s.SelectedPathCount() != 2 {
 		t.Fatalf("count = %d, want 2", s.SelectedPathCount())
 	}
@@ -95,7 +92,7 @@ func TestMergeSelectionSnapshotSkipsMissingPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := &State{SelectedPaths: map[string]bool{keep: true}}
-	s.MergeSelectionSnapshot([]string{keep, filepath.Join(dir, "missing.txt")}, nil, "")
+	s.MergeSelectionSnapshot([]string{keep, filepath.Join(dir, "missing.txt")}, "")
 	if s.SelectedPathCount() != 1 {
 		t.Fatalf("count = %d, want 1", s.SelectedPathCount())
 	}
@@ -115,18 +112,14 @@ func TestStashSaveFromSelectionMergesIntoStash(t *testing.T) {
 	dir := t.TempDir()
 	aPath := filepath.Join(dir, "orchard.txt")
 	bPath := filepath.Join(dir, "pebble.txt")
-	s := &State{SelectedPaths: map[string]bool{aPath: true}, SelectedStripOrder: []string{aPath}}
+	s := &State{SelectedPaths: map[string]bool{aPath: true}}
 	s.StashSaveFromSelection()
 	s.SelectedPaths = map[string]bool{aPath: true, bPath: true}
-	s.SelectedStripOrder = []string{bPath, aPath}
 	if !s.StashSaveFromSelection() {
 		t.Fatal("StashSaveFromSelection() = false, want true")
 	}
 	if got := s.SelectionStashPaths; len(got) != 2 || got[0] != aPath || got[1] != bPath {
 		t.Fatalf("stash paths = %v, want [%s %s]", got, aPath, bPath)
-	}
-	if got := s.SelectionStashStripOrder; len(got) != 2 || got[0] != aPath || got[1] != bPath {
-		t.Fatalf("stash strip = %v, want stash order first", got)
 	}
 	if s.SelectedPathCount() != 0 {
 		t.Fatalf("live selection = %d, want 0", s.SelectedPathCount())

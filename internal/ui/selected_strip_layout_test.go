@@ -10,7 +10,6 @@ import (
 func TestSelectedStripLayoutItemCount(t *testing.T) {
 	st := &panel.State{Path: pathloc.MustParse("/cwd/here")}
 	st.SelectedPaths = map[string]bool{"/other/a": true}
-	st.SelectedStripOrder = []string{"/other/a"}
 	if got := SelectedStripLayoutItemCount(st, PrimaryPanel, SecondaryPanel); got != 0 {
 		t.Fatalf("inactive left with right active: got %d want 0", got)
 	}

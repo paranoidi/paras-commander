@@ -197,7 +197,6 @@ func (s *State) RemoveVanishedSelections(paths []string) int {
 			continue
 		}
 		s.applySelectionRemove(p, s.SelectedDirPaths[p])
-		s.removePathFromSelectedStripOrder(p)
 		removed++
 	}
 	if removed > 0 {

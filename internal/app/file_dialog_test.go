@@ -1711,7 +1711,6 @@ func TestDeleteDialogShowsContextPathWhenSelectionOffPanel(t *testing.T) {
 		t.Fatal(err)
 	}
 	p.SelectedPaths = map[string]bool{season: true}
-	p.SelectedStripOrder = []string{season}
 
 	app.dispatch(keymap.ActionFileDelete)
 	if !app.model.FileDialog.Open {

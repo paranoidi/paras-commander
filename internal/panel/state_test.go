@@ -2030,15 +2030,11 @@ func TestClearSelectionClearsAllDirectories(t *testing.T) {
 			"/tmp/here/a.txt":  true,
 			"/tmp/other/b.txt": true,
 		},
-		SelectedStripOrder: []string{"/tmp/other/b.txt"},
 	}
 
 	state.ClearSelection()
 	if state.SelectedPaths != nil {
 		t.Fatalf("SelectedPaths should be nil, got %#v", state.SelectedPaths)
-	}
-	if len(state.SelectedStripOrder) != 0 {
-		t.Fatalf("SelectedStripOrder should be empty, got %v", state.SelectedStripOrder)
 	}
 }
 
@@ -2918,7 +2914,7 @@ func TestSelectedStripDropsConflictRemovedDir(t *testing.T) {
 	}
 }
 
-func TestCrossDirectorySelectionsAndStripOrder(t *testing.T) {
+func TestCrossDirectorySelectionsStripPaths(t *testing.T) {
 	root := t.TempDir()
 	sub := filepath.Join(root, "sub")
 	if err := os.Mkdir(sub, 0o755); err != nil {

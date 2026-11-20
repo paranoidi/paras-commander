@@ -15,11 +15,6 @@ func TestStripFilterMatchesBasenameAndCycles(t *testing.T) {
 			"/tmp/meadow/crystal.txt": true,
 			"/tmp/orchard/delta.txt":  true,
 		},
-		SelectedStripOrder: []string{
-			"/tmp/meadow/bravo.txt",
-			"/tmp/meadow/crystal.txt",
-			"/tmp/orchard/delta.txt",
-		},
 		FilterOptions: ciFilterOptions,
 	}
 	if n := state.SelectedStripCount(); n != 3 {
