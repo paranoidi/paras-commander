@@ -5,21 +5,23 @@ import "strings"
 // DefaultDedupOverlayKeys holds built-in chords for the find-duplicates view ([dedup]).
 func DefaultDedupOverlayKeys() map[string][]string {
 	return withOpenInPanelKeys(map[string][]string{
-		ActionDedupClose:         {"esc"},
-		ActionDedupToggleSort:    {"M-s"}, // match the file-list sort shortcut (panel.sort-dialog)
-		ActionDedupToggleEmpty:   {"M-e"},
-		ActionDedupFilterDialog:  {"M-f"},
-		ActionDedupToggleNode:    {"right", "C-right"},
-		ActionDedupCollapse:      {"left", "C-left"}, // collapse node, or jump to parent
-		ActionDedupToggleTree:    {"C-t"},            // groups tree ↔ directory tree
-		ActionDedupCollapseAll:   {"M-S-left"},
-		ActionDedupExpandAll:     {"M-S-right"},
-		ActionDedupPrevDir:       {"M-up"},
-		ActionDedupNextDir:       {"M-down"},
-		ActionDedupMarkKeep:      {"space", "C-k"},
-		ActionDedupPrevPane:      {"S-tab"}, // shadows global panel.toggle-hide-inactive in-view
-		ActionDedupCompare:       {"C-M-c"}, // matches global panel.compare-panels; overlay shadows it in-view
-		ActionDedupHashPotential: {"M-H"},
+		ActionDedupClose:          {"esc"},
+		ActionDedupToggleSort:     {"M-s"}, // match the file-list sort shortcut (panel.sort-dialog)
+		ActionDedupToggleEmpty:    {"M-e"},
+		ActionDedupFilterDialog:   {"M-f"},
+		ActionDedupToggleNode:     {"right", "C-right"},
+		ActionDedupCollapse:       {"left", "C-left"}, // collapse node, or jump to parent
+		ActionDedupToggleTree:     {"C-t"},            // groups tree ↔ directory tree
+		ActionDedupCollapseAll:    {"M-S-left"},
+		ActionDedupExpandAll:      {"M-S-right"},
+		ActionDedupExpandCopies:   {"M-right"}, // shadows global nav.forward in-view
+		ActionDedupCollapseCopies: {"M-left"},  // shadows global nav.backward in-view
+		ActionDedupPrevDir:        {"M-up"},
+		ActionDedupNextDir:        {"M-down"},
+		ActionDedupMarkKeep:       {"space", "C-k"},
+		ActionDedupPrevPane:       {"S-tab"}, // shadows global panel.toggle-hide-inactive in-view
+		ActionDedupCompare:        {"C-M-c"}, // matches global panel.compare-panels; overlay shadows it in-view
+		ActionDedupHashPotential:  {"M-H"},
 	})
 }
 

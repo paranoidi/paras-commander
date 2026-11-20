@@ -127,6 +127,10 @@ func (a *App) handleDedupPanelKey(action string, event *tcell.EventKey) bool {
 		a.handleAuxPanelNavKey(p, rows, keymap.ActionNavOpen)
 	case keymap.ActionDedupCollapse:
 		a.handleAuxPanelNavKey(p, rows, keymap.ActionNavParent)
+	case keymap.ActionDedupExpandCopies: // overlay shadows nav.forward/backward; keep history here
+		a.handleAuxPanelNavKey(p, rows, keymap.ActionNavForward)
+	case keymap.ActionDedupCollapseCopies:
+		a.handleAuxPanelNavKey(p, rows, keymap.ActionNavBackward)
 	case keymap.ActionOpenInPrimary, keymap.ActionOpenInSecondary:
 		if e, ok := p.CurrentEntry(); ok {
 			a.dedupCtrl.OpenInPanel(a.openInPanelID(action), e.Path, e.ResolvesToDir())
