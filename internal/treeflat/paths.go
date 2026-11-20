@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// PathNode is the value of one FromPaths node.
+// PathNode is the value of one PathTree node.
 type PathNode struct {
 	// Path is the caller's id for a leaf, or the directory path of a Group.
 	Path string
@@ -168,7 +168,7 @@ func componentCmp(a, b string) int {
 }
 
 // PathTree is a folded directory tree of "/"-separated labels that can change one label at a
-// time: Nodes returns exactly what FromPaths returns for the current label set, rebuilding only
+// time: Nodes returns exactly what NewPathTree builds for the current label set, rebuilding only
 // the nodes a change touched. The zero value is an empty tree. Not safe for concurrent use.
 type PathTree struct{ root *pathTrie }
 
@@ -196,8 +196,13 @@ func (p *PathTree) Nodes() []Node[PathNode] {
 	return t.nodes
 }
 
-// NewPathTree builds a tree from labels (ids[i] identifies labels[i]) in one pass. Labels
-// already in component order (the usual case for sorted paths) skip the per-node lookups.
+// NewPathTree builds a folded directory tree from "/"-separated labels in one pass (ids[i]
+// identifies labels[i]; both are the caller's, e.g. a path relative to a base directory and its
+// absolute path). A synthetic directory whose only child is another synthetic directory folds
+// into it, so a lone "foo/bar/asdf/file.txt" is the node "foo/bar/asdf" with the single child
+// "file.txt". A label that is itself supplied (a selected directory) is a leaf, never a Group.
+// Siblings sort directories first, then by name. Node IDs are the node's Path. Labels already in
+// component order (the usual case for sorted paths) skip the per-node lookups.
 func NewPathTree(labels, ids []string) *PathTree {
 	p := &PathTree{root: &pathTrie{}}
 	sorted := slices.IsSortedFunc(labels, componentCmp)
@@ -205,16 +210,6 @@ func NewPathTree(labels, ids []string) *PathTree {
 		p.root.add(label, ids[i], sorted)
 	}
 	return p
-}
-
-// FromPaths builds a folded directory tree from "/"-separated labels (ids[i] identifies
-// labels[i]; both are the caller's, e.g. a path relative to a base directory and its absolute
-// path). A synthetic directory whose only child is another synthetic directory folds into it, so
-// a lone "foo/bar/asdf/file.txt" is the node "foo/bar/asdf" with the single child "file.txt".
-// A label that is itself supplied (a selected directory) is a leaf, never a Group. Siblings sort
-// directories first, then by name. Node IDs are the node's Path.
-func FromPaths(labels, ids []string) []Node[PathNode] {
-	return NewPathTree(labels, ids).Nodes()
 }
 
 func (t *pathTrie) children() []Node[PathNode] {

@@ -68,7 +68,7 @@ func TestFromPathsFolding(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := shape(FromPaths(tc.labels, tc.ids)); !slices.Equal(got, tc.want) {
+			if got := shape(fromPaths(tc.labels, tc.ids)); !slices.Equal(got, tc.want) {
 				t.Fatalf("got %q, want %q", got, tc.want)
 			}
 		})
@@ -76,14 +76,14 @@ func TestFromPathsFolding(t *testing.T) {
 }
 
 func TestFromPathsGroupPath(t *testing.T) {
-	nodes := FromPaths([]string{"foo/bar/asdf/file.txt"}, []string{"/base/foo/bar/asdf/file.txt"})
+	nodes := fromPaths([]string{"foo/bar/asdf/file.txt"}, []string{"/base/foo/bar/asdf/file.txt"})
 	if got := nodes[0].Value.Path; got != "/base/foo/bar/asdf" {
 		t.Fatalf("group path = %q", got)
 	}
 	if got := nodes[0].Children[0].Value.Path; got != "/base/foo/bar/asdf/file.txt" {
 		t.Fatalf("leaf path = %q", got)
 	}
-	nodes = FromPaths([]string{"foo/a/x.txt", "foo/b/y.txt"}, []string{"/base/foo/a/x.txt", "/base/foo/b/y.txt"})
+	nodes = fromPaths([]string{"foo/a/x.txt", "foo/b/y.txt"}, []string{"/base/foo/a/x.txt", "/base/foo/b/y.txt"})
 	if got := nodes[0].Value.Path; got != "/base/foo" {
 		t.Fatalf("shared group path = %q", got)
 	}
@@ -101,7 +101,7 @@ func TestFromPathsSortedMatchesUnsorted(t *testing.T) {
 		for i, l := range ls {
 			ids[i] = "/base/" + l
 		}
-		return FromPaths(ls, ids)
+		return fromPaths(ls, ids)
 	}
 	sorted := slices.Clone(labels)
 	slices.Sort(sorted)
@@ -120,8 +120,8 @@ func TestFromPathsSortedMatchesUnsorted(t *testing.T) {
 	}
 }
 
-// The incrementally edited tree equals FromPaths over the same label set after every change,
-// whatever order FromPaths gets the labels in.
+// The incrementally edited tree equals fromPaths over the same label set after every change,
+// whatever order fromPaths gets the labels in.
 func TestPathTreeMatchesFromPaths(t *testing.T) {
 	words := []string{"meadow", "anchor", "lantern", "orchard", "ember", "walnut", "quilt", "harbor", "fjord", "cedar"}
 	rng := rand.New(rand.NewSource(7))
@@ -177,7 +177,7 @@ func TestPathTreeMatchesFromPaths(t *testing.T) {
 			for i, l := range labels {
 				ids[i] = idOf(l)
 			}
-			if got, want := tree.Nodes(), FromPaths(labels, ids); !reflect.DeepEqual(got, want) {
+			if got, want := tree.Nodes(), fromPaths(labels, ids); !reflect.DeepEqual(got, want) {
 				t.Fatalf("step %d (%s): tree differs\n got %q\nwant %q", step, name, shape(got), shape(want))
 			}
 		}

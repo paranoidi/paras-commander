@@ -25,7 +25,7 @@ func BenchmarkFromPathsSorted(b *testing.B) {
 	}
 	b.ReportAllocs()
 	for b.Loop() {
-		FromPaths(labels, ids)
+		fromPaths(labels, ids)
 	}
 }
 
@@ -37,7 +37,7 @@ func BenchmarkFromPathsShuffled(b *testing.B) {
 	})
 	b.ReportAllocs()
 	for b.Loop() {
-		FromPaths(labels, ids)
+		fromPaths(labels, ids)
 	}
 }
 
