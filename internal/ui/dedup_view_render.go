@@ -543,21 +543,14 @@ type dedupSuffixIcon struct {
 	Legend string
 }
 
-// dedupRowSuffixIcons is the single source for a row's duplicate-dir, related-copy,
-// skipped-items, potential-duplicate and last-copy icons, in paint order; drawDedupPathColumn paints it and dedupRowLegend explains it.
+// dedupRowSuffixIcons is the single source for a row's duplicate-dir, skipped-items,
+// potential-duplicate, last-copy and (always last) related-copy icons, in paint order; drawDedupPathColumn paints it and dedupRowLegend explains it.
 func dedupRowSuffixIcons(styles theme.Theme, p dedupPaneParams, d *DedupRowData, hinted, groupAllMarked bool) []dedupSuffixIcon {
 	var out []dedupSuffixIcon
 	if d.DirDup != comparepkg.DirNone {
 		ic := dedupSuffixIcon{Icon: styles.IconDedupFullDir(), Style: styles.PanelDedupFullDir, Legend: dedupLegendExact}
 		if d.DirDup == comparepkg.DirContent {
 			ic = dedupSuffixIcon{Icon: styles.IconFilelistRenamed(), Style: styles.PanelDedupFullDirContent, Legend: dedupLegendContent}
-		}
-		out = append(out, ic)
-	}
-	if hinted {
-		ic := dedupSuffixIcon{Icon: styles.IconDedupRelated(), Style: styles.PanelHint}
-		if d.Kind == DedupRowDir && !p.TwinDirs[d.DirRel] {
-			ic = dedupSuffixIcon{Icon: styles.IconDedupRelatedWithin(), Style: styles.PanelHint, Legend: dedupLegendRelatedWithin}
 		}
 		out = append(out, ic)
 	}
@@ -569,6 +562,13 @@ func dedupRowSuffixIcons(styles theme.Theme, p dedupPaneParams, d *DedupRowData,
 	}
 	if groupAllMarked {
 		out = append(out, dedupSuffixIcon{Icon: styles.IconDedupLastCopy(), Style: styles.PanelDedupRowAllMarked, Legend: dedupLegendLastCopy})
+	}
+	if hinted {
+		ic := dedupSuffixIcon{Icon: styles.IconDedupRelated(), Style: styles.PanelHint}
+		if d.Kind == DedupRowDir && !p.TwinDirs[d.DirRel] {
+			ic = dedupSuffixIcon{Icon: styles.IconDedupRelatedWithin(), Style: styles.PanelHint, Legend: dedupLegendRelatedWithin}
+		}
+		out = append(out, ic)
 	}
 	return out
 }
