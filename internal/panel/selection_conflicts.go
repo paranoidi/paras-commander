@@ -359,22 +359,13 @@ func (s *State) resolveSelectionConflicts(path string, addedIsDir bool) bool {
 		removed = append(removed, s.clearSelectionStrictDescendantsIndexed(added)...)
 	}
 	if s.selectionHasDirs {
-		dirBefore := make([]string, 0, len(s.SelectedDirPaths))
-		for p := range s.SelectedDirPaths {
-			dirBefore = append(dirBefore, p)
-		}
-		isSelDir := func(p string) bool {
-			return s.SelectedDirPaths != nil && s.SelectedDirPaths[p]
-		}
-		if clearSelectionDirAncestors(s.SelectedPaths, added, isSelDir) {
-			for _, p := range dirBefore {
-				if s.SelectedPaths == nil || !s.SelectedPaths[p] {
-					removed = append(removed, p)
-					s.unmarkSelectedDir(p)
-					s.adjustSelectionListedBytes(p, false)
-				}
+		walkAncestors(added, func(ps string) bool {
+			if s.SelectedDirPaths[ps] && s.SelectedPaths[ps] {
+				s.dropSelectedPath(ps)
+				removed = append(removed, ps)
 			}
-		}
+			return false
+		})
 	}
 	if len(removed) == 0 {
 		return false

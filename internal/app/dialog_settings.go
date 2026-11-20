@@ -670,15 +670,11 @@ func (a *App) applyOutputGroupSelect(gs *dialog.GroupSelectState) {
 	}
 	req := a.groupSelectRequest(gs)
 	p := a.activePanel()
-	paths := make([]string, len(matches))
-	isDir := make(map[string]bool, len(matches))
-	for i, m := range matches {
-		paths[i], isDir[m.Path] = m.Path, m.IsDir
-	}
+	paths := dialog.OutputMatchPaths(matches)
 	verb, conflicts := "Unselected", false
 	if req.Mode == findctrl.GroupSelectModeSelect {
 		verb = "Selected"
-		conflicts = p.BulkAddSelections(paths, func(path string) bool { return isDir[path] })
+		conflicts = p.BulkAddSelections(paths, dialog.OutputMatchIsDir(matches))
 	} else {
 		p.RemoveSelections(paths)
 	}

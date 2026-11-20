@@ -660,12 +660,12 @@ func (s *State) TogglePathSelection(path string) (selected bool, conflictsRemove
 	if path == "" {
 		return false, false
 	}
-	isDir := s.selectedPathIsDirectory(path)
-	if s.SelectedPaths != nil && s.SelectedPaths[path] {
-		s.applySelectionRemove(path, isDir)
+	if s.SelectedPaths[path] {
+		s.applySelectionRemove(path)
 		s.normalizeSelectedStripCursor()
 		return false, false
 	}
+	isDir := s.selectedPathIsDirectory(path)
 	conflictsRemoved = s.resolveSelectionConflicts(path, isDir)
 	if s.SelectedPaths == nil {
 		s.SelectedPaths = make(map[string]bool)
@@ -685,8 +685,7 @@ func (s *State) ToggleSelection() (selected bool, conflictsRemoved bool) {
 		s.SelectedPaths = make(map[string]bool)
 	}
 	if s.SelectedPaths[entry.Path] {
-		wasDir := entry.IsDir()
-		s.applySelectionRemove(entry.Path, wasDir)
+		s.applySelectionRemove(entry.Path)
 		s.normalizeSelectedStripCursor()
 		return false, false
 	}
@@ -793,12 +792,12 @@ func (s *State) MarkRange(viewportRows int) (anchored bool, added int, conflicts
 }
 
 // IsSelected reports whether entry is selected in this panel.
-func (s State) IsSelected(entry localfs.Entry) bool {
+func (s *State) IsSelected(entry localfs.Entry) bool {
 	return s.IsSelectedPath(entry.Path)
 }
 
 // IsSelectedPath reports whether an absolute path is selected.
-func (s State) IsSelectedPath(path string) bool {
+func (s *State) IsSelectedPath(path string) bool {
 	path = cleanPathString(path)
 	return path != "" && s.SelectedPaths != nil && s.SelectedPaths[path]
 }
@@ -2003,14 +2002,10 @@ func (s *State) ToggleOrRemoveStripSelection() bool {
 	if row := rows[s.Strip.Cursor]; row.Group {
 		s.UnselectUnder(row.Path)
 	} else {
-		s.unselectPath(row.Path)
+		s.applySelectionRemove(row.Path)
+		s.normalizeSelectedStripCursor()
 	}
-	s.normalizeSelectedStripCursor()
 	return true
-}
-
-func (s *State) unselectPath(p string) {
-	s.applySelectionRemove(p, s.selectedPathIsDirectory(p))
 }
 
 // UnselectUnder deselects every selected path below dir.
@@ -2213,7 +2208,7 @@ func (s *State) InvertSelection() {
 		}
 		s.recomputeSelectionListedBytes()
 	}
-	s.invalidateSelectionDerivedFull()
+	s.invalidateSelectionDerived()
 	s.normalizeSelectedStripCursor()
 }
 
@@ -2221,7 +2216,7 @@ func (s *State) InvertSelection() {
 func (s *State) ClearSelection() {
 	s.clearSelectionState()
 	s.Strip.CursorPath = ""
-	s.invalidateSelectionDerivedFull()
+	s.invalidateSelectionDerived()
 	s.normalizeSelectedStripCursor()
 }
 
@@ -2237,16 +2232,7 @@ func (s *State) SelectGroup(spec FilterSpec, meta GroupSelectMeta) (bool, error)
 	if len(paths) == 0 {
 		return false, nil
 	}
-	if s.SelectedPaths == nil {
-		s.SelectedPaths = make(map[string]bool, len(paths))
-	}
-	lookup := func(path string) bool {
-		return isDir[path]
-	}
-	_ = BulkApplySelectionAdds(s.SelectedPaths, paths, lookup)
-	s.rebuildSelectedDirPaths()
-	s.recomputeSelectionListedBytes()
-	s.invalidateSelectionDerivedFull()
+	s.BulkAddSelections(paths, func(path string) bool { return isDir[path] })
 	return true, nil
 }
 

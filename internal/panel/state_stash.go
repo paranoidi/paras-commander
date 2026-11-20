@@ -53,7 +53,7 @@ func (s *State) ApplySelectionSnapshot(paths []string, cursorPath string) {
 	s.Strip.CursorPath = cursorPath
 	paths = filterExistingSelectionPaths(paths)
 	if len(paths) == 0 {
-		s.invalidateSelectionDerivedFull()
+		s.invalidateSelectionDerived()
 		s.normalizeSelectedStripCursor()
 		return
 	}
@@ -63,7 +63,7 @@ func (s *State) ApplySelectionSnapshot(paths []string, cursorPath string) {
 	}
 	s.rebuildSelectedDirPaths()
 	s.recomputeSelectionListedBytes()
-	s.invalidateSelectionDerivedFull()
+	s.invalidateSelectionDerived()
 	s.normalizeSelectedStripCursor()
 }
 
@@ -85,7 +85,7 @@ func (s *State) MergeSelectionSnapshot(paths []string, cursorPath string) {
 	}
 	s.rebuildSelectedDirPaths()
 	s.recomputeSelectionListedBytes()
-	s.invalidateSelectionDerivedFull()
+	s.invalidateSelectionDerived()
 	s.normalizeSelectedStripCursor()
 }
 

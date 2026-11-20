@@ -153,6 +153,7 @@ func TestBulkAddSelectionsRemovesDirAncestorForFile(t *testing.T) {
 	s := &State{
 		Path:             pathloc.MustParse(root),
 		SelectedPaths:    map[string]bool{filepath.Clean(parent): true},
+		SelectedDirPaths: map[string]bool{filepath.Clean(parent): true},
 		selectionHasDirs: true,
 	}
 	if !s.BulkAddSelections([]string{file}, isDir) {
@@ -296,7 +297,7 @@ func TestStripForcedShowsLocalSelections(t *testing.T) {
 	if got := s.SelectedStripCount(); got != 4 {
 		t.Fatalf("after add = %d, want 4", got)
 	}
-	s.applySelectionRemove(extra, false)
+	s.applySelectionRemove(extra)
 	if got := s.SelectedStripCount(); got != 3 {
 		t.Fatalf("after remove = %d, want 3", got)
 	}

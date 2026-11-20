@@ -45,10 +45,6 @@ func (s *State) SetStripForced(on bool) {
 	s.invalidateSelectionDerived()
 }
 
-func (s *State) invalidateSelectionDerivedFull() {
-	s.invalidateSelectionDerived()
-}
-
 func (s *State) selDerivedValid() bool {
 	return s.selDerivedCache.built &&
 		s.selDerivedCache.gen == s.selectionDerivedGen &&
@@ -138,31 +134,19 @@ func (s *State) removeSubtreeAncestorsForPath(path string) {
 		return
 	}
 	countSubtreeAncestors(s.selDerivedCache.subtreeAncestors, path, -1)
-	if len(s.selDerivedCache.subtreeAncestors) == 0 {
-		s.selDerivedCache.subtreeAncestors = nil
-	}
 }
 
 // countSubtreeAncestors adds delta to the count of every strict ancestor directory of path,
 // deleting the counts that reach zero.
 func countSubtreeAncestors(counts map[string]int32, path string, delta int32) {
-	loc, err := pathloc.Parse(path)
-	if err != nil {
-		return
-	}
-	for {
-		parent := loc.Parent()
-		if parent.Equal(loc) || parent.IsZero() {
-			return
-		}
-		key := cleanPathString(parent.String())
-		if n := counts[key] + delta; n > 0 {
-			counts[key] = n
+	walkAncestors(path, func(dir string) bool {
+		if n := counts[dir] + delta; n > 0 {
+			counts[dir] = n
 		} else {
-			delete(counts, key)
+			delete(counts, dir)
 		}
-		loc = parent
-	}
+		return false
+	})
 }
 
 // editStripPath adds (on) or drops path in the strip's sorted list and its tree, when built.
@@ -255,11 +239,15 @@ func (s *State) applySelectionAdd(path string, isDir bool) {
 	s.patchSelectionDerivedAfterAdd(path, isDir)
 }
 
-func (s *State) applySelectionRemove(path string, wasDir bool) {
+// applySelectionRemove unselects one path and patches the derived state. A path that is not
+// selected changes nothing (its counts and bytes were never added); whether it was a directory
+// comes from SelectedDirPaths, never a stat.
+func (s *State) applySelectionRemove(path string) {
 	path = cleanPathString(path)
-	if path == "" || s.SelectedPaths == nil {
+	if path == "" || !s.SelectedPaths[path] {
 		return
 	}
+	wasDir := s.SelectedDirPaths[path]
 	s.dropSelectedPath(path)
 	if len(s.SelectedPaths) == 0 {
 		s.clearSelectionState()
@@ -461,8 +449,25 @@ func (s *State) BulkAddSelections(paths []string, isDir func(string) bool) bool 
 	if s.SelectedPaths == nil {
 		s.SelectedPaths = make(map[string]bool, len(paths))
 	}
+	// Ask isDir (a stat for an unlisted path) once per batch path; the conflict checks ask about
+	// existing selections too, which SelectedDirPaths already answers.
+	batchDir := make(map[string]bool, len(paths))
+	for _, p := range paths {
+		if p = cleanPathString(p); p != "" {
+			if _, ok := batchDir[p]; !ok {
+				batchDir[p] = isDir(p)
+			}
+		}
+	}
+	known := s.SelectedDirPaths
+	dirOf := func(p string) bool {
+		if d, ok := batchDir[p]; ok {
+			return d
+		}
+		return known[p]
+	}
 
-	removed := BulkApplySelectionAdds(s.SelectedPaths, paths, isDir)
+	removed := BulkApplySelectionAdds(s.SelectedPaths, paths, dirOf)
 	// Patch the directory marks instead of rebuilding them: a rebuild stats every unlisted
 	// selection, not just the batch.
 	for p := range s.SelectedDirPaths {
@@ -470,13 +475,13 @@ func (s *State) BulkAddSelections(paths []string, isDir func(string) bool) bool 
 			s.unmarkSelectedDir(p)
 		}
 	}
-	for _, p := range paths {
-		if p = cleanPathString(p); s.SelectedPaths[p] && isDir(p) {
+	for p, d := range batchDir {
+		if d && s.SelectedPaths[p] {
 			s.markSelectedDir(p)
 		}
 	}
 	s.recomputeSelectionListedBytes()
-	s.invalidateSelectionDerivedFull()
+	s.invalidateSelectionDerived()
 	return removed
 }
 
@@ -488,26 +493,59 @@ func (s *State) dropSelectedPath(p string) {
 	s.unmarkSelectedDir(p)
 }
 
-// RemoveSelections unselects every selected path in paths in one go: per-path bookkeeping is
-// O(1) (no stat) and the strip and other derived state rebuild once, on next use, instead of
-// once per path. It reports how many paths were selected.
+// InvertSelections flips each of paths: the selected ones are unselected and the rest selected
+// (isDir answers for those), each side in one bulk change. It reports whether the adds removed
+// conflicting selections.
+func (s *State) InvertSelections(paths []string, isDir func(string) bool) bool {
+	var on, off []string
+	for _, p := range paths {
+		if s.IsSelectedPath(p) {
+			on = append(on, p)
+		} else {
+			off = append(off, p)
+		}
+	}
+	// Adds go first: the remove settles the strip cursor, which builds the derived state once
+	// for both halves.
+	conflicts := s.BulkAddSelections(off, isDir)
+	s.RemoveSelections(on)
+	return conflicts
+}
+
+// RemoveSelections unselects every selected path in paths and reports how many were selected.
+// Per-path bookkeeping is O(1) with no stat. A batch that is small next to the selection patches
+// the derived state path by path (O(depth) plus an O(n) strip splice each); a larger one rebuilds
+// it once instead of once per path.
 func (s *State) RemoveSelections(paths []string) int {
+	patch := removeSelectionsPatches(len(paths), len(s.SelectedPaths))
 	removed := 0
 	for _, p := range paths {
 		p = cleanPathString(p)
 		if p == "" || !s.SelectedPaths[p] {
 			continue
 		}
-		s.dropSelectedPath(p)
+		if patch {
+			s.applySelectionRemove(p)
+		} else {
+			s.dropSelectedPath(p)
+		}
 		removed++
 	}
 	if removed == 0 {
 		return 0
 	}
-	if len(s.SelectedPaths) == 0 {
-		s.clearSelectionState()
+	if !patch {
+		if len(s.SelectedPaths) == 0 {
+			s.clearSelectionState()
+		}
+		s.invalidateSelectionDerived()
 	}
-	s.invalidateSelectionDerivedFull()
 	s.normalizeSelectedStripCursor()
 	return removed
 }
+
+// removeSelectionsPatches reports whether removing k of n selections is cheaper path by path
+// than by one rebuild.
+// ponytail: fixed crossover (a rebuild costs about what patching 1/100 of the selection does at
+// 10k); retune with a k-of-n RemoveSelections benchmark if the numbers move.
+func removeSelectionsPatches(k, n int) bool { return k*64 <= n }

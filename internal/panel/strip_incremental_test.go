@@ -42,7 +42,7 @@ func TestSelectedStripIncrementalMatchesFresh(t *testing.T) {
 		for step := range 300 {
 			p := words[rng.Intn(len(words))]
 			if s.SelectedPaths[p] {
-				s.applySelectionRemove(p, false)
+				s.applySelectionRemove(p)
 			} else {
 				s.applySelectionAdd(p, false)
 			}
@@ -77,7 +77,7 @@ func benchStripToggle(b *testing.B, n int, tree bool) {
 	for b.Loop() {
 		s.applySelectionAdd(p, false)
 		_ = s.SelectedStripRows()
-		s.applySelectionRemove(p, false)
+		s.applySelectionRemove(p)
 		_ = s.SelectedStripRows()
 	}
 }
@@ -142,7 +142,7 @@ func TestSubtreeCountsIncrementalMatchRebuild(t *testing.T) {
 	for step := range 400 {
 		p := pool[rng.Intn(len(pool))]
 		if s.SelectedPaths[p] {
-			s.applySelectionRemove(p, false)
+			s.applySelectionRemove(p)
 		} else {
 			s.applySelectionAdd(p, false)
 		}

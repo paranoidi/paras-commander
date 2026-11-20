@@ -145,26 +145,24 @@ func DedupMarkedPaths(view DedupViewState) []string {
 func DedupStripRows(snap comparepkg.DedupSnapshot, view DedupViewState, tree bool) []selstrip.Row {
 	paths := DedupMarkedPaths(view) // first: it moves c.marked.gen, part of the rows key
 	c := view.Cache
-	var key dedupStripKey
-	if c != nil {
-		key = dedupStripKey{gen: c.marked.gen, tree: tree, collapsedRev: view.Strip.CollapsedRev}
-		if tree {
-			key.treeKey = dedupStripTreeKeyFor(snap)
-		}
-		if c.marked.rowsOK && c.marked.rowsKey == key {
-			return c.marked.rows
-		}
+	if c == nil {
+		return selstrip.Rows(paths, snap.EffectiveDisplayRoot().String(), tree, view.Strip.Collapsed)
 	}
-	var rows []selstrip.Row
+	m := &c.marked
+	key := dedupStripKey{gen: m.gen, tree: tree, collapsedRev: view.Strip.CollapsedRev}
 	if tree {
-		rows = selstrip.TreeRows(DedupStripTreeNodes(snap, view), view.Strip.Collapsed)
+		key.treeKey = dedupStripTreeKeyFor(snap)
+	}
+	if m.rowsOK && m.rowsKey == key {
+		return m.rows
+	}
+	if tree {
+		m.rows = selstrip.TreeRows(DedupStripTreeNodes(snap, view), view.Strip.Collapsed)
 	} else {
-		rows = selstrip.FlatRows(paths)
+		m.rows = selstrip.FlatRows(paths)
 	}
-	if c != nil {
-		c.marked.rows, c.marked.rowsKey, c.marked.rowsOK = rows, key, true
-	}
-	return rows
+	m.rowsKey, m.rowsOK = key, true
+	return m.rows
 }
 
 // dedupStripTreeKeyFor is what a strip tree of snap is built for: its labels' base and groups.

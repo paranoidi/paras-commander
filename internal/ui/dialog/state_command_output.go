@@ -41,6 +41,27 @@ type OutputPathMatch struct {
 	IsDir            bool
 }
 
+// OutputMatchPaths returns the matches' paths, in order.
+func OutputMatchPaths(ms []OutputPathMatch) []string {
+	out := make([]string, len(ms))
+	for i, m := range ms {
+		out[i] = m.Path
+	}
+	return out
+}
+
+// OutputMatchIsDir answers whether a matched path is a directory from the detection Lstat
+// (no re-stat), for the panel's bulk selection calls.
+func OutputMatchIsDir(ms []OutputPathMatch) func(string) bool {
+	dirs := make(map[string]bool, len(ms))
+	for _, m := range ms {
+		if m.IsDir {
+			dirs[m.Path] = true
+		}
+	}
+	return func(p string) bool { return dirs[p] }
+}
+
 // UniquePaths returns Paths with repeated paths dropped, keeping first occurrences in order.
 func (st CommandOutputDialogState) UniquePaths() []OutputPathMatch {
 	seen := make(map[string]bool, len(st.Paths))
