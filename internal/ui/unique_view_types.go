@@ -68,7 +68,7 @@ type UniqueRowData struct {
 }
 
 // UniqueRow is one visible row of the results tree.
-type UniqueRow = treeflat.Row[UniqueRowData]
+type UniqueRow = treeflat.Row[*UniqueRowData]
 
 // RelPath is a listed path as the view names it, below Root (see uniqueRel).
 func (s *UniqueViewState) RelPath(path string) string { return uniqueRel(s.Root, path) }
@@ -174,23 +174,23 @@ func (n *uniqueDirNode) add(f UniqueFile) {
 	}
 }
 
-func uniqueFileNode(f UniqueFile) treeflat.Node[UniqueRowData] {
+func uniqueFileNode(f UniqueFile) treeflat.Node[*UniqueRowData] {
 	data := UniqueRowData{Path: f.Path, Display: filepath.Base(f.Path), Size: f.Size, Count: 1}
 	if f.Unverified {
 		data.Unverified = 1
 	}
-	return treeflat.Node[UniqueRowData]{ID: f.Path, Value: data}
+	return treeflat.Node[*UniqueRowData]{ID: f.Path, Value: &data}
 }
 
 // nodes lists n's children: directories, then files, each by name. A directory holding only one
 // directory folds into it (Display a/b), as the duplicates tree does.
-func (n *uniqueDirNode) nodes() []treeflat.Node[UniqueRowData] {
+func (n *uniqueDirNode) nodes() []treeflat.Node[*UniqueRowData] {
 	names := make([]string, 0, len(n.dirs))
 	for name := range n.dirs {
 		names = append(names, name)
 	}
 	slices.Sort(names)
-	out := make([]treeflat.Node[UniqueRowData], 0, len(names)+len(n.files))
+	out := make([]treeflat.Node[*UniqueRowData], 0, len(names)+len(n.files))
 	for _, name := range names {
 		d, display := n.dirs[name], name
 		for len(d.files) == 0 && len(d.dirs) == 1 {
@@ -200,7 +200,7 @@ func (n *uniqueDirNode) nodes() []treeflat.Node[UniqueRowData] {
 		}
 		data := d.data
 		data.IsDir, data.Path, data.Display = true, d.path, display
-		out = append(out, treeflat.Node[UniqueRowData]{ID: d.path, Value: data, Children: d.nodes()})
+		out = append(out, treeflat.Node[*UniqueRowData]{ID: d.path, Value: &data, Children: d.nodes()})
 	}
 	slices.SortFunc(n.files, func(a, b UniqueFile) int { return cmp.Compare(a.Path, b.Path) })
 	for _, f := range n.files {
@@ -210,7 +210,7 @@ func (n *uniqueDirNode) nodes() []treeflat.Node[UniqueRowData] {
 }
 
 // uniqueNodes builds the tree of the shown files.
-func (s *UniqueViewState) uniqueNodes(files []UniqueFile) []treeflat.Node[UniqueRowData] {
+func (s *UniqueViewState) uniqueNodes(files []UniqueFile) []treeflat.Node[*UniqueRowData] {
 	root := &uniqueDirNode{}
 	for _, f := range files {
 		rel := uniqueRel(s.Root, f.Path)

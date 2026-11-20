@@ -247,7 +247,7 @@ func (h *Handler) cursorID() string {
 func (h *Handler) cursorRow() (ui.UniqueRow, bool) {
 	st, rows := &h.model.UniqueView, h.model.UniqueList
 	if st.Pane.Selected < 0 || st.Pane.Selected >= len(rows) {
-		return ui.UniqueRow{}, false
+		return ui.UniqueRow{Value: &ui.UniqueRowData{}}, false
 	}
 	return rows[st.Pane.Selected], true
 }

@@ -46,7 +46,7 @@ type dedupTreeKey struct {
 // dedupTree is the built node tree for one key; the flatten step runs per call.
 type dedupTree struct {
 	key          dedupTreeKey
-	roots        []treeflat.Node[DedupRowData]
+	roots        []treeflat.Node[*DedupRowData]
 	ignoredEmpty int // files dropped by the ignore-empty filter
 	ids          []string
 	idsDone      bool
@@ -61,7 +61,7 @@ type dedupTree struct {
 func (t *dedupTree) columnWidths() (sizeW, countW int) {
 	if !t.widthsDone {
 		s, c := len([]rune(dedupListSizeTitle)), len([]rune(dedupListCountTitle))
-		treeflat.Walk(t.roots, func(n *treeflat.Node[DedupRowData], _ int) {
+		treeflat.Walk(t.roots, func(n *treeflat.Node[*DedupRowData], _ int) {
 			st, ct := dedupRowDetailTexts(n.Value)
 			s, c = max(s, len([]rune(st))), max(c, len([]rune(ct)))
 		})
@@ -76,7 +76,7 @@ func DedupWalkNodes(snap comparepkg.DedupSnapshot, view DedupViewState, fn func(
 	if snap.Phase != comparepkg.DedupDone {
 		return
 	}
-	treeflat.Walk(dedupTreeFor(snap, view).roots, func(n *treeflat.Node[DedupRowData], depth int) {
+	treeflat.Walk(dedupTreeFor(snap, view).roots, func(n *treeflat.Node[*DedupRowData], depth int) {
 		fn(n.ID, depth, len(n.Children) > 0)
 	})
 }

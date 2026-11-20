@@ -111,7 +111,7 @@ type uniqueTreeParams struct {
 	Hover         ListRowHover
 }
 
-func uniqueRowDetailTexts(d UniqueRowData) (size, count string) {
+func uniqueRowDetailTexts(d *UniqueRowData) (size, count string) {
 	return formatByteSizeListed(d.Size), strconv.Itoa(d.Count)
 }
 
@@ -276,7 +276,7 @@ func drawUniquePathColumn(screen tcell.Screen, styles theme.Theme, p uniqueTreeP
 }
 
 // uniqueRowLegend lists "<icon> <meaning>" for the icons on the cursor row, in paint order.
-func uniqueRowLegend(styles theme.Theme, d UniqueRowData, markedBelow int, rowMarks dialog.RowMarksFunc) string {
+func uniqueRowLegend(styles theme.Theme, d *UniqueRowData, markedBelow int, rowMarks dialog.RowMarksFunc) string {
 	var parts []string
 	add := func(icon rune, text string) { parts = append(parts, string(icon)+" "+text) }
 	if rowMarks != nil {

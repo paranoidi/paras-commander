@@ -757,7 +757,7 @@ func TestDedupListHeaderMatchesCompactColumnSpacing(t *testing.T) {
 
 func TestDedupListColumnWidthsUsesCompactMinimums(t *testing.T) {
 	rows := []DedupRow{{
-		Value: DedupRowData{
+		Value: &DedupRowData{
 			Kind:     DedupRowFile,
 			Size:     741683,
 			Copies:   3,
@@ -1657,7 +1657,7 @@ func TestDrawDedupViewFullDirIcons(t *testing.T) {
 	}
 	view := DedupViewState{TreeDirs: true, IgnoreEmpty: true}
 	list, _ := DedupRowsFromSnapshot(snap, view)
-	byDir := func(rel string) DedupRowData {
+	byDir := func(rel string) *DedupRowData {
 		i := DedupRowIndexByID(list, "d:"+rel)
 		if i < 0 {
 			t.Fatalf("no dir row %q", rel)

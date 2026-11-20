@@ -27,7 +27,7 @@ type dedupListColumns struct {
 	pathW, pathX, gapBeforeCountX, countColX, countColW, sizeColX, sizeColW, sizeColRight, innerRight, listW int
 }
 
-func dedupRowDetailTexts(d DedupRowData) (size, count string) {
+func dedupRowDetailTexts(d *DedupRowData) (size, count string) {
 	switch {
 	case d.ShowSize:
 		return formatByteSizeListed(d.Size), strconv.Itoa(d.Copies)
@@ -216,7 +216,7 @@ func drawDedupView(
 
 func dedupRowAt(rows []DedupRow, idx int) (DedupRow, bool) {
 	if idx < 0 || idx >= len(rows) {
-		return DedupRow{}, false
+		return DedupRow{Value: &DedupRowData{}}, false
 	}
 	return rows[idx], true
 }
@@ -379,7 +379,7 @@ func (f dedupRowFlags) ownCursorStyle(focused bool) bool {
 
 // dedupRowStyle picks the row's line style from precomputed per-row flags and, on the cursor or
 // hovered row, the file list's cursor treatment (theme.PanelListingCursorRow; zero elsewhere).
-func dedupRowStyle(styles theme.Theme, p dedupPaneParams, d DedupRowData, entry DedupRow, f dedupRowFlags, chromeBlocked, hovered bool, base tcell.Style, bg tcell.Color) (tcell.Style, theme.PanelListingCursorRow) {
+func dedupRowStyle(styles theme.Theme, p dedupPaneParams, d *DedupRowData, entry DedupRow, f dedupRowFlags, chromeBlocked, hovered bool, base tcell.Style, bg tcell.Color) (tcell.Style, theme.PanelListingCursorRow) {
 	rowBase := base
 	if dedupRowHinted(p, d, entry, f.RowSelected) {
 		rowBase = styles.PanelHint.Background(bg)
@@ -417,7 +417,7 @@ func dedupRowStyle(styles theme.Theme, p dedupPaneParams, d DedupRowData, entry 
 // active group, a twin of the cursor's duplicate directory, or a collapsed dir whose
 // subtree contains either. Such rows
 // get panel.hint and the icons.dedup.related suffix (the icon survives kept/marked colors).
-func dedupRowHinted(p dedupPaneParams, d DedupRowData, entry DedupRow, rowSelected bool) bool {
+func dedupRowHinted(p dedupPaneParams, d *DedupRowData, entry DedupRow, rowSelected bool) bool {
 	if d.Kind == DedupRowDir && p.TwinDirs[d.DirRel] {
 		return true
 	}
@@ -436,7 +436,7 @@ func dedupRowHinted(p dedupPaneParams, d DedupRowData, entry DedupRow, rowSelect
 // dedupRowAbsPath returns the absolute path for one dedup row: file rows use their own
 // AbsKey directly; dir rows join snap.EffectiveDisplayRoot() with DirRel, mirroring
 // apphandler/dedup.Handler.selectedDirAbs's directory-path join.
-func dedupRowAbsPath(snap comparepkg.DedupSnapshot, d DedupRowData) string {
+func dedupRowAbsPath(snap comparepkg.DedupSnapshot, d *DedupRowData) string {
 	if d.Kind == DedupRowFile {
 		return d.AbsKey
 	}
@@ -448,7 +448,7 @@ func dedupRowAbsPath(snap comparepkg.DedupSnapshot, d DedupRowData) string {
 // trailing pin/in-progress-job marks, and subtree-mark suffix for one row, moved out of
 // drawDedupTreePane's per-row path column block. Pin/job marks are painted before the subtree
 // icon, matching panellist's job/pin-before-subtree suffix ordering.
-func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPaneParams, snap comparepkg.DedupSnapshot, d DedupRowData, entry DedupRow, lineY, pathX, pathW int, lineStyle tcell.Style, cursorStyleKey string, chromeBlocked, hinted bool, matchRanges []search.Range, matchCursor bool) {
+func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPaneParams, snap comparepkg.DedupSnapshot, d *DedupRowData, entry DedupRow, lineY, pathX, pathW int, lineStyle tcell.Style, cursorStyleKey string, chromeBlocked, hinted bool, matchRanges []search.Range, matchCursor bool) {
 	connectorPrefix := dedupTreeConnectorPrefix(styles, entry)
 	gutter, gutterStyle := treeRowGutter(styles, entry.Value.Kind == DedupRowDir, entry.HasChildren, entry.Expanded, lineStyle, cursorStyleKey, chromeBlocked)
 	prefix := connectorPrefix
@@ -553,7 +553,7 @@ type dedupSuffixIcon struct {
 
 // dedupRowSuffixIcons is the single source for a row's duplicate-dir, related-copy,
 // skipped-items and potential-duplicate icons, in paint order; drawDedupPathColumn paints it and dedupRowLegend explains it.
-func dedupRowSuffixIcons(styles theme.Theme, p dedupPaneParams, d DedupRowData, hinted bool) []dedupSuffixIcon {
+func dedupRowSuffixIcons(styles theme.Theme, p dedupPaneParams, d *DedupRowData, hinted bool) []dedupSuffixIcon {
 	var out []dedupSuffixIcon
 	if d.DirDup != comparepkg.DirNone {
 		ic := dedupSuffixIcon{Icon: styles.IconDedupFullDir(), Style: styles.PanelDedupFullDir, Legend: dedupLegendExact}
@@ -580,7 +580,7 @@ func dedupRowSuffixIcons(styles theme.Theme, p dedupPaneParams, d DedupRowData, 
 
 // dedupRowLegend lists "<icon> <meaning>" for each explainable icon on the row, in paint order
 // (job, pin, subtree mark, suffix icons), comma-separated.
-func dedupRowLegend(styles theme.Theme, p dedupPaneParams, snap comparepkg.DedupSnapshot, d DedupRowData, hinted bool) string {
+func dedupRowLegend(styles theme.Theme, p dedupPaneParams, snap comparepkg.DedupSnapshot, d *DedupRowData, hinted bool) string {
 	var parts []string
 	add := func(icon rune, text string) { parts = append(parts, string(icon)+" "+text) }
 	if p.RowMarks != nil {
@@ -613,7 +613,7 @@ func dedupRowLegend(styles theme.Theme, p dedupPaneParams, snap comparepkg.Dedup
 
 // drawDedupDetailColumns paints the Count and Size trailing columns for one row, moved out of
 // drawDedupTreePane's detail-column paint block.
-func drawDedupDetailColumns(screen tcell.Screen, cols dedupListColumns, d DedupRowData, lineY int, lineStyle, detailStyle tcell.Style, innerRight int) {
+func drawDedupDetailColumns(screen tcell.Screen, cols dedupListColumns, d *DedupRowData, lineY int, lineStyle, detailStyle tcell.Style, innerRight int) {
 	sizeText, countText := dedupRowDetailTexts(d)
 	primitive.Text(screen, cols.countColX, lineY, cols.countColW, fmt.Sprintf("%*s", cols.countColW, countText), detailStyle)
 	primitive.Text(screen, cols.countColX+cols.countColW, lineY, 1, "", lineStyle)

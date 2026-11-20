@@ -96,7 +96,7 @@ func TestDrawDedupViewBottomBorderExplainsCursorRowIcons(t *testing.T) {
 
 func TestDedupRowLegendListsDirDupAndHiddenIcons(t *testing.T) {
 	styles := theme.Default()
-	d := DedupRowData{Kind: DedupRowDir, DirRel: "orchard", DirDup: comparepkg.DirExact, DirHidden: true}
+	d := &DedupRowData{Kind: DedupRowDir, DirRel: "orchard", DirDup: comparepkg.DirExact, DirHidden: true}
 	p := dedupPaneParams{TwinDirs: map[string]bool{}}
 	got := dedupRowLegend(styles, p, comparepkg.DedupSnapshot{}, d, false)
 	want := string(styles.IconDedupFullDir()) + " exact duplicate folder, " + string(styles.IconDedupHidden()) + " has skipped items"
@@ -104,10 +104,10 @@ func TestDedupRowLegendListsDirDupAndHiddenIcons(t *testing.T) {
 		t.Fatalf("legend %q, want %q", got, want)
 	}
 	// The related-copy + is never explained.
-	if got := dedupRowLegend(styles, p, comparepkg.DedupSnapshot{}, DedupRowData{Kind: DedupRowDir, DirRel: "x"}, true); !strings.Contains(got, "contains copies") {
+	if got := dedupRowLegend(styles, p, comparepkg.DedupSnapshot{}, &DedupRowData{Kind: DedupRowDir, DirRel: "x"}, true); !strings.Contains(got, "contains copies") {
 		t.Fatalf("within legend %q", got)
 	}
-	file := DedupRowData{Kind: DedupRowFile}
+	file := &DedupRowData{Kind: DedupRowFile}
 	if got := dedupRowLegend(styles, p, comparepkg.DedupSnapshot{}, file, true); got != "" {
 		t.Fatalf("related + legend %q, want empty", got)
 	}
@@ -115,7 +115,7 @@ func TestDedupRowLegendListsDirDupAndHiddenIcons(t *testing.T) {
 
 func TestDedupPotentialRowShowsIconAndLegend(t *testing.T) {
 	styles := theme.Default()
-	d := DedupRowData{Kind: DedupRowFile, Potential: true}
+	d := &DedupRowData{Kind: DedupRowFile, Potential: true}
 	icons := dedupRowSuffixIcons(styles, dedupPaneParams{}, d, false)
 	if len(icons) != 1 || icons[0].Icon != styles.IconDedupPotential() || icons[0].Style != styles.PanelDedupPotential {
 		t.Fatalf("icons = %+v", icons)

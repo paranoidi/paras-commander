@@ -522,7 +522,7 @@ func TestSwitchPanePrevCyclesInReverse(t *testing.T) {
 	root := pathloc.MustParse("/scan")
 	snap := dedupDoneSnapshot(root, dedupFile("alpha/widget.txt"), dedupFile("beta/widget.txt"))
 	h, model := dedupHandlerWithView(t, snap, ui.DedupViewState{TreeDirs: true, Marked: map[string]bool{}, Kept: map[string]bool{}})
-	model.DedupCopiesList = []ui.DedupRow{{}}
+	model.DedupCopiesList = []ui.DedupRow{{Value: &ui.DedupRowData{}}}
 	st := &model.DedupView
 	focus := func() string {
 		switch {

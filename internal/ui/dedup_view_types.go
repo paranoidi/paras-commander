@@ -39,7 +39,7 @@ type DedupRowData struct {
 }
 
 // DedupRow is one visible row of the dedup results tree.
-type DedupRow = treeflat.Row[DedupRowData]
+type DedupRow = treeflat.Row[*DedupRowData]
 
 // DedupPane is one tree pane's cursor/scroll/collapse state (main results pane
 // and the copies pane each own one).
@@ -183,7 +183,7 @@ func DedupCopyExpandableIDs(snap comparepkg.DedupSnapshot, sel DedupRow) []strin
 	return treeflat.ExpandableIDs(dedupCopyRoots(snap, sel))
 }
 
-func dedupCopyRoots(snap comparepkg.DedupSnapshot, sel DedupRow) []treeflat.Node[DedupRowData] {
+func dedupCopyRoots(snap comparepkg.DedupSnapshot, sel DedupRow) []treeflat.Node[*DedupRowData] {
 	d := sel.Value
 	if d.Kind == DedupRowDir {
 		twins := DedupTwinDirs(snap, d.DirRel)
@@ -258,7 +258,7 @@ func DedupExpandableIDs(snap comparepkg.DedupSnapshot, view DedupViewState) []st
 
 // dedupGroupRoots builds one root node per duplicate group; the group's first
 // file is the header row and the remaining copies are its children.
-func dedupGroupRoots(snap comparepkg.DedupSnapshot, idxs []int, sortByWasted bool) []treeflat.Node[DedupRowData] {
+func dedupGroupRoots(snap comparepkg.DedupSnapshot, idxs []int, sortByWasted bool) []treeflat.Node[*DedupRowData] {
 	idxs = slices.Clone(idxs)
 	if sortByWasted {
 		slices.SortFunc(idxs, func(a, b int) int {
@@ -269,12 +269,12 @@ func dedupGroupRoots(snap comparepkg.DedupSnapshot, idxs []int, sortByWasted boo
 			return cmp.Compare(snap.Groups[a].Files[0].Rel, snap.Groups[b].Files[0].Rel)
 		})
 	}
-	roots := make([]treeflat.Node[DedupRowData], 0, len(idxs))
+	roots := make([]treeflat.Node[*DedupRowData], 0, len(idxs))
 	for _, gi := range idxs {
 		g := snap.Groups[gi]
-		root := treeflat.Node[DedupRowData]{
+		root := treeflat.Node[*DedupRowData]{
 			ID: dedupGroupID(g),
-			Value: DedupRowData{
+			Value: &DedupRowData{
 				Kind:      DedupRowFile,
 				File:      g.Files[0],
 				AbsKey:    g.Files[0].Abs.String(),
@@ -287,9 +287,9 @@ func dedupGroupRoots(snap comparepkg.DedupSnapshot, idxs []int, sortByWasted boo
 			},
 		}
 		for _, f := range g.Files[1:] {
-			root.Children = append(root.Children, treeflat.Node[DedupRowData]{
+			root.Children = append(root.Children, treeflat.Node[*DedupRowData]{
 				ID: f.Abs.String(),
-				Value: DedupRowData{
+				Value: &DedupRowData{
 					Kind:      DedupRowFile,
 					File:      f,
 					AbsKey:    f.Abs.String(),
@@ -309,13 +309,13 @@ func dedupGroupRoots(snap comparepkg.DedupSnapshot, idxs []int, sortByWasted boo
 // dedupDirBuild is the intermediate mutable trie used to assemble the dirs-mode tree.
 type dedupDirBuild struct {
 	sub   map[string]*dedupDirBuild
-	files []treeflat.Node[DedupRowData]
+	files []treeflat.Node[*DedupRowData]
 }
 
 // dedupDirRoots builds the directory-hierarchy tree: only directories containing
 // duplicate files appear; leaves are the duplicate files themselves. keep, when
 // non-nil, filters which files appear (the copies pane hides the selection itself).
-func dedupDirRoots(snap comparepkg.DedupSnapshot, idxs []int, keep func(comparepkg.DedupFile) bool) []treeflat.Node[DedupRowData] {
+func dedupDirRoots(snap comparepkg.DedupSnapshot, idxs []int, keep func(comparepkg.DedupFile) bool) []treeflat.Node[*DedupRowData] {
 	root := &dedupDirBuild{}
 	for _, gi := range idxs {
 		g := snap.Groups[gi]
@@ -336,9 +336,9 @@ func dedupDirRoots(snap comparepkg.DedupSnapshot, idxs []int, keep func(comparep
 				}
 				cur = next
 			}
-			cur.files = append(cur.files, treeflat.Node[DedupRowData]{
+			cur.files = append(cur.files, treeflat.Node[*DedupRowData]{
 				ID: f.Abs.String(),
-				Value: DedupRowData{
+				Value: &DedupRowData{
 					Kind:      DedupRowFile,
 					File:      f,
 					AbsKey:    f.Abs.String(),
@@ -384,7 +384,7 @@ func dedupDirMarks(snap comparepkg.DedupSnapshot) map[string]dedupDirMark {
 // DupCount (duplicate files in the subtree) and WastedBytes (reclaimable bytes
 // under the keep-one-survivor rule — all k copies count when the group also
 // lives outside the subtree, k-1 when it lives entirely inside).
-func dedupDirNodes(b *dedupDirBuild, rel string, snap comparepkg.DedupSnapshot, marks map[string]dedupDirMark) ([]treeflat.Node[DedupRowData], map[int]int) {
+func dedupDirNodes(b *dedupDirBuild, rel string, snap comparepkg.DedupSnapshot, marks map[string]dedupDirMark) ([]treeflat.Node[*DedupRowData], map[int]int) {
 	names := make([]string, 0, len(b.sub))
 	for name := range b.sub {
 		names = append(names, name)
@@ -395,7 +395,7 @@ func dedupDirNodes(b *dedupDirBuild, rel string, snap comparepkg.DedupSnapshot, 
 	for _, f := range b.files {
 		counts[f.Value.GroupIdx]++
 	}
-	out := make([]treeflat.Node[DedupRowData], 0, len(names)+len(b.files))
+	out := make([]treeflat.Node[*DedupRowData], 0, len(names)+len(b.files))
 	for _, name := range names {
 		childRel := name
 		if rel != "" {
@@ -413,9 +413,9 @@ func dedupDirNodes(b *dedupDirBuild, rel string, snap comparepkg.DedupSnapshot, 
 			}
 			wasted += int64(k) * g.Size
 		}
-		out = append(out, dedupCompactDir(treeflat.Node[DedupRowData]{
+		out = append(out, dedupCompactDir(treeflat.Node[*DedupRowData]{
 			ID: "d:" + childRel,
-			Value: DedupRowData{
+			Value: &DedupRowData{
 				Kind:        DedupRowDir,
 				DirRel:      childRel,
 				GroupIdx:    -1,
@@ -431,7 +431,7 @@ func dedupDirNodes(b *dedupDirBuild, rel string, snap comparepkg.DedupSnapshot, 
 		}))
 	}
 	files := slices.Clone(b.files)
-	slices.SortFunc(files, func(a, b treeflat.Node[DedupRowData]) int {
+	slices.SortFunc(files, func(a, b treeflat.Node[*DedupRowData]) int {
 		return cmp.Compare(a.Value.Display, b.Value.Display)
 	})
 	return append(out, files...), counts
@@ -440,7 +440,7 @@ func dedupDirNodes(b *dedupDirBuild, rel string, snap comparepkg.DedupSnapshot, 
 // dedupCompactDir folds a directory holding only one directory into that child,
 // so the row reads "a/b" and stands for b. A directory with a duplicate-directory
 // mark stays its own row: the mark and its twins belong to that exact path.
-func dedupCompactDir(n treeflat.Node[DedupRowData]) treeflat.Node[DedupRowData] {
+func dedupCompactDir(n treeflat.Node[*DedupRowData]) treeflat.Node[*DedupRowData] {
 	if n.Value.DirDup != comparepkg.DirNone || len(n.Children) != 1 ||
 		n.Children[0].Value.Kind != DedupRowDir {
 		return n

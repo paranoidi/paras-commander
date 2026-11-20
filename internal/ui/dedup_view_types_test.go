@@ -495,7 +495,7 @@ func TestDedupDirRowDetails(t *testing.T) {
 		},
 	}
 	rows, _ := DedupRowsFromSnapshot(snap, DedupViewState{IgnoreEmpty: true, TreeDirs: true})
-	var meadow DedupRowData
+	meadow := &DedupRowData{}
 	for _, r := range rows {
 		if r.Value.Kind == DedupRowDir && r.Value.DirRel == "meadow" {
 			meadow = r.Value
@@ -681,7 +681,7 @@ func TestDedupCopyFilesUnderDir(t *testing.T) {
 		t.Fatalf("orchard files = %v, want orchard/lantern.txt", orchard)
 	}
 
-	if got := DedupCopyFilesUnderDir(snap, DedupRow{Value: DedupRowData{Kind: DedupRowDir}}, "meadow"); got != nil {
+	if got := DedupCopyFilesUnderDir(snap, DedupRow{Value: &DedupRowData{Kind: DedupRowDir}}, "meadow"); got != nil {
 		t.Fatalf("dir mainSel = %v, want nil", got)
 	}
 
@@ -861,11 +861,11 @@ func TestDedupSnapshotFullyMarkedDirSet(t *testing.T) {
 
 func TestDedupNextDirRowIndex(t *testing.T) {
 	rows := []DedupRow{
-		{Value: DedupRowData{Kind: DedupRowDir, DirRel: "meadow"}, Depth: 0},
-		{Value: DedupRowData{Kind: DedupRowFile, Display: "beacon"}, Depth: 1},
-		{Value: DedupRowData{Kind: DedupRowFile, Display: "lantern"}, Depth: 1},
-		{Value: DedupRowData{Kind: DedupRowDir, DirRel: "orchard"}, Depth: 0},
-		{Value: DedupRowData{Kind: DedupRowFile, Display: "lantern"}, Depth: 1},
+		{Value: &DedupRowData{Kind: DedupRowDir, DirRel: "meadow"}, Depth: 0},
+		{Value: &DedupRowData{Kind: DedupRowFile, Display: "beacon"}, Depth: 1},
+		{Value: &DedupRowData{Kind: DedupRowFile, Display: "lantern"}, Depth: 1},
+		{Value: &DedupRowData{Kind: DedupRowDir, DirRel: "orchard"}, Depth: 0},
+		{Value: &DedupRowData{Kind: DedupRowFile, Display: "lantern"}, Depth: 1},
 	}
 	if got := DedupSubtreeEndIndex(rows, 0); got != 3 {
 		t.Fatalf("subtree end at meadow = %d, want 3", got)

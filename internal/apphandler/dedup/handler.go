@@ -785,7 +785,7 @@ func (h *Handler) syncCopies() {
 
 func (h *Handler) paneRow(p *ui.DedupPane, rows []ui.DedupRow) (ui.DedupRow, bool) {
 	if p.Selected < 0 || p.Selected >= len(rows) {
-		return ui.DedupRow{}, false
+		return ui.DedupRow{Value: &ui.DedupRowData{}}, false
 	}
 	return rows[p.Selected], true
 }

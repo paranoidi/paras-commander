@@ -33,7 +33,7 @@ type uniqueShown struct {
 	key        uniqueShownKey
 	files      []UniqueFile
 	unverified int
-	roots      []treeflat.Node[UniqueRowData]
+	roots      []treeflat.Node[*UniqueRowData]
 	rootsDone  bool
 	ids        []string
 	idsDone    bool
@@ -69,7 +69,7 @@ func (s *UniqueViewState) shown() *uniqueShown {
 	return sh
 }
 
-func (sh *uniqueShown) tree(s *UniqueViewState) []treeflat.Node[UniqueRowData] {
+func (sh *uniqueShown) tree(s *UniqueViewState) []treeflat.Node[*UniqueRowData] {
 	if !sh.rootsDone {
 		sh.roots, sh.rootsDone = s.uniqueNodes(sh.files), true
 	}
@@ -80,8 +80,8 @@ func (sh *uniqueShown) tree(s *UniqueViewState) []treeflat.Node[UniqueRowData] {
 func (s *UniqueViewState) uniqueColumnWidths() (sizeW, countW int) {
 	sh := s.shown()
 	if !sh.widthsDone {
-		var walk func([]treeflat.Node[UniqueRowData])
-		walk = func(nodes []treeflat.Node[UniqueRowData]) {
+		var walk func([]treeflat.Node[*UniqueRowData])
+		walk = func(nodes []treeflat.Node[*UniqueRowData]) {
 			for i := range nodes {
 				size, count := uniqueRowDetailTexts(nodes[i].Value)
 				sh.sizeW, sh.countW = max(sh.sizeW, len([]rune(size))), max(sh.countW, len([]rune(count)))

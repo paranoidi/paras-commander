@@ -139,3 +139,26 @@ func TestDedupMainWidthsSurviveCollapse(t *testing.T) {
 		t.Fatalf("widths %d,%d want %d,%d over the fully expanded rows", s, c, wantS, wantC)
 	}
 }
+
+// TestDedupCacheSharesRowPayloads pins the read-only rule: flattens of one
+// cached tree hand out the same payload pointers, so nothing may write
+// through a row's Value.
+func TestDedupCacheSharesRowPayloads(t *testing.T) {
+	snap := comparepkg.DedupSnapshot{
+		Phase:  comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{dedupTestGroup(1, 10, "walnut/quilt", "pepper/quilt")},
+	}
+	view := DedupViewState{TreeDirs: true, Cache: &DedupCache{}}
+	a, _ := DedupRowsFromSnapshot(snap, view)
+	view.Main.SetCollapsed("d:walnut", true)
+	b, _ := DedupRowsFromSnapshot(snap, view)
+	if len(a) == 0 || len(b) == 0 {
+		t.Fatal("no rows")
+	}
+	for _, rb := range b {
+		i := DedupRowIndexByID(a, rb.ID)
+		if i < 0 || a[i].Value != rb.Value {
+			t.Fatalf("row %q payload not shared between flattens", rb.ID)
+		}
+	}
+}
