@@ -31,7 +31,12 @@ func uniqueViewTitle(view *UniqueViewState, styles theme.Theme) string {
 		title += ")"
 	}
 	if view.Loading {
-		title += fmt.Sprintf(" %c", styles.IconMenuJob("running"))
+		// The lookup queries the file index: its database glyph, the running glyph without Nerd Font icons.
+		icon := styles.IconFileIndex()
+		if icon == "" {
+			icon = string(styles.IconMenuJob("running"))
+		}
+		title += " " + icon
 	}
 	return title + " "
 }
