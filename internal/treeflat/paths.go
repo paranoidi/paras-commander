@@ -27,8 +27,13 @@ type pathTrie struct {
 	value  PathNode         // built: the chain's value ...
 	nodes  []Node[PathNode] // ... and its children
 	below  int32            // components between this node and that leaf
-	leaf   bool
-	dirty  bool
+	// anyUp: the components between this node and any start with ".." (a label relative to a
+	// base above it). Trimming them off any's id does not yield this node's directory, so a leaf
+	// that avoids them is preferred; a node whose every leaf climbs folds into its ".." kid and
+	// never shows its own Path.
+	anyUp bool
+	leaf  bool
+	dirty bool
 }
 
 // pathTrieMapMin is the kid count above which find indexes the kids by name.
@@ -86,6 +91,11 @@ func component(label string, pos int) (name string, next int, more bool) {
 	return label[pos:], len(label), false
 }
 
+// upComponent reports whether the component of label starting at pos is "..".
+func upComponent(label string, pos int) bool {
+	return strings.HasPrefix(label[pos:], "..") && (len(label) == pos+2 || label[pos+2] == '/')
+}
+
 func (t *pathTrie) add(label, id string, sorted bool) {
 	below := strings.Count(label, "/")
 	if !strings.HasPrefix(label, "/") {
@@ -98,8 +108,8 @@ func (t *pathTrie) add(label, id string, sorted bool) {
 		name, pos, more = component(label, pos)
 		t = t.child(name, sorted)
 		t.dirty = true
-		if t.any == "" {
-			t.any, t.below = id, int32(below)
+		if up := more && upComponent(label, pos); t.any == "" || (t.anyUp && !up) {
+			t.any, t.below, t.anyUp = id, int32(below), up
 		}
 		if !more {
 			t.leaf, t.id = true, id
@@ -132,11 +142,18 @@ func (t *pathTrie) remove(label string) {
 		if !n.leaf && len(n.kids) == 0 {
 			p.removeKid(n)
 		} else if n.any == gone {
-			n.any, n.below = "", 0
+			n.any, n.below, n.anyUp = "", 0, false
 			if n.leaf {
 				n.any = n.id
 			} else {
-				n.any, n.below = n.kids[0].any, n.kids[0].below+1
+				k := n.kids[0]
+				for _, c := range n.kids {
+					if c.name != ".." {
+						k = c
+						break
+					}
+				}
+				n.any, n.below, n.anyUp = k.any, k.below+1, k.name == ".."
 			}
 		}
 	}

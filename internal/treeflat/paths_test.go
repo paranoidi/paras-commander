@@ -202,3 +202,34 @@ func TestPathTreeMatchesFromPaths(t *testing.T) {
 		check(step)
 	}
 }
+
+// A folder reached through ".." (labels relative to a base below it) gets its own directory
+// as Path, even when one of its leaves climbs further up, fresh and after removals alike.
+func TestPathTreeGroupPathAboveBase(t *testing.T) {
+	// base /harbor/cwd: ".." is /harbor, "../.." is /.
+	labels := []string{"../../amber/x.txt", "../crystal.txt", "../delta.txt"}
+	ids := []string{"/amber/x.txt", "/harbor/crystal.txt", "/harbor/delta.txt"}
+	groups := func(nodes []Node[PathNode]) map[string]string {
+		out := map[string]string{}
+		Walk(nodes, func(n *Node[PathNode], _ int) {
+			if n.Value.Group {
+				out[n.Value.Display] = n.Value.Path
+			}
+		})
+		return out
+	}
+	want := map[string]string{"..": "/harbor", "../amber": "/amber"}
+	if got := groups(fromPaths(labels, ids)); !maps.Equal(got, want) {
+		t.Fatalf("fresh groups %v, want %v", got, want)
+	}
+	tree := NewPathTree(labels, ids)
+	tree.Remove("../crystal.txt")
+	if got := groups(tree.Nodes()); !maps.Equal(got, want) {
+		t.Fatalf("after removing one sibling: groups %v, want %v", got, want)
+	}
+	tree.Add("../crystal.txt", "/harbor/crystal.txt")
+	tree.Remove("../delta.txt")
+	if got := groups(tree.Nodes()); !maps.Equal(got, want) {
+		t.Fatalf("after swapping siblings: groups %v, want %v", got, want)
+	}
+}
