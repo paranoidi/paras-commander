@@ -45,6 +45,12 @@ type UniqueViewState struct {
 	RangeAnchor string
 	// HideHidden leaves out files with a dot-prefixed path component below Root.
 	HideHidden bool
+	// MarksRev keys the cached marked-files-per-directory counts: whoever changes Marked bumps
+	// MarksRev (SetMark does; so do Handler.keepMarksOf and Handler.ClearMarks).
+	MarksRev int
+	// Cache memoizes the shown files, the node tree and the column widths (see UniqueCache). A
+	// pointer so value copies of the view share it; nil computes directly.
+	Cache *UniqueCache
 }
 
 // UniqueRowData is the payload of one tree row.
@@ -81,15 +87,9 @@ func uniqueIsHidden(rel string) bool {
 }
 
 // VisibleFiles is every file the tree shows, whatever is collapsed. Marks and operations go
-// through it, never through the visible rows, so files inside collapsed directories count.
-func (s *UniqueViewState) VisibleFiles() []UniqueFile {
-	if !s.HideHidden {
-		return s.Files
-	}
-	return slices.DeleteFunc(slices.Clone(s.Files), func(f UniqueFile) bool {
-		return uniqueIsHidden(uniqueRel(s.Root, f.Path))
-	})
-}
+// through it, never through the visible rows, so files in collapsed directories count. The
+// result is shared: callers must not modify it.
+func (s *UniqueViewState) VisibleFiles() []UniqueFile { return s.shown().files }
 
 // FilesUnder is the shown files below the directory dir.
 func (s *UniqueViewState) FilesUnder(dir string) []UniqueFile {
@@ -115,21 +115,14 @@ func (s *UniqueViewState) MarkedFiles() []UniqueFile {
 }
 
 // UnverifiedCount is how many shown files are flagged.
-func (s *UniqueViewState) UnverifiedCount() int {
-	n := 0
-	for _, f := range s.VisibleFiles() {
-		if f.Unverified {
-			n++
-		}
-	}
-	return n
-}
+func (s *UniqueViewState) UnverifiedCount() int { return s.shown().unverified }
 
 // SetMark marks or unmarks one file, keeping MarkedBytes in step.
 func (s *UniqueViewState) SetMark(f UniqueFile, on bool) {
 	if s.Marked[f.Path] == on {
 		return
 	}
+	s.MarksRev++
 	if on {
 		if s.Marked == nil {
 			s.Marked = map[string]bool{}
@@ -142,8 +135,13 @@ func (s *UniqueViewState) SetMark(f UniqueFile, on bool) {
 	s.MarkedBytes -= f.Size
 }
 
-// markedUnderDirs counts the marked files below each directory path.
+// markedUnderDirs counts the marked files below each directory path; the result is shared (and
+// recomputed only when MarksRev changes), callers must not modify it.
 func (s *UniqueViewState) markedUnderDirs() map[string]int {
+	c := s.Cache
+	if c != nil && c.marks != nil && c.marksRev == s.MarksRev {
+		return c.marks
+	}
 	out := map[string]int{}
 	stop := strings.TrimSuffix(s.Root, "/")
 	for p, on := range s.Marked {
@@ -153,6 +151,9 @@ func (s *UniqueViewState) markedUnderDirs() map[string]int {
 		for dir := filepath.Dir(p); dir != stop && dir != "/" && dir != "."; dir = filepath.Dir(dir) {
 			out[dir]++
 		}
+	}
+	if c != nil {
+		c.marks, c.marksRev = out, s.MarksRev
 	}
 	return out
 }
@@ -208,10 +209,10 @@ func (n *uniqueDirNode) nodes() []treeflat.Node[UniqueRowData] {
 	return out
 }
 
-// uniqueTree builds the tree of the shown files.
-func (s *UniqueViewState) uniqueTree() []treeflat.Node[UniqueRowData] {
+// uniqueNodes builds the tree of the shown files.
+func (s *UniqueViewState) uniqueNodes(files []UniqueFile) []treeflat.Node[UniqueRowData] {
 	root := &uniqueDirNode{}
-	for _, f := range s.VisibleFiles() {
+	for _, f := range files {
 		rel := uniqueRel(s.Root, f.Path)
 		parent := strings.TrimSuffix(strings.TrimSuffix(f.Path, rel), "/")
 		parts := strings.Split(rel, "/")
@@ -234,25 +235,19 @@ func (s *UniqueViewState) uniqueTree() []treeflat.Node[UniqueRowData] {
 	return root.nodes()
 }
 
-// UniqueExpandableIDs lists every directory row ID of the tree.
+// UniqueExpandableIDs lists every directory row ID of the tree; the result is shared, callers
+// must not modify it.
 func UniqueExpandableIDs(s *UniqueViewState) []string {
-	var out []string
-	var walk func([]treeflat.Node[UniqueRowData])
-	walk = func(nodes []treeflat.Node[UniqueRowData]) {
-		for i := range nodes {
-			if nodes[i].Value.IsDir {
-				out = append(out, nodes[i].ID)
-				walk(nodes[i].Children)
-			}
-		}
+	sh := s.shown()
+	if !sh.idsDone {
+		sh.ids, sh.idsDone = treeflat.ExpandableIDs(sh.tree(s)), true
 	}
-	walk(s.uniqueTree())
-	return out
+	return sh.ids
 }
 
 // UniqueRows flattens the tree against the pane's collapsed set.
 func UniqueRows(s *UniqueViewState) []UniqueRow {
-	return treeflat.Flatten(s.uniqueTree(), func(id string) bool { return !s.Pane.Collapsed[id] })
+	return treeflat.Flatten(s.shown().tree(s), func(id string) bool { return !s.Pane.Collapsed[id] })
 }
 
 // UniqueRects are the tree's and the destination panel's rects: the tree takes the active panel's

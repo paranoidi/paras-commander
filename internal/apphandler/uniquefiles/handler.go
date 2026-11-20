@@ -134,7 +134,7 @@ func (h *Handler) Open() {
 		h.show()
 		return
 	}
-	h.model.UniqueView = ui.UniqueViewState{Root: root, Scope: scope}
+	h.model.UniqueView = ui.UniqueViewState{Root: root, Scope: scope, Cache: &ui.UniqueCache{}}
 	h.model.UniqueList = nil
 	h.show()
 	h.lookup()
@@ -198,6 +198,7 @@ func (h *Handler) handleLookup(p LookupPayload) {
 func (h *Handler) keepMarksOf(present map[string]int64) {
 	st := &h.model.UniqueView
 	st.MarkedBytes = 0
+	st.MarksRev++
 	for p := range st.Marked {
 		size, ok := present[p]
 		if !ok {
@@ -480,6 +481,7 @@ func (h *Handler) SelectRange() (res primitive.RangeResult, added int) {
 func (h *Handler) ClearMarks() {
 	st := &h.model.UniqueView
 	st.Marked, st.MarkedBytes, st.RangeAnchor = nil, 0, ""
+	st.MarksRev++
 }
 
 // Sources are the files an operation acts on: the marked files, else the cursor file, else the

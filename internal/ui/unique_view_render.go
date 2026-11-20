@@ -128,11 +128,8 @@ func drawUniqueTree(screen tcell.Screen, rect Rect, view *UniqueViewState, rows 
 	bg := chrome.ContentBG
 	contentX, innerRight := rect.X+2, rect.X+rect.Width-2
 
-	sizeW, countW := len([]rune(dedupListSizeTitle)), len([]rune(dedupListCountTitle))
-	for _, row := range rows {
-		s, c := uniqueRowDetailTexts(row.Value)
-		sizeW, countW = max(sizeW, len([]rune(s))), max(countW, len([]rune(c)))
-	}
+	sizeW, countW := view.uniqueColumnWidths()
+	sizeW, countW = max(sizeW, len([]rune(dedupListSizeTitle))), max(countW, len([]rune(dedupListCountTitle)))
 	cols := dedupListColumnLayout(contentX, innerRight, sizeW, countW)
 	headerY := rect.Y + 1
 	headerStyle := chrome.Chrome.Header
