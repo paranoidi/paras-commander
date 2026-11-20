@@ -60,11 +60,13 @@ func TestDrawDedupViewBottomBorderExplainsCursorRowIcons(t *testing.T) {
 		name  string
 		idx   int
 		focus bool
+		stale bool
 		want  string
 	}{
-		{"marked dir row", dirIdx, false, "contains marked files"},
-		{"plain file row", fileIdx, false, ""},
-		{"unfocused pane", dirIdx, true, ""},
+		{"marked dir row", dirIdx, false, false, "contains marked files"},
+		{"plain file row", fileIdx, false, false, ""},
+		{"unfocused pane", dirIdx, true, false, ""},
+		{"held nav key", dirIdx, false, true, ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			screen := tcell.NewSimulationScreen("UTF-8")
@@ -77,6 +79,7 @@ func TestDrawDedupViewBottomBorderExplainsCursorRowIcons(t *testing.T) {
 			view.Main = DedupPane{Selected: tc.idx}
 			view.SourceRow = tc.idx
 			view.FocusCopies = tc.focus
+			view.SourceStale = tc.stale
 			drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil, ListRowHover{})
 			got := dedupBottomRowText(screen, 13, 40)
 			if tc.want == "" {

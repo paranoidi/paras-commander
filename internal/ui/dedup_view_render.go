@@ -345,7 +345,7 @@ func drawDedupTreePane(
 
 		cursorStyleKey := cursorRow.IconKey
 		hinted := dedupRowHinted(p, d, entry, rowSelected)
-		if rowSelected && p.Focused {
+		if rowSelected && p.Focused && !view.SourceStale { // a held nav key defers it like the hints
 			legend = dedupRowLegend(styles, p, snap, d, hinted)
 		}
 		drawDedupPathColumn(screen, styles, p, snap, d, entry, lineY, pathX, pathW, lineStyle, cursorStyleKey, chromeBlocked, hinted, p.Pane.Filter.Ranges(idx), rowSelected && p.Focused)
