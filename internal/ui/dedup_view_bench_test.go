@@ -113,3 +113,31 @@ func BenchmarkDedupCopyRowsTwinDirs(b *testing.B) {
 		DedupCopyRows(snap, list[sel], nil)
 	}
 }
+
+// benchDrawDedupExpanded is one frame of a fully open tree with a tenth of the files marked.
+func benchDrawDedupExpanded(b *testing.B, treeDirs bool) {
+	snap := dedupNestedBenchSnapshot(40000)
+	view := DedupViewState{TreeDirs: treeDirs, IgnoreEmpty: true, Cache: &DedupCache{}, Marked: map[string]bool{}, Kept: map[string]bool{}, Main: DedupPane{Selected: 3}}
+	for g := 0; g < len(snap.Groups); g += 10 {
+		view.Marked[snap.Groups[g].Files[0].Abs.String()] = true
+	}
+	view.MarksRev++
+	list, _ := DedupRowsFromSnapshot(snap, view)
+	copies := DedupCopyRows(snap, list[3], nil)
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		b.Fatal(err)
+	}
+	defer screen.Fini()
+	screen.SetSize(120, 40)
+	layout := Layout{Primary: Rect{X: 0, Y: 1, Width: 60, Height: 36}, Secondary: Rect{X: 60, Y: 1, Width: 60, Height: 36}}
+	styles := theme.Default()
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		drawDedupView(screen, layout, view, snap, list, copies, styles, false, "", SplitHorizontal, nil, ListRowHover{})
+	}
+}
+
+func BenchmarkDrawDedupExpandedDirs(b *testing.B)   { benchDrawDedupExpanded(b, true) }
+func BenchmarkDrawDedupExpandedGroups(b *testing.B) { benchDrawDedupExpanded(b, false) }
