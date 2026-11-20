@@ -226,7 +226,8 @@ func FunctionKeysFilePreviewView(toggleRawHint string, launchedAsFileViewer bool
 // F2 selects the unique parent directories of the whole selection (panel.select-parent-dirs), replacing its normal
 // global meaning (open the user-command menu) only in this context. The find-duplicates strip
 // (dedup) has none of F2, F3 and F4: marked files are neither a selection to widen nor opened in place.
-func FunctionKeysSelectedStripView(clearSelectionLabel, treeLabel string, dedup bool) []FunctionKey {
+// The tree toggle names the mode it switches to: "Tree" from the flat list, "Flat" while tree is set.
+func FunctionKeysSelectedStripView(clearSelectionLabel, treeLabel string, tree, dedup bool) []FunctionKey {
 	out := []FunctionKey{{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help", ActionID: keymap.ActionAppShowHelp}}
 	if !dedup {
 		out = append(out,
@@ -239,7 +240,11 @@ func FunctionKeysSelectedStripView(clearSelectionLabel, treeLabel string, dedup 
 		out = append(out, FunctionKey{KeyLabel: clearSelectionLabel, Hint: "Unselect all", ActionID: keymap.ActionPanelClearSelection})
 	}
 	if treeLabel != "" {
-		out = append(out, FunctionKey{KeyLabel: treeLabel, Hint: "Tree", ActionID: keymap.ActionPanelSelectedToggleTree})
+		hint := "Tree"
+		if tree {
+			hint = "Flat"
+		}
+		out = append(out, FunctionKey{KeyLabel: treeLabel, Hint: hint, ActionID: keymap.ActionPanelSelectedToggleTree})
 	}
 	out = append(out, FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit", ActionID: keymap.ActionAppQuit})
 	return out

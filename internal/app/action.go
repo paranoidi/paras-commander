@@ -62,7 +62,7 @@ func (a *App) selectedStripFooterKeys(dedup bool) []menu.FunctionKey {
 	return menu.FunctionKeysSelectedStripView(
 		a.keys.Global.MenuBindingLabel(keymap.ActionPanelClearSelection),
 		a.keys.SelectedStrip.MenuBindingLabel(keymap.ActionPanelSelectedToggleTree),
-		dedup)
+		a.model.SelectedStripTree(), dedup)
 }
 
 func (a *App) actionFromKeyEvent(ev *tcell.EventKey) string {
