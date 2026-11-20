@@ -22,7 +22,7 @@ type selectionDerivedCache struct {
 	stripRowsTree    bool
 	stripRowsRev     int // Strip.CollapsedRev the rows were built with
 	prunedRoots      []string
-	subtreeAncestors map[string]bool
+	subtreeAncestors map[string]int32 // dir -> selected paths strictly below it (no zero entries)
 }
 
 // SelectionDerivedGen returns the selection-derived cache generation (bumped on selection mutations).
@@ -123,60 +123,46 @@ func (s *State) patchSelectionDerivedAfterRemove(path string, wasDir bool) {
 	s.selDerivedCache.gen = s.selectionDerivedGen
 }
 
+// addSubtreeAncestorsForPath counts path under each of its ancestor directories.
 func (s *State) addSubtreeAncestorsForPath(path string) {
 	if s.selDerivedCache.subtreeAncestors == nil {
-		s.selDerivedCache.subtreeAncestors = make(map[string]bool)
+		s.selDerivedCache.subtreeAncestors = make(map[string]int32)
 	}
-	loc, err := pathloc.Parse(path)
-	if err != nil {
-		return
-	}
-	for {
-		parent := loc.Parent()
-		if parent.Equal(loc) || parent.IsZero() {
-			break
-		}
-		s.selDerivedCache.subtreeAncestors[cleanPathString(parent.String())] = true
-		loc = parent
-	}
+	countSubtreeAncestors(s.selDerivedCache.subtreeAncestors, path, 1)
 }
 
+// removeSubtreeAncestorsForPath uncounts path under each of its ancestor directories, in
+// O(depth): a directory whose count drops to zero has no selection below it any more.
 func (s *State) removeSubtreeAncestorsForPath(path string) {
-	if s.SelectedPaths == nil || s.selDerivedCache.subtreeAncestors == nil {
+	if s.selDerivedCache.subtreeAncestors == nil {
 		return
 	}
-	loc, err := pathloc.Parse(path)
-	if err != nil {
-		return
-	}
-	for {
-		parent := loc.Parent()
-		if parent.Equal(loc) || parent.IsZero() {
-			break
-		}
-		ps := cleanPathString(parent.String())
-		if s.stillHasSelectionUnderAncestor(ps, path) {
-			loc = parent
-			continue
-		}
-		delete(s.selDerivedCache.subtreeAncestors, ps)
-		loc = parent
-	}
+	countSubtreeAncestors(s.selDerivedCache.subtreeAncestors, path, -1)
 	if len(s.selDerivedCache.subtreeAncestors) == 0 {
 		s.selDerivedCache.subtreeAncestors = nil
 	}
 }
 
-func (s *State) stillHasSelectionUnderAncestor(ancestor, exceptPath string) bool {
-	for p, on := range s.SelectedPaths {
-		if !on || p == exceptPath {
-			continue
-		}
-		if isStrictPathDescendant(ancestor, p) {
-			return true
-		}
+// countSubtreeAncestors adds delta to the count of every strict ancestor directory of path,
+// deleting the counts that reach zero.
+func countSubtreeAncestors(counts map[string]int32, path string, delta int32) {
+	loc, err := pathloc.Parse(path)
+	if err != nil {
+		return
 	}
-	return false
+	for {
+		parent := loc.Parent()
+		if parent.Equal(loc) || parent.IsZero() {
+			return
+		}
+		key := cleanPathString(parent.String())
+		if n := counts[key] + delta; n > 0 {
+			counts[key] = n
+		} else {
+			delete(counts, key)
+		}
+		loc = parent
+	}
 }
 
 // editStripPath adds (on) or drops path in the strip's sorted list and its tree, when built.
@@ -256,6 +242,9 @@ func (s *State) applySelectionAdd(path string, isDir bool) {
 	}
 	if s.SelectedPaths == nil {
 		s.SelectedPaths = make(map[string]bool)
+	}
+	if s.SelectedPaths[path] {
+		return // already counted in the listed bytes and subtree counts
 	}
 	s.SelectedPaths[path] = true
 	if isDir {
@@ -389,26 +378,15 @@ func (s *State) buildPrunedSelectionRoots() []string {
 	return PruneNestedPathsForSelection(paths, filesOnly, s.selectedPathIsDirectory)
 }
 
-func buildSubtreeSelAncestors(selected map[string]bool) map[string]bool {
+// buildSubtreeSelAncestors counts, per directory, the selected paths strictly below it.
+func buildSubtreeSelAncestors(selected map[string]bool) map[string]int32 {
 	if len(selected) == 0 {
 		return nil
 	}
-	out := make(map[string]bool)
+	out := make(map[string]int32)
 	for p, on := range selected {
-		if !on {
-			continue
-		}
-		loc, err := pathloc.Parse(p)
-		if err != nil {
-			continue
-		}
-		for {
-			parent := loc.Parent()
-			if parent.Equal(loc) || parent.IsZero() {
-				break
-			}
-			out[cleanPathString(parent.String())] = true
-			loc = parent
+		if on {
+			countSubtreeAncestors(out, p, 1)
 		}
 	}
 	if len(out) == 0 {

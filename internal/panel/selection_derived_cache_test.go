@@ -16,7 +16,7 @@ func TestBuildSubtreeSelAncestorsNonexistentFile(t *testing.T) {
 	if len(ancestors) == 0 {
 		t.Fatalf("expected ancestors for %q, got none", inner)
 	}
-	if !ancestors[cleanPathString(root)] {
+	if ancestors[cleanPathString(root)] == 0 {
 		t.Fatalf("root %q missing from %v", root, ancestors)
 	}
 }

@@ -813,7 +813,7 @@ func (s *State) HasSelectionInSubtree(dirPath string) bool {
 		return false
 	}
 	s.ensureSelectionDerived()
-	return s.selDerivedCache.subtreeAncestors[dir]
+	return s.selDerivedCache.subtreeAncestors[dir] > 0
 }
 
 // IsStrictPathDescendant reports whether child is a strict descendant of parent (different paths, child under parent).

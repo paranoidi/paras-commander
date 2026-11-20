@@ -126,3 +126,38 @@ func BenchmarkUnselectHalfBulk(b *testing.B) {
 		_ = s.SelectedStripRows()
 	}
 }
+
+// The subtree counts moved one select/unselect at a time (nested selections, selected
+// directories with selections below them, the strip shown or hidden) equal a fresh count after
+// every step, and HasSelectionInSubtree follows them.
+func TestSubtreeCountsIncrementalMatchRebuild(t *testing.T) {
+	t.Parallel()
+	pool := []string{"/harbor/cwd/ember.txt", "/harbor/cwd/sub", "/harbor/cwd/sub/delta.txt",
+		"/harbor/crystal", "/harbor/crystal/bravo.txt", "/harbor/crystal/bravo/raven.txt",
+		"/harbor/ocean/tide/foam.txt", "/harbor/ocean/reef.txt", "/quarry/slate.txt"}
+	dirs := []string{"/", "/harbor", "/harbor/cwd", "/harbor/cwd/sub", "/harbor/crystal",
+		"/harbor/crystal/bravo", "/harbor/ocean", "/harbor/ocean/tide", "/quarry", "/meadow"}
+	rng := rand.New(rand.NewSource(11))
+	s := &State{Path: pathloc.MustParse("/harbor/cwd")}
+	for step := range 400 {
+		p := pool[rng.Intn(len(pool))]
+		if s.SelectedPaths[p] {
+			s.applySelectionRemove(p, false)
+		} else {
+			s.applySelectionAdd(p, false)
+		}
+		if rng.Intn(5) == 0 {
+			s.applySelectionAdd(p, false) // a repeated add must not count twice
+		}
+		_ = s.HasSelectionInSubtree("/harbor") // keep the cache built so the next step patches it
+		want := buildSubtreeSelAncestors(s.SelectedPaths)
+		if got := s.selDerivedCache.subtreeAncestors; len(s.SelectedPaths) > 0 && !maps.Equal(got, want) {
+			t.Fatalf("step %d: counts %v, want %v", step, got, want)
+		}
+		for _, d := range dirs {
+			if got, want := s.HasSelectionInSubtree(d), want[d] > 0; got != want {
+				t.Fatalf("step %d: HasSelectionInSubtree(%s) = %v, want %v", step, d, got, want)
+			}
+		}
+	}
+}
