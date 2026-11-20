@@ -70,4 +70,4 @@ A directory rename or removal applied to the disk-usage cache (`flushSweepLocked
 
 ## "Removed conflicting selections" warning repeated
 
-`setTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)` after a conflicting selection change appears at about a dozen sites across `internal/app` and `internal/apphandler/commands`. The output dialog's invert and group-unselect also hand-roll `TogglePathSelection` loops, and `internal/panel` has `BulkAddSelections` but no bulk-remove counterpart. For: each site is one line. Against: the wording and urgency can drift, and the toggle loops are near-copies. The fix is one helper (`warnSelectionConflicts(bool)`, reachable from both `app` and the handler `Host`) and a `panel.BulkRemoveSelections`. Relevance: low.
+`setTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)` after a conflicting selection change appears at about a dozen sites across `internal/app` and `internal/apphandler/commands`. For: each site is one line. Against: the wording and urgency can drift. The fix is one helper (`warnSelectionConflicts(bool)`, reachable from both `app` and the handler `Host`). Relevance: low.

@@ -103,19 +103,23 @@ type selectRecordHost struct {
 	selected map[int]map[string]bool
 }
 
-func (h *selectRecordHost) SetPanelSelection(id int, path string, selected bool) bool {
+func (h *selectRecordHost) SetPanelSelections(id int, paths []string, selected bool) int {
 	if h.selected[id] == nil {
 		h.selected[id] = map[string]bool{}
 	}
-	if h.selected[id][path] == selected {
-		return false
+	n := 0
+	for _, path := range paths {
+		if h.selected[id][path] == selected {
+			continue
+		}
+		if selected {
+			h.selected[id][path] = true
+		} else {
+			delete(h.selected[id], path)
+		}
+		n++
 	}
-	if selected {
-		h.selected[id][path] = true
-	} else {
-		delete(h.selected[id], path)
-	}
-	return true
+	return n
 }
 
 // pickKindAndConfirm chooses the radio with Alt+mnemonic, then presses OK.

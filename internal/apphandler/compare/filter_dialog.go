@@ -68,7 +68,7 @@ func (h *Handler) sideName(panelID int) string {
 // kind f in that panel's selection and reports how many changed per side. Rows without a
 // focused-side entry (only on the other side) use the other side's path and panel.
 func (h *Handler) selectMatching(f comparepkg.Filter, selected bool) {
-	var n [2]int
+	var paths [2][]string
 	focusSecondary := h.model.CompareView.FocusColumn == ui.CompareColumnSecondary
 	for _, row := range h.FilteredRows() {
 		if !comparepkg.FilterMatches(f, row.Kind) {
@@ -81,10 +81,14 @@ func (h *Handler) selectMatching(f comparepkg.Filter, selected bool) {
 		if err != nil || !ok {
 			continue
 		}
-		// ponytail: AddSelection lstats unlisted paths on the UI thread, fine for local
-		// roots; add a batched file-only add if huge results lag.
-		if h.host.SetPanelSelection(id, abs.String(), selected) {
-			n[id]++
+		paths[id] = append(paths[id], abs.String())
+	}
+	// ponytail: the bulk add lstats unlisted paths on the UI thread, fine for local roots; pass
+	// the rows' file kind if huge results lag.
+	var n [2]int
+	for id, ps := range paths {
+		if len(ps) > 0 {
+			n[id] = h.host.SetPanelSelections(id, ps, selected)
 		}
 	}
 	verb := "select"

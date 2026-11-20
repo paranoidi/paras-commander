@@ -503,6 +503,32 @@ func (s *State) BulkAddSelections(paths []string, isDir func(string) bool) bool 
 	return removed
 }
 
+// RemoveSelections unselects every selected path in paths in one go: per-path bookkeeping is
+// O(1) (no stat) and the strip and other derived state rebuild once, on next use, instead of
+// once per path. It reports how many paths were selected.
+func (s *State) RemoveSelections(paths []string) int {
+	removed := 0
+	for _, p := range paths {
+		p = cleanPathString(p)
+		if p == "" || !s.SelectedPaths[p] {
+			continue
+		}
+		delete(s.SelectedPaths, p)
+		s.adjustSelectionListedBytes(p, false)
+		s.unmarkSelectedDir(p)
+		removed++
+	}
+	if removed == 0 {
+		return 0
+	}
+	if len(s.SelectedPaths) == 0 {
+		s.clearSelectionState()
+	}
+	s.invalidateSelectionDerivedFull()
+	s.normalizeSelectedStripCursor()
+	return removed
+}
+
 // dropStripRows forgets the rows and tree built from stripPaths after the paths change.
 func (c *selectionDerivedCache) dropStripRows() {
 	c.stripRowsBuilt, c.stripTree = false, nil

@@ -38,8 +38,9 @@ type Deps struct {
 type Host interface {
 	host.PanelNavigationHost
 	TogglePanelSelection(panelID int, path string) (conflicts bool)
-	// SetPanelSelection adds (selected) or removes path in the panel's selection; true when it changed.
-	SetPanelSelection(panelID int, path string, selected bool) (changed bool)
+	// SetPanelSelections adds (selected) or removes paths in the panel's selection in one bulk
+	// change and reports how many changed.
+	SetPanelSelections(panelID int, paths []string, selected bool) (changed int)
 	// ClearPanelSelection removes every tagged path from the panel's selection.
 	ClearPanelSelection(panelID int)
 	SetTransientMessage(text string, urgency ui.MessageUrgency)
@@ -384,10 +385,15 @@ func (h *Handler) SelectColumnRange() (res primitive.RangeResult, added int) {
 		st.RangeAnchor = abs.String()
 		return primitive.RangeStarted, 0
 	}
+	var paths [2][]string
 	for i := min(ai, st.Selected); i <= max(ai, st.Selected); i++ {
-		a, id, ok, _ := h.focusedSide(rows[i])
-		if ok && h.host.SetPanelSelection(id, a.String(), true) {
-			added++
+		if a, id, ok, _ := h.focusedSide(rows[i]); ok {
+			paths[id] = append(paths[id], a.String())
+		}
+	}
+	for id, ps := range paths {
+		if len(ps) > 0 {
+			added += h.host.SetPanelSelections(id, ps, true)
 		}
 	}
 	st.RangeAnchor = ""

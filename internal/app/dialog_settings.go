@@ -680,10 +680,11 @@ func (a *App) applyOutputGroupSelect(gs *dialog.GroupSelectState) {
 		}
 		conflicts = p.BulkAddSelections(paths, func(path string) bool { return isDir[path] })
 	} else {
-		// Every match is selected, so toggling only removes and never conflicts.
-		for _, m := range matches {
-			p.TogglePathSelection(m.Path)
+		paths := make([]string, len(matches))
+		for i, m := range matches {
+			paths[i] = m.Path
 		}
+		p.RemoveSelections(paths)
 	}
 	a.setTransientMessage(verb+" matching "+req.Describe(), ui.MessageUrgencyInfo)
 	if conflicts {

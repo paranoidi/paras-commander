@@ -14,12 +14,15 @@ type rangeHost struct {
 	selected map[string]bool
 }
 
-func (h *rangeHost) SetPanelSelection(_ int, path string, on bool) bool {
-	if h.selected[path] == on {
-		return false
+func (h *rangeHost) SetPanelSelections(_ int, paths []string, on bool) int {
+	n := 0
+	for _, path := range paths {
+		if h.selected[path] != on {
+			h.selected[path] = on
+			n++
+		}
 	}
-	h.selected[path] = on
-	return true
+	return n
 }
 
 func TestSelectColumnRange(t *testing.T) {

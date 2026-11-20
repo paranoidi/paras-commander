@@ -751,14 +751,13 @@ func (s *State) UnselectPendingRange() (removed int) {
 	if !span.Active {
 		return 0
 	}
+	var paths []string
 	for i := span.Lo; i <= span.Hi; i++ {
-		e, _, ok := s.VisibleEntry(i)
-		if !ok || !s.IsSelectedPath(e.Path) {
-			continue
+		if e, _, ok := s.VisibleEntry(i); ok {
+			paths = append(paths, e.Path)
 		}
-		s.applySelectionRemove(e.Path, s.selectedPathIsDirectory(e.Path))
-		removed++
 	}
+	removed = s.RemoveSelections(paths)
 	s.normalizeSelectedStripCursor()
 	return removed
 }
@@ -2027,9 +2026,7 @@ func (s *State) UnselectUnder(dir string) {
 			under = append(under, p)
 		}
 	}
-	for _, p := range under {
-		s.unselectPath(p)
-	}
+	s.RemoveSelections(under)
 }
 
 // SelectVisibleEntry moves the cursor onto the row named name in this panel's directory. In tree
@@ -2334,19 +2331,14 @@ func (s *State) CountPatternMatches(spec FilterSpec, meta GroupSelectMeta) (file
 // meta: optional meta column data; when Cols is non-empty, values are also matched; OnlyMeta skips filename.
 // The returned bool reports whether the pattern matched any entry (regardless of prior selection state).
 func (s *State) UnselectGroup(spec FilterSpec, meta GroupSelectMeta) (bool, error) {
-	paths, isDir, err := s.groupMatchedPaths(spec, meta)
+	paths, _, err := s.groupMatchedPaths(spec, meta)
 	if err != nil {
 		return false, err
 	}
 	if len(paths) == 0 {
 		return false, nil
 	}
-	for _, path := range paths {
-		if !s.SelectedPaths[path] {
-			continue
-		}
-		s.applySelectionRemove(path, isDir[path])
-	}
+	s.RemoveSelections(paths)
 	s.normalizeSelectedStripCursor()
 	return true, nil
 }

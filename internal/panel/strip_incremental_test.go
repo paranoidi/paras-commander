@@ -86,3 +86,43 @@ func benchStripToggle(b *testing.B, n int, tree bool) {
 // strip, reading the rows after each (the strip redraw).
 func BenchmarkSelectedStripToggleFlat10k(b *testing.B) { benchStripToggle(b, 10000, false) }
 func BenchmarkSelectedStripToggleTree10k(b *testing.B) { benchStripToggle(b, 10000, true) }
+
+// RemoveSelections unselects in bulk: it counts only selected paths, keeps the strip and dir
+// marks consistent with the remaining selection and clears the state once nothing is left.
+func TestRemoveSelections(t *testing.T) {
+	t.Parallel()
+	s := &State{Path: pathloc.MustParse("/harbor/cwd")}
+	for _, p := range []string{"/harbor/amber.txt", "/harbor/mango.txt", "/harbor/zephyr.txt"} {
+		s.applySelectionAdd(p, false)
+	}
+	s.applySelectionAdd("/harbor/orchard", true)
+	_ = s.SelectedStripRows()
+	if n := s.RemoveSelections([]string{"/harbor/mango.txt", "/harbor/orchard", "/harbor/never.txt", ""}); n != 2 {
+		t.Fatalf("removed %d, want 2", n)
+	}
+	if got, want := s.SelectedStripPaths(), []string{"/harbor/amber.txt", "/harbor/zephyr.txt"}; !slices.Equal(got, want) {
+		t.Fatalf("strip paths %v, want %v", got, want)
+	}
+	if s.SelectionHasDirs() {
+		t.Fatalf("dir marks left after removing the only directory: %v", s.SelectedDirPaths)
+	}
+	if n := s.RemoveSelections([]string{"/harbor/amber.txt", "/harbor/zephyr.txt"}); n != 2 || s.SelectedPaths != nil {
+		t.Fatalf("removed %d, selection %v; want 2 and cleared", n, s.SelectedPaths)
+	}
+}
+
+// BenchmarkUnselectHalfBulk unselects 5k of 10k strip-listed selections in one RemoveSelections
+// call and reads the strip (one by one, the same work took about 18 s).
+func BenchmarkUnselectHalfBulk(b *testing.B) {
+	paths := make([]string, 0, 5000)
+	for i := 0; i < 10000; i += 2 {
+		paths = append(paths, stripTestPath(i))
+	}
+	for b.Loop() {
+		b.StopTimer()
+		s := stripTestState(10000, true)
+		b.StartTimer()
+		s.RemoveSelections(paths)
+		_ = s.SelectedStripRows()
+	}
+}

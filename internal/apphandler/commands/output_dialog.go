@@ -179,11 +179,20 @@ func (h *Handler) handleGroupSelectionKey(st *dialog.CommandOutputDialogState, e
 	case keymap.ActionPanelInvertSelection:
 		uniq := st.UniquePaths()
 		p := h.host.ActivePanel()
-		conflicts := false
+		// Split by the state before the invert, then apply each side in bulk: one rebuild
+		// instead of one per path.
+		var on, off []string
+		isDir := make(map[string]bool, len(uniq))
 		for _, m := range uniq {
-			_, c := p.TogglePathSelection(m.Path)
-			conflicts = conflicts || c
+			if p.IsSelectedPath(m.Path) {
+				on = append(on, m.Path)
+			} else {
+				off = append(off, m.Path)
+				isDir[m.Path] = m.IsDir
+			}
 		}
+		p.RemoveSelections(on)
+		conflicts := p.BulkAddSelections(off, func(path string) bool { return isDir[path] })
 		h.host.SetTransientMessage(fmt.Sprintf("Inverted %d", len(uniq)), ui.MessageUrgencyInfo)
 		if conflicts {
 			h.host.SetTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)

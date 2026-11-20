@@ -19,17 +19,19 @@ func (h compareHost) TogglePanelSelection(panelID int, path string) bool {
 	return conflicts
 }
 
-func (h compareHost) SetPanelSelection(panelID int, path string, selected bool) bool {
+func (h compareHost) SetPanelSelections(panelID int, paths []string, selected bool) int {
 	p := h.app.panelByID(panelID)
-	if p.IsSelectedPath(path) == selected {
-		return false
+	if !selected {
+		return p.RemoveSelections(paths)
 	}
-	if selected {
-		p.AddSelection(path)
-	} else {
-		p.TogglePathSelection(path)
+	var add []string
+	for _, path := range paths {
+		if !p.IsSelectedPath(path) {
+			add = append(add, path)
+		}
 	}
-	return true
+	p.BulkAddSelections(add, nil)
+	return len(add)
 }
 
 func (h compareHost) ClearPanelSelection(panelID int) {

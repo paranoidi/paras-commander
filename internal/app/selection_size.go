@@ -125,7 +125,7 @@ func (a *App) applySelectionScanNeed(d selectionScanNeedPayload) bool {
 		return false
 	}
 	changed := false
-	if n := p.RemoveVanishedSelections(d.Vanished); n > 0 {
+	if n := p.RemoveSelections(d.Vanished); n > 0 {
 		word := "items"
 		if n == 1 {
 			word = "item"
