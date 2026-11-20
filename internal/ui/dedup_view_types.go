@@ -256,6 +256,28 @@ func DedupExpandableIDs(snap comparepkg.DedupSnapshot, view DedupViewState) []st
 	return dedupTreeFor(snap, view).expandableIDs()
 }
 
+// DedupExpandableDepths is the row depth of each DedupExpandableIDs entry (parallel
+// slice). Shared with the cache: callers must not modify it.
+func DedupExpandableDepths(snap comparepkg.DedupSnapshot, view DedupViewState) []int {
+	if snap.Phase != comparepkg.DedupDone {
+		return nil
+	}
+	t := dedupTreeFor(snap, view)
+	t.walkOnce()
+	return t.idDepths
+}
+
+// DedupDepthCounts is the number of tree nodes at each depth (index = depth),
+// expanded or not. Shared with the cache: callers must not modify it.
+func DedupDepthCounts(snap comparepkg.DedupSnapshot, view DedupViewState) []int {
+	if snap.Phase != comparepkg.DedupDone {
+		return nil
+	}
+	t := dedupTreeFor(snap, view)
+	t.walkOnce()
+	return t.depthCounts
+}
+
 // dedupGroupRoots builds one root node per duplicate group; the group's first
 // file is the header row and the remaining copies are its children.
 func dedupGroupRoots(snap comparepkg.DedupSnapshot, idxs []int, sortByWasted bool) []treeflat.Node[*DedupRowData] {

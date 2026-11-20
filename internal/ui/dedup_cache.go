@@ -48,8 +48,10 @@ type dedupTree struct {
 	key          dedupTreeKey
 	roots        []treeflat.Node[*DedupRowData]
 	ignoredEmpty int // files dropped by the ignore-empty filter
-	ids          []string
-	idsDone      bool
+	ids          []string // expandable node IDs, depth-first, see walkOnce
+	idDepths     []int    // depth of each ids entry
+	depthCounts  []int    // node count per depth, expanded or not
+	walked       bool
 	sizeW        int // Size column width over every node, see columnWidths
 	countW       int
 	widthsDone   bool
@@ -70,22 +72,36 @@ func (t *dedupTree) columnWidths() (sizeW, countW int) {
 	return t.sizeW, t.countW
 }
 
-// DedupWalkNodes visits every node of the cached tree for snap/view depth-first,
-// expanded or not, with its row depth. Nothing is visited until the scan is done.
-func DedupWalkNodes(snap comparepkg.DedupSnapshot, view DedupViewState, fn func(id string, depth int, hasChildren bool)) {
-	if snap.Phase != comparepkg.DedupDone {
+// walkOnce computes expandable IDs (with their depths) and per-depth node counts in
+// one depth-first pass over the whole tree, expanded or not.
+func (t *dedupTree) walkOnce() {
+	if t.walked {
 		return
 	}
-	treeflat.Walk(dedupTreeFor(snap, view).roots, func(n *treeflat.Node[*DedupRowData], depth int) {
-		fn(n.ID, depth, len(n.Children) > 0)
-	})
+	t.walked = true
+	var walk func(nodes []treeflat.Node[*DedupRowData], depth int)
+	walk = func(nodes []treeflat.Node[*DedupRowData], depth int) {
+		if len(nodes) == 0 {
+			return
+		}
+		for depth >= len(t.depthCounts) {
+			t.depthCounts = append(t.depthCounts, 0)
+		}
+		t.depthCounts[depth] += len(nodes)
+		for i := range nodes {
+			if len(nodes[i].Children) > 0 {
+				t.ids = append(t.ids, nodes[i].ID)
+				t.idDepths = append(t.idDepths, depth)
+				walk(nodes[i].Children, depth+1)
+			}
+		}
+	}
+	walk(t.roots, 0)
 }
 
 // expandableIDs lists the collapsible node IDs; callers must not modify the result.
 func (t *dedupTree) expandableIDs() []string {
-	if !t.idsDone {
-		t.ids, t.idsDone = treeflat.ExpandableIDs(t.roots), true
-	}
+	t.walkOnce()
 	return t.ids
 }
 

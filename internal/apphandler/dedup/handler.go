@@ -1188,7 +1188,7 @@ func (h *Handler) CollapseAll() {
 	} else {
 		ids = ui.DedupExpandableIDs(h.model.DedupSnapshot, *st)
 	}
-	pane.Collapsed = map[string]bool{}
+	pane.Collapsed = make(map[string]bool, len(ids))
 	for _, id := range ids {
 		pane.Collapsed[id] = true
 	}
@@ -1206,41 +1206,48 @@ func (h *Handler) CollapseAll() {
 func (h *Handler) ExpandAll() {
 	st := &h.model.DedupView
 	pane, _ := h.focusedPane()
-	type node struct {
-		id    string
-		depth int
-		kids  bool
-	}
-	var full []node
+	var counts []int // nodes per depth
+	var ids []string // expandable nodes, with their depths
+	var depths []int
 	if st.FocusCopies {
 		sel, _ := h.paneRow(&st.Main, h.model.DedupList)
 		for _, r := range ui.DedupCopyRows(h.model.DedupSnapshot, sel, nil) {
-			full = append(full, node{r.ID, r.Depth, r.HasChildren})
+			for r.Depth >= len(counts) {
+				counts = append(counts, 0)
+			}
+			counts[r.Depth]++
+			if r.HasChildren {
+				ids, depths = append(ids, r.ID), append(depths, r.Depth)
+			}
 		}
 	} else {
-		ui.DedupWalkNodes(h.model.DedupSnapshot, *st, func(id string, depth int, kids bool) {
-			full = append(full, node{id, depth, kids})
-		})
+		counts = ui.DedupDepthCounts(h.model.DedupSnapshot, *st)
+		ids = ui.DedupExpandableIDs(h.model.DedupSnapshot, *st)
+		depths = ui.DedupExpandableDepths(h.model.DedupSnapshot, *st)
 	}
 	limit := panel.MaxExpandAllShallowDepth
 	for ; limit > 0; limit-- {
 		n := 0
-		for _, r := range full {
-			if r.depth <= limit {
-				n++
-			}
+		for d := 0; d <= limit && d < len(counts); d++ {
+			n += counts[d]
 		}
 		if n <= panel.MaxExpandAllTotalRows {
 			break
 		}
 	}
+	collapsed := 0
+	for _, d := range depths {
+		if d >= limit {
+			collapsed++
+		}
+	}
 	pane.Collapsed = nil
-	for _, r := range full {
-		if r.kids && r.depth >= limit {
-			if pane.Collapsed == nil {
-				pane.Collapsed = map[string]bool{}
+	if collapsed > 0 {
+		pane.Collapsed = make(map[string]bool, collapsed)
+		for i, id := range ids {
+			if depths[i] >= limit {
+				pane.Collapsed[id] = true
 			}
-			pane.Collapsed[r.id] = true
 		}
 	}
 	switch {

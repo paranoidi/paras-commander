@@ -71,6 +71,25 @@ func benchExpandAll(b *testing.B, treeDirs bool) {
 func BenchmarkHandlerExpandAllDirs(b *testing.B)   { benchExpandAll(b, true) }
 func BenchmarkHandlerExpandAllGroups(b *testing.B) { benchExpandAll(b, false) }
 
+// benchCollapseAll is the collapse-all action from the fully expanded state.
+func benchCollapseAll(b *testing.B, treeDirs bool) {
+	snap := benchSnapshot(40000)
+	model := &ui.Model{ViewMode: ui.ViewDedup, DedupSnapshot: snap, DedupView: ui.DedupViewState{TreeDirs: treeDirs, IgnoreEmpty: true, Cache: &ui.DedupCache{}}}
+	h := New(Deps{Host: &dedupHandlerHost{}, Model: model})
+	h.syncDedupList()
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		b.StopTimer()
+		h.ExpandAll()
+		b.StartTimer()
+		h.CollapseAll()
+	}
+}
+
+func BenchmarkHandlerCollapseAllDirs(b *testing.B)   { benchCollapseAll(b, true) }
+func BenchmarkHandlerCollapseAllGroups(b *testing.B) { benchCollapseAll(b, false) }
+
 // benchToggleExpanded is one expand/collapse of the cursor row inside a fully open tree.
 func benchToggleExpanded(b *testing.B, treeDirs bool) {
 	snap := benchSnapshot(40000)
