@@ -786,6 +786,7 @@ const (
 	IconKeyDedupFullDir             = "dedup.full_dir"
 	IconKeyDedupHidden              = "dedup.hidden"
 	IconKeyDedupPotential           = "dedup.potential"
+	IconKeyDedupLastCopy            = "dedup.last_copy"
 	IconKeyDedupKeep                = "dedup.keep"
 )
 
@@ -893,6 +894,11 @@ func (t Theme) IconDedupHidden() rune {
 // IconDedupPotential returns the dedup view suffix icon for a file in a potential duplicate set.
 func (t Theme) IconDedupPotential() rune {
 	return t.iconRune(IconKeyDedupPotential)
+}
+
+// IconDedupLastCopy returns the dedup view suffix icon for a file whose whole duplicate group is marked for deletion.
+func (t Theme) IconDedupLastCopy() rune {
+	return t.iconRune(IconKeyDedupLastCopy)
 }
 
 // IconDedupKeep returns the dedup view dir-row mark for a subtree holding kept files.

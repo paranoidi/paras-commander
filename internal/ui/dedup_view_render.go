@@ -336,9 +336,9 @@ func drawDedupTreePane(
 		cursorStyleKey := cursorRow.IconKey
 		hinted := dedupRowHinted(p, d, entry, rowSelected)
 		if rowSelected && p.Focused && !view.SourceStale { // a held nav key defers it like the hints
-			legend = dedupRowLegend(styles, p, snap, d, hinted)
+			legend = dedupRowLegend(styles, p, snap, d, hinted, groupAllMarked)
 		}
-		drawDedupPathColumn(screen, styles, p, snap, d, entry, lineY, pathX, pathW, lineStyle, cursorStyleKey, chromeBlocked, hinted, p.Pane.Filter.Ranges(idx), rowSelected && p.Focused)
+		drawDedupPathColumn(screen, styles, p, snap, d, entry, lineY, pathX, pathW, lineStyle, cursorStyleKey, chromeBlocked, hinted, groupAllMarked, p.Pane.Filter.Ranges(idx), rowSelected && p.Focused)
 		primitive.Text(screen, gapBeforeCountX, lineY, 1, "", lineStyle)
 
 		infoRow := cursorRow
@@ -438,7 +438,7 @@ func dedupRowAbsPath(snap comparepkg.DedupSnapshot, d *DedupRowData) string {
 // trailing pin/in-progress-job marks, and subtree-mark suffix for one row, moved out of
 // drawDedupTreePane's per-row path column block. Pin/job marks are painted before the subtree
 // icon, matching panellist's job/pin-before-subtree suffix ordering.
-func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPaneParams, snap comparepkg.DedupSnapshot, d *DedupRowData, entry DedupRow, lineY, pathX, pathW int, lineStyle tcell.Style, cursorStyleKey string, chromeBlocked, hinted bool, matchRanges []search.Range, matchCursor bool) {
+func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPaneParams, snap comparepkg.DedupSnapshot, d *DedupRowData, entry DedupRow, lineY, pathX, pathW int, lineStyle tcell.Style, cursorStyleKey string, chromeBlocked, hinted, groupAllMarked bool, matchRanges []search.Range, matchCursor bool) {
 	connectorPrefix := dedupTreeConnectorPrefix(styles, entry)
 	gutter, gutterStyle := treeRowGutter(styles, entry.Value.Kind == DedupRowDir, entry.HasChildren, entry.Expanded, lineStyle, cursorStyleKey, chromeBlocked)
 	prefix := connectorPrefix
@@ -456,7 +456,7 @@ func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPanePar
 	if subtreeMark {
 		fitW -= 2 // room for subtree mark suffix, like panellist.SuffixDecorationLen
 	}
-	icons := dedupRowSuffixIcons(styles, p, d, hinted)
+	icons := dedupRowSuffixIcons(styles, p, d, hinted, groupAllMarked)
 	fitW -= 2 * len(icons) // room for the suffix icons
 	fitW -= marksW
 	pathText := primitive.FitPathForWidth(d.Display, max(fitW, 4))
@@ -532,6 +532,7 @@ const (
 	dedupLegendPinned        = "pinned"
 	dedupLegendRangeAnchor   = "range start"
 	dedupLegendPotential     = "potential duplicate, only size and sample compared"
+	dedupLegendLastCopy      = "no copy left if deleted"
 )
 
 // dedupSuffixIcon is one trailing icon after the subtree mark. Legend is empty for icons the
@@ -543,8 +544,8 @@ type dedupSuffixIcon struct {
 }
 
 // dedupRowSuffixIcons is the single source for a row's duplicate-dir, related-copy,
-// skipped-items and potential-duplicate icons, in paint order; drawDedupPathColumn paints it and dedupRowLegend explains it.
-func dedupRowSuffixIcons(styles theme.Theme, p dedupPaneParams, d *DedupRowData, hinted bool) []dedupSuffixIcon {
+// skipped-items, potential-duplicate and last-copy icons, in paint order; drawDedupPathColumn paints it and dedupRowLegend explains it.
+func dedupRowSuffixIcons(styles theme.Theme, p dedupPaneParams, d *DedupRowData, hinted, groupAllMarked bool) []dedupSuffixIcon {
 	var out []dedupSuffixIcon
 	if d.DirDup != comparepkg.DirNone {
 		ic := dedupSuffixIcon{Icon: styles.IconDedupFullDir(), Style: styles.PanelDedupFullDir, Legend: dedupLegendExact}
@@ -566,12 +567,15 @@ func dedupRowSuffixIcons(styles theme.Theme, p dedupPaneParams, d *DedupRowData,
 	if d.Potential {
 		out = append(out, dedupSuffixIcon{Icon: styles.IconDedupPotential(), Style: styles.PanelDedupPotential, Legend: dedupLegendPotential})
 	}
+	if groupAllMarked {
+		out = append(out, dedupSuffixIcon{Icon: styles.IconDedupLastCopy(), Style: styles.PanelDedupRowAllMarked, Legend: dedupLegendLastCopy})
+	}
 	return out
 }
 
 // dedupRowLegend lists "<icon> <meaning>" for each explainable icon on the row, in paint order
 // (job, pin, subtree mark, suffix icons), comma-separated.
-func dedupRowLegend(styles theme.Theme, p dedupPaneParams, snap comparepkg.DedupSnapshot, d *DedupRowData, hinted bool) string {
+func dedupRowLegend(styles theme.Theme, p dedupPaneParams, snap comparepkg.DedupSnapshot, d *DedupRowData, hinted, groupAllMarked bool) string {
 	var parts []string
 	add := func(icon rune, text string) { parts = append(parts, string(icon)+" "+text) }
 	if p.RowMarks != nil {
@@ -594,7 +598,7 @@ func dedupRowLegend(styles theme.Theme, p dedupPaneParams, snap comparepkg.Dedup
 			add(styles.IconFilelistSelectionSubtree(), dedupLegendMarkedSubtree)
 		}
 	}
-	for _, ic := range dedupRowSuffixIcons(styles, p, d, hinted) {
+	for _, ic := range dedupRowSuffixIcons(styles, p, d, hinted, groupAllMarked) {
 		if ic.Legend != "" {
 			add(ic.Icon, ic.Legend)
 		}

@@ -101,17 +101,17 @@ func TestDedupRowLegendListsDirDupAndHiddenIcons(t *testing.T) {
 	styles := theme.Default()
 	d := &DedupRowData{Kind: DedupRowDir, DirRel: "orchard", DirDup: comparepkg.DirExact, DirHidden: true}
 	p := dedupPaneParams{TwinDirs: map[string]bool{}}
-	got := dedupRowLegend(styles, p, comparepkg.DedupSnapshot{}, d, false)
+	got := dedupRowLegend(styles, p, comparepkg.DedupSnapshot{}, d, false, false)
 	want := string(styles.IconDedupFullDir()) + " exact duplicate folder, " + string(styles.IconDedupHidden()) + " has skipped items"
 	if got != want {
 		t.Fatalf("legend %q, want %q", got, want)
 	}
 	// The related-copy + is never explained.
-	if got := dedupRowLegend(styles, p, comparepkg.DedupSnapshot{}, &DedupRowData{Kind: DedupRowDir, DirRel: "x"}, true); !strings.Contains(got, "contains copies") {
+	if got := dedupRowLegend(styles, p, comparepkg.DedupSnapshot{}, &DedupRowData{Kind: DedupRowDir, DirRel: "x"}, true, false); !strings.Contains(got, "contains copies") {
 		t.Fatalf("within legend %q", got)
 	}
 	file := &DedupRowData{Kind: DedupRowFile}
-	if got := dedupRowLegend(styles, p, comparepkg.DedupSnapshot{}, file, true); got != "" {
+	if got := dedupRowLegend(styles, p, comparepkg.DedupSnapshot{}, file, true, false); got != "" {
 		t.Fatalf("related + legend %q, want empty", got)
 	}
 }
@@ -119,11 +119,11 @@ func TestDedupRowLegendListsDirDupAndHiddenIcons(t *testing.T) {
 func TestDedupPotentialRowShowsIconAndLegend(t *testing.T) {
 	styles := theme.Default()
 	d := &DedupRowData{Kind: DedupRowFile, Potential: true}
-	icons := dedupRowSuffixIcons(styles, dedupPaneParams{}, d, false)
+	icons := dedupRowSuffixIcons(styles, dedupPaneParams{}, d, false, false)
 	if len(icons) != 1 || icons[0].Icon != styles.IconDedupPotential() || icons[0].Style != styles.PanelDedupPotential {
 		t.Fatalf("icons = %+v", icons)
 	}
-	if got := dedupRowLegend(styles, dedupPaneParams{}, comparepkg.DedupSnapshot{}, d, false); !strings.Contains(got, dedupLegendPotential) {
+	if got := dedupRowLegend(styles, dedupPaneParams{}, comparepkg.DedupSnapshot{}, d, false, false); !strings.Contains(got, dedupLegendPotential) {
 		t.Fatalf("legend = %q", got)
 	}
 	snap := comparepkg.DedupSnapshot{Phase: comparepkg.DedupDone, Groups: []comparepkg.DedupGroup{{
@@ -148,5 +148,17 @@ func TestDedupPotentialRowShowsIconAndLegend(t *testing.T) {
 		if files != 2 {
 			t.Fatalf("treeDirs %v: %d file rows, want 2", treeDirs, files)
 		}
+	}
+}
+
+func TestDedupLastCopyLegendOnlyWhenGroupAllMarked(t *testing.T) {
+	styles := theme.Default()
+	d := &DedupRowData{Kind: DedupRowFile}
+	p := dedupPaneParams{}
+	if got := dedupRowLegend(styles, p, comparepkg.DedupSnapshot{}, d, false, true); !strings.Contains(got, dedupLegendLastCopy) {
+		t.Fatalf("legend = %q, want %q", got, dedupLegendLastCopy)
+	}
+	if got := dedupRowLegend(styles, p, comparepkg.DedupSnapshot{}, d, false, false); strings.Contains(got, dedupLegendLastCopy) {
+		t.Fatalf("legend = %q, want no last-copy text", got)
 	}
 }

@@ -59,7 +59,7 @@ In **View: Dirs**, a folder whose whole contents duplicate another folder is mar
 
 With the cursor on a marked folder, its twin folders are drawn in the hint color with the related-copy icon (collapsed folders containing a twin get `icons.dedup.related_within`), and the Copies pane lists its twin folders (and their duplicate files) instead of a single file's copies; Insert and keep on a twin folder there act on every duplicate under it.
 
-With the cursor on a row, the focused pane's bottom border explains that row's trailing icons (job, pin, marked/kept subtree, exact or same-content folder, contains copies, skipped items) in a comma-separated list; this applies to file rows' marks too. The related-copy `+` is not explained.
+With the cursor on a row, the focused pane's bottom border explains that row's trailing icons (job, pin, marked/kept subtree, exact or same-content folder, contains copies, skipped items, no copy left if deleted) in a comma-separated list; this applies to file rows' marks too. A file row painted red because every file of its duplicate group is marked for deletion carries a trailing delete-alert icon, and the legend then reads "no copy left if deleted": deleting would remove the last copy. The related-copy `+` is not explained.
 
 When a delete would leave directories empty, a second question lists them and offers to remove them too, parents included at any depth, up to and including the directories scanned and never above them (Yes is the default; Cancel deletes nothing and keeps the marks).
 

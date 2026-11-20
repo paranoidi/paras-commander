@@ -530,6 +530,7 @@ full_dir = "\uee86"
 hidden = "\uf06e"
 potential = "\uf128"
 keep = "\uf00c"   # fa-check: dir holds files marked to keep
+last_copy = "\U000f10a5"   # md-delete_alert: deleting this leaves no copy of the file
 
 [icons.folders]
 folder = "\U000F024B"
