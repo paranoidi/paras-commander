@@ -601,7 +601,7 @@ func (h *Handler) quickViewWantFile() (path string, workDir string, mode quickVi
 	p := h.host.ActivePanel()
 	workDir = p.PathString()
 	if h.model.ActiveSubFocus == ui.SubFocusSelectedStrip && p.SelectedStripCount() > 0 {
-		selPath, ok := p.SelectedPathAtStripIndex(p.SelectedStripCursor)
+		selPath, ok := p.SelectedPathAtStripIndex(p.Strip.Cursor)
 		if !ok {
 			return "", workDir, quickViewWantNone
 		}

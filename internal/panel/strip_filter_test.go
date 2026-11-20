@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/pathloc"
-	"github.com/paranoidi/paras-commander/internal/search"
 )
 
 func TestStripFilterMatchesBasenameAndCycles(t *testing.T) {
@@ -28,35 +27,23 @@ func TestStripFilterMatchesBasenameAndCycles(t *testing.T) {
 	}
 
 	state.AppendStripFilterRune('c', 10)
-	if !state.StripFilter.Active || !state.StripFilter.HasMatches() {
-		t.Fatalf("want active strip filter with matches, got %+v results=%d", state.StripFilter, state.StripFilter.MatchCount())
+	if !state.Strip.Filter.Active || !state.Strip.Filter.HasMatches() {
+		t.Fatalf("want active strip filter with matches, got %+v results=%d", state.Strip.Filter, state.Strip.Filter.MatchCount())
 	}
-	path, ok := state.SelectedPathAtStripIndex(state.SelectedStripCursor)
+	path, ok := state.SelectedPathAtStripIndex(state.Strip.Cursor)
 	if !ok || filepath.Base(path) != "crystal.txt" {
 		t.Fatalf("cursor path = %q ok=%v, want crystal.txt", path, ok)
 	}
 
 	state.AppendStripFilterRune('r', 10) // "cr" still crystal
-	path, ok = state.SelectedPathAtStripIndex(state.SelectedStripCursor)
+	path, ok = state.SelectedPathAtStripIndex(state.Strip.Cursor)
 	if !ok || filepath.Base(path) != "crystal.txt" {
 		t.Fatalf("after 'cr' path = %q, want crystal.txt", path)
 	}
 
 	state.CancelStripFilter(10)
-	if state.StripFilter.Active || state.StripFilter.Editing || state.StripFilter.Query != "" {
-		t.Fatalf("after cancel StripFilter = %+v", state.StripFilter)
-	}
-}
-
-func TestMapStripBasenameRangesToDisplay(t *testing.T) {
-	display := "meadow/crystal.txt"
-	abs := "/tmp/meadow/crystal.txt"
-	mapped := MapStripBasenameRangesToDisplay(display, abs, []search.Range{{Start: 0, End: 3}})
-	if len(mapped) != 1 {
-		t.Fatalf("mapped = %v, want one range", mapped)
-	}
-	if mapped[0].Start != len([]rune("meadow/")) || mapped[0].End != len([]rune("meadow/"))+3 {
-		t.Fatalf("mapped[0] = %+v, want offset onto basename", mapped[0])
+	if state.Strip.Filter.Active || state.Strip.Filter.Editing || state.Strip.Filter.Query != "" {
+		t.Fatalf("after cancel StripFilter = %+v", state.Strip.Filter)
 	}
 }
 
@@ -70,26 +57,26 @@ func TestStripCursorRememberRestore(t *testing.T) {
 		return st
 	}
 	st := mk(paths)
-	st.SelectedStripCursor = 2
+	st.Strip.Cursor = 2
 	want, _ := st.SelectedPathAtStripIndex(2)
 	st.RememberStripCursor()
 	st.ClearSelection()
-	if st.SelectedStripCursor != 0 || st.StripCursorPath != "" {
-		t.Fatalf("after clear: cursor %d path %q", st.SelectedStripCursor, st.StripCursorPath)
+	if st.Strip.Cursor != 0 || st.Strip.CursorPath != "" {
+		t.Fatalf("after clear: cursor %d path %q", st.Strip.Cursor, st.Strip.CursorPath)
 	}
 	for _, p := range paths {
 		st.AddSelection(p)
 	}
-	st.StripCursorPath = want
+	st.Strip.CursorPath = want
 	st.RestoreStripCursor()
-	if got, _ := st.SelectedPathAtStripIndex(st.SelectedStripCursor); got != want {
+	if got, _ := st.SelectedPathAtStripIndex(st.Strip.Cursor); got != want {
 		t.Fatalf("restored %q, want %q", got, want)
 	}
 
-	st.StripCursorPath = "/tmp/gone/missing.txt"
-	st.SelectedStripCursor = 1
+	st.Strip.CursorPath = "/tmp/gone/missing.txt"
+	st.Strip.Cursor = 1
 	st.RestoreStripCursor()
-	if st.SelectedStripCursor != 1 {
-		t.Fatalf("cursor moved to %d for missing path", st.SelectedStripCursor)
+	if st.Strip.Cursor != 1 {
+		t.Fatalf("cursor moved to %d for missing path", st.Strip.Cursor)
 	}
 }

@@ -668,7 +668,7 @@ func TestSyncFollowUsesSelectedStripWhenStripFocused(t *testing.T) {
 		t.Fatal("expected selected strip to list beta while cwd is alpha")
 	}
 	app.model.ActiveSubFocus = ui.SubFocusSelectedStrip
-	left.SelectedStripCursor = 0
+	left.Strip.Cursor = 0
 
 	app.dispatch(keymap.ActionPanelToggleSync)
 	applyNextInterruptEvent(t, app, screen) // async load, immediate sync-follow mirror

@@ -17,6 +17,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
+	"github.com/paranoidi/paras-commander/internal/selstrip"
 	"github.com/paranoidi/paras-commander/internal/treeflat"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
 )
@@ -104,17 +105,16 @@ type State struct {
 	// SelectedStripOrder lists selected paths that belong in the bottom “selections” strip:
 	// off-current-directory order is tracked here; on chdir into dir D those paths are removed;
 	// on chdir away from D, selected paths under D are appended (deduped).
-	SelectedStripOrder  []string
-	SelectedStripCursor int
-	// StripCursorPath is the last focused strip row path; restores the cursor on re-focus.
-	// Cleared by ClearSelection; travels with the stash (SelectionStashStripCursorPath).
-	StripCursorPath     string
-	SelectedStripScroll int
+	SelectedStripOrder []string
+	// Strip is the selected strip's cursor, scroll and quick filter. Strip.CursorPath is the
+	// last focused row path (restores the cursor on re-focus); cleared by ClearSelection and
+	// carried by the stash (SelectionStashStripCursorPath).
+	Strip selstrip.State
 	// SelectionStashPaths holds stashed selection paths (empty/nil = no stash).
 	SelectionStashPaths []string
 	// SelectionStashStripOrder mirrors SelectedStripOrder at stash time.
 	SelectionStashStripOrder []string
-	// SelectionStashStripCursorPath is StripCursorPath at stash time.
+	// SelectionStashStripCursorPath is Strip.CursorPath at stash time.
 	SelectionStashStripCursorPath string
 	ShowHidden                    bool
 	// Gitignore is a shared cache for .gitignore filtering when ShowHidden is false; nil disables.
@@ -146,8 +146,6 @@ type State struct {
 	// scheduleTreeChildGitStatus that haven't completed yet — see NoteTreeChildGitStatusApplied.
 	gitStatusChildPending int
 	Filter                quickfilter.Filter
-	// StripFilter is the selected-strip quick filter (basename fuzzy match), independent of Filter.
-	StripFilter quickfilter.Filter
 	// StripForced keeps the selected strip visible although every selection is in the
 	// current directory (explicit C-s). Use SetStripForced so the derived cache refreshes.
 	StripForced bool
@@ -1995,101 +1993,36 @@ func (s *State) SelectedStripCount() int {
 
 // MoveSelectedStrip moves the selected-strip cursor by delta and keeps it visible.
 func (s *State) MoveSelectedStrip(delta int, stripViewportRows int) {
-	n := s.SelectedStripCount()
-	if n == 0 {
-		s.SelectedStripCursor = 0
-		s.SelectedStripScroll = 0
-		return
-	}
-	s.SelectedStripCursor += delta
-	s.normalizeSelectedStripCursorWithViewport(stripViewportRows)
+	s.Strip.Move(delta, s.SelectedStripCount(), stripViewportRows)
 }
 
 // RememberStripCursor records the path under the strip cursor.
 func (s *State) RememberStripCursor() {
-	if path, ok := s.SelectedPathAtStripIndex(s.SelectedStripCursor); ok {
-		s.StripCursorPath = path
-	}
+	s.Strip.Remember(s.SelectedStripPaths())
 }
 
-// RestoreStripCursor moves the strip cursor back to StripCursorPath when it is still in the strip.
+// RestoreStripCursor moves the strip cursor back to Strip.CursorPath when it is still in the strip.
 func (s *State) RestoreStripCursor() {
-	if s.StripCursorPath == "" {
-		return
-	}
-	for i, p := range s.SelectedStripPaths() {
-		if p == s.StripCursorPath {
-			s.SelectedStripCursor = i
-			return
-		}
-	}
+	s.Strip.Restore(s.SelectedStripPaths())
 }
 
 // SelectedStripTop moves the selected-strip cursor to the first row.
 func (s *State) SelectedStripTop(stripViewportRows int) {
-	if s.SelectedStripCount() == 0 {
-		return
-	}
-	s.SelectedStripCursor = 0
-	s.SelectedStripScroll = 0
-	s.EnsureSelectedStripCursorVisible(stripViewportRows)
+	s.Strip.Top(s.SelectedStripCount(), stripViewportRows)
 }
 
 // SelectedStripBottom moves the selected-strip cursor to the last row.
 func (s *State) SelectedStripBottom(stripViewportRows int) {
-	n := s.SelectedStripCount()
-	if n == 0 {
-		return
-	}
-	s.SelectedStripCursor = n - 1
-	s.EnsureSelectedStripCursorVisible(stripViewportRows)
+	s.Strip.Bottom(s.SelectedStripCount(), stripViewportRows)
 }
 
 func (s *State) normalizeSelectedStripCursor() {
-	s.normalizeSelectedStripCursorWithViewport(0)
+	s.EnsureSelectedStripCursorVisible(0)
 }
 
 // EnsureSelectedStripCursorVisible clamps the selected-strip cursor and scroll to the viewport.
 func (s *State) EnsureSelectedStripCursorVisible(stripViewportRows int) {
-	s.normalizeSelectedStripCursorWithViewport(stripViewportRows)
-}
-
-func (s *State) normalizeSelectedStripCursorWithViewport(stripViewportRows int) {
-	n := s.SelectedStripCount()
-	if n == 0 {
-		s.SelectedStripCursor = 0
-		s.SelectedStripScroll = 0
-		return
-	}
-	if s.SelectedStripCursor < 0 {
-		s.SelectedStripCursor = 0
-	}
-	if s.SelectedStripCursor >= n {
-		s.SelectedStripCursor = n - 1
-	}
-	if stripViewportRows <= 0 {
-		if s.SelectedStripScroll > s.SelectedStripCursor {
-			s.SelectedStripScroll = s.SelectedStripCursor
-		}
-		return
-	}
-	maxOffset := n - stripViewportRows
-	if maxOffset < 0 {
-		maxOffset = 0
-		s.SelectedStripScroll = 0
-	}
-	if s.SelectedStripScroll > maxOffset {
-		s.SelectedStripScroll = maxOffset
-	}
-	if s.SelectedStripScroll < 0 {
-		s.SelectedStripScroll = 0
-	}
-	if s.SelectedStripCursor < s.SelectedStripScroll {
-		s.SelectedStripScroll = s.SelectedStripCursor
-	}
-	if s.SelectedStripCursor >= s.SelectedStripScroll+stripViewportRows {
-		s.SelectedStripScroll = s.SelectedStripCursor - stripViewportRows + 1
-	}
+	s.Strip.Clamp(s.SelectedStripCount(), stripViewportRows)
 }
 
 // SelectedPathAtStripIndex returns the absolute path at the given strip row index, or "", false.
@@ -2103,7 +2036,7 @@ func (s *State) SelectedPathAtStripIndex(index int) (string, bool) {
 
 // ToggleOrRemoveStripSelection toggles off the strip row at SelectedStripCursor (deselects).
 func (s *State) ToggleOrRemoveStripSelection() bool {
-	p, ok := s.SelectedPathAtStripIndex(s.SelectedStripCursor)
+	p, ok := s.SelectedPathAtStripIndex(s.Strip.Cursor)
 	if !ok {
 		return false
 	}
@@ -2334,7 +2267,7 @@ func rebuildSelectedStripOrderAfterBulk(stripOrder []string, selected map[string
 func (s *State) ClearSelection() {
 	s.clearSelectionState()
 	s.SelectedStripOrder = nil
-	s.StripCursorPath = ""
+	s.Strip.CursorPath = ""
 	s.invalidateSelectionDerivedFull()
 	s.normalizeSelectedStripCursor()
 }

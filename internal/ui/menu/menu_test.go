@@ -621,7 +621,7 @@ func TestFunctionKeysFilePreviewViewHidesRawWhenNotEligible(t *testing.T) {
 
 func TestFunctionKeysSelectedStripView(t *testing.T) {
 	t.Parallel()
-	keys := FunctionKeysSelectedStripView("C-u")
+	keys := FunctionKeysSelectedStripView("C-u", false)
 	if len(keys) != 6 {
 		t.Fatalf("len = %d, want F1 + F2 + F3 + F4 + clear + F10", len(keys))
 	}
@@ -648,9 +648,13 @@ func TestFunctionKeysSelectedStripView(t *testing.T) {
 			t.Fatalf("strip footer must not list Esc/F9, got %+v", keys)
 		}
 	}
-	empty := FunctionKeysSelectedStripView("")
+	empty := FunctionKeysSelectedStripView("", false)
 	if len(empty) != 5 {
 		t.Fatalf("empty clear label len = %d, want F1 + F2 + F3 + F4 + F10", len(empty))
+	}
+	dedup := FunctionKeysSelectedStripView("C-u", true)
+	if len(dedup) != 3 || dedup[0].KeyLabel != "F1" || dedup[1].Hint != "Unselect all" || dedup[2].KeyLabel != "F10" {
+		t.Fatalf("dedup strip footer = %+v, want F1 + clear + F10", dedup)
 	}
 }
 

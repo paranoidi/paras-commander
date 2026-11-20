@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"fmt"
 	"github.com/paranoidi/paras-commander/internal/quickfilter"
+	"github.com/paranoidi/paras-commander/internal/selstrip"
 	"iter"
 	"slices"
 	"strings"
@@ -100,6 +101,8 @@ type DedupViewState struct {
 	Copies                DedupPane
 	FocusCopies           bool            // Tab focus: false = main pane, true = copies pane
 	FocusPanel            bool            // Tab focus is in the browse panel (FocusCopies keeps the source pane)
+	FocusSelected         bool            // Tab focus is in the Selected strip listing the marked files
+	Strip                 selstrip.State  // Selected strip cursor, scroll and quick filter
 	Marked                map[string]bool // absolute paths marked for deletion
 	MarkedCount           int
 	RangeAnchor           string // focused pane's file AbsKey marked as the pending range-select start ("" when none); cleared on pane switch

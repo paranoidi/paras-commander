@@ -29,6 +29,7 @@ type DedupCache struct {
 	copyMarks *dedupCopyMarkSet
 	widths    dedupWidths // copies pane
 	index     *dedupIndex
+	marked    dedupMarkedPaths
 }
 
 // dedupGroupsKey identifies a snapshot's Groups slice by its first element.

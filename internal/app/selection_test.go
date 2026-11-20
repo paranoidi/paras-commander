@@ -266,20 +266,20 @@ func TestViMotionHJKLSelectedStripWhenFocused(t *testing.T) {
 	if left.SelectedStripCount() < 2 {
 		t.Fatalf("need at least 2 strip rows, got %d", left.SelectedStripCount())
 	}
-	left.SelectedStripCursor = 0
+	left.Strip.Cursor = 0
 
 	app.model.ViMotionMode = true
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'j', tcell.ModNone))
-	if left.SelectedStripCursor != 1 {
-		t.Fatalf("'j' with vi-motion on: strip cursor = %d, want 1", left.SelectedStripCursor)
+	if left.Strip.Cursor != 1 {
+		t.Fatalf("'j' with vi-motion on: strip cursor = %d, want 1", left.Strip.Cursor)
 	}
-	if left.StripFilter.Active || left.StripFilter.Editing || left.StripFilter.Query != "" {
-		t.Fatalf("'j' with vi-motion on must not open strip filter, got %+v", left.StripFilter)
+	if left.Strip.Filter.Active || left.Strip.Filter.Editing || left.Strip.Filter.Query != "" {
+		t.Fatalf("'j' with vi-motion on must not open strip filter, got %+v", left.Strip.Filter)
 	}
 
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'k', tcell.ModNone))
-	if left.SelectedStripCursor != 0 {
-		t.Fatalf("'k' with vi-motion on: strip cursor = %d, want 0", left.SelectedStripCursor)
+	if left.Strip.Cursor != 0 {
+		t.Fatalf("'k' with vi-motion on: strip cursor = %d, want 0", left.Strip.Cursor)
 	}
 }
 
@@ -308,7 +308,7 @@ func TestViMotionToggleEscWhileSelectedStripFocused(t *testing.T) {
 
 func TestActiveFooterKeysSelectedStripFocused(t *testing.T) {
 	app, _ := setupSelectedStripFocusTest(t)
-	want := menu.FunctionKeysSelectedStripView(app.keys.Global.MenuBindingLabel(keymap.ActionPanelClearSelection))
+	want := menu.FunctionKeysSelectedStripView(app.keys.Global.MenuBindingLabel(keymap.ActionPanelClearSelection), false)
 	got := app.activeFooterKeys()
 	if len(got) != len(want) {
 		t.Fatalf("footer len = %d, want %d: got %+v", len(got), len(want), got)
@@ -388,7 +388,7 @@ func setupSelectedStripFileFocusTest(t *testing.T) (*App, string) {
 		t.Fatal("expected selected strip to list willow.txt while cwd is meadow")
 	}
 	app.model.ActiveSubFocus = ui.SubFocusSelectedStrip
-	left.SelectedStripCursor = 0
+	left.Strip.Cursor = 0
 	return app, filePath
 }
 

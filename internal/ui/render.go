@@ -893,7 +893,11 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) (out RenderedO
 			dialog.DrawCompareFilterDialog(screen, layout, model.CompareFilterDialog, styles)
 		}
 	case ViewDedup:
-		drawDedupView(screen, layout, model.DedupView, model.DedupSnapshot, model.DedupList, model.DedupCopiesList, styles, chromeBlocked, model.UserHomeDir, model.SplitOrientation, rowMarksResolver(model.PinnedItems, model.JobPathMarks), model.AuxListHover)
+		treeLayout := layout
+		var stripRect Rect
+		treeLayout.Primary, stripRect = DedupMainRects(layout.Primary, &model)
+		drawDedupView(screen, treeLayout, model.DedupView, model.DedupSnapshot, model.DedupList, model.DedupCopiesList, styles, chromeBlocked, model.UserHomeDir, model.SplitOrientation, rowMarksResolver(model.PinnedItems, model.JobPathMarks), model.AuxListHover)
+		drawDedupStrip(screen, stripRect, model, styles, chromeBlocked)
 		drawDedupBrowsePanel(screen, layout, model, styles, chromeBlocked)
 	case ViewUnique:
 		drawUniqueView(screen, layout, model, styles, chromeBlocked)
@@ -1017,7 +1021,7 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 	}
 	if side.ColumnWidth > 0 && side.StripRect.Height > 0 {
 		stripFocused := model.ActivePanel == side.PanelID && model.renderSubFocus() == SubFocusSelectedStrip
-		drawSelectedStrip(screen, side.StripRect, ownState, stripFocused, side.ChromeBlocked, SelectedStripOpts{
+		drawBrowserSelectedStrip(screen, side.StripRect, ownState, stripFocused, side.ChromeBlocked, SelectedStripOpts{
 			Styles: styles, UserHomeDir: model.UserHomeDir, Painter: model.DiskUsage,
 			DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints, DiskUsageGoduIgnore: model.DiskUsageGoduIgnore,
 			ShowSelectionSizeOnBottom: side.SelectionSizeOnStripBottom, ScrollbarStyle: model.PanelScrollbar,

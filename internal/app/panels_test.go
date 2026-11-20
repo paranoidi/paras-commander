@@ -176,7 +176,7 @@ func TestNavigateFromSelectedStripSFTPDirectory(t *testing.T) {
 	left.SelectedDirPaths = map[string]bool{dir: true}
 	left.SelectedStripOrder = []string{dir}
 	app.model.ActiveSubFocus = ui.SubFocusSelectedStrip
-	left.SelectedStripCursor = 0
+	left.Strip.Cursor = 0
 
 	var captured panel.AsyncLoadRequest
 	left.ScheduleAsyncLoad = func(req panel.AsyncLoadRequest) bool {
@@ -203,7 +203,7 @@ func TestNavigateFromSelectedStripSFTPFile(t *testing.T) {
 	left.SelectedPaths = map[string]bool{file: true}
 	left.SelectedStripOrder = []string{file}
 	app.model.ActiveSubFocus = ui.SubFocusSelectedStrip
-	left.SelectedStripCursor = 0
+	left.Strip.Cursor = 0
 
 	var captured panel.AsyncLoadRequest
 	left.ScheduleAsyncLoad = func(req panel.AsyncLoadRequest) bool {
@@ -229,13 +229,13 @@ func TestSyncFollowTargetPathSFTPStripRow(t *testing.T) {
 	left.SelectedStripOrder = []string{dir, file}
 	app.model.ActiveSubFocus = ui.SubFocusSelectedStrip
 
-	left.SelectedStripCursor = 0
+	left.Strip.Cursor = 0
 	got, ok := app.syncFollowTargetPath(left)
 	if !ok || got != dir {
 		t.Fatalf("sync dir row = %q ok=%v, want %q", got, ok, dir)
 	}
 
-	left.SelectedStripCursor = 1
+	left.Strip.Cursor = 1
 	got, ok = app.syncFollowTargetPath(left)
 	if !ok || got != dir {
 		t.Fatalf("sync file row = %q ok=%v, want parent %q", got, ok, dir)

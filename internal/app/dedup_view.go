@@ -238,6 +238,11 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 	case keymap.ActionPanelClearSelection:
 		a.dedupCtrl.ClearMarks()
 		return true
+	case keymap.ActionPanelFocusSelected:
+		if !a.dedupCtrl.ToggleStripFocus() {
+			a.setTransientMessage("No marked files", ui.MessageUrgencyWarn)
+		}
+		return true
 	case keymap.ActionPanelSelectRange:
 		res, added := a.dedupCtrl.SelectRange()
 		a.announceRange(res, added)
@@ -336,16 +341,20 @@ func dedupViewFooterKeys(global, dedup *keymap.Map, treeDirs bool) []menu.Functi
 
 // dedupVisibleRows is the number of file rows one tree pane can show (title
 // border, header line, and bottom border consume three rows of chrome — same as
-// jobs/commands). Both panes share the twin-panel split, so the primary rect's
-// row count serves for clamping either pane.
+// jobs/commands) in the focused pane: the Selected strip, Copies, or the results tree
+// (the primary rect minus the strip).
 func (a *App) dedupVisibleRows() int {
 	width, height := a.screen.Size()
 	layout := a.layoutForTerminalSize(width, height)
+	tree, strip := ui.DedupMainRects(layout.Primary, &a.model)
+	if a.model.DedupView.FocusSelected {
+		return ui.SelectedStripListRows(strip)
+	}
 	if a.model.DedupView.FocusCopies {
 		copies, _ := ui.DedupSecondaryRects(layout.Secondary)
 		return ui.PanelListRows(copies)
 	}
-	return ui.PanelListRows(layout.Primary)
+	return ui.PanelListRows(tree)
 }
 
 func (a *App) handleDedupViewKey(event *tcell.EventKey) bool {
@@ -371,6 +380,9 @@ func (a *App) handleDedupViewKey(event *tcell.EventKey) bool {
 	}
 	if a.model.DedupView.FocusPanel {
 		return a.handleDedupPanelKey(nextAction, event)
+	}
+	if a.model.DedupView.FocusSelected {
+		return a.handleDedupStripKey(nextAction, event)
 	}
 	if listNavAction(nextAction) || nextAction == keymap.ActionDedupPrevDir || nextAction == keymap.ActionDedupNextDir {
 		a.dedupCtrl.ArmNavHold()
@@ -429,6 +441,53 @@ func (a *App) handleDedupViewKey(event *tcell.EventKey) bool {
 		a.dedupCtrl.NavigateFromSelection()
 		a.closeDedupView()
 	}
+	return false
+}
+
+// handleDedupStripKey handles keys while the Selected strip of marked files has focus: cursor
+// moves, unmarking the row, revealing it in the main tree, the type-to-jump filter, and the
+// dedup-wide actions that do not depend on the tree cursor. Everything else is swallowed.
+func (a *App) handleDedupStripKey(action string, event *tcell.EventKey) bool {
+	c := a.dedupCtrl
+	if event.Key() == tcell.KeyDelete {
+		action = keymap.ActionPanelSelectToggle
+	}
+	if action == "" && keymap.IsPlainPrintableRune(event) {
+		a.handleListFilterKey(c, event)
+		c.EnsureSelectionVisible(a.dedupVisibleRows())
+		return false
+	}
+	visible := a.dedupVisibleRows()
+	switch action {
+	case keymap.ActionDedupClose:
+		a.closeDedupView()
+	case keymap.ActionPanelSwitch:
+		c.SwitchPane()
+	case keymap.ActionDedupPrevPane:
+		c.SwitchPanePrev()
+	case keymap.ActionNavUp:
+		c.MoveSelection(-1)
+	case keymap.ActionNavDown:
+		c.MoveSelection(1)
+	case keymap.ActionNavPageUp:
+		c.MoveSelection(-visible)
+	case keymap.ActionNavPageDown:
+		c.MoveSelection(visible)
+	case keymap.ActionNavTop:
+		c.SelectEdge(false)
+	case keymap.ActionNavBottom:
+		c.SelectEdge(true)
+	case keymap.ActionPanelSelectToggle:
+		c.UnmarkStripRow()
+	case keymap.ActionNavOpen:
+		c.RevealStripRow()
+	case keymap.ActionPanelRefresh, keymap.ActionDedupToggleSort, keymap.ActionDedupToggleEmpty,
+		keymap.ActionDedupFilterDialog, keymap.ActionDedupToggleTree, keymap.ActionDedupHashPotential,
+		keymap.ActionPanelSelectGroup, keymap.ActionPanelUnselectGroup, keymap.ActionFileDelete,
+		keymap.ActionPanelClearSelection, keymap.ActionPanelFocusSelected:
+		a.tryDispatchDedup(action)
+	}
+	c.EnsureSelectionVisible(a.dedupVisibleRows())
 	return false
 }
 

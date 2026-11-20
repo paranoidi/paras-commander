@@ -224,13 +224,16 @@ func FunctionKeysFilePreviewView(toggleRawHint string, launchedAsFileViewer bool
 // FunctionKeysSelectedStripView returns hints for the footer while the selected strip has keyboard focus.
 // F3 View and F4 Edit use the same handlers as the file list, targeting the highlighted strip row.
 // F2 selects the unique parent directories of the whole selection (panel.select-parent-dirs), replacing its normal
-// global meaning (open the user-command menu) only in this context.
-func FunctionKeysSelectedStripView(clearSelectionLabel string) []FunctionKey {
-	out := []FunctionKey{
-		{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help", ActionID: keymap.ActionAppShowHelp},
-		{Key: tcell.KeyF2, KeyLabel: "F2", Hint: "Parent dirs", ActionID: keymap.ActionPanelSelectParentDirs},
-		{Key: tcell.KeyF3, KeyLabel: "F3", Hint: "View", ActionID: keymap.ActionFileView},
-		{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit", ActionID: keymap.ActionFileEdit},
+// global meaning (open the user-command menu) only in this context. The find-duplicates strip
+// (dedup) has none of F2, F3 and F4: marked files are neither a selection to widen nor opened in place.
+func FunctionKeysSelectedStripView(clearSelectionLabel string, dedup bool) []FunctionKey {
+	out := []FunctionKey{{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help", ActionID: keymap.ActionAppShowHelp}}
+	if !dedup {
+		out = append(out,
+			FunctionKey{Key: tcell.KeyF2, KeyLabel: "F2", Hint: "Parent dirs", ActionID: keymap.ActionPanelSelectParentDirs},
+			FunctionKey{Key: tcell.KeyF3, KeyLabel: "F3", Hint: "View", ActionID: keymap.ActionFileView},
+			FunctionKey{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit", ActionID: keymap.ActionFileEdit},
+		)
 	}
 	if clearSelectionLabel != "" {
 		out = append(out, FunctionKey{KeyLabel: clearSelectionLabel, Hint: "Unselect all", ActionID: keymap.ActionPanelClearSelection})

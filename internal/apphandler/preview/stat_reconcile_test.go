@@ -65,10 +65,9 @@ func TestQuickViewWantFileStripDoesNotStatOnCaller(t *testing.T) {
 	other := t.TempDir()
 	selPath := filepath.Join(other, "notes.txt")
 	h.model.Primary = panel.State{
-		Path:                pathloc.MustParse(root),
-		SelectedPaths:       map[string]bool{selPath: true},
-		SelectedStripOrder:  []string{selPath},
-		SelectedStripCursor: 0,
+		Path:               pathloc.MustParse(root),
+		SelectedPaths:      map[string]bool{selPath: true},
+		SelectedStripOrder: []string{selPath},
 	}
 	h.model.ActivePanel = ui.PrimaryPanel
 	h.model.ActiveSubFocus = ui.SubFocusSelectedStrip
@@ -99,11 +98,10 @@ func TestQuickViewWantFileStripUsesSelectedDirPaths(t *testing.T) {
 	other := t.TempDir()
 	selPath := filepath.Join(other, "photos")
 	h.model.Primary = panel.State{
-		Path:                pathloc.MustParse(root),
-		SelectedPaths:       map[string]bool{selPath: true},
-		SelectedDirPaths:    map[string]bool{selPath: true},
-		SelectedStripOrder:  []string{selPath},
-		SelectedStripCursor: 0,
+		Path:               pathloc.MustParse(root),
+		SelectedPaths:      map[string]bool{selPath: true},
+		SelectedDirPaths:   map[string]bool{selPath: true},
+		SelectedStripOrder: []string{selPath},
 	}
 	h.model.ActivePanel = ui.PrimaryPanel
 	h.model.ActiveSubFocus = ui.SubFocusSelectedStrip
@@ -130,9 +128,8 @@ func TestQuickViewWantFileStripUsesListingSize(t *testing.T) {
 			{Name: "blank.txt", Path: emptyPath, Type: localfs.EntryFile, Size: 0, ModifiedAt: time.Now()},
 			{Name: "notes.txt", Path: filePath, Type: localfs.EntryFile, Size: 12, ModifiedAt: time.Now()},
 		},
-		SelectedPaths:       map[string]bool{emptyPath: true, outside: true},
-		SelectedStripOrder:  []string{emptyPath, filePath, outside},
-		SelectedStripCursor: 0,
+		SelectedPaths:      map[string]bool{emptyPath: true, outside: true},
+		SelectedStripOrder: []string{emptyPath, filePath, outside},
 	}
 	h.model.ActivePanel = ui.PrimaryPanel
 	h.model.ActiveSubFocus = ui.SubFocusSelectedStrip
@@ -148,9 +145,8 @@ func TestQuickViewWantFileStripUsesListingSize(t *testing.T) {
 			{Name: "blank.txt", Path: emptyPath, Type: localfs.EntryFile, Size: 0, ModifiedAt: time.Now()},
 			{Name: "notes.txt", Path: filePath, Type: localfs.EntryFile, Size: 12, ModifiedAt: time.Now()},
 		},
-		SelectedPaths:       map[string]bool{filePath: true, outside: true},
-		SelectedStripOrder:  []string{filePath, outside},
-		SelectedStripCursor: 0,
+		SelectedPaths:      map[string]bool{filePath: true, outside: true},
+		SelectedStripOrder: []string{filePath, outside},
 	}
 	path, _, mode = h.quickViewWantFile()
 	if mode != quickViewWantFile || path != filePath {

@@ -44,7 +44,7 @@ func TestSelectedStripMarkOnFileRow(t *testing.T) {
 		SelectedPaths:      map[string]bool{filePath: true},
 	}
 
-	drawSelectedStrip(screen, rect, state, false, false, SelectedStripOpts{
+	drawBrowserSelectedStrip(screen, rect, state, false, false, SelectedStripOpts{
 		Styles: styles, ShowSelectionSizeOnBottom: true, ScrollbarStyle: uiscrollbar.StyleNone,
 		ScrollbarShowInactive: true, PanelFileListActive: true,
 	})
@@ -105,7 +105,7 @@ func TestSelectedStripMarkOnCursorRow(t *testing.T) {
 		SelectedPaths:      map[string]bool{filePath: true},
 	}
 
-	drawSelectedStrip(screen, rect, state, true, false, SelectedStripOpts{
+	drawBrowserSelectedStrip(screen, rect, state, true, false, SelectedStripOpts{
 		Styles: styles, ShowSelectionSizeOnBottom: true, ScrollbarStyle: uiscrollbar.StyleNone,
 		ScrollbarShowInactive: true, PanelFileListActive: true,
 	})
@@ -159,7 +159,7 @@ func TestSelectedStripViMotionBorderColor(t *testing.T) {
 		SelectedPaths:      map[string]bool{filePath: true},
 	}
 
-	drawSelectedStrip(screen, rect, state, true, false, SelectedStripOpts{
+	drawBrowserSelectedStrip(screen, rect, state, true, false, SelectedStripOpts{
 		Styles: styles, ViMotionActive: true, ScrollbarStyle: uiscrollbar.StyleNone,
 		ScrollbarShowInactive: true, PanelFileListActive: false,
 	})
@@ -214,7 +214,7 @@ func TestSelectedStripTitleShowsMultiLocationIcon(t *testing.T) {
 		SelectedStripOrder: []string{alphaFile, bravoFile},
 		SelectedPaths:      map[string]bool{alphaFile: true, bravoFile: true},
 	}
-	drawSelectedStrip(screen, rect, multiState, true, false, opts)
+	drawBrowserSelectedStrip(screen, rect, multiState, true, false, opts)
 	icon := styles.IconSelectedMultiLocation()
 	// The icon is an end label on the top border, one frame dash before the corner: … ─ x ─┐
 	iconX := rect.X + rect.Width - 4
@@ -233,7 +233,7 @@ func TestSelectedStripTitleShowsMultiLocationIcon(t *testing.T) {
 		SelectedStripOrder: []string{alphaFile},
 		SelectedPaths:      map[string]bool{alphaFile: true},
 	}
-	drawSelectedStrip(screen, rect, singleState, true, false, opts)
+	drawBrowserSelectedStrip(screen, rect, singleState, true, false, opts)
 	if rowContainsText(screen, rect.Y, rect.X, rect.X+rect.Width, icon) {
 		t.Fatal("strip title should not contain the multi-location icon for a single-directory selection")
 	}

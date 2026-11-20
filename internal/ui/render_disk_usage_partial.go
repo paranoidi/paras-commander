@@ -114,7 +114,7 @@ func paintBrowserPanelsInScope(
 		painted = true
 		if leftStrip.Height > 0 {
 			leftStripFocused := model.ActivePanel == PrimaryPanel && model.ActiveSubFocus == SubFocusSelectedStrip
-			drawSelectedStrip(screen, leftStrip, model.Primary, leftStripFocused, chromeBlocked, SelectedStripOpts{
+			drawBrowserSelectedStrip(screen, leftStrip, model.Primary, leftStripFocused, chromeBlocked, SelectedStripOpts{
 				Styles: styles, UserHomeDir: model.UserHomeDir, Painter: model.DiskUsage,
 				DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints, DiskUsageGoduIgnore: model.DiskUsageGoduIgnore,
 				ShowSelectionSizeOnBottom: leftSelectionSizeOnStripBottom, ScrollbarStyle: model.PanelScrollbar,
@@ -162,7 +162,7 @@ func paintBrowserPanelsInScope(
 		painted = true
 		if rightStrip.Height > 0 {
 			rightStripFocused := model.ActivePanel == SecondaryPanel && model.ActiveSubFocus == SubFocusSelectedStrip
-			drawSelectedStrip(screen, rightStrip, model.Secondary, rightStripFocused, chromeBlocked, SelectedStripOpts{
+			drawBrowserSelectedStrip(screen, rightStrip, model.Secondary, rightStripFocused, chromeBlocked, SelectedStripOpts{
 				Styles: styles, UserHomeDir: model.UserHomeDir, Painter: model.DiskUsage,
 				DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints, DiskUsageGoduIgnore: model.DiskUsageGoduIgnore,
 				ShowSelectionSizeOnBottom: rightSelectionSizeOnStripBottom, ScrollbarStyle: model.PanelScrollbar,

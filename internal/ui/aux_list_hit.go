@@ -123,7 +123,8 @@ func DedupListEntryAt(layout Layout, model *Model, x, y int) (row int, copies, o
 	if model.DedupSnapshot.Phase != comparepkg.DedupDone {
 		return 0, false, false
 	}
-	if row, ok = auxListRowAt(layout.Primary, model.DedupView.Main.ListScroll, len(model.DedupList), x, y); ok {
+	tree, _ := DedupMainRects(layout.Primary, model)
+	if row, ok = auxListRowAt(tree, model.DedupView.Main.ListScroll, len(model.DedupList), x, y); ok {
 		return row, false, true
 	}
 	copiesRect, _ := DedupSecondaryRects(layout.Secondary)

@@ -35,7 +35,7 @@ func (s *State) StashSaveFromSelection() bool {
 	s.SelectionStashPaths = slices.Compact(paths)
 	s.SelectionStashStripOrder = uniqueConcat(s.SelectionStashStripOrder, s.SelectedStripOrder)
 	if !hadStash || s.SelectionStashStripCursorPath == "" {
-		s.SelectionStashStripCursorPath = s.StripCursorPath
+		s.SelectionStashStripCursorPath = s.Strip.CursorPath
 	}
 	s.ClearSelection()
 	return true
@@ -53,7 +53,7 @@ func (s *State) StashClear() {
 func (s *State) ApplySelectionSnapshot(paths, stripOrder []string, cursorPath string) {
 	s.clearSelectionState()
 	s.SelectedStripOrder = nil
-	s.StripCursorPath = cursorPath
+	s.Strip.CursorPath = cursorPath
 	paths = filterExistingSelectionPaths(paths)
 	if len(paths) == 0 {
 		s.invalidateSelectionDerivedFull()
@@ -83,8 +83,8 @@ func (s *State) MergeSelectionSnapshot(paths, stripOrder []string, cursorPath st
 	if len(paths) == 0 {
 		return
 	}
-	if s.StripCursorPath == "" {
-		s.StripCursorPath = cursorPath
+	if s.Strip.CursorPath == "" {
+		s.Strip.CursorPath = cursorPath
 	}
 	if s.SelectedPaths == nil {
 		s.SelectedPaths = make(map[string]bool, len(paths))

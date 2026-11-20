@@ -318,7 +318,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionPanelFocusSelected,
-			Views:        HelpBrowser,
+			Views:        HelpBrowser | HelpDedup,
 			Title:        "Focus selected panel",
 			Section:      "Navigation",
 			DefaultKeys:  []string{"C-s"},

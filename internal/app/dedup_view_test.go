@@ -1742,3 +1742,62 @@ func TestDedupViewKeepFolderSkipsSubtree(t *testing.T) {
 		t.Fatalf("cursor on row %d (%+v), want bramble folder", got, *r.Value)
 	}
 }
+
+func TestDedupViewSelectedStrip(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "meadow"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, rel := range []string{"lantern.txt", filepath.Join("meadow", "lantern.txt")} {
+		if err := os.WriteFile(filepath.Join(dir, rel), []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+	view := &app.model.DedupView
+	key := func(k tcell.Key) { app.handleDedupViewKey(tcell.NewEventKey(k, 0, tcell.ModNone)) }
+
+	// Nothing marked: Ctrl+S warns and there is no strip.
+	key(tcell.KeyCtrlS)
+	if view.FocusSelected {
+		t.Fatal("Ctrl+S focused the strip with nothing marked")
+	}
+	if _, strip := ui.DedupMainRects(app.layoutForTerminalSize(80, 24).Primary, &app.model); strip.Height != 0 {
+		t.Fatalf("strip height %d without marks, want 0", strip.Height)
+	}
+
+	// Mark the root-level file, then focus the strip.
+	key(tcell.KeyDown)
+	key(tcell.KeyInsert)
+	if view.MarkedCount != 1 {
+		t.Fatalf("MarkedCount = %d, want 1", view.MarkedCount)
+	}
+	if _, strip := ui.DedupMainRects(app.layoutForTerminalSize(80, 24).Primary, &app.model); strip.Height == 0 {
+		t.Fatal("strip hidden with a mark")
+	}
+	key(tcell.KeyCtrlS)
+	if !view.FocusSelected {
+		t.Fatal("Ctrl+S did not focus the strip")
+	}
+	app.render() // strip must render without panicking
+
+	// Enter reveals the marked file in the main tree.
+	key(tcell.KeyEnter)
+	if view.FocusSelected || app.model.ViewMode != ui.ViewDedup {
+		t.Fatalf("Enter: focusSelected %v view %v, want main tree in the dedup view", view.FocusSelected, app.model.ViewMode)
+	}
+	if got := app.model.DedupList[view.Main.Selected].Value.AbsKey; got != filepath.Join(dir, "lantern.txt") {
+		t.Fatalf("revealed row %q, want the marked file", got)
+	}
+
+	// Insert in the strip unmarks; with nothing left focus drops to the main tree.
+	key(tcell.KeyCtrlS)
+	key(tcell.KeyInsert)
+	app.reconcileAfterEvent()
+	if view.MarkedCount != 0 || view.FocusSelected {
+		t.Fatalf("after unmark: count %d focusSelected %v, want 0/false", view.MarkedCount, view.FocusSelected)
+	}
+}

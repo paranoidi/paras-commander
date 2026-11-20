@@ -7,6 +7,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/primitive"
+	"github.com/paranoidi/paras-commander/internal/selstrip"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
@@ -32,21 +33,55 @@ type SelectedStripOpts struct {
 	ViMotionActive                  bool
 }
 
-// drawSelectedStrip renders the per-panel list of selected paths outside the current directory.
-// The title is always "Selected"; stripFocused only affects title active vs inactive color.
-// When the selections span multiple parent directories, the multi-location icon is painted
-// at the right end of the top border (… ─ x ─┐).
-func drawSelectedStrip(
+// SelectedStripData is everything drawSelectedStrip paints, independent of the owner
+// (file panel or find-duplicates view). Paths are absolute and already ordered.
+type SelectedStripData struct {
+	Paths     []string
+	Strip     selstrip.State
+	BaseDir   string // display paths are relative to this directory
+	EndLabel  string // top-border end label (multi-location icon); hidden while the filter is shown
+	SizeLabel string // bottom-border selection count/size; empty = none
+}
+
+// drawBrowserSelectedStrip draws a file panel's selected strip.
+func drawBrowserSelectedStrip(
 	screen tcell.Screen,
 	rect Rect,
 	state panel.State,
 	stripFocused, chromeBlocked bool,
 	opts SelectedStripOpts,
 ) {
+	data := SelectedStripData{
+		Paths:   state.SelectedStripPaths(),
+		Strip:   state.Strip,
+		BaseDir: state.Path.String(),
+	}
+	if _, multiDir, _ := state.SelectedCommonRoot(); multiDir {
+		data.EndLabel = " " + opts.Styles.IconSelectedMultiLocation() + " "
+	}
+	if opts.ShowSelectionSizeOnBottom {
+		data.SizeLabel, _ = SelectionSizeLabel(
+			&state,
+			!state.Path.HasSubtreeSizes(),
+			opts.Painter,
+			opts.Styles.IconWorking(),
+		)
+	}
+	drawSelectedStrip(screen, rect, data, stripFocused, chromeBlocked, opts)
+}
+
+// drawSelectedStrip renders a list of selected paths (the file panel's selections outside the
+// current directory, or the find-duplicates marks).
+// The title is always "Selected"; stripFocused only affects title active vs inactive color.
+func drawSelectedStrip(
+	screen tcell.Screen,
+	rect Rect,
+	data SelectedStripData,
+	stripFocused, chromeBlocked bool,
+	opts SelectedStripOpts,
+) {
 	styles := opts.Styles
 	userHomeDir := opts.UserHomeDir
-	painter := opts.Painter
-	showSelectionSizeOnBottom := opts.ShowSelectionSizeOnBottom
 	scrollbarStyle := opts.ScrollbarStyle
 	scrollbarShowInactive := opts.ScrollbarShowInactive
 	panelFileListActive := opts.PanelFileListActive
@@ -54,11 +89,8 @@ func drawSelectedStrip(
 		return
 	}
 
-	endLabel := ""
-	if _, multiDir, _ := state.SelectedCommonRoot(); multiDir {
-		endLabel = " " + styles.IconSelectedMultiLocation() + " "
-	}
-	filterUI := stripFocused && (state.StripFilter.Active || state.StripFilter.Editing)
+	endLabel := data.EndLabel
+	filterUI := stripFocused && data.Strip.Filter.UIActive()
 	title := panelSelectedChromePadded
 	if filterUI {
 		title = ""
@@ -66,19 +98,12 @@ func drawSelectedStrip(
 	}
 	chrome := drawAuxPanelChrome(screen, rect, title, endLabel, stripFocused, chromeBlocked, opts.ViMotionActive, styles)
 	if filterUI {
-		drawQuickFilterTitle(screen, chrome.TitleX, rect.Y, chrome.TitleWidth, state.StripFilter, styles)
+		drawQuickFilterTitle(screen, chrome.TitleX, rect.Y, chrome.TitleWidth, data.Strip.Filter, styles)
 	}
 
-	if showSelectionSizeOnBottom {
-		if raw, ok := SelectionSizeLabel(
-			&state,
-			!state.Path.HasSubtreeSizes(),
-			painter,
-			styles.IconWorking(),
-		); ok {
-			endStyle := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelectionSize, stripFocused, chromeBlocked)
-			paintSelectedStripBottomSize(screen, rect, raw, endStyle, chrome.Chrome.Frame)
-		}
+	if data.SizeLabel != "" {
+		endStyle := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelectionSize, stripFocused, chromeBlocked)
+		paintSelectedStripBottomSize(screen, rect, data.SizeLabel, endStyle, chrome.Chrome.Frame)
 	}
 
 	visibleRows := SelectedStripListRows(rect)
@@ -86,12 +111,12 @@ func drawSelectedStrip(
 		return
 	}
 
-	paths := state.SelectedStripPaths()
+	paths := data.Paths
 	interior := rect.Width - 2
 	rowTextWidth := max(1, interior)
 	contentStart := rect.X + 1
 
-	scroll := state.SelectedStripScroll
+	scroll := data.Strip.Scroll
 	if scroll < 0 {
 		scroll = 0
 	}
@@ -115,7 +140,7 @@ func drawSelectedStrip(
 		if chromeBlocked {
 			baseStyle = styles.PanelBlockedRowFile
 		}
-		if stripFocused && idx == state.SelectedStripCursor {
+		if stripFocused && idx == data.Strip.Cursor {
 			if chromeBlocked {
 				baseStyle = styles.PanelBlockedCursor
 				cursorStyleKey = "panel.blocked.row.cursor"
@@ -139,7 +164,7 @@ func drawSelectedStrip(
 		pathLabel := ""
 		if idx < len(paths) {
 			p := paths[idx]
-			pathLabel = selectionStripDisplayPath(p, state.Path.String(), userHomeDir, textCols)
+			pathLabel = selectionStripDisplayPath(p, data.BaseDir, userHomeDir, textCols)
 			text = prefix + pathLabel
 		}
 
@@ -152,10 +177,10 @@ func drawSelectedStrip(
 			}}
 		}
 		if idx < len(paths) {
-			baseRanges := state.StripFilter.Ranges(idx)
-			if mapped := panel.MapStripBasenameRangesToDisplay(pathLabel, paths[idx], baseRanges); len(mapped) > 0 {
+			baseRanges := data.Strip.Filter.Ranges(idx)
+			if mapped := selstrip.MapBasenameRangesToDisplay(pathLabel, paths[idx], baseRanges); len(mapped) > 0 {
 				matchStyle := styles.FuzzyHighlight
-				if stripFocused && idx == state.SelectedStripCursor {
+				if stripFocused && idx == data.Strip.Cursor {
 					matchStyle = styles.FuzzyHighlightCursor
 				}
 				_, bg, _ := baseStyle.Decompose()

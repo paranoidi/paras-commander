@@ -266,7 +266,7 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 	if a.model.ViewMode == ui.ViewBrowser &&
 		a.model.ActiveSubFocus == ui.SubFocusSelectedStrip &&
 		!a.inQuickFilterUI() {
-		keys := menu.FunctionKeysSelectedStripView(a.keys.Global.MenuBindingLabel(keymap.ActionPanelClearSelection))
+		keys := menu.FunctionKeysSelectedStripView(a.keys.Global.MenuBindingLabel(keymap.ActionPanelClearSelection), false)
 		if a.model.ViMotionMode {
 			return viMotionFooterKeys(keys, a.keys.LeaderKey)
 		}
@@ -499,6 +499,9 @@ func (a *App) auxiliaryViewFooterKeys() ([]menu.FunctionKey, bool) {
 		f1 := menu.FunctionKey{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help", ActionID: keymap.ActionAppShowHelp}
 		out = append(out[:1], append([]menu.FunctionKey{f1}, out[1:]...)...)
 		return a.viMotionAuxiliaryFooterKeys(out), true
+	}
+	if a.model.ViewMode == ui.ViewDedup && a.model.DedupView.FocusSelected {
+		return a.viMotionAuxiliaryFooterKeys(menu.FunctionKeysSelectedStripView(a.keys.Global.MenuBindingLabel(keymap.ActionPanelClearSelection), true)), true
 	}
 	if a.model.ViewMode == ui.ViewDedup && !a.inQuickFilterUI() {
 		rest := dedupViewFooterKeys(a.keys.Global, a.keys.Dedup, a.model.DedupView.TreeDirs)
@@ -1230,7 +1233,7 @@ func (a *App) stripFilterFocused() bool {
 
 func (a *App) activeQuickFilter() quickfilter.Filter {
 	if a.stripFilterFocused() {
-		return a.activePanel().StripFilter
+		return a.activePanel().Strip.Filter
 	}
 	return a.activePanel().Filter
 }
@@ -1518,7 +1521,7 @@ func (a *App) handleStripFilterKey(event *tcell.EventKey) {
 	case tcell.KeyDown:
 		p.CycleStripFilterMatch(1, vr)
 	case tcell.KeyEnter:
-		if p.StripFilter.Query != "" {
+		if p.Strip.Filter.Query != "" {
 			p.CancelStripFilter(vr)
 			a.navigateFromSelectedStrip()
 		} else {

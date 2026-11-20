@@ -130,7 +130,7 @@ func TestStripCursorSurvivesStash(t *testing.T) {
 		t.Fatal("focus failed")
 	}
 	p.MoveSelectedStrip(2, 10)
-	want, _ := p.SelectedPathAtStripIndex(p.SelectedStripCursor)
+	want, _ := p.SelectedPathAtStripIndex(p.Strip.Cursor)
 	app.reconcileAfterEvent()
 	app.togglePanelSelectionStash()
 	app.reconcileAfterEvent()
@@ -138,7 +138,7 @@ func TestStripCursorSurvivesStash(t *testing.T) {
 	if !app.focusSelectedStrip() {
 		t.Fatal("refocus failed")
 	}
-	if got, _ := p.SelectedPathAtStripIndex(p.SelectedStripCursor); got != want {
+	if got, _ := p.SelectedPathAtStripIndex(p.Strip.Cursor); got != want {
 		t.Fatalf("cursor path %q, want %q", got, want)
 	}
 }
@@ -168,7 +168,7 @@ func TestStripCursorBelongsToSelectionSet(t *testing.T) {
 		t.Fatal("focus failed")
 	}
 	p.MoveSelectedStrip(2, 10)
-	want, _ := p.SelectedPathAtStripIndex(p.SelectedStripCursor)
+	want, _ := p.SelectedPathAtStripIndex(p.Strip.Cursor)
 	app.reconcileAfterEvent()
 	app.togglePanelSelectionStash()
 	app.reconcileAfterEvent()
@@ -179,8 +179,8 @@ func TestStripCursorBelongsToSelectionSet(t *testing.T) {
 	if !app.focusSelectedStrip() {
 		t.Fatal("focus fresh failed")
 	}
-	if p.SelectedStripCursor != 0 {
-		t.Fatalf("fresh selection cursor %d, want 0", p.SelectedStripCursor)
+	if p.Strip.Cursor != 0 {
+		t.Fatalf("fresh selection cursor %d, want 0", p.Strip.Cursor)
 	}
 	app.reconcileAfterEvent()
 	p.ClearSelection()
@@ -189,7 +189,7 @@ func TestStripCursorBelongsToSelectionSet(t *testing.T) {
 	if !app.focusSelectedStrip() {
 		t.Fatal("refocus failed")
 	}
-	if got, _ := p.SelectedPathAtStripIndex(p.SelectedStripCursor); got != want {
+	if got, _ := p.SelectedPathAtStripIndex(p.Strip.Cursor); got != want {
 		t.Fatalf("cursor path %q, want %q", got, want)
 	}
 }

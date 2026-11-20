@@ -386,7 +386,7 @@ func (a *App) selectParentDirs() {
 // active panel, puts the cursor on that entry (file or directory) and focuses the file list.
 func (a *App) navigateFromSelectedStrip() {
 	p := a.activePanel()
-	selPath, ok := p.SelectedPathAtStripIndex(p.SelectedStripCursor)
+	selPath, ok := p.SelectedPathAtStripIndex(p.Strip.Cursor)
 	if !ok {
 		return
 	}
@@ -524,6 +524,7 @@ func (a *App) reconcileAfterEvent() {
 	}
 	a.previewCtrl.SchedulePrefetchFromActivePanel()
 	a.reconcileDedupPanel()
+	a.dedupCtrl.ReconcileStripFocus()
 	a.previewCtrl.ReconcileQuickViewPreview()
 	a.previewCtrl.ReconcileCarouselFilePreview()
 	a.previewCtrl.ReconcileCarouselSidePreview(ui.PrimaryPanel)
@@ -545,7 +546,7 @@ func (a *App) reconcileTerminalStripScroll() {
 // wins so sync matches what the user is steering; otherwise the file-list cursor row is used.
 func (a *App) syncFollowTargetPath(driver *panel.State) (string, bool) {
 	if a.model.ActiveSubFocus == ui.SubFocusSelectedStrip && driver.SelectedStripCount() > 0 {
-		p, ok := driver.SelectedPathAtStripIndex(driver.SelectedStripCursor)
+		p, ok := driver.SelectedPathAtStripIndex(driver.Strip.Cursor)
 		if !ok {
 			return "", false
 		}

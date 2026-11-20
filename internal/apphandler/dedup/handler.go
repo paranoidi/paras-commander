@@ -29,6 +29,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/sched"
+	"github.com/paranoidi/paras-commander/internal/selstrip"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -828,6 +829,10 @@ func (h *Handler) MoveToAdjacentDir(delta int) {
 // MoveSelection moves the focused pane's cursor by delta rows (clamped). Main
 // pane moves refresh the copies pane.
 func (h *Handler) MoveSelection(delta int) {
+	if st, paths := h.strip(); st != nil {
+		st.Move(delta, len(paths), 0)
+		return
+	}
 	pane, rows := h.focusedPane()
 	if len(rows) == 0 {
 		return
@@ -838,6 +843,9 @@ func (h *Handler) MoveSelection(delta int) {
 
 // FocusedFilter returns a copy of the focused pane's quick filter state.
 func (h *Handler) FocusedFilter() quickfilter.Filter {
+	if st, _ := h.strip(); st != nil {
+		return st.Filter
+	}
 	pane, _ := h.focusedPane()
 	return pane.Filter
 }
@@ -877,12 +885,20 @@ func (h *Handler) setSelected(pane *ui.DedupPane, index int) {
 
 // AppendFilterRune types r into the focused pane's quick filter.
 func (h *Handler) AppendFilterRune(r rune) {
+	if st, paths := h.strip(); st != nil {
+		st.AppendFilterRune(r, selstrip.Names(paths), h.filterOptions(), 0)
+		return
+	}
 	pane, _ := h.focusedPane()
 	h.applyFilter(pane.Filter.InsertRune(r))
 }
 
 // BackspaceFilter deletes the rune before the filter caret.
 func (h *Handler) BackspaceFilter() {
+	if st, paths := h.strip(); st != nil {
+		st.BackspaceFilter(selstrip.Names(paths), h.filterOptions(), 0)
+		return
+	}
 	pane, _ := h.focusedPane()
 	if next, changed := pane.Filter.Backspace(); changed {
 		h.applyFilter(next)
@@ -891,11 +907,19 @@ func (h *Handler) BackspaceFilter() {
 
 // ClearFilter empties the query while the filter stays open.
 func (h *Handler) ClearFilter() {
+	if st, paths := h.strip(); st != nil {
+		st.ClearFilter(selstrip.Names(paths), h.filterOptions(), 0)
+		return
+	}
 	h.applyFilter("")
 }
 
 // CancelFilter closes the focused pane's quick filter.
 func (h *Handler) CancelFilter() {
+	if st, paths := h.strip(); st != nil {
+		st.CancelFilter(selstrip.Names(paths), h.filterOptions(), 0)
+		return
+	}
 	pane, _ := h.focusedPane()
 	pane.Filter = quickfilter.Filter{}
 }
@@ -903,6 +927,10 @@ func (h *Handler) CancelFilter() {
 // CycleFilterMatch steps the focused pane's cursor through filter matches, or
 // moves plainly when nothing matches.
 func (h *Handler) CycleFilterMatch(delta int) {
+	if st, paths := h.strip(); st != nil {
+		st.CycleFilterMatch(delta, len(paths), 0, h.filterOptions())
+		return
+	}
 	pane, _ := h.focusedPane()
 	if cur, ok := pane.Filter.Cycle(pane.Selected, delta, h.filterOptions()); ok {
 		h.setSelected(pane, cur)
@@ -913,6 +941,14 @@ func (h *Handler) CycleFilterMatch(delta int) {
 
 // SelectEdge moves the focused pane's cursor to the first or last row.
 func (h *Handler) SelectEdge(last bool) {
+	if st, paths := h.strip(); st != nil {
+		if last {
+			st.Bottom(len(paths), 0)
+		} else {
+			st.Top(len(paths), 0)
+		}
+		return
+	}
 	pane, rows := h.focusedPane()
 	if len(rows) == 0 {
 		return
@@ -952,32 +988,36 @@ func (h *Handler) SwitchPane() { h.cyclePane(1) }
 // SwitchPanePrev cycles focus in reverse: browse panel → copies → main tree → browse panel.
 func (h *Handler) SwitchPanePrev() { h.cyclePane(-1) }
 
-// cyclePane moves focus dir steps through main tree (0), copies (1) and browse panel (2),
-// skipping an empty copies pane and the browse panel when it is not shown.
+// cyclePane moves focus dir steps through main tree (0), copies (1), browse panel (2) and the
+// Selected strip (3), skipping an empty copies pane, the browse panel when it is not shown and
+// the strip when nothing is marked.
 func (h *Handler) cyclePane(dir int) {
-	avail := [3]bool{
+	avail := [dedupPaneCount]bool{
 		true,
 		len(h.model.DedupCopiesList) > 0,
 		h.model.DedupSnapshot.Phase == comparepkg.DedupDone,
+		h.model.DedupView.MarkedCount > 0,
 	}
-	next := (h.focusedSlot() + dir + 3) % 3
+	next := (h.focusedSlot() + dir + dedupPaneCount) % dedupPaneCount
 	for !avail[next] {
-		next = (next + dir + 3) % 3
+		next = (next + dir + dedupPaneCount) % dedupPaneCount
 	}
 	h.dropPaneFilters()
 	h.focusPane(next)
 }
 
-// dropPaneFilters clears both tree panes' quick filters and the range anchor on a focus change.
+// dropPaneFilters clears the tree panes' and strip's quick filters and the range anchor on a focus change.
 func (h *Handler) dropPaneFilters() {
 	st := &h.model.DedupView
-	st.Main.Filter, st.Copies.Filter = quickfilter.Filter{}, quickfilter.Filter{}
+	st.Main.Filter, st.Copies.Filter, st.Strip.Filter = quickfilter.Filter{}, quickfilter.Filter{}, quickfilter.Filter{}
 	st.RangeAnchor = ""
 }
 
 // focusedSlot is the focused pane as a dedupPane* slot.
 func (h *Handler) focusedSlot() int {
 	switch st := &h.model.DedupView; {
+	case st.FocusSelected:
+		return dedupPaneSelected
 	case st.FocusPanel:
 		return dedupPaneBrowse
 	case st.FocusCopies:
@@ -991,6 +1031,8 @@ const (
 	dedupPaneMain = iota
 	dedupPaneCopies
 	dedupPaneBrowse
+	dedupPaneSelected
+	dedupPaneCount
 )
 
 // focusPane focuses pane (a dedupPane* slot). Moving to another pane drops the quick filters and
@@ -1000,7 +1042,7 @@ func (h *Handler) focusPane(pane int) {
 		h.dropPaneFilters()
 	}
 	st := &h.model.DedupView
-	st.FocusCopies, st.FocusPanel = pane == dedupPaneCopies, pane == dedupPaneBrowse
+	st.FocusCopies, st.FocusPanel, st.FocusSelected = pane == dedupPaneCopies, pane == dedupPaneBrowse, pane == dedupPaneSelected
 }
 
 // resyncPreservingCursor rebuilds the visible rows and re-locates the main
@@ -1402,10 +1444,14 @@ func (h *Handler) SetGroupFilter(fn func(g comparepkg.DedupGroup) bool, label st
 // pane's own rect); the other pane only clamps, since its height differs.
 func (h *Handler) ensureSelectionVisible(visibleRows int) {
 	st := &h.model.DedupView
-	mainRows, copiesRows := visibleRows, 0
-	if st.FocusCopies {
+	mainRows, copiesRows, stripRows := visibleRows, 0, 0
+	switch {
+	case st.FocusSelected:
+		mainRows, stripRows = 0, visibleRows
+	case st.FocusCopies:
 		mainRows, copiesRows = 0, visibleRows
 	}
+	st.Strip.Clamp(len(ui.DedupMarkedPaths(*st)), stripRows)
 	st.Main.EnsureSelectionVisible(len(h.model.DedupList), mainRows)
 	st.Copies.EnsureSelectionVisible(len(h.model.DedupCopiesList), copiesRows)
 }
