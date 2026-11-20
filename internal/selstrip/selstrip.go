@@ -295,3 +295,101 @@ func (s *State) Collapse(rows []Row) bool {
 	}
 	return false
 }
+
+// ExpandAll opens every folder. The cursor stays on its row. The bulk fold methods act only on
+// tree rows (a flat list has no folder rows).
+func (s *State) ExpandAll(rows []Row) {
+	if !hasGroup(rows) || len(s.Collapsed) == 0 {
+		return
+	}
+	s.Remember(rows)
+	s.Collapsed = nil
+	s.CollapsedRev++
+}
+
+// ExpandLevel opens every collapsed folder that is visible, one tree level per press.
+func (s *State) ExpandLevel(rows []Row) {
+	s.Remember(rows)
+	s.setCollapsed(rows, func(r Row) bool { return r.Group && !r.Expanded }, false)
+}
+
+// CollapseLevel folds the deepest open folders, one tree level per press.
+func (s *State) CollapseLevel(rows []Row) {
+	deepest := -1
+	for _, r := range rows {
+		if r.Group && r.Expanded {
+			deepest = max(deepest, r.Depth)
+		}
+	}
+	s.collapse(rows, func(r Row) bool { return r.Group && r.Expanded && r.Depth == deepest }, false)
+}
+
+// CollapseAll folds every folder of the tree over paths (rows is the visible list), leaving
+// only the top-level rows.
+func (s *State) CollapseAll(paths []string, baseDir string, rows []Row) {
+	if !hasGroup(rows) {
+		return
+	}
+	s.collapse(rows, func(Row) bool { return false }, true)
+	for _, r := range Rows(paths, baseDir, true, nil) {
+		if r.Group && !s.Collapsed[r.Path] {
+			s.Collapsed[r.Path] = true
+			s.CollapsedRev++
+		}
+	}
+}
+
+// collapse folds the visible folders matching fold and points CursorPath at the cursor row, or
+// at its shallowest ancestor that will be folded (every ancestor when all is set, as CollapseAll
+// folds them all), so Restore lands on a visible row once the caller rebuilds the rows.
+func (s *State) collapse(rows []Row, fold func(Row) bool, all bool) {
+	if !hasGroup(rows) || s.Cursor < 0 || s.Cursor >= len(rows) {
+		return
+	}
+	if s.Collapsed == nil {
+		s.Collapsed = map[string]bool{}
+	}
+	s.Remember(rows)
+	// Ancestors of the cursor row, shallowest first.
+	var anc []Row
+	for i, d := s.Cursor-1, rows[s.Cursor].Depth; i >= 0 && d > 0; i-- {
+		if rows[i].Depth < d {
+			anc = append([]Row{rows[i]}, anc...)
+			d = rows[i].Depth
+		}
+	}
+	for _, a := range anc {
+		if all || fold(a) {
+			s.CursorPath = a.Path
+			break
+		}
+	}
+	s.setCollapsed(rows, fold, true)
+}
+
+// setCollapsed sets the collapsed state of the folder rows matching fn.
+func (s *State) setCollapsed(rows []Row, fn func(Row) bool, collapsed bool) {
+	for _, r := range rows {
+		if !fn(r) {
+			continue
+		}
+		if collapsed {
+			if s.Collapsed == nil {
+				s.Collapsed = map[string]bool{}
+			}
+			s.Collapsed[r.Path] = true
+		} else {
+			delete(s.Collapsed, r.Path)
+		}
+		s.CollapsedRev++
+	}
+}
+
+func hasGroup(rows []Row) bool {
+	for _, r := range rows {
+		if r.Group {
+			return true
+		}
+	}
+	return false
+}

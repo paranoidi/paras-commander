@@ -3,6 +3,7 @@ package dedup
 import (
 	"strings"
 
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/selstrip"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -38,6 +39,25 @@ func (h *Handler) OpenStripRowInPanel(panelID int) {
 	if row, ok := h.stripRow(); ok {
 		h.OpenInPanel(panelID, row.Path, row.Group)
 	}
+}
+
+// FoldStripRows applies a bulk tree action to the strip: panel.tree-collapse-all /
+// panel.tree-expand-all-shallow fold or open one level, dedup.collapse-all / dedup.expand-all
+// every folder. The cursor stays on its row, or the folder it was folded into.
+func (h *Handler) FoldStripRows(action string) {
+	st := &h.model.DedupView
+	rows := h.stripRows()
+	switch action {
+	case keymap.ActionPanelTreeCollapseAll:
+		st.Strip.CollapseLevel(rows)
+	case keymap.ActionDedupCollapseAll:
+		st.Strip.CollapseAll(ui.DedupMarkedPaths(*st), h.model.DedupSnapshot.EffectiveDisplayRoot().String(), rows)
+	case keymap.ActionPanelTreeExpandAllShallow:
+		st.Strip.ExpandLevel(rows)
+	case keymap.ActionDedupExpandAll:
+		st.Strip.ExpandAll(rows)
+	}
+	st.Strip.Restore(h.stripRows())
 }
 
 // ExpandStripRow opens the collapsed tree-mode folder row under the strip cursor.

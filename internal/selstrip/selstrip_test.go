@@ -1,6 +1,7 @@
 package selstrip
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/search"
@@ -94,5 +95,48 @@ func TestCollapseExpand(t *testing.T) {
 	}
 	if !s.Expand(rows) || len(Rows(paths, "/tmp/meadow", true, s.Collapsed)) != 4 {
 		t.Fatal("expand did not reopen lantern")
+	}
+}
+
+func TestBulkFold(t *testing.T) {
+	paths := []string{
+		"/tmp/meadow/lantern/ember/bravo.txt", "/tmp/meadow/lantern/ember/crystal.txt",
+		"/tmp/meadow/lantern/delta.txt", "/tmp/meadow/willow.txt",
+	}
+	base := "/tmp/meadow"
+	var s State
+	rows := func() []Row { return Rows(paths, base, true, s.Collapsed) }
+	names := func() []string {
+		var out []string
+		for _, r := range rows() {
+			out = append(out, r.Display)
+		}
+		return out
+	}
+	// lantern, ember, bravo, crystal, delta, willow
+	s.Cursor = 3 // crystal.txt
+	s.CollapseLevel(rows())
+	s.Restore(rows())
+	if got := strings.Join(names(), ","); got != "lantern,ember,delta.txt,willow.txt" || s.Cursor != 1 {
+		t.Fatalf("collapse level: %s cursor %d, want ember folded and cursor on it", got, s.Cursor)
+	}
+	s.CollapseAll(paths, base, rows())
+	s.Restore(rows())
+	if got := strings.Join(names(), ","); got != "lantern,willow.txt" || s.Cursor != 0 {
+		t.Fatalf("collapse all: %s cursor %d", got, s.Cursor)
+	}
+	s.ExpandLevel(rows())
+	if got := strings.Join(names(), ","); got != "lantern,ember,delta.txt,willow.txt" {
+		t.Fatalf("expand level: %s", got)
+	}
+	s.ExpandAll(rows())
+	s.Restore(rows())
+	if len(rows()) != 6 || s.Cursor != 0 {
+		t.Fatalf("expand all: %d rows cursor %d", len(rows()), s.Cursor)
+	}
+	flat := Rows(paths, base, false, nil)
+	s.CollapseAll(paths, base, flat)
+	if len(s.Collapsed) != 0 {
+		t.Fatal("bulk fold must ignore a flat list")
 	}
 }

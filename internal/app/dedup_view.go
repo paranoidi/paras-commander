@@ -487,6 +487,9 @@ func (a *App) handleDedupStripKey(action string, event *tcell.EventKey) bool {
 		c.OpenStripRowInPanel(a.model.ActivePanel)
 	case keymap.ActionDestinationInactivePanel:
 		c.OpenStripRowInPanel(a.inactivePanelID())
+	case keymap.ActionPanelTreeCollapseAll, keymap.ActionDedupCollapseAll,
+		keymap.ActionPanelTreeExpandAllShallow, keymap.ActionDedupExpandAll:
+		c.FoldStripRows(action)
 	case keymap.ActionDedupToggleNode:
 		c.ExpandStripRow()
 	case keymap.ActionDedupCollapse:

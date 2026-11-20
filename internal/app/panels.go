@@ -790,6 +790,22 @@ func (a *App) tryDispatchSelectedStrip(actionID string) bool {
 	case keymap.ActionPanelTreeCollapse:
 		p.Strip.Collapse(p.SelectedStripRows())
 		p.EnsureSelectedStripCursorVisible(vr)
+	case keymap.ActionPanelTreeCollapseAll:
+		p.Strip.CollapseLevel(p.SelectedStripRows())
+		p.RestoreStripCursor()
+		p.EnsureSelectedStripCursorVisible(vr)
+	case keymap.ActionPanelTreeCollapseAllFull:
+		p.Strip.CollapseAll(p.SelectedStripPaths(), p.Path.String(), p.SelectedStripRows())
+		p.RestoreStripCursor()
+		p.EnsureSelectedStripCursorVisible(vr)
+	case keymap.ActionPanelTreeExpandAllShallow:
+		p.Strip.ExpandLevel(p.SelectedStripRows())
+		p.RestoreStripCursor()
+		p.EnsureSelectedStripCursorVisible(vr)
+	case keymap.ActionPanelTreeExpandAllFull:
+		p.Strip.ExpandAll(p.SelectedStripRows())
+		p.RestoreStripCursor()
+		p.EnsureSelectedStripCursorVisible(vr)
 	case keymap.ActionAppUserMenu:
 		// F2 opens the user-command menu everywhere else; the Selected strip has no
 		// room for its own dedicated chord, so while it's focused F2 selects the unique
