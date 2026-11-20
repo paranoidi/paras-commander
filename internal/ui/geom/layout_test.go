@@ -676,3 +676,16 @@ func TestSplitJobsViewMessagesBottomInBandRightColumn(t *testing.T) {
 		t.Fatalf("messages %+v not between detail %+v and operations %+v", r.Messages, r.Detail, r.Operations)
 	}
 }
+
+// A focused strip at 50% must be as tall as the lower half of an evenly split neighbour column
+// (the find-duplicates browse panel: height - height/2), also for odd column heights.
+func TestFocusedStripMatchesHalfColumn(t *testing.T) {
+	for _, h := range []int{40, 41, 57} {
+		_, strip := SplitPanelForSelected(Rect{Width: 60, Height: h}, SelectedStripSplitParams{
+			StripItemCount: 500, ActivePercent: 50, StripFocused: true,
+		})
+		if want := h - h/2; strip.Height != want {
+			t.Fatalf("height %d: strip %d, want %d", h, strip.Height, want)
+		}
+	}
+}

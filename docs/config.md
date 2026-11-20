@@ -193,7 +193,7 @@ General interface layout, timing, and rendering behavior.
 | `path_picker_validate_delay_ms` | int | `200` | Delay after the path-picker filter changes before checking whether the typed path exists on disk. |
 | `selection_size_scan_debounce_ms` | int | `100` | Delay after the panel selection, Find dialog marked selection, or an open delete-confirmation dialog's source selection changes before checking which directories still need a background disk-usage scan (stats each one to check mount boundaries). Runs off the main goroutine so a large selection change (e.g. select-all across thousands of directories) doesn't block input handling. `0` runs on the next scheduler tick; values above 30000 are clamped. |
 | `selected_panel_max_rows` | int | `0` (→ 5) | Maximum visible rows in the cross-directory selected strip when it is visible but not focused (side-by-side). `0` means use the built-in default of 5. |
-| `selected_panel_active_percent` | int | `50` | When the selected strip has keyboard focus in side-by-side layout, cap its height to this percent of the panel column (clamped 10–90). In stacked layout, the strip sits to the right of the file list at this percent of panel width and uses the full panel height. |
+| `selected_panel_active_percent` | int | `50` | When the selected strip has keyboard focus in side-by-side layout, cap its height to this percent of the panel column, rounded up (clamped 10–90). In stacked layout, the strip sits to the right of the file list at this percent of panel width and uses the full panel height. |
 
 ## `[ui.zoom]`
 

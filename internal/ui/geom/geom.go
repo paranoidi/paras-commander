@@ -336,9 +336,12 @@ func SplitPanelForSelected(column Rect, p SelectedStripSplitParams) (file Rect, 
 }
 
 // sideBySideFocusedStripContentRows raises the strip content-row cap toward percent of column height.
+// The frame share rounds up (the file list gets the rounded-down rest), so at 50% the strip is as
+// tall as the lower half of an evenly split neighbour column, e.g. the find-duplicates browse panel
+// (DedupSecondaryRects).
 func sideBySideFocusedStripContentRows(columnHeight, activePercent, maxRows int) int {
 	pct := EffectiveSelectedPanelActivePercent(activePercent)
-	capRows := columnHeight*pct/100 - selectedStripChromeRows
+	capRows := columnHeight - columnHeight*(100-pct)/100 - selectedStripChromeRows
 	if capRows < 1 {
 		capRows = 1
 	}
