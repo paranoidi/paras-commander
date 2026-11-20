@@ -2,6 +2,7 @@ package panel
 
 import (
 	"errors"
+	"slices"
 	"sort"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -15,7 +16,7 @@ type selectionDerivedCache struct {
 	path             string
 	gen              uint64
 	stripPaths       []string
-	stripTree        *treeflat.PathTree // labels of stripPaths; nil: built on the next tree-mode use
+	stripTree        *treeflat.PathTree // labels of stripPaths, kept in step with them; nil: built on the next tree-mode use
 	stripRows        []selstrip.Row     // stripPaths as strip rows (flat or tree per Strip.Tree)
 	stripRowsBuilt   bool
 	stripRowsTree    bool
@@ -177,29 +178,20 @@ func (s *State) stillHasSelectionUnderAncestor(ancestor, exceptPath string) bool
 	return false
 }
 
-func (s *State) appendStripPathIfNeeded(path string) {
-	for _, p := range s.selDerivedCache.stripPaths {
-		if p == path {
-			return
-		}
+// appendStripPathIfNeeded adds path to the strip's sorted list (and its tree, when built).
+func (s *State) appendStripPathIfNeeded(path string) { s.editStripPath(path, true) }
+
+// removeStripPath drops path from the strip's sorted list (and its tree, when built).
+func (s *State) removeStripPath(path string) {
+	if len(s.selDerivedCache.stripPaths) > 0 {
+		s.editStripPath(path, false)
 	}
-	s.selDerivedCache.stripPaths = append(s.selDerivedCache.stripPaths, path)
-	sort.Strings(s.selDerivedCache.stripPaths)
-	s.selDerivedCache.dropStripRows()
 }
 
-func (s *State) removeStripPath(path string) {
-	if len(s.selDerivedCache.stripPaths) == 0 {
-		return
-	}
-	out := s.selDerivedCache.stripPaths[:0]
-	for _, p := range s.selDerivedCache.stripPaths {
-		if p != path {
-			out = append(out, p)
-		}
-	}
-	s.selDerivedCache.stripPaths = out
-	s.selDerivedCache.dropStripRows()
+func (s *State) editStripPath(path string, on bool) {
+	c := &s.selDerivedCache
+	c.stripPaths = selstrip.ApplyEdits(c.stripPaths, []selstrip.Edit{{Path: path, On: on}}, c.stripTree, s.Path.String())
+	c.stripRowsBuilt = false
 }
 
 func (s *State) patchPrunedRootsAfterAdd(path string, isDir bool) {
@@ -301,31 +293,21 @@ func (s *State) applySelectionRemove(path string, wasDir bool) {
 	s.patchSelectionDerivedAfterRemove(path, wasDir)
 }
 
-// buildSelectedStripPaths lists ALL selected paths (order-first, extras sorted) when at
-// least one selection lives outside cur or StripForced is set; an all-in-current-directory
-// selection otherwise hides the strip.
+// buildSelectedStripPaths lists ALL selected paths, sorted, when at least one selection lives
+// outside cur or StripForced is set; an all-in-current-directory selection yields nil (strip
+// hidden). Sorted order is what editStripPath keeps.
 func (s *State) buildSelectedStripPaths(cur string) []string {
 	if !s.StripForced && !selectionsOutsideDir(s.SelectedPaths, cur) {
 		return nil
 	}
-	seen := make(map[string]bool, len(s.SelectedPaths))
 	out := make([]string, 0, len(s.SelectedPaths))
-	for _, p := range s.SelectedStripOrder {
-		if !s.SelectedPaths[p] || seen[p] {
-			continue
+	for p, on := range s.SelectedPaths {
+		if on {
+			out = append(out, p)
 		}
-		seen[p] = true
-		out = append(out, p)
 	}
-	extra := make([]string, 0)
-	for p := range s.SelectedPaths {
-		if seen[p] {
-			continue
-		}
-		extra = append(extra, p)
-	}
-	sort.Strings(extra)
-	return append(out, extra...)
+	slices.Sort(out)
+	return out
 }
 
 func selectionsOutsideDir(selected map[string]bool, dir string) bool {

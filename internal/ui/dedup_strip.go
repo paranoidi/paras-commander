@@ -96,42 +96,15 @@ func (m *dedupMarkedPaths) replay(rev, marked int) bool {
 		return false
 	}
 	if len(m.journal) > 0 {
-		type edit struct {
-			p  string
-			on bool
-		}
-		edits := make([]edit, 0, len(m.journal))
+		edits := make([]selstrip.Edit, 0, len(m.journal))
 		for p, on := range m.journal {
-			edits = append(edits, edit{p, on})
+			edits = append(edits, selstrip.Edit{Path: p, On: on})
 		}
-		slices.SortFunc(edits, func(a, b edit) int { return strings.Compare(a.p, b.p) })
-		// Each edit replaces the old entry equal to its path (if any) by that path when it is
-		// marked now: the untouched stretches between them are copied wholesale.
-		out := make([]string, 0, len(m.paths)+len(edits))
-		pos := 0
-		for _, e := range edits {
-			i, found := slices.BinarySearch(m.paths[pos:], e.p)
-			out = append(out, m.paths[pos:pos+i]...)
-			pos += i
-			if found {
-				pos++
-			}
-			if e.on {
-				out = append(out, e.p)
-			}
-		}
-		out = append(out, m.paths[pos:]...)
+		slices.SortFunc(edits, func(a, b selstrip.Edit) int { return strings.Compare(a.Path, b.Path) })
+		// A mismatch leaves the tree edited, but the caller's rebuild drops it with the paths.
+		out := selstrip.ApplyEdits(m.paths, edits, m.tree, m.treeKey.base)
 		if len(out) != marked {
 			return false
-		}
-		if m.tree != nil {
-			for _, e := range edits {
-				if label := selstrip.Label(m.treeKey.base, e.p); e.on {
-					m.tree.Add(label, e.p)
-				} else {
-					m.tree.Remove(label)
-				}
-			}
 		}
 		m.paths = out
 		m.gen++

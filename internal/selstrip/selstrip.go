@@ -4,6 +4,7 @@ package selstrip
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/quickfilter"
@@ -62,6 +63,45 @@ func NewTree(paths []string, baseDir string) *treeflat.PathTree {
 		labels[i] = Label(baseDir, p)
 	}
 	return treeflat.NewPathTree(labels, paths)
+}
+
+// Edit is one change to a strip's sorted path list: On adds Path, otherwise it is removed.
+type Edit struct {
+	Path string
+	On   bool
+}
+
+// ApplyEdits returns the sorted paths with edits applied (sorted by Path, at most one per
+// path), in O(n + k) for k edits: the untouched stretches between edits are copied wholesale.
+// Adding a listed path or removing an unlisted one changes nothing. paths is never modified (it
+// may be shared with callers). A non-nil tree (built by NewTree over paths and baseDir) gets the
+// same adds and removes, so a fold never relabels the whole list. The one incremental update of
+// both strips' path lists.
+func ApplyEdits(paths []string, edits []Edit, tree *treeflat.PathTree, baseDir string) []string {
+	out := make([]string, 0, len(paths)+len(edits))
+	pos := 0
+	for _, e := range edits {
+		i, found := slices.BinarySearch(paths[pos:], e.Path)
+		out = append(out, paths[pos:pos+i]...)
+		pos += i
+		if found {
+			pos++
+		}
+		if e.On {
+			out = append(out, e.Path)
+		}
+	}
+	out = append(out, paths[pos:]...)
+	if tree != nil {
+		for _, e := range edits {
+			if label := Label(baseDir, e.Path); e.On {
+				tree.Add(label, e.Path)
+			} else {
+				tree.Remove(label)
+			}
+		}
+	}
+	return out
 }
 
 // FlatRows is one row per path.
