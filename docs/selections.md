@@ -42,6 +42,8 @@ When selected paths lie outside the current directory, a Selected strip lists th
 | typing (in strip) | Fuzzy filter the strip |
 | `F2` (in strip) | Replace the selection with the parent directories |
 | `M-t` (in strip) | Toggle tree view (also `t` in the strip's `:` menu) |
+| `S-→` (in strip) | Open the entry under the cursor in the inactive panel; the active panel and strip focus stay |
+| `S-←` (in strip) | Open the entry under the cursor in the active panel (same as `Enter`) |
 
 **Tree view:** `M-t` in the focused strip (the footer shows it as "Tree") lists the selections as a folder tree instead of one path per row. A folder that holds only another folder is merged with it, so a single selected `foo/bar/asdf/file.txt` shows as the folder `foo/bar/asdf` with `file.txt` under it; folders with several entries or with files stay as they are, and a selected directory is a plain entry. The mode is shared by both panels and by the [find duplicates](find-duplicates.md) strip. In tree view, `Insert`, `Delete` or `Space` on a folder row unselects everything under that folder, and `Enter` on it opens that folder in the panel. `C-←` / `C-→` (the same keys as the main file list's tree view) collapse or expand the folder under the cursor; `C-←` on a file or a collapsed folder moves to its parent folder.
 

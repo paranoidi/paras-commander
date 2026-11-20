@@ -599,3 +599,31 @@ func TestSelectedStripToggleTreeAction(t *testing.T) {
 		t.Fatal("strip footer lacks the Tree entry")
 	}
 }
+
+func TestSelectedStripShiftArrowsOpenInPanels(t *testing.T) {
+	app, left := setupSelectedStripFocusTest(t)
+	screen := app.screen.(tcell.SimulationScreen)
+	cursorName := func(p *panel.State) string { e, _ := p.CurrentEntry(); return e.Name }
+	alpha := left.Path
+	root := alpha.Parent()
+	right := app.panelByID(ui.SecondaryPanel)
+	if err := right.NavigateTo(alpha.String(), "", 20); err != nil {
+		t.Fatal(err)
+	}
+	applyNextInterruptEvent(t, app, screen)
+
+	app.handleKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift))
+	applyNextInterruptEvent(t, app, screen)
+	if !right.Path.Equal(root) || cursorName(right) != "beta" {
+		t.Fatalf("S-right: inactive panel at %s on %q, want %s on beta", right.Path, cursorName(right), root)
+	}
+	if !left.Path.Equal(alpha) || app.model.ActiveSubFocus != ui.SubFocusSelectedStrip {
+		t.Fatalf("S-right moved the active panel (%s) or strip focus (%v)", left.Path, app.model.ActiveSubFocus)
+	}
+
+	app.handleKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift))
+	applyNextInterruptEvent(t, app, screen)
+	if !left.Path.Equal(root) || cursorName(left) != "beta" {
+		t.Fatalf("S-left: active panel at %s on %q, want %s on beta", left.Path, cursorName(left), root)
+	}
+}

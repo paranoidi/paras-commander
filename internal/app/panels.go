@@ -397,22 +397,9 @@ func (a *App) toggleSelectedStripTree() {
 // tree-mode folder row opens that folder itself.
 func (a *App) navigateFromSelectedStrip() {
 	p := a.activePanel()
-	selPath, ok := p.SelectedPathAtStripIndex(p.Strip.Cursor)
+	dirLoc, name, ok := a.selectedStripOpenTarget()
 	if !ok {
 		return
-	}
-	loc, err := pathloc.Parse(selPath)
-	if err != nil {
-		a.setErrorMessage("Cannot open path", err)
-		return
-	}
-	dirLoc, name := loc, ""
-	if !p.SelectedStripRows()[p.Strip.Cursor].Group {
-		dirLoc, name = loc.Parent(), loc.Base()
-		if dirLoc.Equal(loc) || dirLoc.IsZero() {
-			a.setTransientMessage("Cannot open parent of root", ui.MessageUrgencyWarn)
-			return
-		}
 	}
 	vr := a.activeViewportRows()
 	if err := p.NavigateToPath(dirLoc, name, vr); err != nil {
@@ -421,6 +408,39 @@ func (a *App) navigateFromSelectedStrip() {
 	}
 	p.EnsureCursorInViewport(vr)
 	a.model.ActiveSubFocus = ui.SubFocusFileList
+}
+
+// openSelectedStripInInactive opens the highlighted strip row in the inactive panel the way
+// navigateFromSelectedStrip opens it in the active one; the active panel and strip focus stay.
+func (a *App) openSelectedStripInInactive() {
+	if dirLoc, name, ok := a.selectedStripOpenTarget(); ok {
+		a.openPathInInactivePanel(dirLoc, name, "Open failed")
+	}
+}
+
+// selectedStripOpenTarget is where opening the highlighted strip row lands: a folder row's own
+// directory, else the row path's parent with the cursor on it. ok is false (after a message) when
+// there is no row or it cannot be opened.
+func (a *App) selectedStripOpenTarget() (dir pathloc.Path, name string, ok bool) {
+	p := a.activePanel()
+	selPath, ok := p.SelectedPathAtStripIndex(p.Strip.Cursor)
+	if !ok {
+		return pathloc.Path{}, "", false
+	}
+	loc, err := pathloc.Parse(selPath)
+	if err != nil {
+		a.setErrorMessage("Cannot open path", err)
+		return pathloc.Path{}, "", false
+	}
+	if p.SelectedStripRows()[p.Strip.Cursor].Group {
+		return loc, "", true
+	}
+	dir = loc.Parent()
+	if dir.Equal(loc) || dir.IsZero() {
+		a.setTransientMessage("Cannot open parent of root", ui.MessageUrgencyWarn)
+		return pathloc.Path{}, "", false
+	}
+	return dir, loc.Base(), true
 }
 
 // navigatePanelToDirectory loads dirPath into panelID's listing and navigation history.
@@ -758,8 +778,10 @@ func (a *App) tryDispatchSelectedStrip(actionID string) bool {
 		p.ClearSelection()
 		a.model.ActiveSubFocus = ui.SubFocusFileList
 		a.setTransientMessage("Selection cleared", ui.MessageUrgencyInfo)
-	case keymap.ActionNavOpen:
+	case keymap.ActionNavOpen, keymap.ActionDestinationActivePanel:
 		a.navigateFromSelectedStrip()
+	case keymap.ActionDestinationInactivePanel:
+		a.openSelectedStripInInactive()
 	case keymap.ActionPanelSelectedToggleTree:
 		a.toggleSelectedStripTree()
 	case keymap.ActionPanelTreeExpand:

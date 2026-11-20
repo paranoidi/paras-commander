@@ -32,6 +32,14 @@ func (h *Handler) ToggleStripTree() {
 	st.Strip.Clamp(len(rows), 0)
 }
 
+// OpenStripRowInPanel points panelID at the strip row: a folder row's directory, or a file's
+// parent with the cursor on it. The results view stays open.
+func (h *Handler) OpenStripRowInPanel(panelID int) {
+	if row, ok := h.stripRow(); ok {
+		h.OpenInPanel(panelID, row.Path, row.Group)
+	}
+}
+
 // ExpandStripRow opens the collapsed tree-mode folder row under the strip cursor.
 func (h *Handler) ExpandStripRow() {
 	h.model.DedupView.Strip.Expand(h.stripRows())

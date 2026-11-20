@@ -5,6 +5,9 @@ package keymap
 func DefaultSelectedStripOverlayKeys() map[string][]string {
 	return map[string][]string{
 		ActionPanelSelectedToggleTree: {"M-t"}, // shadows global panel.cycle-column-profile in-strip
+		// Open the row in the active / inactive panel (the app-wide S-left / S-right convention).
+		ActionDestinationActivePanel:   {"S-left"},
+		ActionDestinationInactivePanel: {"S-right"},
 	}
 }
 
