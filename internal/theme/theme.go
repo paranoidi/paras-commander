@@ -786,6 +786,7 @@ const (
 	IconKeyDedupFullDir             = "dedup.full_dir"
 	IconKeyDedupHidden              = "dedup.hidden"
 	IconKeyDedupPotential           = "dedup.potential"
+	IconKeyDedupKeep                = "dedup.keep"
 )
 
 // Menu-bar jobs strip icon keys ([icons] table); see IconMenuJob / IconMenuProgress*.
@@ -892,6 +893,11 @@ func (t Theme) IconDedupHidden() rune {
 // IconDedupPotential returns the dedup view suffix icon for a file in a potential duplicate set.
 func (t Theme) IconDedupPotential() rune {
 	return t.iconRune(IconKeyDedupPotential)
+}
+
+// IconDedupKeep returns the dedup view dir-row mark for a subtree holding kept files.
+func (t Theme) IconDedupKeep() rune {
+	return t.iconRune(IconKeyDedupKeep)
 }
 
 // IconFilelistNew returns the recently-transferred file suffix icon.

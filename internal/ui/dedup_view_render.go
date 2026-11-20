@@ -505,9 +505,10 @@ func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPanePar
 	}
 	if markX := cursorX + 1; subtreeMark && markX < pathX+pathW {
 		var base tcell.Style
+		icon := styles.IconFilelistSelectionSubtree()
 		switch {
 		case keptSubtree:
-			base = styles.PanelDedupRowMarkKeepSubtree
+			base, icon = styles.PanelDedupRowMarkKeepSubtree, styles.IconDedupKeep()
 		case p.DangerMarkedDirs[d.DirRel]:
 			base = styles.PanelDedupRowAllMarked
 		case chromeBlocked:
@@ -515,7 +516,7 @@ func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPanePar
 		default:
 			base = styles.PanelRowMarkSelectionSubtree
 		}
-		primitive.Text(screen, markX, lineY, 1, string(styles.IconFilelistSelectionSubtree()), styles.RowIconStyle(cursorStyleKey, base, rowBG))
+		primitive.Text(screen, markX, lineY, 1, string(icon), styles.RowIconStyle(cursorStyleKey, base, rowBG))
 		cursorX = markX + 1
 	}
 	// Suffix icons take the cursor-row icon color on the cursor row, like the main file list.
@@ -598,7 +599,7 @@ func dedupRowLegend(styles theme.Theme, p dedupPaneParams, snap comparepkg.Dedup
 	if d.Kind == DedupRowDir {
 		switch {
 		case p.KeptDirs[d.DirRel]:
-			add(styles.IconFilelistSelectionSubtree(), dedupLegendKeptSubtree)
+			add(styles.IconDedupKeep(), dedupLegendKeptSubtree)
 		case p.MarkedDirs[d.DirRel]:
 			add(styles.IconFilelistSelectionSubtree(), dedupLegendMarkedSubtree)
 		}

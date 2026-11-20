@@ -35,7 +35,7 @@ M-k (leader `k` in the Selection group, Actions menu `k`) marks a range: the fir
 
 `+` and `-` (leader `g` / `u`, Actions > Select group / Unselect group) open the same [Select group](selections.md#select-and-unselect-group) dialog as the file list and mark or unmark every matching file in the results, including files inside collapsed folders. Groups hidden by the Filter or the ignore-empty toggle are left alone, and kept files are never marked. Matching is on the file name, or on the whole path with "Match whole path" (M-w). Duplicates are all files, so Dirs matches nothing.
 
-Space or C-k (rebindable under `[dedup]` in `keybindings.toml`) marks the file under the cursor to keep; Insert on a kept file shows a toast instead of selecting it.
+Space or C-k (rebindable under `[dedup]` in `keybindings.toml`) marks the file under the cursor to keep; Insert on a kept file shows a toast instead of selecting it. Folders holding kept files show a green check mark after their name.
 
 Right / Enter on a **file** row (tree panes and the browse panel) opens it with the default opener, like the main file list (honours `open_files_externally`); folder and group rows keep their expand/enter behaviour. M-x (the main list's binding, rebindable in `keybindings.toml`) opens the folder of the row in the desktop file manager: a file's containing folder, a folder row itself, or the browse panel's current folder.
 

@@ -529,6 +529,7 @@ related_within = "\U000f17a9"
 full_dir = "\uee86"
 hidden = "\uf06e"
 potential = "\uf128"
+keep = "\uf00c"   # fa-check: dir holds files marked to keep
 
 [icons.folders]
 folder = "\U000F024B"
