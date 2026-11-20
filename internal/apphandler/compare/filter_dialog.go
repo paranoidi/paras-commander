@@ -85,12 +85,7 @@ func (h *Handler) selectMatching(f comparepkg.Filter, selected bool) {
 	}
 	// ponytail: the bulk add lstats unlisted paths on the UI thread, fine for local roots; pass
 	// the rows' file kind if huge results lag.
-	var n [2]int
-	for id, ps := range paths {
-		if len(ps) > 0 {
-			n[id] = h.host.SetPanelSelections(id, ps, selected)
-		}
-	}
+	n := h.setSelections(paths, selected)
 	verb := "select"
 	if !selected {
 		verb = "unselect"
@@ -166,3 +161,14 @@ func (h *Handler) FilterDialogOK() { h.confirmFilterDialog() }
 
 // FilterDialogCancel closes the category-filter dialog.
 func (h *Handler) FilterDialogCancel() { h.closeFilterDialog() }
+
+// setSelections applies one bulk select (or unselect) per panel and reports how many paths
+// changed on each side.
+func (h *Handler) setSelections(paths [2][]string, selected bool) (n [2]int) {
+	for id, ps := range paths {
+		if len(ps) > 0 {
+			n[id] = h.host.SetPanelSelections(id, ps, selected)
+		}
+	}
+	return n
+}

@@ -391,13 +391,9 @@ func (h *Handler) SelectColumnRange() (res primitive.RangeResult, added int) {
 			paths[id] = append(paths[id], a.String())
 		}
 	}
-	for id, ps := range paths {
-		if len(ps) > 0 {
-			added += h.host.SetPanelSelections(id, ps, true)
-		}
-	}
+	n := h.setSelections(paths, true)
 	st.RangeAnchor = ""
-	return primitive.RangeDone, added
+	return primitive.RangeDone, n[0] + n[1]
 }
 
 // SelectedColumnTarget returns the absolute path under the focused column and the panel that

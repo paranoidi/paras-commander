@@ -757,9 +757,7 @@ func (s *State) UnselectPendingRange() (removed int) {
 			paths = append(paths, e.Path)
 		}
 	}
-	removed = s.RemoveSelections(paths)
-	s.normalizeSelectedStripCursor()
-	return removed
+	return s.RemoveSelections(paths)
 }
 
 // MarkRange sets RangeAnchor to the current entry and advances the cursor like
@@ -779,20 +777,19 @@ func (s *State) MarkRange(viewportRows int) (anchored bool, added int, conflicts
 		}
 		return true, 0, false
 	}
+	var paths []string
 	for i := span.Lo; i <= span.Hi; i++ {
 		e, _, ok := s.VisibleEntry(i)
-		if !ok || e.Name == ".." {
+		if !ok || e.Name == ".." || s.IsSelectedPath(e.Path) {
 			continue
 		}
-		if !s.IsSelectedPath(e.Path) {
-			added++
-		}
-		if s.AddSelection(e.Path) {
-			conflicts = true
-		}
+		paths = append(paths, e.Path)
 	}
 	s.RangeAnchor = ""
-	return true, added, conflicts
+	// nil isDir: range entries resolve from the listing, and existing selections keep their
+	// directory status for the conflict rules.
+	conflicts = s.BulkAddSelections(paths, nil)
+	return true, len(paths), conflicts
 }
 
 // IsSelected reports whether entry is selected in this panel.
@@ -1906,12 +1903,10 @@ func cleanPathString(p string) string {
 func (s *State) notifyChdir(oldPath, newPath pathloc.Path) {
 	oldC := cleanPathString(oldPath.String())
 	newC := cleanPathString(newPath.String())
-	if oldC != newC {
-		s.IdleDiskTotalsSort = false
-	}
 	if oldC == newC {
 		return
 	}
+	s.IdleDiskTotalsSort = false
 	s.normalizeSelectedStripCursor()
 }
 
@@ -2208,7 +2203,6 @@ func (s *State) InvertSelection() {
 	}
 	if len(newSel) == 0 {
 		s.clearSelectionState()
-		s.invalidateSelectionDerivedFull()
 	} else {
 		s.SelectedPaths = newSel
 		s.selectionHasDirs = hasDirs
@@ -2218,8 +2212,8 @@ func (s *State) InvertSelection() {
 			s.SelectedDirPaths = nil
 		}
 		s.recomputeSelectionListedBytes()
-		s.invalidateSelectionDerivedFull()
 	}
+	s.invalidateSelectionDerivedFull()
 	s.normalizeSelectedStripCursor()
 }
 
@@ -2339,7 +2333,6 @@ func (s *State) UnselectGroup(spec FilterSpec, meta GroupSelectMeta) (bool, erro
 		return false, nil
 	}
 	s.RemoveSelections(paths)
-	s.normalizeSelectedStripCursor()
 	return true, nil
 }
 

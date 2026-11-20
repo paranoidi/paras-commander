@@ -382,16 +382,17 @@ func (s *State) CollapseLevel(rows []Row) {
 	s.collapse(rows, func(r Row) bool { return r.Group && r.Expanded && r.Depth == deepest }, false)
 }
 
-// CollapseAll folds every folder of the tree (nodes, the full tree the visible rows come from),
-// leaving only the top-level rows.
-func (s *State) CollapseAll(nodes []treeflat.Node[treeflat.PathNode], rows []Row) {
+// CollapseAll folds every folder of the tree (nodes returns the full tree the visible rows come
+// from), leaving only the top-level rows. nodes is called only when rows hold a folder, so flat
+// rows never build a tree.
+func (s *State) CollapseAll(nodes func() []treeflat.Node[treeflat.PathNode], rows []Row) {
 	if !hasGroup(rows) {
 		return
 	}
 	s.collapse(rows, func(Row) bool { return false }, true)
 	// Group nodes always have children and selected leaves never do: the expandable IDs are
 	// exactly the folder paths.
-	for _, id := range treeflat.ExpandableIDs(nodes) {
+	for _, id := range treeflat.ExpandableIDs(nodes()) {
 		if !s.Collapsed[id] {
 			s.Collapsed[id] = true
 			s.CollapsedRev++

@@ -5,6 +5,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/selstrip"
+	"github.com/paranoidi/paras-commander/internal/treeflat"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -51,7 +52,9 @@ func (h *Handler) FoldStripRows(action string) {
 	case keymap.ActionPanelTreeCollapseAll:
 		st.Strip.CollapseLevel(rows)
 	case keymap.ActionDedupCollapseAll:
-		st.Strip.CollapseAll(ui.DedupStripTreeNodes(h.model.DedupSnapshot, *st), rows)
+		st.Strip.CollapseAll(func() []treeflat.Node[treeflat.PathNode] {
+			return ui.DedupStripTreeNodes(h.model.DedupSnapshot, *st)
+		}, rows)
 	case keymap.ActionPanelTreeExpandAllShallow:
 		st.Strip.ExpandLevel(rows)
 	case keymap.ActionDedupExpandAll:

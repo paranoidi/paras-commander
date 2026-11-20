@@ -143,34 +143,40 @@ func DedupMarkedPaths(view DedupViewState) []string {
 // cached per change of the marked paths. The slice is shared with the cache: callers must not
 // modify it.
 func DedupStripRows(snap comparepkg.DedupSnapshot, view DedupViewState, tree bool) []selstrip.Row {
-	paths := DedupMarkedPaths(view)
-	base := snap.EffectiveDisplayRoot().String()
+	paths := DedupMarkedPaths(view) // first: it moves c.marked.gen, part of the rows key
 	c := view.Cache
-	if c == nil {
-		return selstrip.Rows(paths, base, tree, view.Strip.Collapsed)
+	var key dedupStripKey
+	if c != nil {
+		key = dedupStripKey{gen: c.marked.gen, tree: tree, collapsedRev: view.Strip.CollapsedRev}
+		if tree {
+			key.treeKey = dedupStripTreeKeyFor(snap)
+		}
+		if c.marked.rowsOK && c.marked.rowsKey == key {
+			return c.marked.rows
+		}
 	}
-	m := &c.marked
-	key := dedupStripKey{gen: m.gen, tree: tree, collapsedRev: view.Strip.CollapsedRev}
+	var rows []selstrip.Row
 	if tree {
-		key.treeKey = dedupStripTreeKey{base, dedupGroupsID(snap.Groups)}
-	}
-	if m.rowsOK && m.rowsKey == key {
-		return m.rows
-	}
-	if tree {
-		m.rows = selstrip.TreeRows(DedupStripTreeNodes(snap, view), view.Strip.Collapsed)
+		rows = selstrip.TreeRows(DedupStripTreeNodes(snap, view), view.Strip.Collapsed)
 	} else {
-		m.rows = selstrip.FlatRows(paths)
+		rows = selstrip.FlatRows(paths)
 	}
-	m.rowsKey, m.rowsOK = key, true
-	return m.rows
+	if c != nil {
+		c.marked.rows, c.marked.rowsKey, c.marked.rowsOK = rows, key, true
+	}
+	return rows
+}
+
+// dedupStripTreeKeyFor is what a strip tree of snap is built for: its labels' base and groups.
+func dedupStripTreeKeyFor(snap comparepkg.DedupSnapshot) dedupStripTreeKey {
+	return dedupStripTreeKey{snap.EffectiveDisplayRoot().String(), dedupGroupsID(snap.Groups)}
 }
 
 // DedupStripTreeNodes returns the full label tree of the marked paths (every folder open),
 // cached and moved with the marks. Shared with the cache: read only.
 func DedupStripTreeNodes(snap comparepkg.DedupSnapshot, view DedupViewState) []treeflat.Node[treeflat.PathNode] {
 	paths := DedupMarkedPaths(view)
-	key := dedupStripTreeKey{snap.EffectiveDisplayRoot().String(), dedupGroupsID(snap.Groups)}
+	key := dedupStripTreeKeyFor(snap)
 	c := view.Cache
 	if c == nil {
 		return selstrip.NewTree(paths, key.base).Nodes()

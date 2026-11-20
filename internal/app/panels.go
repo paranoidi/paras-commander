@@ -796,7 +796,7 @@ func (a *App) tryDispatchSelectedStrip(actionID string) bool {
 		case keymap.ActionPanelTreeCollapseAll:
 			p.Strip.CollapseLevel(rows)
 		case keymap.ActionPanelTreeCollapseAllFull:
-			p.Strip.CollapseAll(p.SelectedStripTreeNodes(), rows)
+			p.Strip.CollapseAll(p.SelectedStripTreeNodes, rows)
 		case keymap.ActionPanelTreeExpandAllShallow:
 			p.Strip.ExpandLevel(rows)
 		default:

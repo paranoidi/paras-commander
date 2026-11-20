@@ -9,22 +9,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-type rangeHost struct {
-	compareHandlerHost
-	selected map[string]bool
-}
-
-func (h *rangeHost) SetPanelSelections(_ int, paths []string, on bool) int {
-	n := 0
-	for _, path := range paths {
-		if h.selected[path] != on {
-			h.selected[path] = on
-			n++
-		}
-	}
-	return n
-}
-
 func TestSelectColumnRange(t *testing.T) {
 	names := []string{"anchor", "bramble", "cobalt", "dune"}
 	var rows []comparepkg.Row
@@ -37,7 +21,7 @@ func TestSelectColumnRange(t *testing.T) {
 			PrimaryRoot: pathloc.MustParse("/left"), SecondaryRoot: pathloc.MustParse("/right"), Rows: rows,
 		},
 	}
-	host := &rangeHost{selected: map[string]bool{}}
+	host := &selectRecordHost{selected: map[int]map[string]bool{}}
 	h := New(Deps{Host: host, Model: model})
 
 	st := &model.CompareView
@@ -56,7 +40,8 @@ func TestSelectColumnRange(t *testing.T) {
 	if res != primitive.RangeDone || added != 3 {
 		t.Fatalf("second press = %v added %d, want Done/3", res, added)
 	}
-	if host.selected["/right/anchor"] || !host.selected["/right/cobalt"] || host.selected["/left/cobalt"] {
+	right := host.selected[ui.SecondaryPanel]
+	if right["/right/anchor"] || !right["/right/cobalt"] || len(host.selected[ui.PrimaryPanel]) > 0 {
 		t.Fatalf("selection = %v, want only right-side bramble..dune", host.selected)
 	}
 }

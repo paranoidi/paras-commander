@@ -118,16 +118,10 @@ func (s *State) clearSelectionStrictDescendantsIndexed(parent string) []string {
 			continue
 		}
 		removed = append(removed, p)
-		delete(s.SelectedPaths, p)
-		if s.SelectedDirPaths != nil {
-			delete(s.SelectedDirPaths, p)
-		}
-		s.adjustSelectionListedBytes(p, false)
+		s.dropSelectedPath(p)
 	}
 	if len(s.SelectedPaths) == 0 {
 		s.clearSelectionState()
-	} else if len(removed) > 0 && s.selectionHasDirs && len(s.SelectedDirPaths) == 0 {
-		s.selectionHasDirs = false
 	}
 	return removed
 }

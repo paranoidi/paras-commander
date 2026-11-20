@@ -180,7 +180,8 @@ func (h *Handler) handleGroupSelectionKey(st *dialog.CommandOutputDialogState, e
 		uniq := st.UniquePaths()
 		p := h.host.ActivePanel()
 		// Split by the state before the invert, then apply each side in bulk: one rebuild
-		// instead of one per path.
+		// instead of one per path. Adds go first: the remove settles the strip cursor, which
+		// builds the derived state once for both halves.
 		var on, off []string
 		isDir := make(map[string]bool, len(uniq))
 		for _, m := range uniq {
@@ -191,8 +192,8 @@ func (h *Handler) handleGroupSelectionKey(st *dialog.CommandOutputDialogState, e
 				isDir[m.Path] = m.IsDir
 			}
 		}
-		p.RemoveSelections(on)
 		conflicts := p.BulkAddSelections(off, func(path string) bool { return isDir[path] })
+		p.RemoveSelections(on)
 		h.host.SetTransientMessage(fmt.Sprintf("Inverted %d", len(uniq)), ui.MessageUrgencyInfo)
 		if conflicts {
 			h.host.SetTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)

@@ -90,7 +90,7 @@ func (s *State) patchSelectionDerivedAfterAdd(path string, isDir bool) {
 	}
 	s.addSubtreeAncestorsForPath(path)
 	if len(s.selDerivedCache.stripPaths) > 0 {
-		s.appendStripPathIfNeeded(path)
+		s.editStripPath(path, true)
 	} else if parent, ok := selectionParentDir(path); s.StripForced || !ok || parent != cur {
 		// Strip just became visible: it lists every selection, so rebuild.
 		s.rebuildSelectionDerived()
@@ -112,11 +112,12 @@ func (s *State) patchSelectionDerivedAfterRemove(path string, wasDir bool) {
 		return
 	}
 	s.removeSubtreeAncestorsForPath(path)
-	s.removeStripPath(path)
 	if !s.StripForced && !selectionsOutsideDir(s.SelectedPaths, cur) {
 		// Last out-of-directory selection gone: strip hides.
-		s.selDerivedCache.stripPaths = nil
-		s.selDerivedCache.dropStripRows()
+		c := &s.selDerivedCache
+		c.stripPaths, c.stripRowsBuilt, c.stripTree = nil, false, nil
+	} else if len(s.selDerivedCache.stripPaths) > 0 {
+		s.editStripPath(path, false)
 	}
 	s.patchPrunedRootsAfterRemove(path, wasDir)
 	s.selDerivedCache.gen = s.selectionDerivedGen
@@ -178,16 +179,7 @@ func (s *State) stillHasSelectionUnderAncestor(ancestor, exceptPath string) bool
 	return false
 }
 
-// appendStripPathIfNeeded adds path to the strip's sorted list (and its tree, when built).
-func (s *State) appendStripPathIfNeeded(path string) { s.editStripPath(path, true) }
-
-// removeStripPath drops path from the strip's sorted list (and its tree, when built).
-func (s *State) removeStripPath(path string) {
-	if len(s.selDerivedCache.stripPaths) > 0 {
-		s.editStripPath(path, false)
-	}
-}
-
+// editStripPath adds (on) or drops path in the strip's sorted list and its tree, when built.
 func (s *State) editStripPath(path string, on bool) {
 	c := &s.selDerivedCache
 	c.stripPaths = selstrip.ApplyEdits(c.stripPaths, []selstrip.Edit{{Path: path, On: on}}, c.stripTree, s.Path.String())
@@ -279,11 +271,7 @@ func (s *State) applySelectionRemove(path string, wasDir bool) {
 	if path == "" || s.SelectedPaths == nil {
 		return
 	}
-	delete(s.SelectedPaths, path)
-	s.adjustSelectionListedBytes(path, false)
-	if wasDir {
-		s.unmarkSelectedDir(path)
-	}
+	s.dropSelectedPath(path)
 	if len(s.SelectedPaths) == 0 {
 		s.clearSelectionState()
 		s.invalidateSelectionDerived()
@@ -497,10 +485,29 @@ func (s *State) BulkAddSelections(paths []string, isDir func(string) bool) bool 
 	}
 
 	removed := BulkApplySelectionAdds(s.SelectedPaths, paths, isDir)
-	s.rebuildSelectedDirPaths()
+	// Patch the directory marks instead of rebuilding them: a rebuild stats every unlisted
+	// selection, not just the batch.
+	for p := range s.SelectedDirPaths {
+		if !s.SelectedPaths[p] {
+			s.unmarkSelectedDir(p)
+		}
+	}
+	for _, p := range paths {
+		if p = cleanPathString(p); s.SelectedPaths[p] && isDir(p) {
+			s.markSelectedDir(p)
+		}
+	}
 	s.recomputeSelectionListedBytes()
 	s.invalidateSelectionDerivedFull()
 	return removed
+}
+
+// dropSelectedPath removes one selected path's per-path bookkeeping: the selection itself, its
+// listed bytes and its directory mark. Callers own derived-state invalidation.
+func (s *State) dropSelectedPath(p string) {
+	delete(s.SelectedPaths, p)
+	s.adjustSelectionListedBytes(p, false)
+	s.unmarkSelectedDir(p)
 }
 
 // RemoveSelections unselects every selected path in paths in one go: per-path bookkeeping is
@@ -513,9 +520,7 @@ func (s *State) RemoveSelections(paths []string) int {
 		if p == "" || !s.SelectedPaths[p] {
 			continue
 		}
-		delete(s.SelectedPaths, p)
-		s.adjustSelectionListedBytes(p, false)
-		s.unmarkSelectedDir(p)
+		s.dropSelectedPath(p)
 		removed++
 	}
 	if removed == 0 {
@@ -527,9 +532,4 @@ func (s *State) RemoveSelections(paths []string) int {
 	s.invalidateSelectionDerivedFull()
 	s.normalizeSelectedStripCursor()
 	return removed
-}
-
-// dropStripRows forgets the rows and tree built from stripPaths after the paths change.
-func (c *selectionDerivedCache) dropStripRows() {
-	c.stripRowsBuilt, c.stripTree = false, nil
 }
