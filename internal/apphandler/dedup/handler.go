@@ -829,8 +829,8 @@ func (h *Handler) MoveToAdjacentDir(delta int) {
 // MoveSelection moves the focused pane's cursor by delta rows (clamped). Main
 // pane moves refresh the copies pane.
 func (h *Handler) MoveSelection(delta int) {
-	if st, paths := h.strip(); st != nil {
-		st.Move(delta, len(paths), 0)
+	if st, rows := h.strip(); st != nil {
+		st.Move(delta, len(rows), 0)
 		return
 	}
 	pane, rows := h.focusedPane()
@@ -885,8 +885,8 @@ func (h *Handler) setSelected(pane *ui.DedupPane, index int) {
 
 // AppendFilterRune types r into the focused pane's quick filter.
 func (h *Handler) AppendFilterRune(r rune) {
-	if st, paths := h.strip(); st != nil {
-		st.AppendFilterRune(r, selstrip.Names(paths), h.filterOptions(), 0)
+	if st, rows := h.strip(); st != nil {
+		st.AppendFilterRune(r, selstrip.RowNames(rows), h.filterOptions(), 0)
 		return
 	}
 	pane, _ := h.focusedPane()
@@ -895,8 +895,8 @@ func (h *Handler) AppendFilterRune(r rune) {
 
 // BackspaceFilter deletes the rune before the filter caret.
 func (h *Handler) BackspaceFilter() {
-	if st, paths := h.strip(); st != nil {
-		st.BackspaceFilter(selstrip.Names(paths), h.filterOptions(), 0)
+	if st, rows := h.strip(); st != nil {
+		st.BackspaceFilter(selstrip.RowNames(rows), h.filterOptions(), 0)
 		return
 	}
 	pane, _ := h.focusedPane()
@@ -907,8 +907,8 @@ func (h *Handler) BackspaceFilter() {
 
 // ClearFilter empties the query while the filter stays open.
 func (h *Handler) ClearFilter() {
-	if st, paths := h.strip(); st != nil {
-		st.ClearFilter(selstrip.Names(paths), h.filterOptions(), 0)
+	if st, rows := h.strip(); st != nil {
+		st.ClearFilter(selstrip.RowNames(rows), h.filterOptions(), 0)
 		return
 	}
 	h.applyFilter("")
@@ -916,8 +916,8 @@ func (h *Handler) ClearFilter() {
 
 // CancelFilter closes the focused pane's quick filter.
 func (h *Handler) CancelFilter() {
-	if st, paths := h.strip(); st != nil {
-		st.CancelFilter(selstrip.Names(paths), h.filterOptions(), 0)
+	if st, rows := h.strip(); st != nil {
+		st.CancelFilter(selstrip.RowNames(rows), h.filterOptions(), 0)
 		return
 	}
 	pane, _ := h.focusedPane()
@@ -927,8 +927,8 @@ func (h *Handler) CancelFilter() {
 // CycleFilterMatch steps the focused pane's cursor through filter matches, or
 // moves plainly when nothing matches.
 func (h *Handler) CycleFilterMatch(delta int) {
-	if st, paths := h.strip(); st != nil {
-		st.CycleFilterMatch(delta, len(paths), 0, h.filterOptions())
+	if st, rows := h.strip(); st != nil {
+		st.CycleFilterMatch(delta, len(rows), 0, h.filterOptions())
 		return
 	}
 	pane, _ := h.focusedPane()
@@ -941,11 +941,11 @@ func (h *Handler) CycleFilterMatch(delta int) {
 
 // SelectEdge moves the focused pane's cursor to the first or last row.
 func (h *Handler) SelectEdge(last bool) {
-	if st, paths := h.strip(); st != nil {
+	if st, rows := h.strip(); st != nil {
 		if last {
-			st.Bottom(len(paths), 0)
+			st.Bottom(len(rows), 0)
 		} else {
-			st.Top(len(paths), 0)
+			st.Top(len(rows), 0)
 		}
 		return
 	}
@@ -1451,7 +1451,7 @@ func (h *Handler) ensureSelectionVisible(visibleRows int) {
 	case st.FocusCopies:
 		mainRows, copiesRows = 0, visibleRows
 	}
-	st.Strip.Clamp(len(ui.DedupMarkedPaths(*st)), stripRows)
+	st.Strip.Clamp(len(h.stripRows()), stripRows)
 	st.Main.EnsureSelectionVisible(len(h.model.DedupList), mainRows)
 	st.Copies.EnsureSelectionVisible(len(h.model.DedupCopiesList), copiesRows)
 }

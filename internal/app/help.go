@@ -334,6 +334,9 @@ func (a *App) effectiveKeyStringsForView(actionID string, defaults []string, vm 
 	if a.keys.FlattenDialog != nil {
 		add(a.keys.FlattenDialog.BindingsForAction(actionID))
 	}
+	if (vm == ui.ViewBrowser || vm == ui.ViewDedup) && a.keys.SelectedStrip != nil {
+		add(a.keys.SelectedStrip.BindingsForAction(actionID))
+	}
 	if vm == ui.ViewDedup && a.keys.Dedup != nil {
 		add(a.keys.Dedup.BindingsForAction(actionID))
 	}
@@ -394,6 +397,11 @@ func (a *App) effectiveKeyStringsForView(actionID string, defaults []string, vm 
 	}
 	if od := keymap.DefaultMessagesOverlayKeys()[actionID]; len(od) > 0 {
 		add(od)
+	}
+	if vm == ui.ViewBrowser || vm == ui.ViewDedup {
+		if od := keymap.DefaultSelectedStripOverlayKeys()[actionID]; len(od) > 0 {
+			add(od)
+		}
 	}
 	if vm == ui.ViewDedup {
 		if od := keymap.DefaultDedupOverlayKeys()[actionID]; len(od) > 0 {

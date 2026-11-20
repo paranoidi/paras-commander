@@ -22,3 +22,16 @@ func SelectedStripLayoutItemCountFromCount(stripCount, panelID, activePanel int)
 	}
 	return stripCount
 }
+
+// SelectedStripTree reports the session-wide Selected strip tree mode, shared by both file panels
+// and the find-duplicates strip. The file panels' strips hold the flag (their row cache reads it);
+// the primary panel is the one source the Dedup strip reads.
+func (m *Model) SelectedStripTree() bool {
+	return m.Primary.Strip.Tree
+}
+
+// SetSelectedStripTree switches the Selected strip tree mode for both file panels (and with them
+// the Dedup strip).
+func (m *Model) SetSelectedStripTree(on bool) {
+	m.Primary.Strip.Tree, m.Secondary.Strip.Tree = on, on
+}

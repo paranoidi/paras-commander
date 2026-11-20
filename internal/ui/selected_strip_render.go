@@ -5,7 +5,9 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/selstrip"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -34,10 +36,11 @@ type SelectedStripOpts struct {
 }
 
 // SelectedStripData is everything drawSelectedStrip paints, independent of the owner
-// (file panel or find-duplicates view). Paths are absolute and already ordered.
+// (file panel or find-duplicates view). Rows are already ordered; their paths are absolute.
 type SelectedStripData struct {
-	Paths     []string
+	Rows      []selstrip.Row
 	Strip     selstrip.State
+	Tree      bool   // rows form a folded tree (see selstrip.Rows)
 	BaseDir   string // display paths are relative to this directory
 	EndLabel  string // top-border end label (multi-location icon); hidden while the filter is shown
 	SizeLabel string // bottom-border selection count/size; empty = none
@@ -52,7 +55,8 @@ func drawBrowserSelectedStrip(
 	opts SelectedStripOpts,
 ) {
 	data := SelectedStripData{
-		Paths:   state.SelectedStripPaths(),
+		Rows:    state.SelectedStripRows(),
+		Tree:    state.Strip.Tree,
 		Strip:   state.Strip,
 		BaseDir: state.Path.String(),
 	}
@@ -111,7 +115,7 @@ func drawSelectedStrip(
 		return
 	}
 
-	paths := data.Paths
+	rows := data.Rows
 	interior := rect.Width - 2
 	rowTextWidth := max(1, interior)
 	contentStart := rect.X + 1
@@ -127,10 +131,7 @@ func drawSelectedStrip(
 	}
 
 	mark := styles.IconFilelistSelectionSubtree()
-	selectedStripMarkPrefix := " " + string(mark) + " "
-	markCols := utf8.RuneCountInString(selectedStripMarkPrefix)
-	markStart := 1
-	markEnd := markStart + utf8.RuneCountInString(string(mark))
+	folderRowStyle := styles.PanelListingEntryStyle(localfs.EntryDirectory, chromeBlocked)
 
 	for row := 0; row < visibleRows; row++ {
 		y := rect.Y + 1 + row
@@ -152,33 +153,50 @@ func drawSelectedStrip(
 
 		prefix := ""
 		textCols := rowTextWidth
-		if idx < len(paths) {
-			prefix = selectedStripMarkPrefix
-			textCols = rowTextWidth - markCols
-			if textCols < 0 {
-				textCols = 0
+		var spans []primitive.Span
+		if idx < len(rows) {
+			row := rows[idx]
+			// " " + tree connector + icon + " ": the selection mark, or a folder icon on tree-mode folder rows.
+			connector := ""
+			if data.Tree {
+				connector = panellist.TreeConnectorPrefix(row.Depth, row.LastChild, row.AncestorHasNext, styles)
 			}
+			icon, iconFG := string(mark), styles.PanelRowIconForeground(cursorStyleKey, markSource)
+			if row.Group {
+				icon = styles.FolderIcon(theme.FolderIconDefault)
+				iconFG = styles.FolderIconForeground(theme.FolderIconDefault, cursorStyleKey, folderRowStyle)
+			}
+			prefix = " " + connector + icon + " "
+			connectorCols := utf8.RuneCountInString(connector)
+			iconStart := 1 + connectorCols
+			spans = []primitive.Span{{
+				Start: iconStart,
+				End:   iconStart + utf8.RuneCountInString(icon),
+				Style: baseStyle.Foreground(iconFG),
+			}}
+			if connector != "" {
+				_, rowBG, _ := baseStyle.Decompose()
+				spans = append(spans, primitive.Span{
+					Start: 1, End: 1 + connectorCols, Style: styles.PanelRowTreeConnector.Background(rowBG),
+				})
+			}
+			textCols = max(0, rowTextWidth-utf8.RuneCountInString(prefix))
 		}
 
 		text := ""
 		pathLabel := ""
-		if idx < len(paths) {
-			p := paths[idx]
-			pathLabel = selectionStripDisplayPath(p, data.BaseDir, userHomeDir, textCols)
+		if idx < len(rows) {
+			if data.Tree {
+				pathLabel = primitive.FitPathForWidth(rows[idx].Display, textCols)
+			} else {
+				pathLabel = selectionStripDisplayPath(rows[idx].Path, data.BaseDir, userHomeDir, textCols)
+			}
 			text = prefix + pathLabel
 		}
-
-		var spans []primitive.Span
-		if prefix != "" {
-			spans = []primitive.Span{{
-				Start: markStart,
-				End:   markEnd,
-				Style: baseStyle.Foreground(styles.PanelRowIconForeground(cursorStyleKey, markSource)),
-			}}
-		}
-		if idx < len(paths) {
+		if idx < len(rows) {
+			markCols := utf8.RuneCountInString(prefix)
 			baseRanges := data.Strip.Filter.Ranges(idx)
-			if mapped := selstrip.MapBasenameRangesToDisplay(pathLabel, paths[idx], baseRanges); len(mapped) > 0 {
+			if mapped := selstrip.MapBasenameRangesToDisplay(pathLabel, rows[idx].Path, baseRanges); len(mapped) > 0 {
 				matchStyle := styles.FuzzyHighlight
 				if stripFocused && idx == data.Strip.Cursor {
 					matchStyle = styles.FuzzyHighlightCursor
@@ -198,7 +216,7 @@ func drawSelectedStrip(
 	}
 
 	drawPanelListScrollbar(screen, rect,
-		panelScrollPos{ListTopY: rect.Y + 1, Visible: visibleRows, Total: len(paths), Offset: scroll},
+		panelScrollPos{ListTopY: rect.Y + 1, Visible: visibleRows, Total: len(rows), Offset: scroll},
 		scrollbarStyle, panelScrollbarShow(panelFileListActive || stripFocused, scrollbarShowInactive),
 		stripFocused, chromeBlocked, chrome.Chrome.Frame, styles)
 }

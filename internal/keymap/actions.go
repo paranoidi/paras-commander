@@ -112,6 +112,7 @@ const (
 	ActionPanelDiskUsageClear         = "panel.disk-usage-clear"
 	ActionPanelDirSize                = "panel.dir-size"
 	ActionPanelFocusSelected          = "panel.focus-selected"
+	ActionPanelSelectedToggleTree     = "panel.selected-toggle-tree" // bound via [selected], not [main]
 	ActionPanelOpenSelectedRoot       = "panel.open-selected-root"
 	ActionPanelSelectParentDirs       = "panel.select-parent-dirs"
 	ActionPanelToggleHideInactive     = "panel.toggle-hide-inactive"
@@ -509,6 +510,7 @@ var KnownActions = map[string]struct{}{
 	ActionPanelDiskUsageClear:         {},
 	ActionPanelDirSize:                {},
 	ActionPanelFocusSelected:          {},
+	ActionPanelSelectedToggleTree:     {},
 	ActionPanelOpenSelectedRoot:       {},
 	ActionPanelSelectParentDirs:       {},
 	ActionPanelToggleHideInactive:     {},

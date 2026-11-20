@@ -326,6 +326,16 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"selections", "strip"},
 		},
 		{
+			ID:           ActionPanelSelectedToggleTree,
+			Views:        HelpBrowser | HelpDedup,
+			Title:        "Toggle tree view",
+			Section:      "Selection",
+			DefaultKeys:  nil, // overlay: DefaultSelectedStripOverlayKeys
+			PreferredKey: "M-t",
+			LeaderKey:    "t",
+			Keywords:     []string{"selected", "strip", "tree", "folders", "nested"},
+		},
+		{
 			ID:           ActionPanelOpenSelectedRoot,
 			Views:        HelpBrowser,
 			Title:        "Go to selected common root",

@@ -31,7 +31,7 @@ func TestClampKeepsCursorVisible(t *testing.T) {
 }
 
 func TestRememberRestore(t *testing.T) {
-	paths := []string{"/tmp/meadow/bravo.txt", "/tmp/meadow/crystal.txt"}
+	paths := Rows([]string{"/tmp/meadow/bravo.txt", "/tmp/meadow/crystal.txt"}, "/tmp", false)
 	s := State{Cursor: 1}
 	s.Remember(paths)
 	s.Cursor = 0
@@ -55,5 +55,21 @@ func TestMapBasenameRangesToDisplay(t *testing.T) {
 	}
 	if mapped[0].Start != len([]rune("meadow/")) || mapped[0].End != len([]rune("meadow/"))+3 {
 		t.Fatalf("mapped[0] = %+v, want offset onto basename", mapped[0])
+	}
+}
+
+func TestRowsTreeFoldsChain(t *testing.T) {
+	rows := Rows([]string{"/tmp/meadow/foo/bar/asdf/crystal.txt"}, "/tmp/meadow", true)
+	if len(rows) != 2 {
+		t.Fatalf("rows = %+v, want folder + file", rows)
+	}
+	if !rows[0].Group || rows[0].Display != "foo/bar/asdf" || rows[0].Path != "/tmp/meadow/foo/bar/asdf" || rows[0].Depth != 0 {
+		t.Fatalf("group row = %+v", rows[0])
+	}
+	if rows[1].Group || rows[1].Display != "crystal.txt" || rows[1].Depth != 1 || !rows[1].LastChild {
+		t.Fatalf("file row = %+v", rows[1])
+	}
+	if flat := Rows([]string{"/tmp/meadow/foo/bar/asdf/crystal.txt"}, "/tmp/meadow", false); len(flat) != 1 || flat[0].Group {
+		t.Fatalf("flat rows = %+v", flat)
 	}
 }

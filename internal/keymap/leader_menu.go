@@ -182,6 +182,7 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 				ActionPanelSelectParentDirs,
 				ActionPanelOpenSelectedRoot,
 				ActionPanelClearSelection,
+				ActionPanelSelectedToggleTree,
 			},
 			LeaderMenuGroupFile: {ActionCopy, ActionMove, ActionFileDelete, ActionFileFlatten, ActionFileUnflatten, ActionFileRunForEach},
 			LeaderMenuGroupApp:  {ActionAppShowHelp, ActionAppQuit},

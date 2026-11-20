@@ -266,7 +266,7 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 	if a.model.ViewMode == ui.ViewBrowser &&
 		a.model.ActiveSubFocus == ui.SubFocusSelectedStrip &&
 		!a.inQuickFilterUI() {
-		keys := menu.FunctionKeysSelectedStripView(a.keys.Global.MenuBindingLabel(keymap.ActionPanelClearSelection), false)
+		keys := a.selectedStripFooterKeys(false)
 		if a.model.ViMotionMode {
 			return viMotionFooterKeys(keys, a.keys.LeaderKey)
 		}
@@ -501,7 +501,7 @@ func (a *App) auxiliaryViewFooterKeys() ([]menu.FunctionKey, bool) {
 		return a.viMotionAuxiliaryFooterKeys(out), true
 	}
 	if a.model.ViewMode == ui.ViewDedup && a.model.DedupView.FocusSelected {
-		return a.viMotionAuxiliaryFooterKeys(menu.FunctionKeysSelectedStripView(a.keys.Global.MenuBindingLabel(keymap.ActionPanelClearSelection), true)), true
+		return a.viMotionAuxiliaryFooterKeys(a.selectedStripFooterKeys(true)), true
 	}
 	if a.model.ViewMode == ui.ViewDedup && !a.inQuickFilterUI() {
 		rest := dedupViewFooterKeys(a.keys.Global, a.keys.Dedup, a.model.DedupView.TreeDirs)

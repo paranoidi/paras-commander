@@ -13,7 +13,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
-	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
 func TestFilePanelPlusMinusStarSelectionShortcuts(t *testing.T) {
@@ -308,7 +307,7 @@ func TestViMotionToggleEscWhileSelectedStripFocused(t *testing.T) {
 
 func TestActiveFooterKeysSelectedStripFocused(t *testing.T) {
 	app, _ := setupSelectedStripFocusTest(t)
-	want := menu.FunctionKeysSelectedStripView(app.keys.Global.MenuBindingLabel(keymap.ActionPanelClearSelection), false)
+	want := app.selectedStripFooterKeys(false)
 	got := app.activeFooterKeys()
 	if len(got) != len(want) {
 		t.Fatalf("footer len = %d, want %d: got %+v", len(got), len(want), got)
@@ -572,5 +571,31 @@ func TestFilterDialogGhostExtensionPrefill(t *testing.T) {
 	app.dialogCtrl.HandleFilterDialogKey(tcell.NewEventKey(tcell.KeyRune, 'q', tcell.ModNone))
 	if fd.Text != "q" || fd.PrefillPending {
 		t.Fatalf("after typing: text=%q pending=%v", fd.Text, fd.PrefillPending)
+	}
+}
+
+func TestSelectedStripToggleTreeAction(t *testing.T) {
+	app, left := setupSelectedStripFocusTest(t)
+	altT := func() { app.handleKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModAlt)) }
+	altT()
+	if !left.Strip.Tree || !app.model.Secondary.Strip.Tree || !app.model.SelectedStripTree() {
+		t.Fatal("M-t in the focused strip must enable tree mode on both panels")
+	}
+	// cwd alpha, selection ../beta: a ".." folder row plus the selected entry.
+	rows := left.SelectedStripRows()
+	if len(rows) != 2 || !rows[0].Group || rows[0].Display != ".." || rows[1].Group {
+		t.Fatalf("tree rows = %+v", rows)
+	}
+	app.render() // tree rows must render without panicking
+	altT()
+	if left.Strip.Tree || left.SelectedStripCount() != 1 {
+		t.Fatalf("second M-t: tree %v rows %d, want flat with one row", left.Strip.Tree, left.SelectedStripCount())
+	}
+	var sawTree bool
+	for _, fk := range app.activeFooterKeys() {
+		sawTree = sawTree || fk.Hint == "Tree"
+	}
+	if !sawTree {
+		t.Fatal("strip footer lacks the Tree entry")
 	}
 }

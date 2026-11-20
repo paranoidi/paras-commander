@@ -1801,3 +1801,46 @@ func TestDedupViewSelectedStrip(t *testing.T) {
 		t.Fatalf("after unmark: count %d focusSelected %v, want 0/false", view.MarkedCount, view.FocusSelected)
 	}
 }
+
+func TestDedupViewSelectedStripTree(t *testing.T) {
+	dir := t.TempDir()
+	for _, rel := range []string{"orchard", filepath.Join("meadow", "quartz")} {
+		if err := os.MkdirAll(filepath.Join(dir, rel), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	files := []string{filepath.Join("orchard", "lantern.txt"), filepath.Join("meadow", "quartz", "lantern.txt")}
+	for _, rel := range files {
+		if err := os.WriteFile(filepath.Join(dir, rel), []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+	view := &app.model.DedupView
+	for _, rel := range files {
+		view.Marked[filepath.Join(dir, rel)] = true
+		view.MarkedCount++
+		view.MarksRev++
+	}
+	if view.MarkedCount != 2 {
+		t.Fatalf("MarkedCount = %d, want 2", view.MarkedCount)
+	}
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyCtrlS, 0, tcell.ModNone))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModAlt))
+	if !app.model.SelectedStripTree() {
+		t.Fatal("M-t in the dedup strip did not enable tree mode")
+	}
+	rows := ui.DedupStripRows(app.model.DedupSnapshot, *view, true)
+	if len(rows) != 4 || !rows[0].Group || rows[0].Display != "meadow/quartz" || rows[1].Group {
+		t.Fatalf("tree rows = %+v, want two folded folders with their file", rows)
+	}
+	app.render()
+	view.Strip.Cursor = 0 // first folder row: unmarking it clears its subtree
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
+	if view.MarkedCount != 1 {
+		t.Fatalf("after folder unmark: MarkedCount = %d, want 1", view.MarkedCount)
+	}
+}

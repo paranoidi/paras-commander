@@ -1009,6 +1009,7 @@ func resolveKeymapBundle(opts Options) (*keymap.Bundle, error) {
 		{&rk.Compare, keymap.DefaultCompareOverlayKeys, "compare overlay"},
 		{&rk.Dedup, keymap.DefaultDedupOverlayKeys, "dedup overlay"},
 		{&rk.Unique, keymap.DefaultUniqueOverlayKeys, "unique files overlay"},
+		{&rk.SelectedStrip, keymap.DefaultSelectedStripOverlayKeys, "selected strip overlay"},
 		{&rk.Terminal, keymap.DefaultTerminalOverlayKeys, "terminal overlay"},
 	} {
 		if *step.km != nil {

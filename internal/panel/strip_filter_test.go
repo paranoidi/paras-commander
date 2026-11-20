@@ -80,3 +80,37 @@ func TestStripCursorRememberRestore(t *testing.T) {
 		t.Fatalf("cursor moved to %d for missing path", st.Strip.Cursor)
 	}
 }
+
+func TestStripTreeFolderRowUnselectsSubtree(t *testing.T) {
+	st := State{Path: pathloc.MustParse("/tmp/harbor"), SelectedPaths: map[string]bool{}}
+	keep := "/tmp/orchard/delta.txt"
+	for _, p := range []string{"/tmp/meadow/quartz/bravo.txt", "/tmp/meadow/quartz/crystal.txt", "/tmp/meadow/willow/ember.txt", keep} {
+		st.AddSelection(p)
+	}
+	st.Strip.Tree = true
+	rows := st.SelectedStripRows()
+	var meadow = -1
+	for i, r := range rows {
+		if r.Group && r.Path == "/tmp/meadow" {
+			meadow = i
+		}
+	}
+	if meadow < 0 || rows[meadow].Display != "meadow" {
+		t.Fatalf("no meadow folder row in %+v", rows)
+	}
+	if n := st.SelectedStripCount(); n != len(rows) || n <= len(st.SelectedPaths) {
+		t.Fatalf("tree strip count = %d, rows %d, selections %d: folders must add rows", n, len(rows), len(st.SelectedPaths))
+	}
+	st.Strip.Cursor = meadow
+	if !st.ToggleOrRemoveStripSelection() {
+		t.Fatal("ToggleOrRemoveStripSelection on a folder row = false")
+	}
+	if len(st.SelectedPaths) != 1 || !st.SelectedPaths[keep] {
+		t.Fatalf("selections after folder unselect = %v, want only %s", st.SelectedPaths, keep)
+	}
+	for _, r := range st.SelectedStripRows() {
+		if r.Path != keep && !r.Group {
+			t.Fatalf("stale row %+v after folder unselect", r)
+		}
+	}
+}

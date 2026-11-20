@@ -5,6 +5,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
+	"github.com/paranoidi/paras-commander/internal/selstrip"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/treeflat"
 )
@@ -14,7 +15,7 @@ import (
 // drawing, the main pane's visible rows and mouse hit-testing.
 func DedupMainRects(primary Rect, model *Model) (tree, strip Rect) {
 	return SplitPanelForSelected(primary, SelectedStripSplitParams{
-		StripItemCount:     model.DedupView.MarkedCount,
+		StripItemCount:     len(DedupStripRows(model.DedupSnapshot, model.DedupView, model.SelectedStripTree())),
 		MaxRows:            model.SelectedPanelMaxRows,
 		ActivePercent:      model.SelectedPanelActivePercent,
 		StripFocused:       model.DedupView.FocusSelected,
@@ -23,14 +24,18 @@ func DedupMainRects(primary Rect, model *Model) (tree, strip Rect) {
 	})
 }
 
-// dedupMarkedPaths is the sorted marked paths of one marks revision.
+// dedupMarkedPaths is the sorted marked paths of one marks revision, and the strip rows built
+// from them for one tree mode.
 type dedupMarkedPaths struct {
-	rev, n int
-	paths  []string
+	rev, n   int
+	paths    []string
+	rows     []selstrip.Row
+	rowsTree bool
+	rowsOK   bool
 }
 
-// DedupMarkedPaths returns the marked paths in sorted order (the strip's rows), cached per
-// MarksRev. The slice is shared with the cache: callers must not modify it.
+// DedupMarkedPaths returns the marked paths in sorted order, cached per MarksRev. The slice is
+// shared with the cache: callers must not modify it.
 func DedupMarkedPaths(view DedupViewState) []string {
 	c := view.Cache
 	if c != nil && c.marked.paths != nil && c.marked.rev == view.MarksRev && c.marked.n == len(view.Marked) {
@@ -42,9 +47,24 @@ func DedupMarkedPaths(view DedupViewState) []string {
 	}
 	slices.Sort(paths)
 	if c != nil {
-		c.marked = dedupMarkedPaths{view.MarksRev, len(view.Marked), paths}
+		c.marked = dedupMarkedPaths{rev: view.MarksRev, n: len(view.Marked), paths: paths}
 	}
 	return paths
+}
+
+// DedupStripRows returns the strip's rows: the marked paths, flat or as a folded tree (tree),
+// cached per marks revision. The slice is shared with the cache: callers must not modify it.
+func DedupStripRows(snap comparepkg.DedupSnapshot, view DedupViewState, tree bool) []selstrip.Row {
+	paths := DedupMarkedPaths(view)
+	c := view.Cache
+	if c != nil && c.marked.rowsOK && c.marked.rowsTree == tree && c.marked.rev == view.MarksRev && c.marked.n == len(view.Marked) {
+		return c.marked.rows
+	}
+	rows := selstrip.Rows(paths, snap.EffectiveDisplayRoot().String(), tree)
+	if c != nil {
+		c.marked.rows, c.marked.rowsTree, c.marked.rowsOK = rows, tree, true
+	}
+	return rows
 }
 
 // drawDedupStrip paints the Selected strip of marked files.
@@ -54,8 +74,9 @@ func drawDedupStrip(screen tcell.Screen, rect Rect, model Model, styles theme.Th
 		return
 	}
 	drawSelectedStrip(screen, rect, SelectedStripData{
-		Paths:     DedupMarkedPaths(view),
+		Rows:      DedupStripRows(model.DedupSnapshot, view, model.SelectedStripTree()),
 		Strip:     view.Strip,
+		Tree:      model.SelectedStripTree(),
 		BaseDir:   model.DedupSnapshot.EffectiveDisplayRoot().String(),
 		SizeLabel: view.MarkedSummary(),
 	}, view.FocusSelected, chromeBlocked, SelectedStripOpts{
@@ -65,9 +86,10 @@ func drawDedupStrip(screen tcell.Screen, rect Rect, model Model, styles theme.Th
 	})
 }
 
-// DedupRevealPath locates absKey in the main tree: the node ID of its row and the IDs of
-// the ancestors that must be expanded to show it. ok is false when the file has no row
-// (hidden by the ignore-empty or group filter).
+// DedupRevealPath locates absKey (a file or, in the directory tree, a directory) in the main
+// tree: the node ID of its row and the IDs of the ancestors that must be expanded to show it. ok
+// is false when it has no row (hidden by the ignore-empty or group filter, or a directory in the
+// groups view).
 func DedupRevealPath(snap comparepkg.DedupSnapshot, view DedupViewState, absKey string) (id string, ancestors []string, ok bool) {
 	if snap.Phase != comparepkg.DedupDone {
 		return "", nil, false
@@ -76,7 +98,7 @@ func DedupRevealPath(snap comparepkg.DedupSnapshot, view DedupViewState, absKey 
 	find = func(nodes []treeflat.Node[*DedupRowData], path []string) bool {
 		for i := range nodes {
 			n := &nodes[i]
-			if n.Value.Kind == DedupRowFile && n.Value.AbsKey == absKey {
+			if (n.Value.Kind == DedupRowFile || n.Value.Kind == DedupRowDir) && dedupRowAbsPath(snap, n.Value) == absKey {
 				id, ancestors = n.ID, slices.Clone(path)
 				return true
 			}

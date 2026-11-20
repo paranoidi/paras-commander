@@ -6,6 +6,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/selstrip"
 )
 
 type selectionDerivedCache struct {
@@ -13,6 +14,9 @@ type selectionDerivedCache struct {
 	path             string
 	gen              uint64
 	stripPaths       []string
+	stripRows        []selstrip.Row // stripPaths as strip rows (flat or tree per Strip.Tree)
+	stripRowsBuilt   bool
+	stripRowsTree    bool
 	prunedRoots      []string
 	subtreeAncestors map[string]bool
 }
@@ -108,6 +112,7 @@ func (s *State) patchSelectionDerivedAfterRemove(path string, wasDir bool) {
 	if !s.StripForced && !selectionsOutsideDir(s.SelectedPaths, cur) {
 		// Last out-of-directory selection gone: strip hides.
 		s.selDerivedCache.stripPaths = nil
+		s.selDerivedCache.stripRowsBuilt = false
 	}
 	s.patchPrunedRootsAfterRemove(path, wasDir)
 	s.selDerivedCache.gen = s.selectionDerivedGen
@@ -177,6 +182,7 @@ func (s *State) appendStripPathIfNeeded(path string) {
 	}
 	s.selDerivedCache.stripPaths = append(s.selDerivedCache.stripPaths, path)
 	sort.Strings(s.selDerivedCache.stripPaths)
+	s.selDerivedCache.stripRowsBuilt = false
 }
 
 func (s *State) removeStripPath(path string) {
@@ -190,6 +196,7 @@ func (s *State) removeStripPath(path string) {
 		}
 	}
 	s.selDerivedCache.stripPaths = out
+	s.selDerivedCache.stripRowsBuilt = false
 }
 
 func (s *State) patchPrunedRootsAfterAdd(path string, isDir bool) {

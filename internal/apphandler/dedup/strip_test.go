@@ -93,3 +93,41 @@ func TestRevealStripRowExpandsAncestorsAndFocusesMain(t *testing.T) {
 		t.Fatalf("main cursor on %q (ok=%v), want %q", row.Value.AbsKey, ok, target)
 	}
 }
+
+func TestStripTreeFolderRowUnmarksSubtree(t *testing.T) {
+	snap := dedupDoneSnapshot(pathloc.MustParse("/scan"),
+		dedupFile("orchard/lantern.txt"), dedupFile("meadow/quartz/lantern.txt"), dedupFile("meadow/quartz/garnet.txt"),
+		dedupFile("meadow/willow/ember.txt"))
+	h, model := dedupHandlerWithView(t, snap, ui.DedupViewState{
+		TreeDirs: true, Marked: map[string]bool{}, Kept: map[string]bool{}, Cache: &ui.DedupCache{},
+	})
+	st := &model.DedupView
+	for _, f := range snap.Groups[0].Files {
+		h.setMark(f.Abs.String(), 100, true)
+	}
+	h.ToggleStripFocus()
+	h.ToggleStripTree()
+	if !model.SelectedStripTree() {
+		t.Fatal("ToggleStripTree did not enable tree mode")
+	}
+	rows := h.stripRows()
+	// meadow/ (quartz/, willow/ children), orchard/ folded with its single file.
+	var meadow = -1
+	for i, r := range rows {
+		if r.Group && r.Display == "meadow" {
+			meadow = i
+		}
+	}
+	if meadow < 0 {
+		t.Fatalf("no meadow folder row in %+v", rows)
+	}
+	st.Strip.Cursor = meadow
+	h.UnmarkStripRow()
+	if st.MarkedCount != 1 || !st.Marked["/scan/orchard/lantern.txt"] || st.MarkedReclaimBytes != 100 {
+		t.Fatalf("after folder unmark: count %d bytes %d marked %v", st.MarkedCount, st.MarkedReclaimBytes, st.Marked)
+	}
+	h.ToggleStripTree()
+	if model.SelectedStripTree() || len(h.stripRows()) != 1 {
+		t.Fatalf("flat mode rows = %+v", h.stripRows())
+	}
+}

@@ -19,6 +19,7 @@ type Bundle struct {
 	Compare             *Map // Compare-view overlay; may be nil
 	Dedup               *Map // find-duplicates view overlay; may be nil
 	Unique              *Map // Find unique files view overlay; may be nil
+	SelectedStrip       *Map // Selected strip overlay (consulted first while a strip has focus); may be nil
 	Terminal            *Map // embedded terminal panel overlay; may be nil
 	MassRenameDialog    *Map // mass-rename dialog (save/load/delete pattern shortcuts)
 	RunForEachDialog    *Map // run-for-each dialog (command history shortcut)
@@ -50,7 +51,7 @@ func (b *Bundle) Overlays() []*Map {
 		b.BookmarkDialog, b.FindDialog, b.HistoryDialog, b.FlattenDialog, b.TransferDialog,
 		b.Compare, b.Dedup, b.Terminal, b.MassRenameDialog, b.RunForEachDialog, b.PinDialog,
 		b.HelpDialog, b.UserMenu, b.CommandOutputDialog, b.ColumnsDialog, b.FilePreviewSearch, b.Unique,
-		b.ThemeDialog, b.PatternDialog, b.JumpDialog, b.ConfigDialog,
+		b.ThemeDialog, b.PatternDialog, b.JumpDialog, b.ConfigDialog, b.SelectedStrip,
 	}
 }
 
@@ -123,7 +124,7 @@ func (b *Bundle) mapFields() []**Map {
 		&b.BookmarkDialog, &b.FindDialog, &b.HistoryDialog, &b.FlattenDialog, &b.TransferDialog,
 		&b.Compare, &b.Dedup, &b.Terminal, &b.MassRenameDialog, &b.RunForEachDialog, &b.PinDialog,
 		&b.HelpDialog, &b.UserMenu, &b.CommandOutputDialog, &b.ColumnsDialog, &b.FilePreviewSearch, &b.Unique,
-		&b.ThemeDialog, &b.PatternDialog, &b.JumpDialog, &b.ConfigDialog,
+		&b.ThemeDialog, &b.PatternDialog, &b.JumpDialog, &b.ConfigDialog, &b.SelectedStrip,
 	}
 }
 

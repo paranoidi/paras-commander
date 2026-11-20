@@ -8,6 +8,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/quickfilter"
 	"github.com/paranoidi/paras-commander/internal/search"
+	"github.com/paranoidi/paras-commander/internal/treeflat"
 )
 
 // State is the strip's view state; rows come from the caller (n rows / paths).
@@ -18,13 +19,59 @@ type State struct {
 	CursorPath string
 	// Filter is the strip quick filter (basename fuzzy match).
 	Filter quickfilter.Filter
+	// Tree lists the rows as a folded directory tree instead of one flat row per path. The
+	// session-wide mode lives on the file panels' strips (ui.Model.SelectedStripTree).
+	Tree bool
 }
 
-// Names returns the basename of each path (the strip filter's match text).
-func Names(paths []string) []string {
-	names := make([]string, len(paths))
+// Row is one strip row: a selected path, or (tree mode) a synthetic folder grouping them.
+type Row struct {
+	// Path is the selected path, or the folder's directory path for a Group row.
+	Path string
+	// Display is the tree label ("file.txt", folded "foo/bar"); empty in flat mode, where the
+	// renderer fits Path relative to the base directory itself.
+	Display string
+	Group   bool
+	// Depth, LastChild and AncestorHasNext shape the tree connector (treeflat.Row semantics).
+	Depth           int
+	LastChild       bool
+	AncestorHasNext []bool
+}
+
+// Rows lists paths as strip rows: one per path (flat), or a folded tree of their labels
+// relative to baseDir (tree; tilde-less absolute when baseDir does not contain the path).
+func Rows(paths []string, baseDir string, tree bool) []Row {
+	if !tree {
+		rows := make([]Row, len(paths))
+		for i, p := range paths {
+			rows[i] = Row{Path: p}
+		}
+		return rows
+	}
+	labels := make([]string, len(paths))
 	for i, p := range paths {
-		names[i] = filepath.Base(p)
+		label, err := filepath.Rel(baseDir, p)
+		if err != nil {
+			label = p
+		}
+		labels[i] = filepath.ToSlash(label)
+	}
+	flat := treeflat.Flatten(treeflat.FromPaths(labels, paths), nil)
+	rows := make([]Row, len(flat))
+	for i, r := range flat {
+		rows[i] = Row{
+			Path: r.Value.Path, Display: r.Value.Display, Group: r.Value.Group,
+			Depth: r.Depth, LastChild: r.LastChild, AncestorHasNext: r.AncestorHasNext,
+		}
+	}
+	return rows
+}
+
+// RowNames returns the basename of each row's path (the strip filter's match text).
+func RowNames(rows []Row) []string {
+	names := make([]string, len(rows))
+	for i, r := range rows {
+		names[i] = filepath.Base(r.Path)
 	}
 	return names
 }
@@ -98,19 +145,19 @@ func (s *State) Bottom(n, vr int) {
 }
 
 // Remember records the path under the cursor.
-func (s *State) Remember(paths []string) {
-	if s.Cursor >= 0 && s.Cursor < len(paths) {
-		s.CursorPath = paths[s.Cursor]
+func (s *State) Remember(rows []Row) {
+	if s.Cursor >= 0 && s.Cursor < len(rows) {
+		s.CursorPath = rows[s.Cursor].Path
 	}
 }
 
 // Restore moves the cursor back to CursorPath when it is still listed.
-func (s *State) Restore(paths []string) {
+func (s *State) Restore(rows []Row) {
 	if s.CursorPath == "" {
 		return
 	}
-	for i, p := range paths {
-		if p == s.CursorPath {
+	for i, r := range rows {
+		if r.Path == s.CursorPath {
 			s.Cursor = i
 			return
 		}

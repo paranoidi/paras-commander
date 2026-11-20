@@ -382,8 +382,19 @@ func (a *App) selectParentDirs() {
 	a.setTransientMessage(message, ui.MessageUrgencyInfo)
 }
 
+// toggleSelectedStripTree switches the session-wide Selected strip tree mode (shared with the
+// find-duplicates strip), keeping the cursor on the same row when it still exists.
+func (a *App) toggleSelectedStripTree() {
+	p := a.activePanel()
+	p.RememberStripCursor()
+	a.model.SetSelectedStripTree(!a.model.SelectedStripTree())
+	p.RestoreStripCursor()
+	p.EnsureSelectedStripCursorVisible(a.selectedStripViewportRows(a.model.ActivePanel))
+}
+
 // navigateFromSelectedStrip opens the directory containing the highlighted strip path in the
-// active panel, puts the cursor on that entry (file or directory) and focuses the file list.
+// active panel, puts the cursor on that entry (file or directory) and focuses the file list. A
+// tree-mode folder row opens that folder itself.
 func (a *App) navigateFromSelectedStrip() {
 	p := a.activePanel()
 	selPath, ok := p.SelectedPathAtStripIndex(p.Strip.Cursor)
@@ -395,13 +406,16 @@ func (a *App) navigateFromSelectedStrip() {
 		a.setErrorMessage("Cannot open path", err)
 		return
 	}
-	dirLoc := loc.Parent()
-	if dirLoc.Equal(loc) || dirLoc.IsZero() {
-		a.setTransientMessage("Cannot open parent of root", ui.MessageUrgencyWarn)
-		return
+	dirLoc, name := loc, ""
+	if !p.SelectedStripRows()[p.Strip.Cursor].Group {
+		dirLoc, name = loc.Parent(), loc.Base()
+		if dirLoc.Equal(loc) || dirLoc.IsZero() {
+			a.setTransientMessage("Cannot open parent of root", ui.MessageUrgencyWarn)
+			return
+		}
 	}
 	vr := a.activeViewportRows()
-	if err := p.NavigateToPath(dirLoc, loc.Base(), vr); err != nil {
+	if err := p.NavigateToPath(dirLoc, name, vr); err != nil {
 		a.setErrorMessage("Open failed", err)
 		return
 	}
@@ -746,6 +760,8 @@ func (a *App) tryDispatchSelectedStrip(actionID string) bool {
 		a.setTransientMessage("Selection cleared", ui.MessageUrgencyInfo)
 	case keymap.ActionNavOpen:
 		a.navigateFromSelectedStrip()
+	case keymap.ActionPanelSelectedToggleTree:
+		a.toggleSelectedStripTree()
 	case keymap.ActionAppUserMenu:
 		// F2 opens the user-command menu everywhere else; the Selected strip has no
 		// room for its own dedicated chord, so while it's focused F2 selects the unique

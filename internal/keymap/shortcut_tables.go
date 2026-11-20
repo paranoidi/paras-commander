@@ -31,6 +31,7 @@ const (
 	CompareShortcutsTable             = "compare"
 	DedupShortcutsTable               = "dedup"
 	UniqueShortcutsTable              = "unique"
+	SelectedStripShortcutsTable       = "selected"
 	TerminalShortcutsTable            = "terminal"
 	LeaderKeyShortcutsTable           = "leader_key"
 	CopyMenuShortcutsTable            = "copy_menu"
@@ -91,6 +92,7 @@ func AllShortcutTablePaths() []string {
 		CompareShortcutsTable,
 		DedupShortcutsTable,
 		UniqueShortcutsTable,
+		SelectedStripShortcutsTable,
 		TerminalShortcutsTable,
 	}
 }

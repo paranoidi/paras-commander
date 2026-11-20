@@ -1985,10 +1985,21 @@ func (s *State) SelectedStripPaths() []string {
 	return s.selDerivedCache.stripPaths
 }
 
+// SelectedStripRows returns the selections sub-pane rows: one per selected path, or the folded
+// directory tree of them when Strip.Tree is set. The slice is cached; do not modify it.
+func (s *State) SelectedStripRows() []selstrip.Row {
+	s.ensureSelectionDerived()
+	c := &s.selDerivedCache
+	if !c.stripRowsBuilt || c.stripRowsTree != s.Strip.Tree {
+		c.stripRows = selstrip.Rows(c.stripPaths, s.Path.String(), s.Strip.Tree)
+		c.stripRowsBuilt, c.stripRowsTree = true, s.Strip.Tree
+	}
+	return c.stripRows
+}
+
 // SelectedStripCount is the number of rows in the selections sub-pane for the current directory.
 func (s *State) SelectedStripCount() int {
-	s.ensureSelectionDerived()
-	return len(s.selDerivedCache.stripPaths)
+	return len(s.SelectedStripRows())
 }
 
 // MoveSelectedStrip moves the selected-strip cursor by delta and keeps it visible.
@@ -1998,12 +2009,12 @@ func (s *State) MoveSelectedStrip(delta int, stripViewportRows int) {
 
 // RememberStripCursor records the path under the strip cursor.
 func (s *State) RememberStripCursor() {
-	s.Strip.Remember(s.SelectedStripPaths())
+	s.Strip.Remember(s.SelectedStripRows())
 }
 
 // RestoreStripCursor moves the strip cursor back to Strip.CursorPath when it is still in the strip.
 func (s *State) RestoreStripCursor() {
-	s.Strip.Restore(s.SelectedStripPaths())
+	s.Strip.Restore(s.SelectedStripRows())
 }
 
 // SelectedStripTop moves the selected-strip cursor to the first row.
@@ -2026,25 +2037,48 @@ func (s *State) EnsureSelectedStripCursorVisible(stripViewportRows int) {
 }
 
 // SelectedPathAtStripIndex returns the absolute path at the given strip row index, or "", false.
+// A tree-mode folder row yields the folder's directory path.
 func (s *State) SelectedPathAtStripIndex(index int) (string, bool) {
-	paths := s.SelectedStripPaths()
-	if index < 0 || index >= len(paths) {
+	rows := s.SelectedStripRows()
+	if index < 0 || index >= len(rows) {
 		return "", false
 	}
-	return paths[index], true
+	return rows[index].Path, true
 }
 
-// ToggleOrRemoveStripSelection toggles off the strip row at SelectedStripCursor (deselects).
+// ToggleOrRemoveStripSelection deselects the strip row at the cursor; a tree-mode folder row
+// deselects everything under that folder.
 func (s *State) ToggleOrRemoveStripSelection() bool {
-	p, ok := s.SelectedPathAtStripIndex(s.Strip.Cursor)
-	if !ok {
+	rows := s.SelectedStripRows()
+	if s.Strip.Cursor < 0 || s.Strip.Cursor >= len(rows) {
 		return false
 	}
-	wasDir := s.selectedPathIsDirectory(p)
-	s.applySelectionRemove(p, wasDir)
-	s.removePathFromSelectedStripOrder(p)
+	if row := rows[s.Strip.Cursor]; row.Group {
+		s.UnselectUnder(row.Path)
+	} else {
+		s.unselectPath(row.Path)
+	}
 	s.normalizeSelectedStripCursor()
 	return true
+}
+
+func (s *State) unselectPath(p string) {
+	s.applySelectionRemove(p, s.selectedPathIsDirectory(p))
+	s.removePathFromSelectedStripOrder(p)
+}
+
+// UnselectUnder deselects every selected path below dir and returns how many it removed.
+func (s *State) UnselectUnder(dir string) int {
+	var under []string
+	for p, on := range s.SelectedPaths {
+		if on && isStrictPathDescendant(dir, p) {
+			under = append(under, p)
+		}
+	}
+	for _, p := range under {
+		s.unselectPath(p)
+	}
+	return len(under)
 }
 
 // SelectVisibleEntry moves the cursor onto the row named name in this panel's directory. In tree
