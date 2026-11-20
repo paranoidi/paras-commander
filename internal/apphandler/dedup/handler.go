@@ -1763,6 +1763,12 @@ func (h *Handler) KeepSelection() {
 			}
 		}
 		h.notifyDuplicateKeep(replaced)
+		// Step past the folder's subtree: its rows are kept now too.
+		pane, rows := h.focusedPane()
+		if next := ui.DedupSubtreeEndIndex(rows, pane.Selected); next < len(rows) {
+			pane.Selected = next
+			h.followMainCursor()
+		}
 		return
 	}
 	if row.Value.Kind != ui.DedupRowFile {

@@ -1261,10 +1261,7 @@ func TestDedupProgressDialogFooterShowsEscAndF10(t *testing.T) {
 	}
 }
 
-// dedupMarkKeep marks the current selection to keep. ActionDedupMarkKeep has no dedicated
-// chord (see DefaultDedupOverlayKeys) — it's reachable via the `:` menu, F9 menu, or a direct
-// leader letter ('m') when vi-motion mode is on — so tests dispatch the action directly rather
-// than simulating a keypress.
+// dedupMarkKeep marks the current selection to keep by dispatching the action directly.
 func dedupMarkKeep(app *App) {
 	app.tryDispatchDedup(keymap.ActionDedupMarkKeep)
 }
@@ -1705,5 +1702,43 @@ func TestDedupViewEmptyDirsClimbToScanRoot(t *testing.T) {
 		if got := app.dedupCtrl.EmptyDirsAfterDelete(); !slices.Equal(got, want) {
 			t.Fatalf("scoped=%v: dirs = %v, want %v", scoped, got, want)
 		}
+	}
+}
+
+// Keeping an expanded folder moves the cursor past its subtree, not into it.
+func TestDedupViewKeepFolderSkipsSubtree(t *testing.T) {
+	dir := t.TempDir()
+	for _, rel := range []string{"anchor/quill.txt", "anchor/raven.txt", "bramble/quill.txt"} {
+		p := filepath.Join(dir, rel)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+	if !app.model.DedupView.TreeDirs {
+		t.Fatal("want dirs mode")
+	}
+	app.tryDispatchDedup(keymap.ActionDedupExpandAll)
+	rows := app.model.DedupList
+	anchor := -1
+	for i, r := range rows {
+		if r.Value.Kind == ui.DedupRowDir && r.Value.DirRel == "anchor" {
+			anchor = i
+		}
+	}
+	if anchor < 0 || anchor+1 >= len(rows) || rows[anchor+1].Depth <= rows[anchor].Depth {
+		t.Fatalf("anchor not expanded: %d rows", len(rows))
+	}
+	app.model.DedupView.Main.Selected = anchor
+	dedupMarkKeep(app)
+	got := app.model.DedupView.Main.Selected
+	if r := app.model.DedupList[got]; r.Value.Kind != ui.DedupRowDir || r.Value.DirRel != "bramble" {
+		t.Fatalf("cursor on row %d (%+v), want bramble folder", got, *r.Value)
 	}
 }
