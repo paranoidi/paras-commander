@@ -66,6 +66,7 @@ special = "magenta"
 [menu]
 dropdown = { fg = "fg", bg = "menu_bg" }
 dropdown.accent = { fg = "accent"}
+dropdown.disabled = { fg = "info_columns" }  # surface2: greyed-out pulldown items sit well below the labels, as in the leader menu  # tuned
 
 [message]
 error = { fg = "ink", bg = "danger", bold = true }

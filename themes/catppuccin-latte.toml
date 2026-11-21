@@ -76,6 +76,7 @@ completed = { fg = "fg", bold = true }
 status = { fg = "fg" }     # status-command text at top-left of menu bar (status.toml)
 dropdown = { fg = "fg", bg = "menu_bg" }
 dropdown.accent = { fg = "accent"}
+dropdown.disabled = { fg = "faint" }  # overlay0: greyed-out pulldown items sit well below the labels, as in the leader menu  # tuned
 dropdown.selected = { fg = "fg_strong", bg = "focus_bg", bold = true }
 
 [menu.bar]
