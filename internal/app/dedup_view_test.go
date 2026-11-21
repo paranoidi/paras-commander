@@ -1188,23 +1188,17 @@ func TestDedupViewFooterEscFirst(t *testing.T) {
 	if keys[2].ActionID != keymap.ActionFileView {
 		t.Fatalf("footer[2] = %+v, want F3 View next to F1", keys[2])
 	}
-	var foundDelete, foundRefresh bool
+	var foundDelete bool
 	for _, fk := range keys {
 		if fk.Hint == "Delete" {
 			foundDelete = true
 		}
-		if fk.Hint == "Refresh" {
-			foundRefresh = true
-		}
-		if fk.Hint == "Edit" || fk.Hint == "Copy" {
+		if fk.Hint == "Edit" || fk.Hint == "Copy" || fk.Hint == "Refresh" { // Refresh: menus only, the footer is full
 			t.Fatalf("footer lists unavailable browser action %q: %+v", fk.Hint, keys)
 		}
 	}
 	if !foundDelete {
 		t.Fatalf("footer missing Delete: %+v", keys)
-	}
-	if !foundRefresh {
-		t.Fatalf("footer missing Refresh: %+v", keys)
 	}
 	assertDedupFooterGroupOnlyHints(t, keys, false)
 }
