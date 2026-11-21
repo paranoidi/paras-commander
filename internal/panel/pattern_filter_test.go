@@ -410,3 +410,32 @@ func TestPatternFilterTreeKeepsAncestorsOfMatches(t *testing.T) {
 		}
 	}
 }
+
+func TestSetEntryFilterPullsScrollIntoShrunkList(t *testing.T) {
+	dir := t.TempDir()
+	words := []string{"harbor", "willow", "cobalt", "meadow", "lantern", "pebble", "thistle", "copper"}
+	for i := range 40 {
+		name := words[i%len(words)] + "-" + words[(i/len(words))%len(words)] + "-" + string(rune('a'+i%26)) + ".txt"
+		if i == 3 {
+			name = "rugged-handle-gizmo.txt"
+		}
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	state, err := New(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state.FileListViewportRows = func() int { return 10 }
+	state.Cursor, state.ScrollOffset = 35, 30
+	filter, err := PatternFilter(FilterSpec{Pattern: "*handle*", Mode: GroupPatternSimple}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state.SetEntryFilter(filter)
+	n := state.VisibleEntryCount()
+	if n == 0 || state.ScrollOffset >= n || state.Cursor < state.ScrollOffset {
+		t.Fatalf("count=%d cursor=%d scroll=%d: filtered rows scrolled out of view", n, state.Cursor, state.ScrollOffset)
+	}
+}

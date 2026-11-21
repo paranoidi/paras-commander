@@ -25,7 +25,9 @@ func (s *State) SetEntryFilter(f *EntryFilter) {
 	}
 	s.ActiveEntryFilter = f
 	s.rebuildFilter()
-	s.clampCursor()
+	// The visible count can shrink below ScrollOffset (a scrolled-down, expanded tree); clamping
+	// only the cursor would paint rows past the end, i.e. an empty panel.
+	s.EnsureCursorInViewport(0)
 }
 
 // ClearEntryFilter removes any active entry filter.
@@ -39,7 +41,7 @@ func (s *State) RefreshEntryFilter() {
 		return
 	}
 	s.rebuildFilter()
-	s.clampCursor()
+	s.EnsureCursorInViewport(0)
 }
 
 // NoteTreeChildGitStatusApplied decrements the in-flight tree-child git-status counter and
