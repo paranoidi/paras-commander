@@ -703,6 +703,13 @@ func (h *Handler) syncDedupList() {
 	h.model.DedupList, st.IgnoredEmptyCount = ui.DedupRowsFromSnapshot(h.model.DedupSnapshot, *st)
 	h.refilterPane(&st.Main, h.model.DedupList)
 	h.syncCopies()
+	// Every dedup menu build reads HasPotential, so a rebuild is needed only when it flips.
+	if has := ui.DedupHasPotential(h.model.DedupSnapshot, *st); has != st.HasPotential {
+		st.HasPotential = has
+		if h.model.ViewMode == ui.ViewDedup {
+			h.model.MenuDefinitions = h.host.DedupMenuDefinitions() // dims Hash potential duplicates
+		}
+	}
 }
 
 // ArmNavHold (re)starts the held-nav window. The first press applies at once (leading edge);

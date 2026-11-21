@@ -105,6 +105,7 @@ type DedupViewState struct {
 	Strip                 selstrip.State  // Selected strip cursor, scroll and quick filter
 	Marked                map[string]bool // absolute paths marked for deletion
 	MarkedCount           int
+	HasPotential          bool // a shown group is a potential duplicate set: dedup.hash-potential has work (menus dim it otherwise)
 	RangeAnchor           string // focused pane's file AbsKey marked as the pending range-select start ("" when none); cleared on pane switch
 	MarkedReclaimBytes    int64
 	Kept                  map[string]bool                    // absolute paths designated as survivors
@@ -140,6 +141,16 @@ func (v DedupViewState) groupVisible(g comparepkg.DedupGroup) bool {
 		return false
 	}
 	return v.GroupFilter == nil || v.GroupFilter(g)
+}
+
+// DedupHasPotential reports whether a group the view shows is a potential duplicate set.
+func DedupHasPotential(snap comparepkg.DedupSnapshot, view DedupViewState) bool {
+	for _, g := range snap.Groups {
+		if g.Potential && view.groupVisible(g) {
+			return true
+		}
+	}
+	return false
 }
 
 // DedupActiveGroups returns the snapshot groups the view shows (ignore-empty and group

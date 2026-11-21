@@ -22,6 +22,9 @@ type Item struct {
 	// BrowserDefinitions / JobsDefinitions fill this from the resolved keymap.
 	KeyLabel  string
 	Separator bool
+	// Disabled draws the item dimmed when it has nothing to act on; it stays activatable and
+	// its handler says why it did nothing (as dimmed leader-menu entries do).
+	Disabled bool
 }
 
 // Definition describes one top-level pulldown menu.

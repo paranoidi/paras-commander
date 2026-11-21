@@ -423,11 +423,16 @@ func drawPulldownMenu(screen tcell.Screen, layout Layout, state menu.State, menu
 			drawMenuSeparator(screen, rect.X, rect.Y+1+row, rect.Width, styles.MenuDropdownFrame)
 			continue
 		}
-		style := styles.MenuDropdown
+		style, accent := styles.MenuDropdown, styles.MenuDropdownAccent
+		if item.Disabled {
+			fg, _, _ := styles.MenuDropdownDisabled.Decompose()
+			style = style.Foreground(fg)
+			accent = style
+		}
 		if row == state.SelectedItem {
 			style = styles.MenuDropdownSelected
 		}
-		drawMenuItem(screen, rect.X+1, rect.Y+1+row, rect.Width-2, item, style, styles.MenuDropdownAccent)
+		drawMenuItem(screen, rect.X+1, rect.Y+1+row, rect.Width-2, item, style, accent)
 	}
 }
 

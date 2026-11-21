@@ -318,7 +318,7 @@ func TestDedupDefinitionsFillsMenuKeyLabels(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DefaultBundle: %v", err)
 	}
-	defs := DedupDefinitions(bundle.Global, bundle.Dedup, true, true)
+	defs := DedupDefinitions(bundle.Global, bundle.Dedup, true, true, true)
 	if defs[0].ID != TopDedup {
 		t.Fatalf("first menu = %s, want TopDedup", defs[0].ID)
 	}
@@ -398,11 +398,11 @@ func TestDedupToggleEmptyMenuLabel(t *testing.T) {
 	if got := DedupToggleEmptyMenuLabel(false); got != "Ignore empty files" {
 		t.Fatalf("ignoreEmpty=false label = %q, want Ignore empty files", got)
 	}
-	defs := DefinitionsDedup(true, true)
+	defs := DefinitionsDedup(true, true, true)
 	if got := dedupMenuItemLabel(defs, keymap.ActionDedupToggleEmpty); got != "Show empty files" {
 		t.Fatalf("DefinitionsDedup(true, true) empty label = %q", got)
 	}
-	defs = DefinitionsDedup(false, true)
+	defs = DefinitionsDedup(false, true, true)
 	if got := dedupMenuItemLabel(defs, keymap.ActionDedupToggleEmpty); got != "Ignore empty files" {
 		t.Fatalf("DefinitionsDedup(false, true) empty label = %q", got)
 	}
@@ -415,7 +415,7 @@ func TestDefinitionsDedupSortActionByTreeMode(t *testing.T) {
 	for _, treeDirs := range []bool{true, false} {
 		name := map[bool]string{true: "dirs", false: "groups"}[treeDirs]
 		t.Run(name, func(t *testing.T) {
-			defs := DefinitionsDedup(false, treeDirs)
+			defs := DefinitionsDedup(false, treeDirs, true)
 			for _, item := range defs[0].Items {
 				if groupOnlyActions[item.Action] && treeDirs {
 					t.Fatalf("dirs mode includes group-only action %q", item.Action)
@@ -448,7 +448,7 @@ func TestAuxiliaryViewDefinitionsIncludeDisplay(t *testing.T) {
 		"jobs":     JobsDefinitions(bundle.Global, bundle.Jobs),
 		"commands": CommandsDefinitions(bundle.Global, bundle.Commands),
 		"messages": MessagesDefinitions(bundle.Global, bundle.Messages),
-		"dedup":    DedupDefinitions(bundle.Global, bundle.Dedup, true, true),
+		"dedup":    DedupDefinitions(bundle.Global, bundle.Dedup, true, true, true),
 		"compare":  CompareDefinitions(bundle.Global, bundle.Compare, true),
 	} {
 		t.Run(name, func(t *testing.T) {

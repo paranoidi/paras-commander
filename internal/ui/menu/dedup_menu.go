@@ -14,12 +14,13 @@ func DedupToggleEmptyMenuLabel(ignoreEmpty bool) string {
 // DefinitionsDedup returns top menus while the find-duplicates view is active.
 // ignoreEmpty is the current DedupViewState.IgnoreEmpty (empties hidden when true).
 // treeDirs is true in directory-tree mode; sort is omitted when true.
-func DefinitionsDedup(ignoreEmpty, treeDirs bool) []Definition {
+// hasPotential is DedupViewState.HasPotential; without it Hash potential duplicates is dimmed.
+func DefinitionsDedup(ignoreEmpty, treeDirs, hasPotential bool) []Definition {
 	items := []Item{
 		{Action: keymap.ActionDedupClose, Label: "Back to file view", Shortcut: 'b'},
 		{Action: keymap.ActionPanelRefresh, Label: "Refresh", Shortcut: 'r'},
 		{Action: keymap.ActionDedupCompare, Label: "Compare directories", Shortcut: 'o'},
-		{Action: keymap.ActionDedupHashPotential, Label: "Hash potential duplicates", Shortcut: 'p'},
+		{Action: keymap.ActionDedupHashPotential, Label: "Hash potential duplicates", Shortcut: 'p', Disabled: !hasPotential},
 	}
 	if !treeDirs {
 		items = append(items, Item{Action: keymap.ActionDedupToggleSort, Label: "Sort order", Shortcut: 's'})
@@ -32,8 +33,8 @@ func DefinitionsDedup(ignoreEmpty, treeDirs bool) []Definition {
 	)
 	if treeDirs {
 		items = append(items,
-			Item{Action: keymap.ActionDedupExpandCopies, Label: "Show copies", Shortcut: 's'},
-			Item{Action: keymap.ActionDedupCollapseCopies, Label: "Hide copies", Shortcut: 'h'},
+			Item{Action: keymap.ActionDedupExpandCopies, Label: "Expand copies", Shortcut: 'x'},
+			Item{Action: keymap.ActionDedupCollapseCopies, Label: "Collapse copies", Shortcut: 'l'},
 		)
 	}
 	items = append(items,
@@ -65,8 +66,8 @@ func DefinitionsDedup(ignoreEmpty, treeDirs bool) []Definition {
 }
 
 // DedupDefinitions returns DefinitionsDedup() with KeyLabels resolved from global km plus optional dedup overlay.
-func DedupDefinitions(global, dedup *keymap.Map, ignoreEmpty, treeDirs bool) []Definition {
-	defs := DefinitionsDedup(ignoreEmpty, treeDirs)
+func DedupDefinitions(global, dedup *keymap.Map, ignoreEmpty, treeDirs, hasPotential bool) []Definition {
+	defs := DefinitionsDedup(ignoreEmpty, treeDirs, hasPotential)
 	ApplyOverlayMenuKeyLabels(defs, global, dedup)
 	return defs
 }

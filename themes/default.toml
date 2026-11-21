@@ -92,6 +92,7 @@ status.separator = { fg = "muted" }  # glyph between and after status-command se
 # dropdown is both a leaf style and a parent of .accent/.frame/.selected — keep dotted here
 dropdown = { fg = "ink", bg = "menu_bg" }
 dropdown.accent = { fg = "fg"}
+dropdown.disabled = { fg = "muted" }  # item with nothing to act on; fg only, on the dropdown fill
 dropdown.frame = { fg = "highlight_bg", bg = "menu_bg" }
 dropdown.selected = { fg = "focus_fg", bg = "focus_bg", bold = true }
 

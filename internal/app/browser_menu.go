@@ -11,5 +11,5 @@ func (a *App) uniqueMenuDefinitions() []menu.Definition {
 }
 
 func (a *App) dedupMenuDefinitions() []menu.Definition {
-	return menu.DedupDefinitions(a.keys.Global, a.keys.Dedup, a.model.DedupView.IgnoreEmpty, a.model.DedupView.TreeDirs)
+	return menu.DedupDefinitions(a.keys.Global, a.keys.Dedup, a.model.DedupView.IgnoreEmpty, a.model.DedupView.TreeDirs, a.model.DedupView.HasPotential)
 }

@@ -49,6 +49,9 @@ func TestDedupHashPotentialRefreshesView(t *testing.T) {
 	if g := a.model.DedupSnapshot.Groups[0]; !g.Potential || len(g.Files) != 3 {
 		t.Fatalf("group before hashing = %+v", g)
 	}
+	if hashPotentialMenuDisabled(t, a) {
+		t.Fatal("Hash potential duplicates dimmed with a potential group shown")
+	}
 	anchor, err := pathloc.FileIndex(filepath.Join(root, "anchor.bin"))
 	if err != nil {
 		t.Fatal(err)
@@ -67,12 +70,29 @@ func TestDedupHashPotentialRefreshesView(t *testing.T) {
 	if g := a.model.DedupSnapshot.Groups[0]; len(g.Files) != 2 {
 		t.Fatalf("group after hashing = %+v, want the two identical files", g)
 	}
+	if !hashPotentialMenuDisabled(t, a) {
+		t.Fatal("Hash potential duplicates not dimmed once every group is confirmed")
+	}
 	if !a.model.DedupView.Marked[marked] {
 		t.Fatalf("mark lost: %v", a.model.DedupView.Marked)
 	}
 	if a.model.DedupView.GroupFilter == nil || a.model.DedupView.NameFilterLabel != "reed" {
 		t.Fatal("group filter lost")
 	}
+}
+
+// hashPotentialMenuDisabled reports the Actions menu item's Disabled flag.
+func hashPotentialMenuDisabled(t *testing.T, a *App) bool {
+	t.Helper()
+	for _, d := range a.model.MenuDefinitions {
+		for _, it := range d.Items {
+			if it.Action == keymap.ActionDedupHashPotential {
+				return it.Disabled
+			}
+		}
+	}
+	t.Fatal("no Hash potential duplicates menu item")
+	return false
 }
 
 // The delete dialog warns only when a marked file is in a potential duplicate group.

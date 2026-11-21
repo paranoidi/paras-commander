@@ -200,6 +200,9 @@ func (a *App) openViewLeaderMenu() {
 	if a.model.ViewMode == ui.ViewJobs {
 		applyJobActionsToLeaderMenu(items, actions, a.jobsCtrl.SelectedJobActions())
 	}
+	if a.model.ViewMode == ui.ViewDedup && !a.model.DedupView.HasPotential {
+		dimLeaderMenuAction(items, actions, keymap.ActionDedupHashPotential)
+	}
 	a.openLeaderMenuDispatch(items, actions, ui.LeaderMenuBuiltin, prefix, a.activateHelpAction)
 }
 
@@ -219,6 +222,21 @@ func applyJobActionsToLeaderMenu(items []ui.LeaderMenuItem, actions []string, av
 		if id == keymap.ActionJobsResume && avail.Retry {
 			items[i].Label = "Retry job"
 		}
+	}
+}
+
+// dimLeaderMenuAction dims the entry for action id (still activatable). actions is parallel to
+// the non-group rows of items, as buildLeaderMenuItems returns them.
+func dimLeaderMenuAction(items []ui.LeaderMenuItem, actions []string, id string) {
+	ai := 0
+	for i := range items {
+		if items[i].GroupTitle != "" {
+			continue
+		}
+		if actions[ai] == id {
+			items[i].Disabled = true
+		}
+		ai++
 	}
 }
 

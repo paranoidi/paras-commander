@@ -7,8 +7,8 @@ func allMenuSets() map[string][]Definition {
 	return map[string][]Definition{
 		"browser":   Definitions(),
 		"compare":   DefinitionsCompare(false),
-		"dedup":     DefinitionsDedup(false, false),
-		"dedup/dir": DefinitionsDedup(false, true),
+		"dedup":     DefinitionsDedup(false, false, true),
+		"dedup/dir": DefinitionsDedup(false, true, true),
 		"jobs":      DefinitionsJobs(),
 		"commands":  DefinitionsCommands(),
 		"messages":  DefinitionsMessages(),
