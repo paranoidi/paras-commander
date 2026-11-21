@@ -656,8 +656,8 @@ func TestFunctionKeysSelectedStripView(t *testing.T) {
 		t.Fatalf("empty clear label len = %d, want F1 + F2 + F3 + F4 + F10", len(empty))
 	}
 	dedup := FunctionKeysSelectedStripView("C-u", "M-t", false, true)
-	if len(dedup) != 4 || dedup[0].KeyLabel != "F1" || dedup[1].Hint != "Unselect all" || dedup[2].Hint != "Tree" || dedup[3].KeyLabel != "F10" {
-		t.Fatalf("dedup strip footer = %+v, want F1 + clear + tree + F10", dedup)
+	if len(dedup) != 5 || dedup[0].KeyLabel != "F1" || dedup[1].KeyLabel != "F3" || dedup[2].Hint != "Unselect all" || dedup[3].Hint != "Tree" || dedup[4].KeyLabel != "F10" {
+		t.Fatalf("dedup strip footer = %+v, want F1 + F3 + clear + tree + F10", dedup)
 	}
 	if tree := FunctionKeysSelectedStripView("C-u", "M-t", true, false); tree[5].Hint != "Flat" {
 		t.Fatalf("tree-mode toggle = %+v, want hint Flat", tree[5])

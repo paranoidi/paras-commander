@@ -42,6 +42,12 @@ func (h *Handler) OpenStripRowInPanel(panelID int) {
 	}
 }
 
+// StripFile returns the strip row's path when it is a file (not a tree-mode folder row).
+func (h *Handler) StripFile() (string, bool) {
+	row, ok := h.stripRow()
+	return row.Path, ok && !row.Group
+}
+
 // FoldStripRows applies a bulk tree action to the strip: panel.tree-collapse-all /
 // panel.tree-expand-all-shallow fold or open one level, dedup.collapse-all / dedup.expand-all
 // every folder. The cursor stays on its row, or the folder it was folded into.

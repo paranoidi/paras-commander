@@ -238,6 +238,9 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 	case keymap.ActionPanelClearSelection:
 		a.dedupCtrl.ClearMarks()
 		return true
+	case keymap.ActionFileView:
+		a.dedupViewFile(a.dedupCtrl.PaneOpenableFile(a.model.DedupView.FocusCopies))
+		return true
 	case keymap.ActionPanelFocusSelected:
 		if !a.dedupCtrl.ToggleStripFocus() {
 			a.setTransientMessage("No marked files", ui.MessageUrgencyWarn)
@@ -275,6 +278,15 @@ func (a *App) dedupOpenSelectedFile() bool {
 	return true
 }
 
+// dedupViewFile opens path in the fullscreen file viewer, which returns to the results view.
+func (a *App) dedupViewFile(path string, ok bool) {
+	if !ok {
+		a.setTransientMessage("View: not a file", ui.MessageUrgencyWarn)
+	} else if err := a.previewCtrl.OpenFullscreenFilePreviewAt(path, false); err != nil {
+		a.setErrorMessage("View", err)
+	}
+}
+
 // dedupOpenInExternalBrowser reveals the focused row's directory (a file's containing directory).
 func (a *App) dedupOpenInExternalBrowser() {
 	path, isDir, ok := a.dedupCtrl.PaneTarget(a.model.DedupView.FocusCopies)
@@ -300,6 +312,9 @@ func dedupViewFooterKeys(global, dedup *keymap.Map, treeDirs bool) []menu.Functi
 	if global != nil {
 		if lbl := global.MenuBindingLabel(keymap.ActionPanelRefresh); lbl != "" {
 			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Refresh", ActionID: keymap.ActionPanelRefresh})
+		}
+		if lbl := global.MenuBindingLabel(keymap.ActionFileView); lbl != "" {
+			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "View", ActionID: keymap.ActionFileView})
 		}
 	}
 	if dedup != nil {
@@ -481,6 +496,8 @@ func (a *App) handleDedupStripKey(action string, event *tcell.EventKey) bool {
 		c.UnmarkStripRow()
 	case keymap.ActionNavOpen:
 		c.RevealStripRow()
+	case keymap.ActionFileView:
+		a.dedupViewFile(c.StripFile())
 	case keymap.ActionPanelSelectedToggleTree:
 		c.ToggleStripTree()
 	case keymap.ActionDestinationActivePanel:

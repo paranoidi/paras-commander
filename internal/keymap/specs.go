@@ -826,7 +826,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"back", "browser"},
-			LeaderKey:   "v",
+			LeaderKey:   "x",
 		},
 		{
 			ID:          ActionDedupToggleSort,
@@ -1845,7 +1845,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionFileView,
-			Views:        HelpBrowser | HelpUnique,
+			Views:        HelpBrowser | HelpDedup | HelpUnique,
 			Title:        "Full screen preview",
 			Section:      "File",
 			DefaultKeys:  []string{"F3", "C-v"},

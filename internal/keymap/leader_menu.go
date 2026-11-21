@@ -251,6 +251,7 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 				ActionDedupFilterDialog,
 			},
 			LeaderMenuGroupDuplicates: {
+				ActionFileView,
 				ActionPanelRefresh,
 				ActionFileDelete,
 				ActionDedupMarkKeep,

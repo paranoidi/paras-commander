@@ -298,7 +298,7 @@ func TestDedupViewViMotionHJKLOnlyWhenModeOn(t *testing.T) {
 }
 
 // TestDedupViewViMotionLeaderLetterOnlyWhenModeOn verifies a bound leader-menu letter (here
-// 'v', dedup.close) fires its action directly only while vi-motion mode is on.
+// 'x', dedup.close) fires its action directly only while vi-motion mode is on.
 func TestDedupViewViMotionLeaderLetterOnlyWhenModeOn(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("dup"), 0o644); err != nil {
@@ -312,16 +312,16 @@ func TestDedupViewViMotionLeaderLetterOnlyWhenModeOn(t *testing.T) {
 	app.openFindDuplicates()
 	waitDedupDone(t, app)
 
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRune, 'v', tcell.ModNone))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModNone))
 	if app.model.ViewMode != ui.ViewDedup {
-		t.Fatal("vi-motion off: 'v' must not close the dedup view")
+		t.Fatal("vi-motion off: 'x' must not close the dedup view")
 	}
 
-	app.dedupCtrl.CancelFilter() // the plain 'v' opened type-to-jump
+	app.dedupCtrl.CancelFilter() // the plain 'x' opened type-to-jump
 	app.model.ViMotionMode = true
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRune, 'v', tcell.ModNone))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModNone))
 	if app.model.ViewMode != ui.ViewBrowser {
-		t.Fatalf("vi-motion on: 'v' should dispatch dedup.close directly, ViewMode = %v", app.model.ViewMode)
+		t.Fatalf("vi-motion on: 'x' should dispatch dedup.close directly, ViewMode = %v", app.model.ViewMode)
 	}
 }
 
@@ -1193,7 +1193,7 @@ func TestDedupViewFooterEscFirst(t *testing.T) {
 		if fk.Hint == "Refresh" {
 			foundRefresh = true
 		}
-		if fk.Hint == "Edit" || fk.Hint == "View" || fk.Hint == "Copy" {
+		if fk.Hint == "Edit" || fk.Hint == "Copy" {
 			t.Fatalf("footer lists unavailable browser action %q: %+v", fk.Hint, keys)
 		}
 	}
@@ -1792,6 +1792,22 @@ func TestDedupViewSelectedStrip(t *testing.T) {
 	if got := app.model.DedupList[view.Main.Selected].Value.AbsKey; got != filepath.Join(dir, "lantern.txt") {
 		t.Fatalf("revealed row %q, want the marked file", got)
 	}
+
+	// F3 views the file under the cursor in the tree and in the strip, returning to the view.
+	for _, strip := range []bool{false, true} {
+		if strip {
+			key(tcell.KeyCtrlS)
+		}
+		key(tcell.KeyF3)
+		if app.model.ViewMode != ui.ViewFilePreview || app.model.FullscreenFilePreview.Path != filepath.Join(dir, "lantern.txt") {
+			t.Fatalf("F3 (strip %v): view %v path %q, want the viewer on the file", strip, app.model.ViewMode, app.model.FullscreenFilePreview.Path)
+		}
+		app.previewCtrl.CloseFilePreviewFullscreen()
+		if app.model.ViewMode != ui.ViewDedup || view.FocusSelected != strip {
+			t.Fatalf("after viewer (strip %v): view %v focusSelected %v", strip, app.model.ViewMode, view.FocusSelected)
+		}
+	}
+	key(tcell.KeyCtrlS) // back to the tree; the next step refocuses the strip
 
 	// Insert in the strip unmarks; with nothing left focus drops to the main tree.
 	key(tcell.KeyCtrlS)

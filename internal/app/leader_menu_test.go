@@ -657,8 +657,8 @@ func TestColonKeyOpensPerViewLeaderMenuInDedup(t *testing.T) {
 		t.Fatalf("groups: tree=%v duplicates=%v, want both", foundTree, foundDuplicates)
 	}
 
-	// 'v' = dedup.close (activateDedupHelpAction -> tryDispatchDedup).
-	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'v', tcell.ModNone))
+	// 'x' = dedup.close (activateDedupHelpAction -> tryDispatchDedup).
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModNone))
 	if app.model.LeaderMenu.Open {
 		t.Fatal("leader menu should close after activation")
 	}
