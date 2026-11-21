@@ -91,6 +91,8 @@ remove.gfx.1 = { fg = "fg" }
 [message]
 warn = { fg = "fg", bg = "warning", bold = true }  # text reads better than base on yellow  # tuned
 error = { fg = "ink", bg = "danger", bold = true }
+warn_text = { fg = "fg", bold = true } # warning line on a panel/dialog surface (dialog warn line, conflict panel, mass-rename row, Messages view row)
+success_text = { fg = "fg" } # success line on a panel surface (Messages view row)
 success = { fg = "fg_strong", bg = "success" }
 
 [footer]

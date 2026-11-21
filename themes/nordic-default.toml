@@ -48,6 +48,7 @@ focus_fg = "#d8dee9"
 file_cursor_fg = "#d8dee9"
 accent = "#ebcb8b"
 accent_alt = "#ebcb8b"
+dialog_title = "default"
 primary = "#81a1c1"
 inactive_frame = "#4c566a"
 directory = "#81a1c1"
@@ -81,7 +82,9 @@ deleted = { fg = "fg" }
 not_modified = { fg = "git_unchanged", bold = true }  # keep the dim mark: repair would brighten it  # tuned
 
 [panel.fileindex]
+indexed = { fg = "fg" }  # dim like the meta column
 new = { fg = "fg" }
+unchecked = { fg = "fg" }  # dim like the meta column
 
 [panel.meta]
 critical = { fg = "fg" }
