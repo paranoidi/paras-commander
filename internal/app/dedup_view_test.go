@@ -1182,8 +1182,11 @@ func TestDedupViewFooterEscFirst(t *testing.T) {
 	if keys[0] != menu.FooterEscClose {
 		t.Fatalf("footer[0] = %+v, want Esc Close", keys[0])
 	}
-	if len(keys) < 2 || keys[1].Key != tcell.KeyF1 || keys[1].Hint != "Help" {
+	if len(keys) < 3 || keys[1].Key != tcell.KeyF1 || keys[1].Hint != "Help" {
 		t.Fatalf("footer[1] = %+v, want F1 Help", keys[1])
+	}
+	if keys[2].ActionID != keymap.ActionFileView {
+		t.Fatalf("footer[2] = %+v, want F3 View next to F1", keys[2])
 	}
 	var foundDelete, foundRefresh bool
 	for _, fk := range keys {

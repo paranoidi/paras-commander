@@ -274,8 +274,8 @@ func uniqueViewFooterKeys(global, unique *keymap.Map) []menu.FunctionKey {
 			out = append(out, menu.FunctionKey{Key: key, KeyLabel: lbl, Hint: hint, ActionID: action})
 		}
 	}
-	add(global, tcell.KeyNUL, keymap.ActionPanelRefresh, "Refresh")
 	add(global, tcell.KeyNUL, keymap.ActionFileView, "View")
+	add(global, tcell.KeyNUL, keymap.ActionPanelRefresh, "Refresh")
 	add(global, tcell.KeyNUL, keymap.ActionFileEdit, "Edit")
 	add(global, tcell.KeyNUL, keymap.ActionCopy, "Copy")
 	add(global, tcell.KeyNUL, keymap.ActionMove, "Move")
