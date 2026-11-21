@@ -1193,7 +1193,7 @@ func TestDedupViewFooterEscFirst(t *testing.T) {
 		if fk.Hint == "Delete" {
 			foundDelete = true
 		}
-		if fk.Hint == "Edit" || fk.Hint == "Copy" || fk.Hint == "Refresh" { // Refresh: menus only, the footer is full
+		if fk.Hint == "Edit" || fk.Hint == "Copy" || fk.Hint == "Refresh" || fk.Hint == "Compare" { // Refresh, Compare: menus only, the footer is full
 			t.Fatalf("footer lists unavailable browser action %q: %+v", fk.Hint, keys)
 		}
 	}

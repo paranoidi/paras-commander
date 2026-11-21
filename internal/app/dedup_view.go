@@ -333,9 +333,6 @@ func dedupViewFooterKeys(global, dedup *keymap.Map, treeDirs bool) []menu.Functi
 		if lbl := dedup.MenuBindingLabel(keymap.ActionDedupMarkKeep); lbl != "" {
 			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Keep", ActionID: keymap.ActionDedupMarkKeep})
 		}
-		if lbl := dedup.MenuBindingLabel(keymap.ActionDedupCompare); lbl != "" {
-			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Compare", ActionID: keymap.ActionDedupCompare})
-		}
 		if lbl := dedup.MenuBindingLabel(keymap.ActionOpenInPrimary); lbl != "" {
 			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Open ◄", ActionID: keymap.ActionOpenInPrimary})
 		}
