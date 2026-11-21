@@ -449,3 +449,16 @@ func TestBuildLeaderMenuEntriesMenuGroupIsBottomRow(t *testing.T) {
 		t.Errorf("git entry = %q %q, want G / Git menu", string(bottom[2].Key), bottom[2].Label)
 	}
 }
+
+// Every per-view leader menu that lists the fullscreen preview reaches it on 'v', like the browser's.
+func TestLeaderMenuFullScreenPreviewIsV(t *testing.T) {
+	b, err := DefaultBundle()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, vm := range []HelpViews{HelpDedup, HelpUnique, HelpSelectedStrip} {
+		if id, ok := b.ActionForLeaderKeyInView('v', vm); !ok || id != ActionFileView {
+			t.Fatalf("view %v 'v' = %q %v, want %s", vm, id, ok, ActionFileView)
+		}
+	}
+}

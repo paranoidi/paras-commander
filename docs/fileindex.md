@@ -334,7 +334,7 @@ directory under the cursor.
 | `F6` | Move to the other panel; the files leave the list |
 | `F8` | Delete, after a confirmation that warns the index knows no other copy; the files leave the list. If that would leave directories empty, a second question lists them and offers to remove them too, parents included at any depth, up to and including the directories checked and never above them (Yes is the default; Cancel deletes nothing and keeps the marks) |
 | `M-H` | Fully hash what the flagged files need, in a background job; the list refreshes when it ends |
-| `F3` / `F4` | View or edit the file |
+| `F3` / `F4` | View (leader `v`) or edit the file |
 | `S-Left` / `S-Right` | Show the row in the left or right panel |
 | `Alt+Insert` | Pin the row |
 

@@ -980,7 +980,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Find unique files",
 			DefaultKeys: nil, // overlay: DefaultUniqueOverlayKeys
 			Keywords:    []string{"back", "browser"},
-			LeaderKey:   "v",
+			LeaderKey:   "x",
 		},
 		{
 			ID:          ActionUniqueToggleNode,

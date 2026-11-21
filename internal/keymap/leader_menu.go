@@ -282,6 +282,7 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 			},
 			LeaderMenuGroupSelection: {ActionPanelSelectRange, ActionPanelClearSelection},
 			LeaderMenuGroupFile: {
+				ActionFileView,
 				ActionPanelRefresh,
 				ActionCopy,
 				ActionMove,
