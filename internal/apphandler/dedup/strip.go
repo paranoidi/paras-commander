@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/selstrip"
 	"github.com/paranoidi/paras-commander/internal/treeflat"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -45,7 +46,13 @@ func (h *Handler) OpenStripRowInPanel(panelID int) {
 // StripFile returns the strip row's path when it is a file (not a tree-mode folder row).
 func (h *Handler) StripFile() (string, bool) {
 	row, ok := h.stripRow()
-	return row.Path, ok && !row.Group
+	if !ok || row.Group {
+		return "", false
+	}
+	if loc, err := pathloc.Parse(row.Path); err == nil {
+		return diskPath(loc), true
+	}
+	return row.Path, true
 }
 
 // FoldStripRows applies a bulk tree action to the strip: panel.tree-collapse-all /

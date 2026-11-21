@@ -1,7 +1,10 @@
 package dedup
 
 import (
+	"strings"
 	"testing"
+
+	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -129,5 +132,37 @@ func TestStripTreeFolderRowUnmarksSubtree(t *testing.T) {
 	h.ToggleStripTree()
 	if model.SelectedStripTree() || len(h.stripRows()) != 1 {
 		t.Fatalf("flat mode rows = %+v", h.stripRows())
+	}
+}
+
+// An indexed view's rows are fileindex:// paths; the viewer gets the file on disk.
+func TestOpenableFilesOfIndexedViewAreHostPaths(t *testing.T) {
+	root, err := pathloc.FileIndex("/scan")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var files []comparepkg.DedupFile
+	for _, rel := range []string{"orchard/lantern.txt", "meadow/lantern.txt"} {
+		abs, err := pathloc.FileIndex("/scan/" + rel)
+		if err != nil {
+			t.Fatal(err)
+		}
+		files = append(files, comparepkg.DedupFile{Rel: rel, Abs: abs})
+	}
+	h, model := dedupHandlerWithView(t, dedupDoneSnapshot(root, files...), ui.DedupViewState{
+		Marked: map[string]bool{}, Kept: map[string]bool{}, Cache: &ui.DedupCache{},
+	})
+	h.setMark(files[0].Abs.String(), 100, true)
+	if got, ok := h.StripFile(); !ok || got != "/scan/orchard/lantern.txt" {
+		t.Fatalf("StripFile = %q %v, want the host path", got, ok)
+	}
+	for i, r := range model.DedupList {
+		if r.Value.Kind == ui.DedupRowFile && !r.HasChildren {
+			model.DedupView.Main.Selected = i
+			break
+		}
+	}
+	if got, ok := h.PaneOpenableFile(false); !ok || !strings.HasPrefix(got, "/scan/") {
+		t.Fatalf("PaneOpenableFile = %q %v, want a host path", got, ok)
 	}
 }

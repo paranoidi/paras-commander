@@ -1894,7 +1894,16 @@ func (h *Handler) PaneOpenableFile(copies bool) (string, bool) {
 	if !ok || row.HasChildren || row.Value.Kind != ui.DedupRowFile {
 		return "", false
 	}
-	return row.Value.File.Abs.String(), true
+	return diskPath(row.Value.File.Abs), true
+}
+
+// diskPath is the host path to open or view for loc: an indexed view's fileindex:// path maps
+// to the file it records (the viewer and the opener only read the disk).
+func diskPath(loc pathloc.Path) string {
+	if host, err := loc.Local().FilePath(); err == nil {
+		return host
+	}
+	return loc.String()
 }
 
 // ClearMarks unmarks every file and clears keep designations, reusing the
