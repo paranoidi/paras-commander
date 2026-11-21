@@ -203,6 +203,9 @@ func (a *App) openViewLeaderMenu() {
 	if a.model.ViewMode == ui.ViewDedup && !a.model.DedupView.HasPotential {
 		dimLeaderMenuAction(items, actions, keymap.ActionDedupHashPotential)
 	}
+	if a.model.ViewMode == ui.ViewUnique && len(a.model.UniqueView.ToHash) == 0 {
+		dimLeaderMenuAction(items, actions, keymap.ActionUniqueHashUnverified)
+	}
 	a.openLeaderMenuDispatch(items, actions, ui.LeaderMenuBuiltin, prefix, a.activateHelpAction)
 }
 

@@ -187,6 +187,9 @@ func (h *Handler) handleLookup(p LookupPayload) {
 		present[f.Path] = f.Size
 	}
 	st.ToHash = p.Result.ToHash
+	if h.model.ViewMode == ui.ViewUnique {
+		h.model.MenuDefinitions = h.host.UniqueMenuDefinitions() // dims Hash unverified files
+	}
 	h.keepMarksOf(present)
 	h.rebuild(cursor)
 	if len(p.Result.NotIndexed) > 0 {

@@ -3,7 +3,8 @@ package menu
 import "github.com/paranoidi/paras-commander/internal/keymap"
 
 // DefinitionsUnique returns top menus while the Find unique files view is active.
-func DefinitionsUnique() []Definition {
+// canHash is whether UniqueViewState.ToHash has files; without any Hash unverified files is dimmed.
+func DefinitionsUnique(canHash bool) []Definition {
 	return []Definition{
 		{
 			ID:         TopUnique,
@@ -16,7 +17,7 @@ func DefinitionsUnique() []Definition {
 				{Action: keymap.ActionCopy, Label: "Copy to the other panel", Shortcut: 'c'},
 				{Action: keymap.ActionMove, Label: "Move to the other panel", Shortcut: 'm'},
 				{Action: keymap.ActionFileDelete, Label: "Delete", Shortcut: 'd'},
-				{Action: keymap.ActionUniqueHashUnverified, Label: "Hash unverified files", Shortcut: 'h'},
+				{Action: keymap.ActionUniqueHashUnverified, Label: "Hash unverified files", Shortcut: 'h', Disabled: !canHash},
 				{Action: keymap.ActionPanelToggleHidden, Label: "Show / hide hidden files", Shortcut: 'i'},
 				{Action: keymap.ActionUniqueCollapseAll, Label: "Collapse all", Shortcut: 'l'},
 				{Action: keymap.ActionUniqueExpandAll, Label: "Expand all", Shortcut: 'e'},
@@ -39,8 +40,8 @@ func DefinitionsUnique() []Definition {
 
 // UniqueDefinitions returns DefinitionsUnique with KeyLabels resolved from global km plus the
 // view's overlay.
-func UniqueDefinitions(global, unique *keymap.Map) []Definition {
-	defs := DefinitionsUnique()
+func UniqueDefinitions(global, unique *keymap.Map, canHash bool) []Definition {
+	defs := DefinitionsUnique(canHash)
 	ApplyOverlayMenuKeyLabels(defs, global, unique)
 	return defs
 }

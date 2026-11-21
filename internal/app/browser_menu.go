@@ -7,7 +7,7 @@ func (a *App) browserMenuDefinitions() []menu.Definition {
 }
 
 func (a *App) uniqueMenuDefinitions() []menu.Definition {
-	return menu.UniqueDefinitions(a.keys.Global, a.keys.Unique)
+	return menu.UniqueDefinitions(a.keys.Global, a.keys.Unique, len(a.model.UniqueView.ToHash) > 0)
 }
 
 func (a *App) dedupMenuDefinitions() []menu.Definition {

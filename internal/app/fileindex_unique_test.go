@@ -508,11 +508,17 @@ func TestUniqueViewHashUnverifiedQueuesAndRefreshes(t *testing.T) {
 	if !slices.Contains(st.ToHash, harbor) || st.UnverifiedCount() != 1 {
 		t.Fatalf("toHash = %v unverified = %d", st.ToHash, st.UnverifiedCount())
 	}
+	if menuItemDisabled(t, a, keymap.ActionUniqueHashUnverified) {
+		t.Fatal("Hash unverified files dimmed with a file to hash")
+	}
 	a.dispatch(keymap.ActionUniqueHashUnverified)
 	if len(a.jobState.AllJobs()) != 1 {
 		t.Fatalf("jobs = %+v", a.jobState.AllJobs())
 	}
 	drainInterruptEventsUntil(t, a, screen, 5*time.Second, func() bool { return st.UnverifiedCount() == 0 && !st.Loading })
+	if !menuItemDisabled(t, a, keymap.ActionUniqueHashUnverified) {
+		t.Fatal("Hash unverified files not dimmed once every file is settled")
+	}
 }
 
 // Marks across directories get the multi-location preview, relative to their common root.
