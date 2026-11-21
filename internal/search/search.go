@@ -18,9 +18,9 @@ type Options struct {
 	CaseInsensitive bool
 }
 
-// Query is a parsed subset-fzf query.
+// Query is a parsed subset-fzf query: groups are ANDed, the terms inside a group are ORed.
 type Query struct {
-	terms []term
+	groups [][]term
 }
 
 type termKind int
@@ -53,45 +53,92 @@ type RankedResult struct {
 	Result Result
 }
 
-// Parse converts a whitespace-separated subset-fzf query into match terms.
+// Parse converts a whitespace-separated subset-fzf query into match terms. A bare "|" token
+// ORs the terms on either side of it into one group (fzf `a | b`); a stray leading, trailing
+// or doubled "|" is ignored and "|" inside a word stays literal. "\ " is a literal space
+// inside a term.
 func Parse(value string) Query {
-	fields := strings.Fields(value)
-	terms := make([]term, 0, len(fields))
-	for _, field := range fields {
+	var groups [][]term
+	orNext := false
+	for _, field := range tokenize(value) {
+		if field == "|" {
+			orNext = true
+			continue
+		}
 		parsed, ok := parseTerm(field)
-		if ok {
-			terms = append(terms, parsed)
+		if !ok {
+			continue
+		}
+		if orNext && len(groups) > 0 {
+			groups[len(groups)-1] = append(groups[len(groups)-1], parsed)
+		} else {
+			groups = append(groups, []term{parsed})
+		}
+		orNext = false
+	}
+	return Query{groups: groups}
+}
+
+// tokenize splits on unicode whitespace like strings.Fields, except that a space preceded by a
+// backslash is kept in the token (the backslash is dropped). Other backslashes stay literal.
+func tokenize(s string) []string {
+	var tokens []string
+	var cur []rune
+	flush := func() {
+		if len(cur) > 0 {
+			tokens = append(tokens, string(cur))
+			cur = cur[:0]
 		}
 	}
-	return Query{terms: terms}
+	runes := []rune(s)
+	for i := 0; i < len(runes); i++ {
+		switch r := runes[i]; {
+		case r == '\\' && i+1 < len(runes) && runes[i+1] == ' ':
+			cur = append(cur, ' ')
+			i++
+		case unicode.IsSpace(r):
+			flush()
+		default:
+			cur = append(cur, r)
+		}
+	}
+	flush()
+	return tokens
 }
 
 // Empty reports whether the query has no effective terms.
 func (q Query) Empty() bool {
-	return len(q.terms) == 0
+	return len(q.groups) == 0
 }
 
-// Match reports whether value satisfies all query terms.
+// Match reports whether value satisfies every group. A group is satisfied when any of its
+// terms is (an inverse term is satisfied when it does not match); its score and ranges come
+// from the best-scoring satisfied non-inverse term.
 func (q Query) Match(value string, opts Options) Result {
-	if len(q.terms) == 0 {
+	if len(q.groups) == 0 {
 		return Result{Matched: true}
 	}
 
 	totalScore := 0
 	var ranges []Range
-	for _, term := range q.terms {
-		result := matchTerm(term, value, opts)
-		if term.Inverse {
-			if result.Matched {
-				return Result{}
+	for _, group := range q.groups {
+		passed := false
+		var best Result
+		for _, term := range group {
+			result := matchTerm(term, value, opts)
+			if result.Matched == term.Inverse {
+				continue
 			}
-			continue
+			passed = true
+			if !term.Inverse && (!best.Matched || result.Score > best.Score) {
+				best = result
+			}
 		}
-		if !result.Matched {
+		if !passed {
 			return Result{}
 		}
-		totalScore += result.Score
-		ranges = append(ranges, result.Ranges...)
+		totalScore += best.Score
+		ranges = append(ranges, best.Ranges...)
 	}
 
 	return Result{
@@ -111,7 +158,7 @@ func (q Query) Rank(values []string, opts Options) []RankedResult {
 // If shouldCancel returns true the computation is abandoned and (nil, true) is returned.
 // Pass nil for shouldCancel to disable cancellation (equivalent to Rank).
 func (q Query) RankCancellable(values []string, opts Options, shouldCancel func() bool) ([]RankedResult, bool) {
-	if len(q.terms) == 0 {
+	if len(q.groups) == 0 {
 		results := make([]RankedResult, len(values))
 		for i := range values {
 			results[i] = RankedResult{Index: i, Result: Result{Matched: true}}
@@ -135,7 +182,7 @@ func (q Query) RankCancellable(values []string, opts Options, shouldCancel func(
 	return results, false
 }
 
-// parseTerm follows fzf extended-search token order: ! then $, then '…'/', then ^.
+// parseTerm parses one token (escaped spaces already resolved by tokenize). It follows fzf extended-search token order: ! then $, then '…'/', then ^.
 func parseTerm(field string) (term, bool) {
 	kind := termFuzzy
 	inverse := false

@@ -246,7 +246,7 @@ Panel quick-filter behavior.
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `mode` | string | `"fuzzy"` | Quick-filter matching mode. Currently only `"fuzzy"` is supported. |
-| `syntax` | string | `"subset-fzf"` | Quick-filter query syntax. Currently only `"subset-fzf"` is supported. |
+| `syntax` | string | `"subset-fzf"` | Quick-filter query syntax. Currently only `"subset-fzf"` is supported: fzf terms `^start`, `end$`, `'exact`, `!exclude`, space = AND, a standalone `\|` between terms = OR, `\ ` = literal space. |
 | `cycle_matches` | string | `"visual"` | How Up/Down move among quick-filter matches: `"visual"` (panel row order) or `"ranked"` (best fuzzy match first). |
 | `case_insensitive` | bool | `true` | Match panel quick-filter and find queries case-insensitively. |
 | `file` | string | `""` | Path of the saved [Filter and Select group patterns](panel-filter.md#saved-patterns-and-history) file. Empty uses `filters.toml` in the config directory. |

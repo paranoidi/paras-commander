@@ -25,7 +25,7 @@ Options in the dialog:
 
 | Mode | Query | Order |
 |---|---|---|
-| Fuzzy (default) | fzf-style terms: `^start`, `end$`, `'exact`, `!exclude`, space = AND | best match first |
+| Fuzzy (default) | fzf-style terms: `^start`, `end$`, `'exact`, `!exclude`, space = AND, `\|` between terms = OR (`^core go$ \| rb$`), `\ ` = literal space | best match first |
 | Glob | shell pattern (`*`, `?`, `[a-z]`) on the basename; with a `/` it matches the whole relative path and `*` crosses directories (`src/*_test.go`). A word without wildcards finds names containing it | breadth-first (shallow first) |
 | Regex | Go regular expression on the relative path (`_test\.go$`, `^docs/`) | breadth-first |
 

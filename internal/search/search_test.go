@@ -53,6 +53,78 @@ func TestMatchPrefixSuffixExactAndInverseTerms(t *testing.T) {
 	}
 }
 
+func TestMatchOrGroupsAndEscapedSpaces(t *testing.T) {
+	tests := []struct {
+		name  string
+		query string
+		value string
+		want  bool
+	}{
+		{name: "or first alternative", query: "walnut | harbor", value: "walnut.txt", want: true},
+		{name: "or second alternative", query: "walnut | harbor", value: "harbor.txt", want: true},
+		{name: "or neither alternative", query: "walnut | harbor", value: "lantern.txt", want: false},
+		{name: "or with and, left alternative", query: "^core | ^lib .go$", value: "lib_walnut.go", want: true},
+		{name: "or with and, right term fails", query: "^core | ^lib .go$", value: "lib_walnut.rb", want: false},
+		{name: "or with and, group fails", query: "^core | ^lib .go$", value: "walnut.go", want: false},
+		{name: "or suffixes", query: "^core go$ | rb$ | py$", value: "core_walnut.py", want: true},
+		{name: "or suffixes still need prefix", query: "^core go$ | rb$ | py$", value: "walnut.py", want: false},
+		{name: "or suffixes reject others", query: "^core go$ | rb$ | py$", value: "core_walnut.txt", want: false},
+		{name: "inverse satisfied by absence", query: "!harbor | ^core", value: "walnut.go", want: true},
+		{name: "inverse unsatisfied, other fails", query: "!harbor | ^core", value: "harbor_walnut.go", want: false},
+		{name: "other term rescues matched inverse", query: "!harbor | ^core", value: "core_harbor.go", want: true},
+		{name: "leading pipe ignored", query: "| walnut", value: "walnut", want: true},
+		{name: "leading pipe does not widen", query: "| walnut", value: "harbor", want: false},
+		{name: "trailing pipe ignored", query: "walnut |", value: "harbor", want: false},
+		{name: "doubled pipe joins neighbours", query: "walnut | | harbor", value: "harbor", want: true},
+		{name: "attached pipe is literal match", query: "a|b", value: "a|b", want: true},
+		{name: "attached pipe is not or", query: "a|b", value: "b", want: false},
+		{name: "escaped space matches space", query: `lantern\ walnut`, value: "lantern walnut.txt", want: true},
+		{name: "escaped space is not a separator", query: `lantern\ walnut`, value: "lantern_walnut.txt", want: false},
+		{name: "plain space still separates", query: "lantern walnut", value: "lantern_walnut.txt", want: true},
+		{name: "escaped space with exact prefix", query: `'lantern\ walnut`, value: "old lantern walnut.txt", want: true},
+		{name: "escaped space with exact prefix rejects scatter", query: `'lantern\ walnut`, value: "lantern x walnut.txt", want: false},
+		{name: "escaped space before pipe is not operator", query: `\ |`, value: "a |b", want: true},
+		{name: "other backslash stays literal", query: `lantern\walnut`, value: `lantern\walnut`, want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := Parse(tt.query).Match(tt.value, Options{CaseInsensitive: true}).Matched
+			if got != tt.want {
+				t.Fatalf("Parse(%q).Match(%q) matched = %v, want %v", tt.query, tt.value, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestEmptyAfterStrayPipes(t *testing.T) {
+	for _, q := range []string{"|", "| |", "  |  ", "! |"} {
+		if !Parse(q).Empty() {
+			t.Fatalf("Parse(%q).Empty() = false, want true", q)
+		}
+	}
+}
+
+func TestMatchOrRangesUseBestAlternative(t *testing.T) {
+	value := "core_walnut.rb"
+	// The prefix alternative outscores the suffix one, so only its range is reported.
+	got := Parse("rb$ | ^core").Match(value, Options{CaseInsensitive: true})
+	if !got.Matched {
+		t.Fatal("Match() matched = false, want true")
+	}
+	assertRanges(t, got.Ranges, []Range{{Start: 0, End: 4}})
+	want := Parse("^core").Match(value, Options{CaseInsensitive: true}).Score
+	if got.Score != want {
+		t.Fatalf("Score = %d, want best alternative's %d", got.Score, want)
+	}
+}
+
+func TestMatchOrInverseOnlySatisfactionScoresNothing(t *testing.T) {
+	got := Parse("!harbor | ^core").Match("walnut.go", Options{CaseInsensitive: true})
+	if !got.Matched || got.Score != 0 || len(got.Ranges) != 0 {
+		t.Fatalf("Match() = %+v, want matched with zero score and no ranges", got)
+	}
+}
+
 func TestRankOrdersBetterFuzzyMatchesFirst(t *testing.T) {
 	results := Parse("abc").Rank([]string{
 		"a-long-boring-candidate",
