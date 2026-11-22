@@ -328,7 +328,12 @@ func TestRenderBrowserListNavUpdateFullRendersWhenZoomDecisionChanged(t *testing
 		t.Fatal("zoom should be off at 160 cells without meta columns")
 	}
 
-	app.model.MetaResults[ui.PrimaryPanel] = wideMetaColumn()
+	// Cover every listed entry so the reconciler finds nothing missing and the widths are settled.
+	cols := wideMetaColumn()
+	for _, e := range app.activePanel().Entries {
+		cols[0].Results[e.Path] = strings.Repeat("x", 15)
+	}
+	app.model.MetaResults[ui.PrimaryPanel] = cols
 	if !app.zoomLayoutChanged(160, 30) {
 		t.Fatal("zoomLayoutChanged = false after meta columns squeezed the name column")
 	}
@@ -409,5 +414,25 @@ func TestLayoutForTerminalSizeKeepsEvenSplitWhenNamesFit(t *testing.T) {
 	lay := app.layoutForTerminalSize(160, 30)
 	if lay.Primary.Width != 80 || lay.Secondary.Width != 80 {
 		t.Fatalf("Left=%d Right=%d want 50/50", lay.Primary.Width, lay.Secondary.Width)
+	}
+}
+
+// A width guess carried over from the previous directory must not zoom for a frame: the name
+// gate holds its last decision until the meta widths settle, unless names cannot fit even
+// without meta.
+func TestZoomGateHoldsWhileMetaWidthsUnsettled(t *testing.T) {
+	// 45 cells: fits the 49-cell even-split name column at 120, not one squeezed by a 15-cell guess.
+	app := newZoomAppWithFile(t, 120, strings.Repeat("orchard-", 5)+"lake.txt")
+	app.model.MetaResults[ui.PrimaryPanel] = []ui.MetaColumnState{{
+		EntryName: "bramble", ColumnTitle: "Bramble", Guess: ui.MetaLayoutGuess{Width: 15},
+	}}
+	if lay := app.layoutForTerminalSize(120, 30); lay.Primary.Width != 60 {
+		t.Fatalf("unsettled guess Left=%d want 60 (held 50/50)", lay.Primary.Width)
+	}
+
+	long := newNameWidthZoomApp(t, 120)
+	long.model.MetaResults[ui.PrimaryPanel] = app.model.MetaResults[ui.PrimaryPanel]
+	if lay := long.layoutForTerminalSize(120, 30); lay.Primary.Width != 84 {
+		t.Fatalf("names too long even without meta Left=%d want 84 (zoomed)", lay.Primary.Width)
 	}
 }

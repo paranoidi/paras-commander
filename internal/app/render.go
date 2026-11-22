@@ -689,10 +689,22 @@ func (a *App) zoomActivePanelSuppressedByNameWidth(width int) bool {
 	if n <= 0 {
 		return false
 	}
-	nameW := ui.PanelNameColumnWidth(width/2, *a.activePanel(), a.model.UseNerdfontIcons,
-		a.model.NarrowPanelsNameOnly, a.model.MetaResults[a.model.ActivePanel])
+	p := a.activePanel()
+	cols := a.model.MetaResults[a.model.ActivePanel]
+	if len(cols) > 0 && !a.metaCtrl.LayoutSettled(a.model.ActivePanel) {
+		// Mid-navigation meta widths belong to the previous directory: deciding on them zooms
+		// for a frame and snaps back. Zoom only when names cannot fit even without meta (meta
+		// only narrows them); otherwise keep the last decision until the widths settle.
+		bare := ui.PanelNameColumnWidth(width/2, *p, a.model.UseNerdfontIcons, a.model.NarrowPanelsNameOnly, nil)
+		if bare < n && !ui.PanelNamesFit(p, bare) {
+			return false
+		}
+		return !a.model.PanelZoomEnabled
+	}
+	nameW := ui.PanelNameColumnWidth(width/2, *p, a.model.UseNerdfontIcons,
+		a.model.NarrowPanelsNameOnly, cols)
 	// Zoom only helps when names are cut off; if they all fit at the even split, keep it.
-	return nameW >= n || ui.PanelNamesFit(a.activePanel(), nameW)
+	return nameW >= n || ui.PanelNamesFit(p, nameW)
 }
 
 func (a *App) zoomActivePanelSuppressedByTerminalHeight(height int) bool {

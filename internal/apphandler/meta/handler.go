@@ -704,6 +704,21 @@ func (h *Handler) ColumnResolved(panelID int) bool {
 }
 
 // pendingCount is the number of dispatched cells still running across cols.
+// LayoutSettled reports whether panelID's meta column widths are final for its listing: no
+// meta.toml load or command in flight, nothing unpublished, and no width guess carried over from
+// an earlier listing. Until then the widths are the previous directory's.
+func (h *Handler) LayoutSettled(panelID int) bool {
+	if h.loadPending[panelID] {
+		return false
+	}
+	for _, c := range h.model.MetaResults[panelID] {
+		if c.PendingCount > 0 || c.LayoutGen != c.ResultsGen || c.Guess != (ui.MetaLayoutGuess{}) {
+			return false
+		}
+	}
+	return true
+}
+
 func pendingCount(cols []ui.MetaColumnState) int {
 	n := 0
 	for _, c := range cols {
