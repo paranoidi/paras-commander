@@ -273,7 +273,7 @@ func drawCarouselColumn(cp carouselColumnParams) {
 		}); len(suffixSpans) > 0 {
 			spans = append(suffixSpans, spans...)
 		}
-		spans = append(spans, panellist.ListingCutSpans(panellist.EntryDisplayRunes(entry, nameWidth, p.ShowIcons, rowSuffix, p.Styles), func(di int) tcell.Style {
+		spans = append(spans, panellist.ListingCutSpans(panellist.EntryDisplayRunes(entry, nameWidth, p.ShowIcons, rowSuffix, p.Styles), p.ChromeBlocked, func(di int) tcell.Style {
 			return blendCell(nameColOffset + di)
 		})...)
 		drawCarouselRowIconAndText(screen, cp, carouselRowPaintState{

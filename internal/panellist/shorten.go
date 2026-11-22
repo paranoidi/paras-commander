@@ -225,7 +225,11 @@ func shortenName(name []rune, width int, withExt bool) []DisplayRune {
 
 // ListingCutSpans returns spans recolouring the cells where the row's shortened name was cut
 // (theme.CutMarkStyle of the cell's own style). cellStyleAt gives the cell's style by display index.
-func ListingCutSpans(display []DisplayRune, cellStyleAt func(displayIndex int) tcell.Style) []primitive.Span {
+// While panel chrome is blocked there are no marks: cut cells keep the blocked name style.
+func ListingCutSpans(display []DisplayRune, chromeBlocked bool, cellStyleAt func(displayIndex int) tcell.Style) []primitive.Span {
+	if chromeBlocked {
+		return nil
+	}
 	var spans []primitive.Span
 	for i, dr := range display {
 		if dr.Cut {

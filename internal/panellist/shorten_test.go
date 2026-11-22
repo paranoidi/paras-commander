@@ -132,7 +132,10 @@ func TestEntryDisplayRunesShortensSymlinkKeepingMarkers(t *testing.T) {
 func TestListingCutSpansUseCutMarkStyle(t *testing.T) {
 	base := tcell.StyleDefault.Foreground(tcell.ColorNavy).Background(tcell.ColorBlack)
 	display := shortenName([]rune("Copperfield.Was.Wandering.2041.Orchard.Silver.v7.Lantern"), 20, true)
-	spans := ListingCutSpans(display, func(int) tcell.Style { return base })
+	spans := ListingCutSpans(display, false, func(int) tcell.Style { return base })
+	if got := ListingCutSpans(display, true, func(int) tcell.Style { return base }); got != nil {
+		t.Fatalf("blocked chrome: want no cut spans, got %v", got)
+	}
 	if len(spans) != 2 {
 		t.Fatalf("spans = %v", spans)
 	}

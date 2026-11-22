@@ -545,7 +545,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 			spans = append(suffixSpans, spans...)
 		}
 		nameDisplay := panellist.EntryDisplayRunes(cur, nameWidth, display.ShowIcons, rowSuffix, panelStyle.Styles)
-		spans = append(spans, panellist.ListingCutSpans(nameDisplay, func(di int) tcell.Style {
+		spans = append(spans, panellist.ListingCutSpans(nameDisplay, ctx.ChromeBlocked, func(di int) tcell.Style {
 			return blendCell(di + leftGutter + gitStrip + iconStrip + treeGutterWidth)
 		})...)
 	}
