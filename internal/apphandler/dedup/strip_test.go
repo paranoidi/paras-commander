@@ -19,26 +19,25 @@ func stripTestHandler(t *testing.T) (*Handler, *ui.Model) {
 	})
 }
 
-func TestStripJoinsFocusCycleOnlyWithMarks(t *testing.T) {
+func TestStripSkippedByFocusCycle(t *testing.T) {
 	h, model := stripTestHandler(t)
 	st := &model.DedupView
 	if h.ToggleStripFocus() {
 		t.Fatal("ToggleStripFocus with nothing marked = true, want false")
 	}
-	for range 4 {
+	h.setMark("/scan/orchard/lantern.txt", 100, true)
+	for range 8 {
 		h.SwitchPane()
 		if st.FocusSelected {
-			t.Fatal("strip focused by Tab without marks")
+			t.Fatal("Tab focused the strip")
 		}
 	}
-	h.setMark("/scan/orchard/lantern.txt", 100, true)
-	seen := false
-	for range 4 {
-		h.SwitchPane()
-		seen = seen || st.FocusSelected
+	if !h.ToggleStripFocus() || !st.FocusSelected {
+		t.Fatal("ToggleStripFocus with marks must focus the strip")
 	}
-	if !seen {
-		t.Fatal("Tab never reached the strip with a mark present")
+	h.SwitchPane()
+	if st.FocusSelected {
+		t.Fatal("Tab from the strip must move on to another pane")
 	}
 	h.focusPane(dedupPaneMain)
 	if !h.ToggleStripFocus() || !st.FocusSelected {

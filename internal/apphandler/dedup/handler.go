@@ -1003,7 +1003,7 @@ func (h *Handler) cyclePane(dir int) {
 		true,
 		len(h.model.DedupCopiesList) > 0,
 		h.model.DedupSnapshot.Phase == comparepkg.DedupDone,
-		h.model.DedupView.MarkedCount > 0,
+		false, // the Selected strip is reached only through panel.focus-selected
 	}
 	next := (h.focusedSlot() + dir + dedupPaneCount) % dedupPaneCount
 	for !avail[next] {
