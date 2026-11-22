@@ -157,7 +157,7 @@ func (h *Handler) handlePathKey(st *dialog.CommandOutputDialogState, event *tcel
 		if !ok || id != keymap.ActionCommandOutputToggleSelection {
 			return false
 		}
-		if _, conflicts := h.host.ActivePanel().TogglePathSelection(st.Paths[cur].Path); conflicts {
+		if _, conflicts := h.host.FocusedPanel().TogglePathSelection(st.Paths[cur].Path); conflicts {
 			h.host.SetTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
 		}
 		cur = min(cur+1, n-1)
@@ -178,7 +178,7 @@ func (h *Handler) handleGroupSelectionKey(st *dialog.CommandOutputDialogState, e
 		h.host.OpenOutputGroupSelect(false)
 	case keymap.ActionPanelInvertSelection:
 		uniq := st.UniquePaths()
-		conflicts := h.host.ActivePanel().InvertSelections(dialog.OutputMatchPaths(uniq), dialog.OutputMatchIsDir(uniq))
+		conflicts := h.host.FocusedPanel().InvertSelections(dialog.OutputMatchPaths(uniq), dialog.OutputMatchIsDir(uniq))
 		h.host.SetTransientMessage(fmt.Sprintf("Inverted %d", len(uniq)), ui.MessageUrgencyInfo)
 		if conflicts {
 			h.host.SetTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)

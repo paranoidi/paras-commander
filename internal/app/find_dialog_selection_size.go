@@ -5,7 +5,6 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
-	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
 // reconcileFindDialogSelectionSizeScans enqueues disk-usage walks for marked directories
@@ -13,7 +12,7 @@ import (
 // stat-syscall-heavy "what needs scanning" check runs on a debounced background goroutine
 // rather than inline on the main goroutine.
 func (a *App) reconcileFindDialogSelectionSizeScans() {
-	if a.disk.engine == nil || a.model.ViewMode != ui.ViewBrowser {
+	if a.disk.engine == nil || !a.fileListFocused() {
 		return
 	}
 	st := &a.model.FindDialog

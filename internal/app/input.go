@@ -953,6 +953,11 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	}
 
 	mode := a.inputMode()
+	if (mode == InputModeDedupView || mode == InputModeUniqueView) && a.model.EmbeddedPanelFocused() {
+		// The view's embedded panel takes the browser's key path; the view's own actions still
+		// reach the view first (actionFromKeyEvent, tryDispatchTreeViews).
+		mode = InputModeNormal
+	}
 	if handler, ok := inputModeKeyHandlers[mode]; ok {
 		quit := handler(a, event)
 		if !quit && mode == InputModeJobsView && a.jobsCtrl.ScrollKey(event) && a.shouldDeferNavPaint() {
@@ -1187,7 +1192,7 @@ func (a *App) shouldStartFilter(event *tcell.EventKey) bool {
 		// Printable keys bound in the keymap run their action instead of opening quick filter (e.g. '-' unselect group).
 		return false
 	}
-	return !ui.IsAuxiliaryView(a.model.ViewMode) &&
+	return a.fileListFocused() &&
 		(a.model.ViewMode != ui.ViewBrowser || a.model.ActiveSubFocus != ui.SubFocusInactivePreview) &&
 		!a.model.QuickFilterStartBlocked()
 }
@@ -1233,17 +1238,17 @@ func (a *App) stripFilterFocused() bool {
 
 func (a *App) activeQuickFilter() quickfilter.Filter {
 	if a.stripFilterFocused() {
-		return a.activePanel().Strip.Filter
+		return a.focusedPanel().Strip.Filter
 	}
-	return a.activePanel().Filter
+	return a.focusedPanel().Filter
 }
 
 func (a *App) cancelActiveQuickFilter() {
 	if a.stripFilterFocused() {
-		a.activePanel().CancelStripFilter(a.selectedStripViewportRows(a.model.ActivePanel))
+		a.focusedPanel().CancelStripFilter(a.selectedStripViewportRows(a.focusedPanelID()))
 		return
 	}
-	a.activePanel().CancelFilter(a.activeViewportRows())
+	a.focusedPanel().CancelFilter(a.focusedViewportRows())
 }
 
 // dispatchActionLikeKeyboardShortcut runs the same effects as the bound key in normal browser mode.
@@ -1299,6 +1304,9 @@ func (a *App) dispatch(actionID string) bool {
 	if a.tryDispatchSelectedStrip(actionID) {
 		return false
 	}
+	if a.tryDispatchTreeViews(actionID) {
+		return false
+	}
 	if a.jobsCtrl.TryDispatch(actionID) {
 		return false
 	}
@@ -1312,9 +1320,6 @@ func (a *App) dispatch(actionID string) bool {
 		return false
 	}
 	if a.tryDispatchCompare(actionID) {
-		return false
-	}
-	if a.tryDispatchTreeViews(actionID) {
 		return false
 	}
 	if handled, quit := a.tryDispatchNavigation(actionID); handled {
@@ -1332,8 +1337,8 @@ func (a *App) dispatch(actionID string) bool {
 	if a.previewCtrl.TryDispatchFileView(actionID) {
 		return false
 	}
-	viewportRows := a.activeViewportRows()
-	activePanel := a.activePanel()
+	viewportRows := a.focusedViewportRows()
+	activePanel := a.focusedPanel()
 	switch actionID {
 	case keymap.ActionAppOpenMenu:
 		a.openMenu()
@@ -1354,9 +1359,11 @@ func (a *App) dispatch(actionID string) bool {
 	case keymap.ActionPanelRefresh:
 		a.reloadActive("Panel refreshed")
 	case keymap.ActionPanelExternalBrowser:
-		a.openPanelPathInExternalBrowser(a.model.ActivePanel)
+		a.openPanelPathInExternalBrowser(a.focusedPanelID())
 	case keymap.ActionPanelDiskUsageScan:
-		a.requestDiskUsageScanForPanel(a.model.ActivePanel)
+		if a.model.ViewMode == ui.ViewBrowser { // disk usage is a browser-pair feature
+			a.requestDiskUsageScanForPanel(a.model.ActivePanel)
+		}
 	case keymap.ActionPanelDirSize:
 		a.scanCursorDirSize()
 	case keymap.ActionPanelSwitch:
@@ -1379,7 +1386,7 @@ func (a *App) dispatch(actionID string) bool {
 		a.metaCtrl.EditMetaFile()
 	case keymap.ActionPanelFilterOpen:
 		if a.stripFilterFocused() {
-			a.activePanel().OpenStripFilter(a.selectedStripViewportRows(a.model.ActivePanel))
+			a.focusedPanel().OpenStripFilter(a.selectedStripViewportRows(a.focusedPanelID()))
 		} else {
 			activePanel.OpenFilter(viewportRows)
 		}
@@ -1387,7 +1394,7 @@ func (a *App) dispatch(actionID string) bool {
 	case keymap.ActionBookmarkOpen:
 		a.dialogCtrl.OpenBookmarkDialog()
 	case keymap.ActionNavNavigateTo:
-		if a.model.ViewMode == ui.ViewBrowser {
+		if a.fileListFocused() {
 			a.dialogCtrl.OpenNavigateToDialog()
 		}
 	case keymap.ActionBookmarkAdd:
@@ -1398,17 +1405,17 @@ func (a *App) dispatch(actionID string) bool {
 		a.toggleSyncFollow()
 	case keymap.ActionPanelHistoryDialog:
 		// Keyboard/menu shortcut targets whichever panel is active (left vs right).
-		a.openHistoryDialog(a.model.ActivePanel)
+		a.openHistoryDialog(a.focusedPanelID())
 	case keymap.ActionPanelPinDialog:
 		a.pinCtrl.OpenDialog()
 	case keymap.ActionPanelGitFilterMenu:
 		a.toggleGitFilterMenu()
 	case keymap.ActionPanelFolderColorMenu:
-		a.openFolderColorMenu(a.model.ActivePanel)
+		a.openFolderColorMenu(a.focusedPanelID())
 	case keymap.ActionPanelFindDialog:
-		a.openFindDialog(a.model.ActivePanel)
+		a.openFindDialog(a.focusedPanelID())
 	case keymap.ActionPanelJumpDialog:
-		a.openJumpDialog(a.model.ActivePanel)
+		a.openJumpDialog(a.focusedPanelID())
 	case keymap.ActionAppUserMenu:
 		a.toggleUserMenu()
 	case keymap.ActionAppLeaderMenu:
@@ -1465,8 +1472,8 @@ func (a *App) handleFilterKey(event *tcell.EventKey) {
 		a.handleStripFilterKey(event)
 		return
 	}
-	activePanel := a.activePanel()
-	viewportRows := a.activeViewportRows()
+	activePanel := a.focusedPanel()
+	viewportRows := a.focusedViewportRows()
 	switch event.Key() {
 	case tcell.KeyEsc:
 		activePanel.CancelFilter(viewportRows)
@@ -1511,7 +1518,7 @@ func (a *App) handleFilterKey(event *tcell.EventKey) {
 }
 
 func (a *App) handleStripFilterKey(event *tcell.EventKey) {
-	p := a.activePanel()
+	p := a.focusedPanel()
 	vr := a.selectedStripViewportRows(a.model.ActivePanel)
 	switch event.Key() {
 	case tcell.KeyEsc:
@@ -1564,7 +1571,7 @@ func (a *App) handleSelectedStripKey(event *tcell.EventKey) bool {
 			event = remapped
 		}
 	}
-	p := a.activePanel()
+	p := a.focusedPanel()
 	vr := a.selectedStripViewportRows(a.model.ActivePanel)
 	switch event.Key() {
 	case tcell.KeyUp:

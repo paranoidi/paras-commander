@@ -20,7 +20,7 @@ func (fakePinHost) LayoutForTerminalSize(w, h int) ui.Layout      { return ui.La
 func (fakePinHost) SetTransientMessage(string, ui.MessageUrgency) {}
 func (fakePinHost) SetErrorMessage(string, error)                 {}
 func (fakePinHost) NavigatePanelToPath(int, string, string) error { return nil }
-func (fakePinHost) ActivePanel() *panel.State                     { return &panel.State{} }
+func (fakePinHost) FocusedPanel() *panel.State                    { return &panel.State{} }
 func (fakePinHost) PanelByID(int) *panel.State                    { return &panel.State{} }
 func (fakePinHost) PanelViewportRows(int) int                     { return 20 }
 func (fakePinHost) InQuickFilterUI() bool                         { return false }

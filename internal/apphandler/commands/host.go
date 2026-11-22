@@ -15,8 +15,8 @@ type Host interface {
 	host.MessageHost
 	host.ShellHost
 
-	ActivePanel() *panel.State
-	InactivePanel() *panel.State
+	FocusedPanel() *panel.State
+	DestinationPanel() *panel.State
 
 	// Styles returns the current theme snapshot, read fresh on every use (the settings/theme
 	// dialogs mutate it in place after construction) — needed for the run-for-each PTY

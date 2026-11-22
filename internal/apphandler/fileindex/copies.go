@@ -32,7 +32,7 @@ func (h *Handler) Copies() {
 	if !h.localOrIndex() {
 		return
 	}
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	entry, ok := p.CurrentEntry()
 	if !ok || entry.IsDir() {
 		h.host.SetTransientMessage(copiesTitle+" works on files", ui.MessageUrgencyWarn)
@@ -43,7 +43,7 @@ func (h *Handler) Copies() {
 		h.host.SetErrorMessage(copiesTitle, err)
 		return
 	}
-	res := CopiesPayload{PanelID: h.model.ActivePanel, Path: entry.Path, Name: entry.Name, IndexPanel: p.Path.Scheme() == pathloc.SchemeFileIndex}
+	res := CopiesPayload{PanelID: h.model.FocusedPanelID(), Path: entry.Path, Name: entry.Name, IndexPanel: p.Path.Scheme() == pathloc.SchemeFileIndex}
 	h.WithIndex(func() {
 		go func() {
 			res.Files, res.State, res.Err = h.index.OtherCopies(host)
@@ -58,7 +58,7 @@ func (h *Handler) CopiesOutside() {
 	if !h.localOrIndex() {
 		return
 	}
-	dir, err := hostPath(h.host.ActivePanel().PathString())
+	dir, err := hostPath(h.host.FocusedPanel().PathString())
 	if err != nil {
 		h.host.SetErrorMessage(copiesOutsideTitle, err)
 		return
@@ -76,7 +76,7 @@ func (h *Handler) FindDuplicates() {
 	if !h.localOrIndex() {
 		return
 	}
-	dir, err := hostPath(h.host.ActivePanel().PathString())
+	dir, err := hostPath(h.host.FocusedPanel().PathString())
 	if err != nil {
 		h.host.SetErrorMessage(findDuplicatesTitle, err)
 		return
@@ -84,10 +84,10 @@ func (h *Handler) FindDuplicates() {
 	h.host.OpenDedupIndexed(dir)
 }
 
-// stillBrowsing reports whether a result started from panelID can still be shown: the browser is
-// up, no dialog is open and that panel is still active.
+// stillBrowsing reports whether a result started from panelID can still be shown: a file list has
+// focus, no dialog is open and panelID is still the focused panel.
 func (h *Handler) stillBrowsing(panelID int) bool {
-	return h.model.ViewMode == ui.ViewBrowser && !h.model.ModalDialogOpen() && h.model.ActivePanel == panelID
+	return h.model.FileListFocused() && !h.model.ModalDialogOpen() && h.model.FocusedPanelID() == panelID
 }
 
 // HandleCopies shows the lookup unless the user has moved on since it started.
@@ -95,7 +95,7 @@ func (h *Handler) HandleCopies(p CopiesPayload) {
 	if !h.stillBrowsing(p.PanelID) {
 		return
 	}
-	if cur, ok := h.host.ActivePanel().CurrentEntry(); !ok || cur.Path != p.Path {
+	if cur, ok := h.host.FocusedPanel().CurrentEntry(); !ok || cur.Path != p.Path {
 		return
 	}
 	switch {

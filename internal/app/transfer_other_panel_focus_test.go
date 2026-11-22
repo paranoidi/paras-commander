@@ -27,13 +27,13 @@ func TestCopyToOtherPanelFocusesTransferredEntry(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, srcDir)
-	if err := app.inactivePanel().Load(dstDir); err != nil {
+	if err := app.otherBrowserPanel().Load(dstDir); err != nil {
 		t.Fatal(err)
 	}
 	applyNextInterruptEvent(t, app, screen)
-	selectPanelEntryByName(t, app.inactivePanel(), "meadow.txt")
+	selectPanelEntryByName(t, app.otherBrowserPanel(), "meadow.txt")
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	selectPanelEntryByName(t, p, "willow.txt")
 	p.SelectedPaths = map[string]bool{src: true}
 
@@ -43,11 +43,11 @@ func TestCopyToOtherPanelFocusesTransferredEntry(t *testing.T) {
 	drainInterruptEventsUntil(t, app, screen, 5*time.Second, func() bool {
 		app.jobsCtrl.PollEvents()
 		_ = app.jobsCtrl.ApplyRefreshes()
-		e, ok := app.inactivePanel().CurrentEntry()
+		e, ok := app.otherBrowserPanel().CurrentEntry()
 		return ok && e.Name == "willow.txt"
 	})
 
-	e, ok := app.inactivePanel().CurrentEntry()
+	e, ok := app.otherBrowserPanel().CurrentEntry()
 	if !ok || e.Name != "willow.txt" {
 		t.Fatalf("inactive cursor = %v ok=%v, want willow.txt", e, ok)
 	}
@@ -72,13 +72,13 @@ func TestCopyToOtherPanelSelectsFirstInPanelOrder(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, srcDir)
-	if err := app.inactivePanel().Load(dstDir); err != nil {
+	if err := app.otherBrowserPanel().Load(dstDir); err != nil {
 		t.Fatal(err)
 	}
 	applyNextInterruptEvent(t, app, screen)
-	selectPanelEntryByName(t, app.inactivePanel(), "anchor.txt")
+	selectPanelEntryByName(t, app.otherBrowserPanel(), "anchor.txt")
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{zebra: true, cedar: true}
 
 	app.dialogCtrl.OpenCopyDialog()
@@ -87,11 +87,11 @@ func TestCopyToOtherPanelSelectsFirstInPanelOrder(t *testing.T) {
 	drainInterruptEventsUntil(t, app, screen, 5*time.Second, func() bool {
 		app.jobsCtrl.PollEvents()
 		_ = app.jobsCtrl.ApplyRefreshes()
-		e, ok := app.inactivePanel().CurrentEntry()
+		e, ok := app.otherBrowserPanel().CurrentEntry()
 		return ok && e.Name == "cedar.txt"
 	})
 
-	e, ok := app.inactivePanel().CurrentEntry()
+	e, ok := app.otherBrowserPanel().CurrentEntry()
 	if !ok || e.Name != "cedar.txt" {
 		t.Fatalf("inactive cursor = %v ok=%v, want cedar.txt (first in panel order)", e, ok)
 	}
@@ -113,26 +113,26 @@ func TestCopyToOtherPanelSkipsWhenUserMovedCursor(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, srcDir)
-	if err := app.inactivePanel().Load(dstDir); err != nil {
+	if err := app.otherBrowserPanel().Load(dstDir); err != nil {
 		t.Fatal(err)
 	}
 	applyNextInterruptEvent(t, app, screen)
-	selectPanelEntryByName(t, app.inactivePanel(), "anchor.txt")
+	selectPanelEntryByName(t, app.otherBrowserPanel(), "anchor.txt")
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	selectPanelEntryByName(t, p, "willow.txt")
 	p.SelectedPaths = map[string]bool{src: true}
 
 	app.dialogCtrl.OpenCopyDialog()
 	app.dialogCtrl.ConfirmCopy()
 	// Move inactive cursor before any refresh/reconcile applies pending focus.
-	selectPanelEntryByName(t, app.inactivePanel(), "meadow.txt")
+	selectPanelEntryByName(t, app.otherBrowserPanel(), "meadow.txt")
 
 	flushBackgroundJobs(t, app)
 	_ = app.jobsCtrl.ApplyRefreshes()
 	app.dialogCtrl.ReconcilePendingPanelFocus()
 
-	e, ok := app.inactivePanel().CurrentEntry()
+	e, ok := app.otherBrowserPanel().CurrentEntry()
 	if !ok || e.Name != "meadow.txt" {
 		t.Fatalf("inactive cursor = %v ok=%v, want meadow.txt (user choice preserved)", e, ok)
 	}
@@ -166,13 +166,13 @@ func TestCopyToOtherPanelFocusDisabledByConfig(t *testing.T) {
 		}
 		app.stopWorker()
 	})
-	if err := app.inactivePanel().Load(dstDir); err != nil {
+	if err := app.otherBrowserPanel().Load(dstDir); err != nil {
 		t.Fatal(err)
 	}
 	applyNextInterruptEvent(t, app, screen)
-	selectPanelEntryByName(t, app.inactivePanel(), "anchor.txt")
+	selectPanelEntryByName(t, app.otherBrowserPanel(), "anchor.txt")
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	selectPanelEntryByName(t, p, "willow.txt")
 	p.SelectedPaths = map[string]bool{src: true}
 
@@ -182,7 +182,7 @@ func TestCopyToOtherPanelFocusDisabledByConfig(t *testing.T) {
 	_ = app.jobsCtrl.ApplyRefreshes()
 	app.dialogCtrl.ReconcilePendingPanelFocus()
 
-	e, ok := app.inactivePanel().CurrentEntry()
+	e, ok := app.otherBrowserPanel().CurrentEntry()
 	if !ok || e.Name != "anchor.txt" {
 		t.Fatalf("inactive cursor = %v ok=%v, want anchor.txt (focus disabled)", e, ok)
 	}
@@ -205,13 +205,13 @@ func TestCopyToNonOtherPanelDoesNotFocusInactive(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, srcDir)
-	if err := app.inactivePanel().Load(dstDir); err != nil {
+	if err := app.otherBrowserPanel().Load(dstDir); err != nil {
 		t.Fatal(err)
 	}
 	applyNextInterruptEvent(t, app, screen)
-	selectPanelEntryByName(t, app.inactivePanel(), "anchor.txt")
+	selectPanelEntryByName(t, app.otherBrowserPanel(), "anchor.txt")
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	selectPanelEntryByName(t, p, "willow.txt")
 	p.SelectedPaths = map[string]bool{src: true}
 
@@ -223,7 +223,7 @@ func TestCopyToNonOtherPanelDoesNotFocusInactive(t *testing.T) {
 	_ = app.jobsCtrl.ApplyRefreshes()
 	app.dialogCtrl.ReconcilePendingPanelFocus()
 
-	e, ok := app.inactivePanel().CurrentEntry()
+	e, ok := app.otherBrowserPanel().CurrentEntry()
 	if !ok || e.Name != "anchor.txt" {
 		t.Fatalf("inactive cursor = %v ok=%v, want anchor.txt (dest was not other panel)", e, ok)
 	}

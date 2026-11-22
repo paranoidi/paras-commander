@@ -42,11 +42,11 @@ func indexScanApp(t *testing.T, body string) (a *App, screen tcell.SimulationScr
 // moveOtherPanel loads dir in the other panel and waits for it to land (Load is async).
 func moveOtherPanel(t *testing.T, a *App, screen tcell.SimulationScreen, dir string) {
 	t.Helper()
-	if err := a.inactivePanel().Load(dir); err != nil {
+	if err := a.otherBrowserPanel().Load(dir); err != nil {
 		t.Fatal(err)
 	}
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
-		return a.inactivePanel().PathString() == dir
+		return a.otherBrowserPanel().PathString() == dir
 	})
 }
 
@@ -235,7 +235,7 @@ run_for_each = ["files"]
 background = true
 fileindex_scan = "%D"
 `)
-	a.activePanel().SelectedPaths = map[string]bool{
+	a.focusedPanel().SelectedPaths = map[string]bool{
 		filepath.Join(dir, "harbor.txt"): true,
 		filepath.Join(dir, "meadow.txt"): true,
 	}

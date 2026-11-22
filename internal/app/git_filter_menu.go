@@ -67,7 +67,7 @@ func (a *App) toggleGitFilterMenu() {
 		if i < 0 || i >= len(filters) {
 			return false
 		}
-		a.activePanel().SetEntryFilter(filters[i])
+		a.focusedPanel().SetEntryFilter(filters[i])
 		return false
 	})
 	if opened {

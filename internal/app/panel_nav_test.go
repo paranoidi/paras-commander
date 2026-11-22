@@ -446,7 +446,7 @@ func TestOpenInOtherPanelDisablesSync(t *testing.T) {
 
 	app.model.SyncFollowEnabled = true
 	app.model.SyncFollowPanel = ui.PrimaryPanel
-	if _, err := left.Enter(app.activeViewportRows()); err != nil {
+	if _, err := left.Enter(app.focusedViewportRows()); err != nil {
 		t.Fatal(err)
 	}
 	app.dispatch(keymap.ActionPanelOpenActivePathInOther)
@@ -522,15 +522,15 @@ func TestParentNavigationCentersInAppViewport(t *testing.T) {
 	app := newApp(t, screen, bar)
 	app.model.ActivePanel = ui.PrimaryPanel
 	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "asdf")
-	if _, err := app.activePanel().Enter(app.activeViewportRows()); err != nil {
+	if _, err := app.focusedPanel().Enter(app.focusedViewportRows()); err != nil {
 		t.Fatal(err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, entering asdf
 	app.dispatch(keymap.ActionNavParent)
 	applyNextInterruptEvent(t, app, screen) // async load, Parent back to bar
 	app.render()
-	p := app.activePanel()
-	vr := app.activeViewportRows()
+	p := app.focusedPanel()
+	vr := app.focusedViewportRows()
 	if vr < 1 {
 		t.Fatalf("viewportRows = %d", vr)
 	}
@@ -585,7 +585,7 @@ func TestParentCentersWhenSelectedStripShrinksAfterChdir(t *testing.T) {
 		t.Fatal("strip should be hidden while cross-dir selections are in the current directory")
 	}
 	selectPanelEntryByName(t, left, "sub")
-	if _, err := left.Enter(app.activeViewportRows()); err != nil {
+	if _, err := left.Enter(app.focusedViewportRows()); err != nil {
 		t.Fatal(err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, entering sub
@@ -609,7 +609,7 @@ func TestParentCentersWhenSelectedStripShrinksAfterChdir(t *testing.T) {
 		t.Fatal(err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, Parent back to root
-	vr := app.activeViewportRows()
+	vr := app.focusedViewportRows()
 	if staleVR >= vr {
 		t.Fatalf("staleVR = %d, want smaller than post-parent %d (strip must shrink file list)", staleVR, vr)
 	}

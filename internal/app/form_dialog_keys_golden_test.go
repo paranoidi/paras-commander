@@ -185,7 +185,7 @@ func extractKeyDialog(name string, note bool) keyGoldenDialog {
 
 func openExtractOn(note bool) func(t *testing.T, app *App, dir string) {
 	return func(t *testing.T, app *App, dir string) {
-		harbor := app.activePanel().PathString()
+		harbor := app.focusedPanel().PathString()
 		for _, d := range []string{"orchard", "otter", "oak"} {
 			if err := os.MkdirAll(filepath.Join(dir, "projects", "meadow", d), 0o755); err != nil {
 				t.Fatal(err)
@@ -197,7 +197,7 @@ func openExtractOn(note bool) func(t *testing.T, app *App, dir string) {
 		}
 		for _, n := range names {
 			writeFile(t, filepath.Join(harbor, n))
-			app.activePanel().AddSelection(filepath.Join(harbor, n))
+			app.focusedPanel().AddSelection(filepath.Join(harbor, n))
 		}
 		app.dispatch(keymap.ActionFileExtract)
 		fd := &app.model.FileDialog

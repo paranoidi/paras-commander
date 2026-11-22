@@ -390,15 +390,15 @@ func TestFindDialogSelectsFile(t *testing.T) {
 	// than assume the very next event is ours.
 	wantDir := filepath.Clean(sub)
 	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
-		return filepath.Clean(app.activePanel().Path.String()) == wantDir
+		return filepath.Clean(app.focusedPanel().Path.String()) == wantDir
 	})
 	if app.model.FindDialog.Open {
 		t.Fatal("expected dialog closed")
 	}
-	if got := filepath.Clean(app.activePanel().Path.String()); got != wantDir {
+	if got := filepath.Clean(app.focusedPanel().Path.String()); got != wantDir {
 		t.Fatalf("panel dir = %q want %q", got, wantDir)
 	}
-	entry, ok := app.activePanel().CurrentEntry()
+	entry, ok := app.focusedPanel().CurrentEntry()
 	if !ok || entry.Name != "target.go" {
 		t.Fatalf("cursor entry = %+v ok=%v, want target.go", entry, ok)
 	}

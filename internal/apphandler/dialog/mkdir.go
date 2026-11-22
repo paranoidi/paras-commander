@@ -58,14 +58,14 @@ func (h *Handler) MkdirDialogExtractFooterEligible() bool {
 	if !d.Open || d.DialogType != dialog.FileDialogMkdir {
 		return false
 	}
-	if len(h.host.ActivePanel().SelectedPaths) < 2 {
+	if len(h.host.FocusedPanel().SelectedPaths) < 2 {
 		return false
 	}
 	return h.keysMkdirDialog.MenuBindingLabel(keymap.ActionFileMkdirExtractCommonName) != ""
 }
 
 func (h *Handler) applyMkdirExtractCommonName() bool {
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	source, err := ops.ResolveSource(p)
 	if err != nil || len(source.Entries) < 2 {
 		h.host.SetErrorMessage("Mkdir", ops.SourceError("select at least two entries to extract a common name"))

@@ -92,7 +92,7 @@ func singleCopyTarget(path string) ([]string, []localfs.Entry, string) {
 func (a *App) copyTargets() (paths []string, entries []localfs.Entry, dirPath, warn string, ok bool) {
 	switch a.model.ViewMode {
 	case ui.ViewBrowser:
-		p := a.activePanel()
+		p := a.focusedPanel()
 		return panelTargetPaths(p), panelTargetEntries(p), p.CursorDir().String(), "", true
 	case ui.ViewFilePreview:
 		path := a.model.FullscreenFilePreview.Path
@@ -151,7 +151,7 @@ func (a *App) fileContentsCopyTarget() (string, bool) {
 		fp := &a.model.FullscreenFilePreview
 		return fp.Path, fp.Path != "" && !fp.IsDir && fp.ImagePayload == ""
 	case ui.ViewBrowser:
-		e, ok := a.activePanel().CurrentEntry()
+		e, ok := a.focusedPanel().CurrentEntry()
 		if !ok || e.Name == ".." || e.Type != localfs.EntryFile {
 			return "", false
 		}

@@ -220,7 +220,7 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 		return true
 	case keymap.ActionDedupCompare:
 		if p, s, ok := a.dedupCtrl.CompareDirsFromSelection(); ok {
-			showHidden := a.activePanel().ShowHidden
+			showHidden := a.activeBrowserPanel().ShowHidden
 			a.resolveSelectionBeforeCompare(func() {
 				a.compareCtrl.OpenPaths(p, s, showHidden, func() { a.dedupCtrl.ReopenPreservingState() })
 			})
@@ -387,9 +387,6 @@ func (a *App) handleDedupViewKey(event *tcell.EventKey) bool {
 	if nextAction != "" && a.tryDispatchAuxiliaryScreens(nextAction) {
 		return false
 	}
-	if a.model.DedupView.FocusPanel {
-		return a.handleDedupPanelKey(nextAction, event)
-	}
 	if a.model.DedupView.FocusSelected {
 		return a.handleDedupStripKey(nextAction, event)
 	}
@@ -497,7 +494,7 @@ func (a *App) handleDedupStripKey(action string, event *tcell.EventKey) bool {
 	case keymap.ActionDestinationActivePanel:
 		c.OpenStripRowInPanel(a.model.ActivePanel)
 	case keymap.ActionDestinationInactivePanel:
-		c.OpenStripRowInPanel(a.inactivePanelID())
+		c.OpenStripRowInPanel(a.otherBrowserPanelID())
 	case keymap.ActionPanelTreeCollapseAll, keymap.ActionDedupCollapseAll,
 		keymap.ActionPanelTreeExpandAllShallow, keymap.ActionDedupExpandAll:
 		c.FoldStripRows(action)

@@ -26,7 +26,7 @@ func (h *Handler) OpenExtractDialog(p *panel.State) {
 		h.host.SetTransientMessage("No supported archives selected", ui.MessageUrgencyWarn)
 		return
 	}
-	fields := []dialog.FileDialogField{DialogDestinationField(h.host.InactivePanel().PathString(), false)}
+	fields := []dialog.FileDialogField{DialogDestinationField(h.host.DestinationPanel().PathString(), false)}
 	msg := ""
 	if skipped > 0 {
 		msg = fmt.Sprintf("%d non-archive item(s) will be skipped.", skipped)
@@ -155,7 +155,7 @@ func extractQueuedMessage(n int, skipped []string) string {
 }
 
 func (h *Handler) finishExtractEnqueueSources(sources []string, dest string, asDir bool, skipped []string) {
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	p.ClearSelection()
 	h.jobs.EnqueueExtractJob(sources, dest, asDir)
 	h.host.SetTransientMessage(extractQueuedMessage(len(sources), skipped), ui.MessageUrgencyInfo)
@@ -168,5 +168,5 @@ func (h *Handler) updateExtractTargetPanels() {
 	if !d.Open || d.DialogType != dialog.FileDialogExtract || len(d.Fields) == 0 {
 		return
 	}
-	h.updateDestinationTargetPanels(h.host.ActivePanel().PathString(), d.Fields[0].Value, false)
+	h.updateDestinationTargetPanels(h.host.FocusedPanel().PathString(), d.Fields[0].Value, false)
 }

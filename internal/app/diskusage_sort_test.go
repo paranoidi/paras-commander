@@ -52,7 +52,7 @@ func TestParentStaysCenteredAfterDiskUsageResort(t *testing.T) {
 
 	app.model.ActivePanel = ui.PrimaryPanel
 	selectPanelEntryByName(t, left, "asdf")
-	if _, err := left.Enter(app.activeViewportRows()); err != nil {
+	if _, err := left.Enter(app.focusedViewportRows()); err != nil {
 		t.Fatal(err)
 	}
 	waitPanelListingApplied(t, app, screen, left, asdf)
@@ -60,8 +60,8 @@ func TestParentStaysCenteredAfterDiskUsageResort(t *testing.T) {
 	waitPanelListingApplied(t, app, screen, left, bar)
 	app.resortPanelsDiskUsageSorted()
 
-	vr := app.activeViewportRows()
-	p := app.activePanel()
+	vr := app.focusedViewportRows()
+	p := app.focusedPanel()
 	row := p.Cursor - p.ScrollOffset
 	mid := vr / 2
 	if row != mid && row != vr-1 {

@@ -27,9 +27,9 @@ func (h jobsHost) RequestBothPanelsVolumeSpaceRefreshAsync() {
 	h.app.requestBothPanelsVolumeSpaceRefreshAsync()
 }
 
-func (h jobsHost) ActivePanelSources() []string { return h.app.dialogCtrl.ActivePanelSources() }
+func (h jobsHost) FocusedPanelSources() []string { return h.app.dialogCtrl.FocusedPanelSources() }
 
-func (h jobsHost) InactivePanel() *panel.State { return h.app.inactivePanel() }
+func (h jobsHost) DestinationPanel() *panel.State { return h.app.destinationPanel() }
 
 func (h jobsHost) PrimaryPanel() *panel.State { return &h.app.model.Primary }
 

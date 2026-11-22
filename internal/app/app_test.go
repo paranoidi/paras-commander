@@ -208,7 +208,7 @@ func TestMenuShortcutCopyOpensTransferDialog(t *testing.T) {
 	screen.SetSize(80, 20)
 
 	app := newTestApp(t, screen, testOptions(dir))
-	if err := app.inactivePanel().Load(dstDir); err != nil {
+	if err := app.otherBrowserPanel().Load(dstDir); err != nil {
 		t.Fatalf("inactive Load: %v", err)
 	}
 

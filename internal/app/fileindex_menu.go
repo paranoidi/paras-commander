@@ -22,7 +22,7 @@ func (a *App) toggleFileIndexMenu() {
 		return
 	}
 	items, actions := a.buildLeaderMenuItems(a.keys.FileIndexMenuEntries())
-	p := a.activePanel()
+	p := a.focusedPanel()
 	inIndex := p.WithIndex || p.Path.Scheme() == pathloc.SchemeFileIndex
 	row := 0
 	for i := range items {
@@ -34,12 +34,12 @@ func (a *App) toggleFileIndexMenu() {
 			items[i].Disabled = !inIndex
 		case keymap.ActionFileIndexScan:
 			items[i].Label = "Scan directory"
-			if len(a.activePanel().SelectedPaths) > 0 {
+			if len(a.focusedPanel().SelectedPaths) > 0 {
 				items[i].Label = "Scan selection"
 			}
 		case keymap.ActionFileIndexScanFast:
 			items[i].Label = "Fast scan directory"
-			if len(a.activePanel().SelectedPaths) > 0 {
+			if len(a.focusedPanel().SelectedPaths) > 0 {
 				items[i].Label = "Fast scan selection"
 			}
 		}

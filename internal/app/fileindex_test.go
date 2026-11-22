@@ -234,7 +234,7 @@ func harborTags(t *testing.T, a *App, dir string) map[string][]string {
 
 func cursorTo(t *testing.T, a *App, name string) {
 	t.Helper()
-	p := a.activePanel()
+	p := a.focusedPanel()
 	for i, e := range p.Entries {
 		if e.Name == name {
 			p.Cursor = i
@@ -340,7 +340,7 @@ func selectFileAndDir(t *testing.T, a *App, dir string) {
 	if err := os.Mkdir(thicket, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	a.activePanel().SelectedPaths = map[string]bool{filepath.Join(dir, "harbor.txt"): true, thicket: true}
+	a.focusedPanel().SelectedPaths = map[string]bool{filepath.Join(dir, "harbor.txt"): true, thicket: true}
 }
 
 func TestFileIndexTagEditorRecursiveOnlyWithADirectory(t *testing.T) {
@@ -451,7 +451,7 @@ func TestFileIndexTagEditorCancelDiscards(t *testing.T) {
 func TestFileIndexTagEditorKeepsMixedTag(t *testing.T) {
 	a, screen, dir, _ := fileIndexApp(t)
 	seedTags(t, a, dir, []string{"amber"}, "harbor.txt")
-	p := a.activePanel()
+	p := a.focusedPanel()
 	p.SelectedPaths = map[string]bool{filepath.Join(dir, "harbor.txt"): true, filepath.Join(dir, "meadow.txt"): true}
 
 	a.dispatch(keymap.ActionFileIndexTags)
@@ -500,10 +500,10 @@ func TestFileIndexOpenAndReveal(t *testing.T) {
 	a.dispatch(keymap.ActionFileIndexBrowse)
 	want := "fileindex://" + dir
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
-		p := a.activePanel()
+		p := a.focusedPanel()
 		return p.PathString() == want && !p.ListingPending
 	})
-	p := a.activePanel()
+	p := a.focusedPanel()
 	if p.Path.Scheme() != pathloc.SchemeFileIndex {
 		t.Fatalf("panel = %s", p.PathString())
 	}
@@ -521,10 +521,10 @@ func TestFileIndexOpenAndReveal(t *testing.T) {
 	cursorTo(t, a, "harbor.txt")
 	a.dispatch(keymap.ActionFileIndexReveal)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
-		p := a.activePanel()
+		p := a.focusedPanel()
 		return p.PathString() == dir && !p.ListingPending
 	})
-	if e, ok := a.activePanel().CurrentEntry(); !ok || e.Name != "harbor.txt" {
+	if e, ok := a.focusedPanel().CurrentEntry(); !ok || e.Name != "harbor.txt" {
 		t.Fatalf("revealed cursor = %+v", e)
 	}
 }
@@ -599,7 +599,7 @@ func TestFileIndexMissingIndexAsksToCreate(t *testing.T) {
 	if _, err := os.Stat(dbPath); !os.IsNotExist(err) {
 		t.Fatal("declining must not create the database")
 	}
-	if a.activePanel().Path.Scheme() == pathloc.SchemeFileIndex {
+	if a.focusedPanel().Path.Scheme() == pathloc.SchemeFileIndex {
 		t.Fatal("panel must stay put without an index")
 	}
 
@@ -624,7 +624,7 @@ func TestFileIndexHostPathFeatures(t *testing.T) {
 	cursorTo(t, a, "meadow.txt")
 	a.dispatch(keymap.ActionFileIndexBrowse)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
-		p := a.activePanel()
+		p := a.focusedPanel()
 		return p.Path.Scheme() == pathloc.SchemeFileIndex && !p.ListingPending
 	})
 	cursorTo(t, a, "meadow.txt")
@@ -633,7 +633,7 @@ func TestFileIndexHostPathFeatures(t *testing.T) {
 	if got, err := a.resolveLocalEditFilePath(); err != nil || got != want {
 		t.Fatalf("edit path = %q, %v; want %q", got, err, want)
 	}
-	if got := shellInsertPathList(a.activePanel()); !slices.Equal(got, []string{want}) {
+	if got := shellInsertPathList(a.focusedPanel()); !slices.Equal(got, []string{want}) {
 		t.Fatalf("send paths = %v, want %v", got, want)
 	}
 	if got := a.localActivePanelDir(); got != dir {
@@ -680,8 +680,8 @@ func TestFileIndexMenuDimsReveal(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		a.activePanel().Path = p
-		a.activePanel().WithIndex = tc.withIndex
+		a.focusedPanel().Path = p
+		a.focusedPanel().WithIndex = tc.withIndex
 		a.toggleFileIndexMenu()
 		if got := dimmed(); (tc.want == "" && len(got) != 0) || (tc.want != "" && (len(got) != 1 || !got[tc.want])) {
 			t.Errorf("%s: dimmed = %v, want only %q", tc.dir, got, tc.want)
@@ -706,7 +706,7 @@ func TestFileIndexMenuScanLabel(t *testing.T) {
 	if got := scanLabel(); got != "Scan directory" {
 		t.Fatalf("no selection: %q", got)
 	}
-	a.activePanel().AddSelection(filepath.Join(a.activePanel().PathString(), "meadow"))
+	a.focusedPanel().AddSelection(filepath.Join(a.focusedPanel().PathString(), "meadow"))
 	if got := scanLabel(); got != "Scan selection" {
 		t.Fatalf("with selection: %q", got)
 	}
@@ -718,10 +718,10 @@ func TestFileIndexScanClearsSelection(t *testing.T) {
 		t.Run(action, func(t *testing.T) {
 			a, screen, dir, _ := fileIndexApp(t)
 			selected := filepath.Join(dir, "harbor.txt")
-			a.activePanel().AddSelection(selected)
+			a.focusedPanel().AddSelection(selected)
 			a.dispatch(action) // queued once the index is open, off the UI thread
 			drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
-				return a.activePanel().SelectedPathCount() == 0
+				return a.focusedPanel().SelectedPathCount() == 0
 			})
 			all := a.jobState.AllJobs()
 			if len(all) != 1 || len(all[0].Sources) != 1 || all[0].Sources[0].String() != selected {
@@ -736,7 +736,7 @@ func openIndexFind(t *testing.T, a *App, screen tcell.SimulationScreen, dir stri
 	t.Helper()
 	a.dispatch(keymap.ActionFileIndexBrowse)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
-		p := a.activePanel()
+		p := a.focusedPanel()
 		return p.PathString() == "fileindex://"+dir && !p.ListingPending
 	})
 	a.dispatch(keymap.ActionPanelFindDialog)
@@ -809,7 +809,7 @@ func TestIndexFindEnterWithMarksAddsSelections(t *testing.T) {
 	if a.model.IndexFindDialog.Open {
 		t.Fatal("Enter should close the dialog")
 	}
-	sel := a.activePanel().SelectedPaths
+	sel := a.focusedPanel().SelectedPaths
 	for _, name := range []string{"harbor.txt", "meadow.txt"} {
 		if !sel["fileindex://"+filepath.Join(dir, name)] {
 			t.Errorf("%s not selected: %v", name, sel)
@@ -830,7 +830,7 @@ func TestFileIndexFindFromLocalPanelSelectsHostPaths(t *testing.T) {
 	typeIndexFindQuery(t, a, screen, ".txt", 2)
 	a.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
 	a.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
-	if sel := a.activePanel().SelectedPaths; !sel[filepath.Join(dir, "harbor.txt")] {
+	if sel := a.focusedPanel().SelectedPaths; !sel[filepath.Join(dir, "harbor.txt")] {
 		t.Fatalf("harbor.txt not selected as a plain path: %v", sel)
 	}
 }
@@ -841,11 +841,11 @@ func TestIndexFindEnterWithoutMarksNavigates(t *testing.T) {
 	typeIndexFindQuery(t, a, screen, "meadow", 1)
 	a.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
-		e, ok := a.activePanel().CurrentEntry()
-		return ok && e.Name == "meadow.txt" && !a.activePanel().ListingPending
+		e, ok := a.focusedPanel().CurrentEntry()
+		return ok && e.Name == "meadow.txt" && !a.focusedPanel().ListingPending
 	})
-	if a.model.IndexFindDialog.Open || a.activePanel().PathString() != "fileindex://"+dir {
-		t.Fatalf("open=%v path=%s", a.model.IndexFindDialog.Open, a.activePanel().PathString())
+	if a.model.IndexFindDialog.Open || a.focusedPanel().PathString() != "fileindex://"+dir {
+		t.Fatalf("open=%v path=%s", a.model.IndexFindDialog.Open, a.focusedPanel().PathString())
 	}
 }
 
@@ -910,10 +910,10 @@ func TestIndexFindSearchOnlySelectionsAndHiddenDepth(t *testing.T) {
 	}
 	a.dispatch(keymap.ActionFileIndexBrowse)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
-		p := a.activePanel()
+		p := a.focusedPanel()
 		return p.PathString() == "fileindex://"+dir && !p.ListingPending
 	})
-	a.activePanel().BulkAddSelections([]string{"fileindex://" + sub}, func(string) bool { return true })
+	a.focusedPanel().BulkAddSelections([]string{"fileindex://" + sub}, func(string) bool { return true })
 	a.dispatch(keymap.ActionPanelFindDialog)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.IndexFindDialog.Open })
 	st := &a.model.IndexFindDialog
@@ -943,11 +943,11 @@ func TestFileIndexDirSizeFromIndex(t *testing.T) {
 		t.Fatal(err)
 	}
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
-		p := a.activePanel()
+		p := a.focusedPanel()
 		return p.PathString() == parent && !p.ListingPending
 	})
 	cursorTo(t, a, filepath.Base(dir))
-	entry, _ := a.activePanel().CurrentEntry()
+	entry, _ := a.focusedPanel().CurrentEntry()
 	a.scanCursorDirSize()
 	want := int64(len("harbor.txt") + len("meadow.txt"))
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
@@ -964,13 +964,13 @@ func browseWith(t *testing.T, a *App, screen tcell.SimulationScreen) {
 	t.Helper()
 	a.dispatch(keymap.ActionFileIndexBrowseWith)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
-		p := a.activePanel()
+		p := a.focusedPanel()
 		return p.WithIndex && !p.ListingPending && p.Path.IsLocal()
 	})
 }
 
 func entryStatus(a *App, name string) (string, bool) {
-	for _, e := range a.activePanel().Entries {
+	for _, e := range a.focusedPanel().Entries {
 		if e.Name == name {
 			return e.IndexStatus, true
 		}
@@ -1025,7 +1025,7 @@ func TestFileIndexBrowseWithOverlayAndToggle(t *testing.T) {
 	if st, _ := entryStatus(a, "willow.txt"); st != "new" {
 		t.Fatalf("willow.txt (not indexed) = %q, want new", st)
 	}
-	if a.activePanel().GitColumnActive {
+	if a.focusedPanel().GitColumnActive {
 		t.Fatal("the index strip replaces git status while WithIndex is on")
 	}
 
@@ -1034,20 +1034,20 @@ func TestFileIndexBrowseWithOverlayAndToggle(t *testing.T) {
 	if err := os.Mkdir(sub, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := a.activePanel().Load(sub); err != nil {
+	if err := a.focusedPanel().Load(sub); err != nil {
 		t.Fatal(err)
 	}
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
-		p := a.activePanel()
+		p := a.focusedPanel()
 		return p.PathString() == sub && !p.ListingPending
 	})
-	if !a.activePanel().WithIndex {
+	if !a.focusedPanel().WithIndex {
 		t.Fatal("WithIndex must persist across chdir")
 	}
 
 	// Toggling off drops the overlay (and the ghost rows with it).
 	a.dispatch(keymap.ActionFileIndexBrowseWith)
-	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return !a.activePanel().WithIndex })
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return !a.focusedPanel().WithIndex })
 }
 
 // Browse filesystem leaves Browse with fileindex: the panel stays on its directory, without the
@@ -1067,9 +1067,9 @@ func TestFileIndexRevealLeavesBrowseWith(t *testing.T) {
 	a.dispatch(keymap.ActionFileIndexReveal)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
 		_, ghost := entryStatus(a, "meadow.txt")
-		return !ghost && !a.activePanel().ListingPending
+		return !ghost && !a.focusedPanel().ListingPending
 	})
-	p := a.activePanel()
+	p := a.focusedPanel()
 	if p.WithIndex || p.PathString() != dir {
 		t.Fatalf("WithIndex = %v, path = %s, want off on %s", p.WithIndex, p.PathString(), dir)
 	}
@@ -1077,10 +1077,10 @@ func TestFileIndexRevealLeavesBrowseWith(t *testing.T) {
 
 func TestFileIndexBrowseWithRefusesSFTP(t *testing.T) {
 	a, screen, _, _ := fileIndexApp(t)
-	a.activePanel().Path = pathloc.MustParse("sftp://paras@example.invalid/srv")
+	a.focusedPanel().Path = pathloc.MustParse("sftp://paras@example.invalid/srv")
 	a.dispatch(keymap.ActionFileIndexBrowseWith)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.Message != "" })
-	if a.activePanel().WithIndex {
+	if a.focusedPanel().WithIndex {
 		t.Fatal("browse-with must not turn on for an sftp panel")
 	}
 	if !strings.Contains(a.model.Message, "local paths only") {
@@ -1110,7 +1110,7 @@ func TestFileIndexGhostRowRefusesCopyAndDeletesFromIndex(t *testing.T) {
 	}
 
 	// Delete a local file together with the ghost row: the real file goes from disk, the ghost row from the index.
-	p := a.activePanel()
+	p := a.focusedPanel()
 	p.SelectedPaths = map[string]bool{
 		filepath.Join(dir, "harbor.txt"):                           true,
 		pathloc.FileIndexPrefix + filepath.Join(dir, "meadow.txt"): true,
@@ -1140,7 +1140,7 @@ func TestFileIndexGhostRowRefusesCopyAndDeletesFromIndex(t *testing.T) {
 // drift requests the panel makes.
 func openIndexedParent(t *testing.T, a *App, screen tcell.SimulationScreen, dir string, reqs *[]panel.IndexDriftRequest) {
 	t.Helper()
-	p := a.activePanel()
+	p := a.focusedPanel()
 	p.ScheduleIndexDrift = func(r panel.IndexDriftRequest) bool { *reqs = append(*reqs, r); return true }
 	parent := filepath.Dir(dir)
 	if err := a.navigatePanelToDirectory(a.model.ActivePanel, parent, filepath.Base(dir)); err != nil {
@@ -1180,7 +1180,7 @@ func TestFileIndexDirSizeRequestsUnlimitedDrift(t *testing.T) {
 func TestFileIndexAutoDriftOff(t *testing.T) {
 	a, screen, dir, _ := fileIndexApp(t)
 	var reqs []panel.IndexDriftRequest
-	a.activePanel().IndexAutoDriftDepth = (config.FileIndexConfig{BrowserScanMaxDepth: 0}).AutoDriftDepth()
+	a.focusedPanel().IndexAutoDriftDepth = (config.FileIndexConfig{BrowserScanMaxDepth: 0}).AutoDriftDepth()
 	openIndexedParent(t, a, screen, dir, &reqs)
 	if len(reqs) != 0 {
 		t.Fatalf("automatic pass ran with depth 0: %+v", reqs)
@@ -1194,7 +1194,7 @@ func TestFileIndexSelectionRequestsDriftOnce(t *testing.T) {
 	var reqs []panel.IndexDriftRequest
 	openIndexedParent(t, a, screen, dir, &reqs)
 	reqs = nil
-	p := a.activePanel()
+	p := a.focusedPanel()
 	cursorTo(t, a, filepath.Base(dir))
 	entry, _ := p.CurrentEntry()
 	for range 3 {
@@ -1211,7 +1211,7 @@ func TestFileIndexAutoDriftNeverOverwritesExplicit(t *testing.T) {
 	a, screen, dir, _ := fileIndexApp(t)
 	var reqs []panel.IndexDriftRequest
 	openIndexedParent(t, a, screen, dir, &reqs)
-	id, p, name := a.model.ActivePanel, a.activePanel(), filepath.Base(dir)
+	id, p, name := a.model.ActivePanel, a.focusedPanel(), filepath.Base(dir)
 	send := func(explicit bool, status string) {
 		a.applyIndexDrift(indexDriftPayload{panelID: id, dir: p.Path, dirs: map[string]string{name: status}, explicit: explicit})
 	}
@@ -1296,7 +1296,7 @@ func TestFileIndexCopiesJumpsToChosenCopy(t *testing.T) {
 		if onIndex {
 			a.dispatch(keymap.ActionFileIndexBrowse)
 			drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
-				return a.activePanel().PathString() == "fileindex://"+dir && !a.activePanel().ListingPending
+				return a.focusedPanel().PathString() == "fileindex://"+dir && !a.focusedPanel().ListingPending
 			})
 			wantDir = "fileindex://" + wantDir
 		}
@@ -1310,7 +1310,7 @@ func TestFileIndexCopiesJumpsToChosenCopy(t *testing.T) {
 		}
 		a.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 		drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
-			p := a.activePanel()
+			p := a.focusedPanel()
 			e, ok := p.CurrentEntry()
 			return p.PathString() == wantDir && !p.ListingPending && ok && e.Name == "harbor.txt"
 		})
@@ -1346,7 +1346,7 @@ func openIndexPanel(t *testing.T, a *App, screen tcell.SimulationScreen, dir str
 	t.Helper()
 	a.dispatch(keymap.ActionFileIndexBrowse)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
-		p := a.activePanel()
+		p := a.focusedPanel()
 		return p.PathString() == "fileindex://"+dir && !p.ListingPending
 	})
 }
@@ -1812,7 +1812,7 @@ func TestFileIndexShowResultsFromJobsView(t *testing.T) {
 	if a.model.PathPicker.Open {
 		t.Fatal("the picker stayed open after confirming")
 	}
-	if e, ok := a.activePanel().CurrentEntry(); !ok || e.Name != "willow.txt" {
+	if e, ok := a.focusedPanel().CurrentEntry(); !ok || e.Name != "willow.txt" {
 		t.Fatalf("cursor entry = %+v, want willow.txt", e)
 	}
 }
@@ -1881,10 +1881,10 @@ func TestFileIndexCopiesPickerMarksAddToSelection(t *testing.T) {
 			t.Fatalf("onIndex=%v: Insert did not mark: %v", onIndex, a.model.PathPicker.Marked)
 		}
 		a.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
-		if a.model.PathPicker.Open || !a.activePanel().SelectedPaths[want] || a.model.Message != "Added 1 to selection" {
-			t.Fatalf("onIndex=%v: open=%v selected=%v message=%q", onIndex, a.model.PathPicker.Open, a.activePanel().SelectedPaths, a.model.Message)
+		if a.model.PathPicker.Open || !a.focusedPanel().SelectedPaths[want] || a.model.Message != "Added 1 to selection" {
+			t.Fatalf("onIndex=%v: open=%v selected=%v message=%q", onIndex, a.model.PathPicker.Open, a.focusedPanel().SelectedPaths, a.model.Message)
 		}
-		if a.activePanel().PathString() == filepath.Dir(want) {
+		if a.focusedPanel().PathString() == filepath.Dir(want) {
 			t.Fatalf("onIndex=%v: applying marks must not jump to the copy", onIndex)
 		}
 	}
@@ -2070,7 +2070,7 @@ func TestFileIndexDriftPendingEndsWithThePass(t *testing.T) {
 	a, screen, dir, _ := fileIndexApp(t)
 	var reqs []panel.IndexDriftRequest
 	openIndexedParent(t, a, screen, dir, &reqs)
-	p, name := a.activePanel(), filepath.Base(dir)
+	p, name := a.focusedPanel(), filepath.Base(dir)
 	pending := func() bool {
 		for _, e := range p.Entries {
 			if e.Name == name {
@@ -2126,7 +2126,7 @@ func TestFileIndexDriftSettlesEachDirectoryAsItFinishes(t *testing.T) {
 	a, screen, dir, _ := fileIndexApp(t)
 	var reqs []panel.IndexDriftRequest
 	openIndexedParent(t, a, screen, dir, &reqs)
-	p, id, name, sibling := a.activePanel(), a.model.ActivePanel, filepath.Base(dir), "lantern"
+	p, id, name, sibling := a.focusedPanel(), a.model.ActivePanel, filepath.Base(dir), "lantern"
 	p.Entries = append(p.Entries, localfs.Entry{Name: sibling, Path: filepath.Join(filepath.Dir(dir), sibling), Type: localfs.EntryDirectory, IndexStatus: localfs.IndexStatusIndexed})
 	pending := func(n string) bool {
 		for _, e := range p.Entries {

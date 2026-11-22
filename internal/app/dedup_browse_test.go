@@ -3,10 +3,13 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -27,7 +30,7 @@ func dedupBrowseSettle(t *testing.T, app *App, screen tcell.SimulationScreen) {
 }
 
 func dedupBrowseKey(app *App, k tcell.Key) {
-	app.handleDedupViewKey(tcell.NewEventKey(k, 0, tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(k, 0, tcell.ModNone))
 	app.reconcileAfterEvent()
 }
 
@@ -259,7 +262,7 @@ func TestDedupAltArrowsWalkHistoryOnlyInBrowsePanel(t *testing.T) {
 	app.openFindDuplicates()
 	waitDedupDone(t, app)
 	alt := func(k tcell.Key) {
-		app.handleDedupViewKey(tcell.NewEventKey(k, 0, tcell.ModAlt))
+		app.handleKey(tcell.NewEventKey(k, 0, tcell.ModAlt))
 		app.reconcileAfterEvent()
 	}
 
@@ -301,4 +304,162 @@ func TestDedupAltArrowsWalkHistoryOnlyInBrowsePanel(t *testing.T) {
 	waitPanelPath(dir)
 	alt(tcell.KeyRight)
 	waitPanelPath(meadow)
+}
+
+// dedupBrowseFocusApp opens the duplicates view over dir (lantern.txt, meadow/lantern.txt,
+// meadow/beacon.txt, meadow/thicket/) with the browser's inactive panel on its own dest directory,
+// and gives the browse panel focus inside meadow.
+func dedupBrowseFocusApp(t *testing.T) (app *App, screen tcell.SimulationScreen, dir, meadow, dest string) {
+	t.Helper()
+	dir = t.TempDir()
+	meadow = filepath.Join(dir, "meadow")
+	if err := os.MkdirAll(filepath.Join(meadow, "thicket"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, rel := range []string{"lantern.txt", filepath.Join("meadow", "lantern.txt"), filepath.Join("meadow", "beacon.txt")} {
+		if err := os.WriteFile(filepath.Join(dir, rel), []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	dest = t.TempDir()
+	screen = newScreen(t, 100, 30)
+	app = newApp(t, screen, dir)
+	if err := app.otherBrowserPanel().Load(dest); err != nil {
+		t.Fatal(err)
+	}
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+	dedupBrowseKey(app, tcell.KeyDown)
+	dedupBrowseSettle(t, app, screen)
+	dedupBrowseKey(app, tcell.KeyTab) // Copies
+	dedupBrowseKey(app, tcell.KeyTab) // browse panel
+	if !app.model.EmbeddedPanelFocused() || app.focusedPanelID() != app.model.DedupPanelID {
+		t.Fatalf("browse panel not focused: %+v", app.model.DedupView)
+	}
+	p := &app.model.DedupPanel
+	if err := p.NavigateTo(meadow, "beacon.txt", 20); err != nil {
+		t.Fatal(err)
+	}
+	drainInterruptEventsUntil(t, app, screen, 5*time.Second, func() bool { return p.PathString() == meadow && !p.ListingPending })
+	return app, screen, dir, meadow, dest
+}
+
+func dedupBrowseCursorName(t *testing.T, app *App) string {
+	t.Helper()
+	e, ok := app.model.DedupPanel.CurrentEntry()
+	if !ok {
+		t.Fatal("browse panel has no cursor entry")
+	}
+	return e.Name
+}
+
+// The focused browse panel is a full file list: selection, file operations on its own selection with
+// the browser's inactive panel as destination, quick filter, sort and navigation, while the view's
+// close key still closes the view.
+func TestDedupBrowsePanelActsAsFileList(t *testing.T) {
+	app, screen, _, meadow, dest := dedupBrowseFocusApp(t)
+	p := &app.model.DedupPanel
+	beacon := filepath.Join(meadow, "beacon.txt")
+	if got := dedupBrowseCursorName(t, app); got != "beacon.txt" {
+		t.Fatalf("cursor = %q", got)
+	}
+
+	// Space is the view's mark-keep key; with the panel focused it selects like in the browser.
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
+	if !p.SelectedPaths[beacon] || app.model.DedupView.MarkedCount != 0 {
+		t.Fatalf("selection = %v, dedup marks = %d", p.SelectedPaths, app.model.DedupView.MarkedCount)
+	}
+
+	// Delete confirms the panel's selection, not the duplicates marks, and deletes it.
+	dedupBrowseKey(app, tcell.KeyF8)
+	fd := app.model.FileDialog
+	if !fd.Open || fd.DialogType != dialog.FileDialogDelete || len(fd.DeleteEntries) != 1 || fd.DeleteEntries[0].Path != beacon {
+		t.Fatalf("delete dialog: %+v", fd)
+	}
+	app.dialogCtrl.ExecuteDelete()
+	all := app.jobState.AllJobs()
+	if len(all) != 1 || all[0].Type != jobs.TypeDelete || all[0].Sources[0].String() != beacon {
+		t.Fatalf("jobs after delete = %+v", all)
+	}
+	if app.model.ViewMode != ui.ViewDedup || !app.model.DedupView.FocusPanel {
+		t.Fatalf("view = %v focus panel = %v", app.model.ViewMode, app.model.DedupView.FocusPanel)
+	}
+
+	// Copy takes the panel's files as sources and the browser's inactive panel as destination.
+	if !p.SelectVisibleEntry("lantern.txt") {
+		t.Fatal("no lantern.txt in the browse panel")
+	}
+	dedupBrowseKey(app, tcell.KeyF5)
+	if !app.model.TransferDialog.Open || !strings.HasPrefix(app.model.TransferDialog.Destination.Value, dest) {
+		t.Fatalf("copy dialog: %+v", app.model.TransferDialog)
+	}
+	app.dialogCtrl.ConfirmCopy()
+	lantern := filepath.Join(meadow, "lantern.txt")
+	copied := slices.ContainsFunc(app.jobState.AllJobs(), func(j *jobs.Job) bool {
+		return j.Type == jobs.TypeCopy && len(j.Sources) == 1 && j.Sources[0].String() == lantern
+	})
+	if !copied {
+		t.Fatalf("no copy job of %s: %d jobs", lantern, len(app.jobState.AllJobs()))
+	}
+
+	// The quick filter runs on the browse panel: its query lands there and the cursor jumps to the
+	// match.
+	app.dispatch(keymap.ActionPanelFilterOpen)
+	for _, r := range "thick" {
+		app.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	if p.Filter.Query != "thick" || dedupBrowseCursorName(t, app) != "thicket" {
+		t.Fatalf("browse panel filter = %+v cursor = %q", p.Filter, dedupBrowseCursorName(t, app))
+	}
+	width, height := screen.Size()
+	_, browse := ui.DedupSecondaryRects(app.layoutForTerminalSize(width, height).Secondary)
+	if x, y := screenTextCell(t, app, "thick"); y != browse.Y || x < browse.X {
+		t.Fatalf("filter query at %d,%d, want on the browse panel's top row %+v", x, y, browse)
+	}
+	dedupBrowseKey(app, tcell.KeyEsc)
+	if p.Filter.Active || p.Filter.Editing || app.model.ViewMode != ui.ViewDedup {
+		t.Fatalf("Esc: filter = %+v view = %v", p.Filter, app.model.ViewMode)
+	}
+
+	// A sort action re-sorts the browse panel; Alt+S opens the sort dialog for it.
+	reverse := p.Sort.Reverse
+	app.dispatch(keymap.ActionPanelReverseSort)
+	if p.Sort.Reverse == reverse {
+		t.Fatal("reverse sort did not change the browse panel")
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModAlt))
+	if !app.model.SortDialog.Open || app.model.SortDialog.PanelID != app.model.DedupPanelID {
+		t.Fatalf("sort dialog: %+v", app.model.SortDialog)
+	}
+	app.closeSortDialog()
+
+	// The history dialog targets the browse panel.
+	app.dispatch(keymap.ActionPanelHistoryDialog)
+	if !app.model.HistoryDialog.Open || app.model.HistoryDialog.PanelID != app.model.DedupPanelID {
+		t.Fatalf("history dialog: open=%v panel=%d, want panel %d", app.model.HistoryDialog.Open, app.model.HistoryDialog.PanelID, app.model.DedupPanelID)
+	}
+	app.closeHistoryDialog()
+
+	// Navigation: Enter enters a directory, Backspace returns, Right/Left do the same.
+	if !p.SelectVisibleEntry("thicket") {
+		t.Fatal("no thicket entry")
+	}
+	dedupBrowseKey(app, tcell.KeyEnter)
+	thicket := filepath.Join(meadow, "thicket")
+	drainInterruptEventsUntil(t, app, screen, 5*time.Second, func() bool { return p.PathString() == thicket && !p.ListingPending })
+	dedupBrowseKey(app, tcell.KeyBackspace2)
+	drainInterruptEventsUntil(t, app, screen, 5*time.Second, func() bool { return p.PathString() == meadow && !p.ListingPending })
+	if !p.SelectVisibleEntry("thicket") {
+		t.Fatal("no thicket entry after parent")
+	}
+	dedupBrowseKey(app, tcell.KeyRight)
+	drainInterruptEventsUntil(t, app, screen, 5*time.Second, func() bool { return p.PathString() == thicket && !p.ListingPending })
+	dedupBrowseKey(app, tcell.KeyLeft)
+	drainInterruptEventsUntil(t, app, screen, 5*time.Second, func() bool { return p.PathString() == meadow && !p.ListingPending })
+
+	// The view's close key still closes the view.
+	dedupBrowseKey(app, tcell.KeyEsc)
+	if app.model.ViewMode != ui.ViewBrowser {
+		t.Fatalf("Esc left view = %v", app.model.ViewMode)
+	}
 }

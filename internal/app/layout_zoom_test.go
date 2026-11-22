@@ -330,7 +330,7 @@ func TestRenderBrowserListNavUpdateFullRendersWhenZoomDecisionChanged(t *testing
 
 	// Cover every listed entry so the reconciler finds nothing missing and the widths are settled.
 	cols := wideMetaColumn()
-	for _, e := range app.activePanel().Entries {
+	for _, e := range app.focusedPanel().Entries {
 		cols[0].Results[e.Path] = strings.Repeat("x", 15)
 	}
 	app.model.MetaResults[ui.PrimaryPanel] = cols

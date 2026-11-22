@@ -22,13 +22,13 @@ func (h *Handler) ClearCarouselPreviewNavCoalesce() {
 
 func (h *Handler) carouselPreviewNavCoalesceContext() bool {
 	if h.model.ViewMode != ui.ViewBrowser ||
-		!h.host.ActivePanel().CarouselMode ||
+		!h.host.FocusedPanel().CarouselMode ||
 		h.model.ActiveSubFocus != ui.SubFocusFileList ||
 		h.model.Menu.Open ||
 		h.model.ModalDialogOpen() {
 		return false
 	}
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	eligible := h.carouselFilePreviewEligible()
 	if !panelcarousel.ShowChildPreviewColumn(*p, h.model.QuickViewDisplayActive(), eligible) {
 		return false
@@ -43,7 +43,7 @@ func (h *Handler) carouselChildListingScrollable() bool {
 	if !h.carouselPreviewNavCoalesceContext() {
 		return false
 	}
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	eligible := h.carouselFilePreviewEligible()
 	if panelcarousel.ChildPreviewKindFor(*p, h.model.QuickViewDisplayActive(), eligible) != panelcarousel.ChildPreviewDirectoryListing {
 		return false
@@ -53,8 +53,8 @@ func (h *Handler) carouselChildListingScrollable() bool {
 
 // pageCarouselChildListing pages the cached child directory listing in place.
 func (h *Handler) pageCarouselChildListing(pageDir int) {
-	p := h.host.ActivePanel()
-	p.CarouselSideCache.Child.Page(pageDir, h.host.ActiveViewportRows())
+	p := h.host.FocusedPanel()
+	p.CarouselSideCache.Child.Page(pageDir, h.host.FocusedViewportRows())
 }
 
 // ScrollCarouselFilePreview scrolls the carousel child column's file preview by delta rows (the
@@ -72,7 +72,7 @@ func (h *Handler) scheduleCarouselPreviewDebounceTimer(gen uint64) {
 	path, _, ok := h.carouselFilePreviewWantPath()
 	heavy := false
 	if ok {
-		p := h.host.ActivePanel()
+		p := h.host.FocusedPanel()
 		entryType := localfs.EntryFile
 		if entry, ok := p.CurrentEntry(); ok {
 			entryType = entry.Type
@@ -106,7 +106,7 @@ func (h *Handler) EnsureCarouselChildCacheBeforeListNav() {
 	if !h.carouselPreviewNavCoalesceContext() {
 		return
 	}
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	eligible := h.carouselFilePreviewEligible()
 	if panelcarousel.ChildPreviewKindFor(*p, h.model.QuickViewDisplayActive(), eligible) != panelcarousel.ChildPreviewDirectoryListing {
 		return
@@ -118,7 +118,7 @@ func (h *Handler) EnsureCarouselChildCacheBeforeListNav() {
 	if !ok {
 		return
 	}
-	h.dispatchCarouselChildSnapshot(h.model.ActivePanel, target, h.host.ActiveViewportRows())
+	h.dispatchCarouselChildSnapshot(h.model.ActivePanel, target, h.host.FocusedViewportRows())
 }
 
 // ArmCarouselPreviewNavCoalesceAfterListNav arms the carousel side-preview coalesce debounce
@@ -160,13 +160,13 @@ func (h *Handler) loadCarouselChildPreviewFromDisk() {
 		return
 	}
 	h.SyncCarouselChildPreviewCoalesceFlags()
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	eligible := h.carouselFilePreviewEligible()
 	kind := panelcarousel.ChildPreviewKindFor(*p, h.model.QuickViewDisplayActive(), eligible)
 	switch kind {
 	case panelcarousel.ChildPreviewDirectoryListing:
 		if target, ok := p.CarouselChildPreviewTarget(); ok {
-			h.dispatchCarouselChildSnapshot(h.model.ActivePanel, target, h.host.ActiveViewportRows())
+			h.dispatchCarouselChildSnapshot(h.model.ActivePanel, target, h.host.FocusedViewportRows())
 		}
 	case panelcarousel.ChildPreviewFile:
 		h.applyCarouselFilePreviewAfterFlush()
@@ -305,7 +305,7 @@ func (h *Handler) ReconcileCarouselSidePreview(panelID int) {
 
 // CarouselPreviewHeldListNav reports file-list nav keys while carousel child preview coalesce may apply.
 func (h *Handler) CarouselPreviewHeldListNav(resolvedAction string, event *tcell.EventKey) bool {
-	if h.host.Config().UI.KeyRepeatDebounceMS <= 0 || !h.host.ActivePanel().CarouselMode {
+	if h.host.Config().UI.KeyRepeatDebounceMS <= 0 || !h.host.FocusedPanel().CarouselMode {
 		return false
 	}
 	return h.host.PanelSyncFollowHeldListNav(resolvedAction, event)

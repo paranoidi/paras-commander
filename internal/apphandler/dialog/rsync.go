@@ -99,7 +99,7 @@ func (h *Handler) OpenRsyncDialog(p *panel.State) {
 		DialogType: dialog.FileDialogRsync,
 		Focus:      dialog.FileFieldID(dialog.RsyncFieldDest), // the Mode radios above it are not where typing starts
 		Fields: []dialog.FileDialogField{
-			DialogDestinationField(h.host.InactivePanel().PathString(), true),
+			DialogDestinationField(h.host.DestinationPanel().PathString(), true),
 			text("Exclude", mem.exclude),
 			text("Bandwidth limit (KiB/s)", mem.bandwidth),
 			text("Extra arguments", mem.extra),
@@ -175,7 +175,7 @@ func (h *Handler) updateRsyncPreview() {
 	} else {
 		d.RsyncPreview = rsync.DisplayArgs(rsync.BuildArgv(run.options))
 	}
-	h.updateDestinationTargetPanels(h.host.ActivePanel().PathString(), d.Fields[dialog.RsyncFieldDest].Value, d.RsyncOptions.Mode == rsync.ModeMirror)
+	h.updateDestinationTargetPanels(h.host.FocusedPanel().PathString(), d.Fields[dialog.RsyncFieldDest].Value, d.RsyncOptions.Mode == rsync.ModeMirror)
 }
 
 // ExecuteRsync runs the Rsync dialog's OK action: queues an rsync job for the sources gathered when
@@ -201,7 +201,7 @@ func (h *Handler) ExecuteRsync() {
 		onDryRun = func(changes []string) { h.postRsyncDryRun(RsyncDryRunPayload{Task: task, Changes: changes}) }
 	}
 	task = rsync.NewTask(run.options, onDryRun)
-	h.host.ActivePanel().ClearSelection()
+	h.host.FocusedPanel().ClearSelection()
 	h.jobs.AddRsyncJob(task, run.sources, run.dest)
 	msg := "Rsync queued"
 	if run.options.DryRun {

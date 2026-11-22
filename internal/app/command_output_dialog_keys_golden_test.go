@@ -95,7 +95,7 @@ func cmdOutDialog(name, mode string, lines int, withPaths bool, exit int) keyGol
 			st := app.model.CommandOutputDialog
 			sel := 0
 			for _, m := range st.Paths {
-				if app.activePanel().IsSelectedPath(m.Path) {
+				if app.focusedPanel().IsSelectedPath(m.Path) {
 					sel++
 				}
 			}

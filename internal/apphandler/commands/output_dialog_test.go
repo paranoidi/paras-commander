@@ -36,8 +36,8 @@ type bannerHost struct {
 
 func (b *bannerHost) SetTransientMessageBanner(string, string, ui.MessageUrgency) { b.banners++ }
 func (b *bannerHost) RefreshAfterBackgroundCommand()                              {}
-func (b *bannerHost) ActivePanel() *panel.State                                   { return b.pnl }
-func (b *bannerHost) InactivePanel() *panel.State                                 { return nil }
+func (b *bannerHost) FocusedPanel() *panel.State                                  { return b.pnl }
+func (b *bannerHost) DestinationPanel() *panel.State                              { return nil }
 func (b *bannerHost) LayoutForTerminalSize(w, h int) ui.Layout {
 	return ui.Layout{Width: w, Height: h}
 }
@@ -154,7 +154,7 @@ type pathKeysHost struct {
 	groupSelect []bool
 }
 
-func (p *pathKeysHost) ActivePanel() *panel.State { return p.pnl }
+func (p *pathKeysHost) FocusedPanel() *panel.State { return p.pnl }
 
 func (p *pathKeysHost) SetTransientMessage(msg string, _ ui.MessageUrgency) {
 	p.msgs = append(p.msgs, msg)

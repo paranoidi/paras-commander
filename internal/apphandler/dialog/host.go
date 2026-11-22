@@ -16,11 +16,13 @@ type Host interface {
 	host.MessageHost
 	host.PanelNavigationHost
 
-	ActivePanel() *panel.State
-	InactivePanel() *panel.State
-	InactivePanelID() int
+	// FocusedPanel is the panel file operations act on (the active browser column or a view's
+	// focused embedded panel); DestinationPanel is where they go (App.destinationPanelID).
+	FocusedPanel() *panel.State
+	DestinationPanel() *panel.State
+	DestinationPanelID() int
 	PanelByID(panelID int) *panel.State
-	ActiveViewportRows() int
+	FocusedViewportRows() int
 	PanelViewportRows(panelID int) int
 
 	// FilterCursorEntry is the basename and kind of the row under the cursor of what the Filter

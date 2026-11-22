@@ -253,7 +253,7 @@ func (h *Handler) SchedulePrefetchFromActivePanel() {
 		}
 		return
 	}
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	if p == nil {
 		return
 	}
@@ -282,7 +282,7 @@ func (h *Handler) SchedulePrefetchFromActivePanel() {
 	h.prefetchLastEntryCount = entryCount
 
 	window := h.host.Config().Preview.PrefetchWindow
-	pageSize := max(h.host.ActiveViewportRows(), 1) // matches panel.State.Page's own floor-at-1
+	pageSize := max(h.host.FocusedViewportRows(), 1) // matches panel.State.Page's own floor-at-1
 	lo := p.Cursor - pageSize - window
 	hi := p.Cursor + pageSize + window
 	start := max(lo, 0)
@@ -326,6 +326,6 @@ func (h *Handler) prefetchSurfaceActive() bool {
 	if h.model.QuickViewEnabled {
 		return true
 	}
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	return p != nil && p.CarouselMode
 }

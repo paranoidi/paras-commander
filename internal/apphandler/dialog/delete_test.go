@@ -85,7 +85,7 @@ func TestApplyDeleteDialogScanNeedNotJobFiltered(t *testing.T) {
 	s := newSnapshotHarness(t, true)
 	s.h.diskUsage = diskusage.New()
 	s.h.OpenDeleteDialog(ui.PrimaryPanel)
-	p := s.h.host.ActivePanel()
+	p := s.h.host.FocusedPanel()
 	s.h.ApplyDeleteDialogScanNeed(DeleteDialogScanNeedPayload{
 		Need: []string{s.dir},
 		Gen:  p.SelectionDerivedGen(),

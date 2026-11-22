@@ -451,7 +451,7 @@ func (h *Handler) handleFilePreviewScrollKey(event *tcell.EventKey) bool {
 // When the selected strip has keyboard focus, the highlighted strip row is the target
 // (same resolution as quick view / EditActiveFile).
 func (h *Handler) OpenFilePreviewFullscreen() {
-	if h.model.ViewMode != ui.ViewBrowser {
+	if !h.model.FileListFocused() {
 		return
 	}
 	if h.model.Menu.Open || h.model.ModalDialogOpen() {
@@ -479,7 +479,7 @@ func (h *Handler) OpenFilePreviewFullscreen() {
 		h.host.SetTransientMessage("View: select a file", ui.MessageUrgencyWarn)
 		return
 	}
-	if msg := panel.GhostRefusal(h.host.ActivePanel().GhostSources(path)); msg != "" {
+	if msg := panel.GhostRefusal(h.host.FocusedPanel().GhostSources(path)); msg != "" {
 		h.host.SetTransientMessage(msg, ui.MessageUrgencyWarn)
 		return
 	}
@@ -503,7 +503,7 @@ func (h *Handler) OpenFullscreenFilePreviewAt(path string, isDir bool) error {
 	}
 	union := ui.MergeTwinPanelRects(lay.Primary, lay.Secondary, h.host.EffectivePaneSplitOrientation())
 	panelPath := filepath.Dir(path)
-	if active := h.host.ActivePanel(); active != nil && active.PathString() != "" {
+	if active := h.host.FocusedPanel(); active != nil && active.PathString() != "" {
 		panelPath = active.PathString()
 	}
 	if isDir {

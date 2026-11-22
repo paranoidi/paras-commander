@@ -105,9 +105,9 @@ func TestFullscreenFilePreviewArrowDownScrollsWithoutNavigatingList(t *testing.T
 	app.model.FullscreenFilePreview.Scroll = 0
 	app.commandsMu.Unlock()
 
-	cursorBefore := app.activePanel().Cursor
+	cursorBefore := app.focusedPanel().Cursor
 	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	if got := app.activePanel().Cursor; got != cursorBefore {
+	if got := app.focusedPanel().Cursor; got != cursorBefore {
 		t.Fatalf("list cursor moved %d -> %d; Down must scroll preview, not nav.down", cursorBefore, got)
 	}
 	app.commandsMu.RLock()
@@ -134,10 +134,10 @@ func TestFullscreenFilePreviewLeftBackspaceDoNotChangePanelPath(t *testing.T) {
 	screen.SetSize(80, 20)
 
 	app := newTestApp(t, screen, testOptions(dir))
-	if err := app.activePanel().Load(sub); err != nil {
+	if err := app.focusedPanel().Load(sub); err != nil {
 		t.Fatalf("Load(sub): %v", err)
 	}
-	pathBefore := app.activePanel().Path
+	pathBefore := app.focusedPanel().Path
 
 	app.model.ViewMode = ui.ViewFilePreview
 	app.commandsMu.Lock()
@@ -148,11 +148,11 @@ func TestFullscreenFilePreviewLeftBackspaceDoNotChangePanelPath(t *testing.T) {
 	app.commandsMu.Unlock()
 
 	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
-	if got := app.activePanel().Path; !got.Equal(pathBefore) {
+	if got := app.focusedPanel().Path; !got.Equal(pathBefore) {
 		t.Fatalf("KeyLeft changed path %q -> %q", pathBefore, got)
 	}
 	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone))
-	if got := app.activePanel().Path; !got.Equal(pathBefore) {
+	if got := app.focusedPanel().Path; !got.Equal(pathBefore) {
 		t.Fatalf("Backspace changed path %q -> %q", pathBefore, got)
 	}
 }
@@ -180,9 +180,9 @@ func TestFullscreenFilePreviewRightDoesNotMoveListCursor(t *testing.T) {
 	app.model.FullscreenFilePreview.Scroll = 0
 	app.commandsMu.Unlock()
 
-	cursorBefore := app.activePanel().Cursor
+	cursorBefore := app.focusedPanel().Cursor
 	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
-	if got := app.activePanel().Cursor; got != cursorBefore {
+	if got := app.focusedPanel().Cursor; got != cursorBefore {
 		t.Fatalf("list cursor moved %d -> %d; Right must not nav.open", cursorBefore, got)
 	}
 }
@@ -264,7 +264,7 @@ func TestFullscreenFilePreviewIgnoresBrowserOnlyShortcuts(t *testing.T) {
 	app.model.FullscreenFilePreview.CombinedText = "x\n"
 	app.model.FullscreenFilePreview.Scroll = 0
 	app.commandsMu.Unlock()
-	pathBefore := app.activePanel().PathString()
+	pathBefore := app.focusedPanel().PathString()
 
 	for _, tc := range []struct {
 		name string
@@ -284,7 +284,7 @@ func TestFullscreenFilePreviewIgnoresBrowserOnlyShortcuts(t *testing.T) {
 			if app.model.PathPicker.Open {
 				t.Fatal("bookmark picker must stay closed")
 			}
-			if got := app.activePanel().PathString(); got != pathBefore {
+			if got := app.focusedPanel().PathString(); got != pathBefore {
 				t.Fatalf("panel path changed %q -> %q", pathBefore, got)
 			}
 		})
@@ -427,7 +427,7 @@ func TestF8DeletesOnlyPreviewedFileKeepingPanelSelection(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{previewedPath: true, otherPath: true}
 
 	app.model.ViewMode = ui.ViewFilePreview

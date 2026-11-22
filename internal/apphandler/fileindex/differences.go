@@ -50,7 +50,7 @@ func (h *Handler) ReportDifferences() {
 	if !h.localOrIndex() {
 		return
 	}
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	target := p.PathString()
 	if e, ok := p.CurrentEntry(); ok && e.IsDir() && e.Name != ".." {
 		target = e.Path
@@ -60,7 +60,7 @@ func (h *Handler) ReportDifferences() {
 		h.host.SetErrorMessage(differencesTitle, err)
 		return
 	}
-	panelID, indexPanel, started := h.model.ActivePanel, p.Path.Scheme() == pathloc.SchemeFileIndex, time.Now()
+	panelID, indexPanel, started := h.model.FocusedPanelID(), p.Path.Scheme() == pathloc.SchemeFileIndex, time.Now()
 	resolved := new(bool) // UI goroutine only
 	var task *jobs.Task
 	task = h.index.DifferencesTask(root, func(diffs []fi.Difference, err error) {

@@ -21,7 +21,7 @@ func TestTransferDialogPrefillDestinationTrailingSlash(t *testing.T) {
 	screen.SetSize(80, 24)
 
 	app := newTestApp(t, screen, testOptions(root))
-	if err := app.inactivePanel().Load(root); err != nil {
+	if err := app.otherBrowserPanel().Load(root); err != nil {
 		t.Fatal(err)
 	}
 
@@ -217,7 +217,7 @@ func TestTransferDialogEnterOverGhostTextConfirmsNotAccepts(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)); quit {
 		t.Fatal("unexpected quit")
 	}
@@ -347,7 +347,7 @@ func TestTransferDialogCompletionDirsOnlyForMultiSelection(t *testing.T) {
 	app := newTestApp(t, screen, testOptions(root))
 
 	complete := func(selected map[string]bool) []string {
-		app.activePanel().SelectedPaths = selected
+		app.focusedPanel().SelectedPaths = selected
 		app.dialogCtrl.OpenCopyDialog()
 		d := &app.model.TransferDialog
 		partial := filepath.Join(root, "harbor-")

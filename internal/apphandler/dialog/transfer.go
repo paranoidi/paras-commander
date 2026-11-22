@@ -70,14 +70,14 @@ func TransferPrefilledDestination(path string) dialog.FileDialogField {
 }
 
 func (h *Handler) openTransferDialog(kind dialog.TransferKind) {
-	passive := h.host.InactivePanel()
+	passive := h.host.DestinationPanel()
 	if source, err := h.transferSource(); err != nil {
 		if h.model.ViewMode == ui.ViewUnique {
 			h.host.SetTransientMessage(err.Error(), ui.MessageUrgencyWarn)
 			return
 		}
 	} else if h.model.ViewMode != ui.ViewUnique {
-		if msg := panel.GhostRefusal(h.host.ActivePanel().GhostSources(ops.SourcePaths(source)...)); msg != "" {
+		if msg := panel.GhostRefusal(h.host.FocusedPanel().GhostSources(ops.SourcePaths(source)...)); msg != "" {
 			h.host.SetTransientMessage(msg, ui.MessageUrgencyWarn)
 			return
 		}
@@ -132,7 +132,7 @@ func (h *Handler) multiDirSelectionCommonRoot() (string, bool) {
 	if h.model.ViewMode == ui.ViewUnique {
 		return h.uniqueCommonRoot()
 	}
-	root, multiDir, ok := h.host.ActivePanel().SelectedCommonRoot()
+	root, multiDir, ok := h.host.FocusedPanel().SelectedCommonRoot()
 	if !ok || !multiDir {
 		return "", false
 	}
@@ -186,7 +186,7 @@ func (h *Handler) applyCopyDefaults(st *dialog.TransferDialogState) {
 	st.PreservePermissions = cfg.Operations.PreservePermissions
 	st.PreserveTimestamps = cfg.Operations.PreserveTimestamps
 	st.DereferenceSymlinks = cfg.Operations.DereferenceSymlinks
-	st.SourceIsRemote = !h.host.ActivePanel().Path.IsLocal()
+	st.SourceIsRemote = !h.host.FocusedPanel().Path.IsLocal()
 }
 
 // transferViewContext is what dialog.TransferView needs besides the state: the screen layout, the
@@ -319,7 +319,7 @@ func transferBasenameIssue(name string) string {
 func (h *Handler) confirmTransfer() {
 	d := &h.model.TransferDialog
 	startPaused := d.StartPaused
-	sources := h.ActivePanelSources()
+	sources := h.FocusedPanelSources()
 	if len(sources) == 0 {
 		if d.Kind == dialog.TransferKindCopy {
 			h.host.SetTransientMessage("No files to copy", ui.MessageUrgencyWarn)
@@ -450,7 +450,7 @@ func (h *Handler) confirmTransferSelfCopyRename(sources []string, startPaused bo
 // that view is open, else the active panel's selection or cursor entry.
 func (h *Handler) transferSource() (ops.Source, error) {
 	if h.model.ViewMode != ui.ViewUnique {
-		return ops.ResolveSource(h.host.ActivePanel())
+		return ops.ResolveSource(h.host.FocusedPanel())
 	}
 	files := h.unique.Sources()
 	if len(files) == 0 {
@@ -490,7 +490,7 @@ func (h *Handler) transferQueued(jobType jobs.Type, sources []string) {
 		h.unique.FilesQueued(sources, jobType == jobs.TypeMove)
 		return
 	}
-	h.host.ActivePanel().ClearSelection()
+	h.host.FocusedPanel().ClearSelection()
 }
 
 func (h *Handler) setTransferQueuedMessage(jobType jobs.Type, paused bool) {
@@ -516,7 +516,7 @@ func (h *Handler) ConfirmCopy() {
 
 // ActivePanelSources returns file paths from the active panel: selected entries
 // if any, otherwise the cursor entry. Returns nil if no valid sources exist.
-func (h *Handler) ActivePanelSources() []string {
+func (h *Handler) FocusedPanelSources() []string {
 	source, err := h.transferSource()
 	if err != nil {
 		return nil

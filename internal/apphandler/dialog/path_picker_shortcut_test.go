@@ -20,9 +20,9 @@ type pathPickerItemsHost struct {
 	cfg      config.Config
 }
 
-func (f pathPickerItemsHost) ActivePanel() *panel.State   { return f.active }
-func (f pathPickerItemsHost) InactivePanel() *panel.State { return f.inactive }
-func (f pathPickerItemsHost) Config() config.Config       { return f.cfg }
+func (f pathPickerItemsHost) FocusedPanel() *panel.State     { return f.active }
+func (f pathPickerItemsHost) DestinationPanel() *panel.State { return f.inactive }
+func (f pathPickerItemsHost) Config() config.Config          { return f.cfg }
 
 func TestPathPickerBuildersLeaveShortcutIDsEmpty(t *testing.T) {
 	t.Parallel()

@@ -26,11 +26,11 @@ func openAdvancedMove(t *testing.T) *App {
 
 	screen := newScreen(t, 100, 40)
 	app := newApp(t, screen, srcDir)
-	if err := app.inactivePanel().Load(dstDir); err != nil {
+	if err := app.otherBrowserPanel().Load(dstDir); err != nil {
 		t.Fatal(err)
 	}
 	applyNextInterruptEvent(t, app, screen)
-	app.activePanel().SelectedPaths = map[string]bool{src: true}
+	app.focusedPanel().SelectedPaths = map[string]bool{src: true}
 
 	app.dialogCtrl.OpenMoveDialog()
 	app.dialogCtrl.ApplyTransferEvent(dlg.Event{ID: dialog.TransferAdvanced})

@@ -53,15 +53,15 @@ func TestFileMenuCopyOpensTransferDialogWithoutEnqueue(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	if err := app.activePanel().Load(dir); err != nil {
+	if err := app.focusedPanel().Load(dir); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if err := app.inactivePanel().Load(dst); err != nil {
+	if err := app.otherBrowserPanel().Load(dst); err != nil {
 		t.Fatalf("Load dst: %v", err)
 	}
 
 	p := filepath.Join(dir, "a.txt")
-	app.activePanel().SelectedPaths = map[string]bool{p: true}
+	app.focusedPanel().SelectedPaths = map[string]bool{p: true}
 
 	defs := menu.BrowserDefinitions(app.keys.Global, false)
 	def, item, ok := findFileMenuItem(defs, "Copy")
@@ -76,7 +76,7 @@ func TestFileMenuCopyOpensTransferDialogWithoutEnqueue(t *testing.T) {
 	if len(app.jobState.AllJobs()) != 0 {
 		t.Fatalf("expected no job before confirm, got %d", len(app.jobState.AllJobs()))
 	}
-	if len(app.activePanel().SelectedPaths) == 0 {
+	if len(app.focusedPanel().SelectedPaths) == 0 {
 		t.Fatal("opening copy dialog must not clear selection")
 	}
 }
@@ -93,17 +93,17 @@ func TestQuickFilterF5OpensCopyDialogWithoutEnqueue(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	if err := app.activePanel().Load(dir); err != nil {
+	if err := app.focusedPanel().Load(dir); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if err := app.inactivePanel().Load(dst); err != nil {
+	if err := app.otherBrowserPanel().Load(dst); err != nil {
 		t.Fatalf("Load dst: %v", err)
 	}
 
 	p := filepath.Join(dir, "a.txt")
-	app.activePanel().SelectedPaths = map[string]bool{p: true}
-	app.activePanel().OpenFilter(app.activeViewportRows())
-	app.activePanel().AcceptFilter(app.activeViewportRows())
+	app.focusedPanel().SelectedPaths = map[string]bool{p: true}
+	app.focusedPanel().OpenFilter(app.focusedViewportRows())
+	app.focusedPanel().AcceptFilter(app.focusedViewportRows())
 
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
 	if quit {

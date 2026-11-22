@@ -26,12 +26,12 @@ import (
 // Sort dialog handlers
 
 func (a *App) openSortDialog() {
-	a.openSortDialogForPanel(a.model.ActivePanel)
+	a.openSortDialogForPanel(a.focusedPanelID())
 }
 
 func (a *App) openSortDialogForPanel(panelID int) {
 	target := a.panelByID(panelID)
-	cols := a.model.MetaResults[panelID]
+	cols := a.model.PanelMetaResults(panelID)
 	n := min(len(cols), len(panel.SortDialogRadios()))
 	metaRadios := make([]dialog.SortDialogMetaRadio, n)
 	metaNames := make([]string, n)
@@ -370,7 +370,7 @@ func (a *App) openGroupSelect(mode string, context string) {
 	}
 	metaCount := 0
 	if context == "panel" {
-		metaCount = len(a.model.MetaResults[a.model.ActivePanel])
+		metaCount = len(a.model.PanelMetaResults(a.focusedPanelID()))
 	}
 	a.model.GroupSelect = dialog.GroupSelectState{
 		Open:               true,
@@ -434,7 +434,7 @@ func (a *App) filterCursorEntry(target dialog.FilterTarget) (name string, isDir,
 func (a *App) groupSelectCursorEntry(context string) (name string, isDir, ok bool) {
 	switch context {
 	case "panel":
-		if e, found := a.activePanel().CurrentEntry(); found {
+		if e, found := a.focusedPanel().CurrentEntry(); found {
 			return e.Name, e.IsDir(), true
 		}
 	case "find":
@@ -489,7 +489,7 @@ type groupSelectPreviewKey struct {
 // from its current include/only-meta checkboxes. Shared by executeGroupSelect and
 // updateGroupSelectPreview so the two stay in sync.
 func (a *App) groupSelectMeta(gs *dialog.GroupSelectState) panel.GroupSelectMeta {
-	return ui.MetaMatchData(a.model.MetaResults[a.model.ActivePanel], gs.IncludeMetaColumns, gs.OnlyMetaColumns)
+	return ui.MetaMatchData(a.model.PanelMetaResults(a.focusedPanelID()), gs.IncludeMetaColumns, gs.OnlyMetaColumns)
 }
 
 // groupSelectSpec is the panel.FilterSpec for the dialog's current state (Invert unused).
@@ -594,7 +594,7 @@ func (a *App) updateGroupSelectPreview() {
 		a.findCtrl.StartGroupCount(a.groupSelectRequest(gs), !selectMode)
 		return
 	}
-	p := a.activePanel()
+	p := a.focusedPanel()
 	files, dirs, err := p.CountGroupMatches(a.groupSelectSpec(gs), a.groupSelectMeta(gs), !selectMode)
 	if err != nil {
 		gs.PreviewShow = false
@@ -614,7 +614,7 @@ func (a *App) outputGroupMatches(gs *dialog.GroupSelectState) ([]dialog.OutputPa
 	if err != nil {
 		return nil, err
 	}
-	p := a.activePanel()
+	p := a.focusedPanel()
 	selectMode := req.Mode == findctrl.GroupSelectModeSelect
 	var out []dialog.OutputPathMatch
 	for _, m := range a.model.CommandOutputDialog.UniquePaths() {
@@ -669,7 +669,7 @@ func (a *App) applyOutputGroupSelect(gs *dialog.GroupSelectState) {
 		return
 	}
 	req := a.groupSelectRequest(gs)
-	p := a.activePanel()
+	p := a.focusedPanel()
 	paths := dialog.OutputMatchPaths(matches)
 	verb, conflicts := "Unselected", false
 	if req.Mode == findctrl.GroupSelectModeSelect {
@@ -745,7 +745,7 @@ func (a *App) executeGroupSelect() {
 	case "dedup":
 		a.applyDedupGroupSelect(gs)
 	default:
-		p := a.activePanel()
+		p := a.focusedPanel()
 		meta := a.groupSelectMeta(gs)
 		spec := a.groupSelectSpec(gs)
 		what := findctrl.GroupSelectRequest{Pattern: gs.Text, TypeLabel: spec.TypeLabel}.Describe()

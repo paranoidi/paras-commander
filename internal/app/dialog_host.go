@@ -22,13 +22,13 @@ func (h dialogHost) NavigatePanelToPath(panelID int, path, selectName string) er
 
 func (h dialogHost) CloseJobsView() { h.app.jobsCtrl.TryDispatch(keymap.ActionJobsClose) }
 
-func (h dialogHost) InactivePanel() *panel.State { return h.app.inactivePanel() }
+func (h dialogHost) DestinationPanel() *panel.State { return h.app.destinationPanel() }
 
-func (h dialogHost) InactivePanelID() int { return h.app.inactivePanelID() }
+func (h dialogHost) DestinationPanelID() int { return h.app.destinationPanelID() }
 
 func (h dialogHost) PanelByID(panelID int) *panel.State { return h.app.panelByID(panelID) }
 
-func (h dialogHost) ActiveViewportRows() int { return h.app.activeViewportRows() }
+func (h dialogHost) FocusedViewportRows() int { return h.app.focusedViewportRows() }
 
 func (h dialogHost) PanelViewportRows(panelID int) int { return h.app.panelViewportRows(panelID) }
 

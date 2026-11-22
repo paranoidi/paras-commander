@@ -25,10 +25,13 @@ type Host interface {
 	// vi-motion mode's "every preview-menu letter fires directly" shortcut.
 	ActionForPreviewMenuKey(r rune) (string, bool)
 
-	ActivePanel() *panel.State
+	// FocusedPanel is the panel F3 and the preview prefetch read (the active browser column or a
+	// view's focused embedded panel); OtherBrowserPanelID is the inactive browser column quick view
+	// and latched sync paint into.
+	FocusedPanel() *panel.State
 	PanelByID(panelID int) *panel.State
-	InactivePanelID() int
-	ActiveViewportRows() int
+	OtherBrowserPanelID() int
+	FocusedViewportRows() int
 	PanelViewportRows(panelID int) int
 	SelectedStripViewportRows(panelID int) int
 	FocusSelectedStrip() bool

@@ -25,16 +25,16 @@ func TestExtractDestinationShortcutsAndFooter(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	if err := app.activePanel().Load(activeDir); err != nil {
+	if err := app.focusedPanel().Load(activeDir); err != nil {
 		t.Fatal(err)
 	}
 	applyNextInterruptEvent(t, app, screen)
-	if err := app.inactivePanel().Load(inactiveDir); err != nil {
+	if err := app.otherBrowserPanel().Load(inactiveDir); err != nil {
 		t.Fatal(err)
 	}
 	applyNextInterruptEvent(t, app, screen)
-	app.activePanel().SelectedPaths = map[string]bool{archive: true}
-	app.dialogCtrl.OpenExtractDialog(app.activePanel())
+	app.focusedPanel().SelectedPaths = map[string]bool{archive: true}
+	app.dialogCtrl.OpenExtractDialog(app.focusedPanel())
 	if !app.model.FileDialog.Open {
 		t.Fatal("extract dialog should be open")
 	}

@@ -311,8 +311,10 @@ know is named in a warning when the list loads.
 
 **The view.** The tree takes the active panel's place, with a file count and size on each row.
 Directories start collapsed and a directory holding only one directory is shown as one row. The
-other panel stays beside it: `Tab` focuses it, and you browse it as usual to choose where files go.
-It is the real panel, so it stays where you left it when you close the view. `Esc` or `M-U` closes
+other panel stays beside it: `Tab` focuses it, and it works like a normal file panel there (browse,
+select, rename, create folders, sort, quick filter, view, edit) to choose where files go. `F5` and `F6`
+from it still copy or move the tree's files into it; `F8` does nothing there, so a delete always
+starts from the tree. It is the real panel, so it stays where you left it when you close the view. `Esc` or `M-U` closes
 the view and keeps the results and marks; `M-U` on the same scope brings them back. A different scope
 starts over. Refresh (`C-y`) reads the index again, keeping marks and open directories that
 still apply.

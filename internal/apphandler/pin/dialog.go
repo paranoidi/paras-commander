@@ -33,7 +33,7 @@ func (h *Handler) DialogView() dlg.Spec {
 // OpenDialog opens the Pin dialog. Every item's PathMissing starts false; a background scan
 // (startMissingScan) fills it in once it lands, so opening never blocks on a stat.
 func (h *Handler) OpenDialog() {
-	if ui.IsAuxiliaryView(h.model.ViewMode) {
+	if !h.model.FileListFocused() {
 		return
 	}
 	if h.host.InQuickFilterUI() {
@@ -141,7 +141,7 @@ func (h *Handler) OpenSelected(panelID int) bool {
 // time, not stored at dialog-open time — Pin is opened globally, not per-panel) and closes
 // the dialog on success only.
 func (h *Handler) ActivateSelection() {
-	if h.OpenSelected(h.model.ActivePanel) {
+	if h.OpenSelected(h.model.FocusedPanelID()) {
 		h.CloseDialog()
 	}
 }

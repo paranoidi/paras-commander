@@ -18,7 +18,7 @@ import (
 // destination from config's FlattenDefaultLocation (falling back to the active panel when the
 // inactive panel is itself one of the flatten sources).
 func (h *Handler) OpenFlattenDialog() {
-	roots, err := ops.ValidateFlattenSource(h.host.ActivePanel())
+	roots, err := ops.ValidateFlattenSource(h.host.FocusedPanel())
 	if err != nil {
 		h.flattenSourceErrorToast(err)
 		return
@@ -27,18 +27,18 @@ func (h *Handler) OpenFlattenDialog() {
 	for i, r := range roots {
 		rootStrs[i] = r.String()
 	}
-	destPanel := h.host.InactivePanel()
+	destPanel := h.host.DestinationPanel()
 	if h.host.Config().Operations.FlattenDefaultLocation == config.FlattenDefaultLocationActive {
-		destPanel = h.host.ActivePanel()
+		destPanel = h.host.FocusedPanel()
 	}
 	inactiveIsSource := false
-	if destPanel == h.host.InactivePanel() {
-		inactiveLoc, parseErr := pathloc.Parse(h.host.InactivePanel().PathString())
+	if destPanel == h.host.DestinationPanel() {
+		inactiveLoc, parseErr := pathloc.Parse(h.host.DestinationPanel().PathString())
 		if parseErr == nil {
 			for _, root := range roots {
 				if root.Equal(inactiveLoc) {
 					inactiveIsSource = true
-					destPanel = h.host.ActivePanel()
+					destPanel = h.host.FocusedPanel()
 					break
 				}
 			}
@@ -170,7 +170,7 @@ func (h *Handler) confirmFlatten() {
 		return
 	}
 	h.CloseFlattenDialog()
-	h.host.ActivePanel().ClearSelection()
+	h.host.FocusedPanel().ClearSelection()
 	h.jobs.AddFlattenJob(jobsctrl.FlattenJobRequest{
 		Roots: d.DirRoots, Dest: destLoc.String(), Recursive: d.Recursive, RemoveEmpty: d.RemoveEmpty,
 	})

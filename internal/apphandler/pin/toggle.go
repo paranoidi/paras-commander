@@ -41,7 +41,7 @@ func (h *Handler) TogglePath(name, path string, isDir bool) {
 
 // ToggleActivePanelCursor pins/unpins the active panel's cursor entry.
 func (h *Handler) ToggleActivePanelCursor() {
-	entry, ok := h.host.ActivePanel().CurrentEntry()
+	entry, ok := h.host.FocusedPanel().CurrentEntry()
 	if !ok {
 		h.host.SetTransientMessage("No entry to pin", ui.MessageUrgencyInfo)
 		return

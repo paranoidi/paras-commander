@@ -25,7 +25,7 @@ func TestQuickFilterFunctionKeyClosesFuzzyAndRunsFullscreenFileView(t *testing.T
 
 	app := newTestApp(t, screen, testOptions(dir))
 
-	app.activePanel().OpenFilter(app.activeViewportRows())
+	app.focusedPanel().OpenFilter(app.focusedViewportRows())
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModNone))
 
 	// F3 runs file.view (full-screen file view) after the bound action clears the filter.
@@ -61,7 +61,7 @@ func TestQuickFilterF9ClosesFuzzyAndOpensMenu(t *testing.T) {
 
 	app := newTestApp(t, screen, testOptions(dir))
 
-	app.activePanel().OpenFilter(app.activeViewportRows())
+	app.focusedPanel().OpenFilter(app.focusedViewportRows())
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 	if quit {
 		t.Fatal("handleKey() quit = true, want false")
@@ -87,7 +87,7 @@ func TestQuickFilterF10Quits(t *testing.T) {
 
 	app := newTestApp(t, screen, testOptions(dir))
 
-	app.activePanel().OpenFilter(app.activeViewportRows())
+	app.focusedPanel().OpenFilter(app.focusedViewportRows())
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF10, 0, tcell.ModNone))
 	if !quit {
 		t.Fatal("handleKey() quit = false, want true for F10 from quick filter")
@@ -111,7 +111,7 @@ func TestQuickFilterEmptyOverlayThenTypingEnterOnFileClearsFuzzy(t *testing.T) {
 
 	app := newTestApp(t, screen, testOptions(dir))
 
-	app.activePanel().OpenFilter(app.activeViewportRows())
+	app.focusedPanel().OpenFilter(app.focusedViewportRows())
 	if !app.model.Primary.Filter.Editing {
 		t.Fatal("filter editing = false, want true after OpenFilter")
 	}
@@ -318,7 +318,7 @@ func TestQuickFilterEmptyQueryEnterExitsEditing(t *testing.T) {
 
 	app := newTestApp(t, screen, testOptions(dir))
 
-	app.activePanel().OpenFilter(app.activeViewportRows())
+	app.focusedPanel().OpenFilter(app.focusedViewportRows())
 	if !app.model.Primary.Filter.Editing {
 		t.Fatal("want editing after OpenFilter")
 	}
@@ -344,7 +344,7 @@ func TestFilterModeEscCancelsInsteadOfQuitting(t *testing.T) {
 
 	app := newTestApp(t, screen, testOptions(dir))
 
-	app.activePanel().OpenFilter(app.activeViewportRows())
+	app.focusedPanel().OpenFilter(app.focusedViewportRows())
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if quit {
 		t.Fatal("handleKey(Esc) quit = true, want filter cancel")
@@ -370,7 +370,7 @@ func TestQuickFilterKeymapActionClosesFilterAndOpensDirInOtherPanel(t *testing.T
 		t.Fatal("no key bound to ActionPanelOpenDirInOther")
 	}
 
-	app.activePanel().OpenFilter(app.activeViewportRows())
+	app.focusedPanel().OpenFilter(app.focusedViewportRows())
 	for _, r := range "sub" {
 		app.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
@@ -412,7 +412,7 @@ func TestQuickFilterUpDownCyclesMatches(t *testing.T) {
 
 	app := newTestApp(t, screen, testOptions(dir))
 
-	app.activePanel().OpenFilter(app.activeViewportRows())
+	app.focusedPanel().OpenFilter(app.focusedViewportRows())
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModNone))
 	if app.model.Primary.Filter.Query != "s" {
 		t.Fatalf("query=%q want s", app.model.Primary.Filter.Query)
@@ -478,7 +478,7 @@ func TestQuickFilterCtrlBackspaceClearsQuery(t *testing.T) {
 	app := newApp(t, screen, dir)
 
 	// Type something into filter
-	app.activePanel().OpenFilter(app.activeViewportRows())
+	app.focusedPanel().OpenFilter(app.focusedViewportRows())
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModNone))
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'l', tcell.ModNone))
 
@@ -516,7 +516,7 @@ func TestQuickFilterShiftF6OpensRenameNotMove(t *testing.T) {
 
 	app := newTestApp(t, screen, testOptions(dir))
 
-	app.activePanel().OpenFilter(app.activeViewportRows())
+	app.focusedPanel().OpenFilter(app.focusedViewportRows())
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModNone))
 
 	// Shift+F6 must resolve through the keymap (file.rename), not degrade to plain F6 (file.move).

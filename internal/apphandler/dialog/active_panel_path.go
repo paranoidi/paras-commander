@@ -68,14 +68,14 @@ func (h *Handler) TryTransferDialogDestinationShortcut(ev *tcell.EventKey) bool 
 
 func (h *Handler) applyTransferDestinationFromActivePanel() {
 	d := &h.model.TransferDialog
-	d.Destination = TransferPrefilledDestination(h.host.ActivePanel().PathString())
+	d.Destination = TransferPrefilledDestination(h.host.FocusedPanel().PathString())
 	h.SyncPathFieldCompletion(&d.Destination, h.TransferDestinationTextWidth())
 	h.ArmTransferDestinationValidateTimer()
 }
 
 func (h *Handler) applyTransferDestinationFromInactivePanel() {
 	d := &h.model.TransferDialog
-	d.Destination = TransferPrefilledDestination(h.host.InactivePanel().PathString())
+	d.Destination = TransferPrefilledDestination(h.host.DestinationPanel().PathString())
 	h.SyncPathFieldCompletion(&d.Destination, h.TransferDestinationTextWidth())
 	h.ArmTransferDestinationValidateTimer()
 }
@@ -100,14 +100,14 @@ func (h *Handler) TryFlattenDialogDestinationShortcut(ev *tcell.EventKey) bool {
 
 func (h *Handler) applyFlattenDestinationFromActivePanel() {
 	d := &h.model.FlattenDialog
-	d.Destination = TransferPrefilledDestination(h.host.ActivePanel().PathString())
+	d.Destination = TransferPrefilledDestination(h.host.FocusedPanel().PathString())
 	h.SyncPathFieldCompletion(&d.Destination, h.TransferDestinationTextWidth())
 	h.ArmFlattenDestinationValidateTimer()
 }
 
 func (h *Handler) applyFlattenDestinationFromInactivePanel() {
 	d := &h.model.FlattenDialog
-	d.Destination = TransferPrefilledDestination(h.host.InactivePanel().PathString())
+	d.Destination = TransferPrefilledDestination(h.host.DestinationPanel().PathString())
 	h.SyncPathFieldCompletion(&d.Destination, h.TransferDestinationTextWidth())
 	h.ArmFlattenDestinationValidateTimer()
 }
@@ -129,8 +129,8 @@ func (h *Handler) DestinationDialogOverlayFooterKeys(keys *keymap.Map) []menu.Fu
 // when the user presses a chord from [dialog.transfer] while the destination row is focused.
 func (h *Handler) tryDestinationDialogShortcut(ev *tcell.EventKey) bool {
 	return TryDestinationShortcut(ev, h.keysTransferDialog, h.destinationDialogFooterEligible(),
-		func() { h.applyDialogDestination(h.host.ActivePanel().PathString()) },
-		func() { h.applyDialogDestination(h.host.InactivePanel().PathString()) })
+		func() { h.applyDialogDestination(h.host.FocusedPanel().PathString()) },
+		func() { h.applyDialogDestination(h.host.DestinationPanel().PathString()) })
 }
 
 func (h *Handler) applyDialogDestination(path string) {

@@ -102,7 +102,7 @@ func TestUniqueViewScopesToPanelDirectory(t *testing.T) {
 
 func TestUniqueViewScopesToSelectedDirectories(t *testing.T) {
 	a, screen, _, orchard, willow := uniqueApp(t)
-	a.activePanel().AddSelection(orchard)
+	a.focusedPanel().AddSelection(orchard)
 	openUnique(t, a, screen)
 	if got := uniqueFiles(a); !slices.Equal(got, []string{"orchard/thistle.txt"}) {
 		t.Fatalf("one directory: %v (clover has a copy in willow)", got)
@@ -111,7 +111,7 @@ func TestUniqueViewScopesToSelectedDirectories(t *testing.T) {
 
 	// Both selected: the copy is inside the scope, so clover and sedge are listed, and a new
 	// scope is a new lookup rather than the kept results.
-	a.activePanel().AddSelection(willow)
+	a.focusedPanel().AddSelection(willow)
 	openUnique(t, a, screen)
 	want := []string{"orchard/clover.txt", "orchard/thistle.txt", "willow/bramble.txt", "willow/sedge.txt"}
 	if got := uniqueFiles(a); !slices.Equal(got, want) {
@@ -121,8 +121,8 @@ func TestUniqueViewScopesToSelectedDirectories(t *testing.T) {
 
 func TestUniqueViewRefusesMixedSelection(t *testing.T) {
 	a, screen, dir, orchard, _ := uniqueApp(t)
-	a.activePanel().AddSelection(orchard)
-	a.activePanel().AddSelection(filepath.Join(dir, "harbor.txt"))
+	a.focusedPanel().AddSelection(orchard)
+	a.focusedPanel().AddSelection(filepath.Join(dir, "harbor.txt"))
 	a.dispatch(keymap.ActionFileIndexFindUnique)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.Message != "" })
 	if a.model.ViewMode != ui.ViewBrowser || a.model.MessageUrgency != ui.MessageUrgencyCritical || !strings.Contains(a.model.Message, "select only") {
@@ -133,10 +133,10 @@ func TestUniqueViewRefusesMixedSelection(t *testing.T) {
 func TestUniqueViewIgnoresSelectionOfOnlyFiles(t *testing.T) {
 	a, screen, dir, _, _ := uniqueApp(t)
 	selected := filepath.Join(dir, "harbor.txt")
-	a.activePanel().AddSelection(selected)
+	a.focusedPanel().AddSelection(selected)
 	openUnique(t, a, screen)
-	if !slices.Equal(a.model.UniqueView.Scope, []string{dir}) || !a.activePanel().SelectedPaths[selected] {
-		t.Fatalf("scope = %v selection = %v", a.model.UniqueView.Scope, a.activePanel().SelectedPaths)
+	if !slices.Equal(a.model.UniqueView.Scope, []string{dir}) || !a.focusedPanel().SelectedPaths[selected] {
+		t.Fatalf("scope = %v selection = %v", a.model.UniqueView.Scope, a.focusedPanel().SelectedPaths)
 	}
 }
 
@@ -146,7 +146,7 @@ func TestUniqueViewRefusesIndexRoot(t *testing.T) {
 		t.Fatal(err)
 	}
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
-		p := a.activePanel()
+		p := a.focusedPanel()
 		return p.PathString() == "fileindex:///" && !p.ListingPending
 	})
 	a.dispatch(keymap.ActionFileIndexFindUnique)
@@ -161,17 +161,17 @@ func TestUniqueViewClassifiesIndexSelection(t *testing.T) {
 	a, screen, dir, orchard, _ := uniqueApp(t)
 	a.dispatch(keymap.ActionFileIndexBrowse)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
-		p := a.activePanel()
+		p := a.focusedPanel()
 		return p.PathString() == "fileindex://"+dir && !p.ListingPending
 	})
-	a.activePanel().AddSelection("fileindex://" + orchard)
+	a.focusedPanel().AddSelection("fileindex://" + orchard)
 	openUnique(t, a, screen)
 	if !slices.Equal(a.model.UniqueView.Scope, []string{orchard}) {
 		t.Fatalf("scope = %v", a.model.UniqueView.Scope)
 	}
 	a.uniqueCtrl.Leave()
 	a.model.Message = ""
-	a.activePanel().AddSelection("fileindex://" + filepath.Join(dir, "willow", "bramble.txt"))
+	a.focusedPanel().AddSelection("fileindex://" + filepath.Join(dir, "willow", "bramble.txt"))
 	a.dispatch(keymap.ActionFileIndexFindUnique)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.Message != "" })
 	if a.model.ViewMode != ui.ViewBrowser {
@@ -260,12 +260,12 @@ func TestUniqueViewCopyAndMoveTargetOtherPanel(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := a.navigatePanelToDirectory(a.inactivePanelID(), dest, ""); err != nil {
+	if err := a.navigatePanelToDirectory(a.otherBrowserPanelID(), dest, ""); err != nil {
 		t.Fatal(err)
 	}
-	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return !a.inactivePanel().ListingPending })
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return !a.otherBrowserPanel().ListingPending })
 	panelSelected := filepath.Join(dir, "meadow.txt")
-	a.activePanel().AddSelection(panelSelected)
+	a.focusedPanel().AddSelection(panelSelected)
 	openUnique(t, a, screen)
 	st := &a.model.UniqueView
 
@@ -283,8 +283,8 @@ func TestUniqueViewCopyAndMoveTargetOtherPanel(t *testing.T) {
 		t.Fatalf("jobs = %+v", all)
 	}
 	// A copy keeps the file listed; its marks go, the panel selection stays.
-	if len(st.Marked) != 0 || !slices.Contains(uniqueFiles(a), "orchard/thistle.txt") || !a.activePanel().SelectedPaths[panelSelected] {
-		t.Fatalf("after copy: marks=%v files=%v selection=%v", st.Marked, uniqueFiles(a), a.activePanel().SelectedPaths)
+	if len(st.Marked) != 0 || !slices.Contains(uniqueFiles(a), "orchard/thistle.txt") || !a.focusedPanel().SelectedPaths[panelSelected] {
+		t.Fatalf("after copy: marks=%v files=%v selection=%v", st.Marked, uniqueFiles(a), a.focusedPanel().SelectedPaths)
 	}
 
 	// A move drops the file from the list.
@@ -338,7 +338,7 @@ func TestUniqueViewDeleteAsksAboutEmptyDirs(t *testing.T) {
 			if err := os.Remove(filepath.Join(willow, "sedge.txt")); err != nil {
 				t.Fatal(err)
 			}
-			a.activePanel().AddSelection(willow)
+			a.focusedPanel().AddSelection(willow)
 			openUnique(t, a, screen)
 			st := &a.model.UniqueView
 			bramble := filepath.Join(willow, "bramble.txt")
@@ -467,10 +467,10 @@ func TestUniqueViewRefresh(t *testing.T) {
 // The destination is the real inactive panel: browsing it from the view moves that panel.
 func TestUniqueViewDestinationPanelFocus(t *testing.T) {
 	a, screen, dir, orchard, _ := uniqueApp(t)
-	if err := a.navigatePanelToDirectory(a.inactivePanelID(), dir, ""); err != nil {
+	if err := a.navigatePanelToDirectory(a.otherBrowserPanelID(), dir, ""); err != nil {
 		t.Fatal(err)
 	}
-	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return !a.inactivePanel().ListingPending })
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return !a.otherBrowserPanel().ListingPending })
 	openUnique(t, a, screen)
 	st := &a.model.UniqueView
 	active := a.model.ActivePanel
@@ -478,7 +478,7 @@ func TestUniqueViewDestinationPanelFocus(t *testing.T) {
 	if !st.FocusPanel {
 		t.Fatal("tab did not focus the destination")
 	}
-	p := a.inactivePanel()
+	p := a.otherBrowserPanel()
 	if !p.SelectVisibleEntry("orchard") {
 		t.Fatal("no orchard entry in the destination")
 	}
@@ -533,7 +533,7 @@ func TestUniqueViewCopyAcrossDirectoriesPreview(t *testing.T) {
 	if !d.Open || d.CommonRoot != dir || len(d.Entries) != 2 {
 		t.Fatalf("root = %q entries = %+v", d.CommonRoot, d.Entries)
 	}
-	if got := a.dialogCtrl.ActivePanelSources(); len(got) != 2 {
+	if got := a.dialogCtrl.FocusedPanelSources(); len(got) != 2 {
 		t.Fatalf("sources = %v", got)
 	}
 }
@@ -580,4 +580,55 @@ func findUniqueChord(t *testing.T, a *App) *tcell.EventKey {
 		t.Fatal(err)
 	}
 	return tcell.NewEventKey(ch.Key, ch.Rune, ch.Mod)
+}
+
+// The focused destination is a file list for selection, while copy from it still acts on the tree's
+// files, into the destination itself.
+func TestUniqueViewDestinationSelectsAndCopiesTreeFiles(t *testing.T) {
+	a, screen, _, orchard, willow := uniqueApp(t)
+	if err := a.navigatePanelToDirectory(a.otherBrowserPanelID(), willow, ""); err != nil {
+		t.Fatal(err)
+	}
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return !a.otherBrowserPanel().ListingPending })
+	openUnique(t, a, screen)
+	st := &a.model.UniqueView
+	a.handleKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone)) // orchard open
+	st.Pane.Selected = slices.Index(uniqueRowTexts(a), "thistle.txt")
+	a.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
+	thistle := filepath.Join(orchard, "thistle.txt")
+	if !st.Marked[thistle] {
+		t.Fatalf("tree marks = %v", st.Marked)
+	}
+
+	a.handleKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
+	dest := a.otherBrowserPanel()
+	if !st.FocusPanel || a.focusedPanelID() != a.otherBrowserPanelID() {
+		t.Fatal("tab did not focus the destination")
+	}
+	if !dest.SelectVisibleEntry("sedge.txt") {
+		t.Fatal("no sedge.txt in the destination")
+	}
+	a.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
+	sedge := filepath.Join(willow, "sedge.txt")
+	if !dest.SelectedPaths[sedge] || len(st.Marked) != 1 {
+		t.Fatalf("destination selection = %v, tree marks = %v", dest.SelectedPaths, st.Marked)
+	}
+
+	a.handleKey(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone)) // a delete needs the tree focused
+	if a.model.FileDialog.Open {
+		t.Fatalf("delete from the destination opened %+v", a.model.FileDialog)
+	}
+
+	a.handleKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	if !a.model.TransferDialog.Open || !strings.HasPrefix(a.model.TransferDialog.Destination.Value, willow) {
+		t.Fatalf("copy dialog: %+v", a.model.TransferDialog)
+	}
+	a.dialogCtrl.ConfirmCopy()
+	all := a.jobState.AllJobs()
+	if len(all) != 1 || all[0].Type != jobs.TypeCopy || len(all[0].Sources) != 1 || all[0].Sources[0].String() != thistle {
+		t.Fatalf("jobs = %+v", all)
+	}
+	if a.model.ViewMode != ui.ViewUnique || !st.FocusPanel {
+		t.Fatalf("view = %v focus = %v", a.model.ViewMode, st.FocusPanel)
+	}
 }

@@ -68,7 +68,7 @@ func transferKeyDialog(name string, o transferKeyOpts) keyGoldenDialog {
 			app := newApp(t, newScreen(t, 80, 24), harbor)
 			app.model.Message = ""
 			app.model.UserHomeDir = dir
-			p := app.activePanel()
+			p := app.focusedPanel()
 			switch {
 			case o.multi:
 				for _, f := range []string{"harbor/lantern.txt", "harbor/willow.txt", "harbor/anchor.txt", "orchard/meadow.txt", "orchard/timber.txt", "orchard/velvet.txt"} {
@@ -127,7 +127,7 @@ func transferKeyDialog(name string, o transferKeyOpts) keyGoldenDialog {
 			for _, j := range app.jobState.AllJobs() {
 				parts = append(parts, fmt.Sprintf("%s paused=%v sources=%d dest=%s", j.Type, j.PausedAfterScan, len(j.Sources), mask(j.Destination.String())))
 			}
-			return fmt.Sprintf("message=%q jobs=[%s] selected=%d", mask(app.model.Message), strings.Join(parts, "; "), len(app.activePanel().SelectedPaths))
+			return fmt.Sprintf("message=%q jobs=[%s] selected=%d", mask(app.model.Message), strings.Join(parts, "; "), len(app.focusedPanel().SelectedPaths))
 		},
 		action: func(t *testing.T, app *App, tok string) {
 			if tok != "@tmpdest" {

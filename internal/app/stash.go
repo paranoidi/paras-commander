@@ -11,7 +11,7 @@ import (
 )
 
 func (a *App) togglePanelSelectionStash() {
-	p := a.activePanel()
+	p := a.focusedPanel()
 	if p.StashEmpty() {
 		if !p.StashSaveFromSelection() {
 			a.setTransientMessage("No selection to stash", ui.MessageUrgencyInfo)
@@ -74,7 +74,7 @@ func stashRestoreFocusAction(focus dlg.ID) string {
 }
 
 func (a *App) applyStashRestoreChoice(action string) {
-	p := a.activePanel()
+	p := a.focusedPanel()
 	stashPaths := append([]string(nil), p.SelectionStashPaths...)
 	stashCursor := p.SelectionStashStripCursorPath
 	a.closeStashRestoreDialog()

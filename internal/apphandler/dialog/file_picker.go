@@ -80,7 +80,7 @@ func (h *Handler) toggleFilePickerMark() {
 // applyFilePickerMarks adds the marked files to the active panel's selection and closes the picker.
 func (h *Handler) applyFilePickerMarks() {
 	st := &h.model.PathPicker
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	var paths []string
 	for file := range st.Marked {
 		loc, err := pathloc.ForPanel(file, st.IndexPanel)

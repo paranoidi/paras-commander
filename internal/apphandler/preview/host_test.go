@@ -62,7 +62,7 @@ func (f *fakeHost) HandleQuitImmediate() bool                   { return true }
 func (f *fakeHost) Dispatch(string)                             {}
 func (f *fakeHost) ActionFromKeyEvent(*tcell.EventKey) string   { return "" }
 func (f *fakeHost) ActionForPreviewMenuKey(rune) (string, bool) { return "", false }
-func (f *fakeHost) ActivePanel() *panel.State {
+func (f *fakeHost) FocusedPanel() *panel.State {
 	if f.model.ActivePanel == ui.SecondaryPanel {
 		return &f.model.Secondary
 	}
@@ -74,8 +74,8 @@ func (f *fakeHost) PanelByID(panelID int) *panel.State {
 	}
 	return &f.model.Primary
 }
-func (f *fakeHost) InactivePanelID() int              { return f.inactive }
-func (f *fakeHost) ActiveViewportRows() int           { return 20 }
+func (f *fakeHost) OtherBrowserPanelID() int          { return f.inactive }
+func (f *fakeHost) FocusedViewportRows() int          { return 20 }
 func (f *fakeHost) PanelViewportRows(int) int         { return 20 }
 func (f *fakeHost) SelectedStripViewportRows(int) int { return 0 }
 func (f *fakeHost) FocusSelectedStrip() bool          { return false }

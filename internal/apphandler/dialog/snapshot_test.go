@@ -46,16 +46,17 @@ func (f *identityTestHost) SetErrorMessage(title string, err error) {
 	}
 }
 func (f *identityTestHost) NavigatePanelToPath(int, string, string) error { return nil }
-func (f *identityTestHost) ActivePanel() *panel.State                     { return &f.model.Primary }
-func (f *identityTestHost) InactivePanel() *panel.State                   { return &f.model.Secondary }
-func (f *identityTestHost) InactivePanelID() int                          { return ui.SecondaryPanel }
+func (f *identityTestHost) FocusedPanel() *panel.State                    { return &f.model.Primary }
+func (f *identityTestHost) DestinationPanel() *panel.State                { return &f.model.Secondary }
+func (f *identityTestHost) DestinationPanelID() int                       { return ui.SecondaryPanel }
+func (f *identityTestHost) OtherBrowserPanelID() int                      { return ui.SecondaryPanel }
 func (f *identityTestHost) PanelByID(panelID int) *panel.State {
 	if panelID == ui.SecondaryPanel {
 		return &f.model.Secondary
 	}
 	return &f.model.Primary
 }
-func (f *identityTestHost) ActiveViewportRows() int                     { return 20 }
+func (f *identityTestHost) FocusedViewportRows() int                    { return 20 }
 func (f *identityTestHost) PanelViewportRows(int) int                   { return 20 }
 func (f *identityTestHost) SelectedStripViewportRows(int) int           { return 0 }
 func (f *identityTestHost) FocusSelectedStrip() bool                    { return false }
@@ -100,14 +101,14 @@ func (f *identityTestHost) ClampFilteredListSelection(selected *int, rankedLen i
 func (f *identityTestHost) HandleFilteredListSelectionKey(*tcell.EventKey, int, *int, int, func() int, func()) bool {
 	return false
 }
-func (f *identityTestHost) ActivePanelSources() []string { return nil }
-func (f *identityTestHost) PrimaryPanel() *panel.State   { return &f.model.Primary }
-func (f *identityTestHost) SecondaryPanel() *panel.State { return &f.model.Secondary }
-func (f *identityTestHost) HandleQuit() bool             { return false }
-func (f *identityTestHost) HandleQuitImmediate() bool    { return false }
-func (f *identityTestHost) OpenMenu()                    {}
-func (f *identityTestHost) OpenMenuByShortcut(rune) bool { return false }
-func (f *identityTestHost) Dispatch(string)              {}
+func (f *identityTestHost) FocusedPanelSources() []string { return nil }
+func (f *identityTestHost) PrimaryPanel() *panel.State    { return &f.model.Primary }
+func (f *identityTestHost) SecondaryPanel() *panel.State  { return &f.model.Secondary }
+func (f *identityTestHost) HandleQuit() bool              { return false }
+func (f *identityTestHost) HandleQuitImmediate() bool     { return false }
+func (f *identityTestHost) OpenMenu()                     {}
+func (f *identityTestHost) OpenMenuByShortcut(rune) bool  { return false }
+func (f *identityTestHost) Dispatch(string)               {}
 func (f *identityTestHost) TryDispatchAuxiliaryScreens(string) bool {
 	return false
 }

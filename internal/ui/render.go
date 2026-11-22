@@ -551,6 +551,53 @@ func (m *Model) InactiveColumnShowsFilePreview(inactivePanelID int) bool {
 	return m.FilePreviewDraw.Open
 }
 
+// IsBrowserPanel reports whether id is one of the two browser columns (PrimaryPanel,
+// SecondaryPanel) rather than a panel embedded in a view.
+func IsBrowserPanel(id int) bool {
+	return id == PrimaryPanel || id == SecondaryPanel
+}
+
+// FocusedPanelID is the file-list panel keys and file operations act on: a view's embedded panel
+// while that view gives it focus (the dedup browse panel, the Find unique files destination),
+// else the active browser column. Derived from view state, so it has no setter of its own.
+func (m *Model) FocusedPanelID() int {
+	switch {
+	case m.ViewMode == ViewDedup && m.DedupView.FocusPanel && m.DedupPanelID != 0:
+		return m.DedupPanelID
+	case m.ViewMode == ViewUnique && m.UniqueView.FocusPanel:
+		return m.inactivePanelID()
+	}
+	return m.ActivePanel
+}
+
+// EmbeddedPanelFocused reports whether a view's embedded file-list panel has focus.
+func (m *Model) EmbeddedPanelFocused() bool {
+	return m.FocusedPanelID() != m.ActivePanel
+}
+
+// FocusPanel makes panel id the focused one after a dialog navigated it: a browser column becomes
+// the active column, unless a view's embedded panel has focus, which keeps it.
+func (m *Model) FocusPanel(id int) {
+	if !m.EmbeddedPanelFocused() && IsBrowserPanel(id) {
+		m.ActivePanel = id
+	}
+}
+
+// PanelMetaResults is panelID's active meta columns: nil for any panel but the two browser
+// columns, which are the only ones meta columns run for.
+func (m *Model) PanelMetaResults(panelID int) []MetaColumnState {
+	if !IsBrowserPanel(panelID) {
+		return nil
+	}
+	return m.MetaResults[panelID]
+}
+
+// FileListFocused reports whether a file-list panel has focus: the browser, or a view's embedded
+// panel. Gates for file-list behaviour use it; gates for browser layout and chrome check ViewBrowser.
+func (m *Model) FileListFocused() bool {
+	return m.ViewMode == ViewBrowser || m.EmbeddedPanelFocused()
+}
+
 // inactivePanelID returns PrimaryPanel or SecondaryPanel for the inactive column.
 func (m *Model) inactivePanelID() int {
 	if m.ActivePanel == SecondaryPanel {

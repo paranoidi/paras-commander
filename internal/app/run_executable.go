@@ -104,7 +104,7 @@ func (a *App) runExecutableFromPanel(path string) {
 	if a.model.ViewMode != ui.ViewBrowser {
 		return
 	}
-	p := a.activePanel()
+	p := a.focusedPanel()
 	if _, ok := p.Path.HostPath(); !ok {
 		a.setTransientMessage(pathloc.Unavailable("Run", p.Path), ui.MessageUrgencyWarn)
 		return

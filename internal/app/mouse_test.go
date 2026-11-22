@@ -634,7 +634,7 @@ func TestMouseDialogWheelScrollsScrollOnlyList(t *testing.T) {
 	dir := t.TempDir()
 	app := newApp(t, newScreen(t, 100, 30), dir)
 	app.config.UI.Mouse = true
-	p := app.activePanel()
+	p := app.focusedPanel()
 	for i := 1; i <= 25; i++ {
 		name := filepath.Join(dir, fmt.Sprintf("thicket%02d.txt", i))
 		writeFile(t, name)

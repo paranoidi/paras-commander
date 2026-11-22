@@ -25,7 +25,7 @@ func (a *App) paneHiddenVisibilityMessage(shown bool) string {
 // even if a previous reload error left them diverged. Both panels are always updated;
 // a reload error on one does not skip the other.
 func (a *App) toggleHiddenGlobal() error {
-	shown := !a.activePanel().ShowHidden
+	shown := !a.focusedPanel().ShowHidden
 	errPrimary := a.model.Primary.SetShowHidden(shown, a.panelViewportRows(ui.PrimaryPanel))
 	errSecondary := a.model.Secondary.SetShowHidden(shown, a.panelViewportRows(ui.SecondaryPanel))
 	if err := errors.Join(errPrimary, errSecondary); err != nil {

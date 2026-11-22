@@ -536,7 +536,7 @@ background = true
 	// actually shows up rather than assuming the very next screen event is that reload landing.
 	screen := app.screen.(tcell.SimulationScreen)
 	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
-		p := app.activePanel()
+		p := app.focusedPanel()
 		for i := 0; i < p.VisibleEntryCount(); i++ {
 			if e, _, ok := p.VisibleEntry(i); ok && e.Name == marker {
 				return true

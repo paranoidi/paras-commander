@@ -218,7 +218,7 @@ func TestTerminalStripOpenKeepsCursorVisible(t *testing.T) {
 		}
 	}
 	app := newApp(t, newScreen(t, 100, 40), dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.Cursor = len(p.Entries) - 1
 	app.ensurePanelsVisible()
 	app.reconcileAfterEvent()

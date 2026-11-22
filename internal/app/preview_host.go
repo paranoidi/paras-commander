@@ -25,9 +25,9 @@ func (h previewHost) ActionForPreviewMenuKey(r rune) (string, bool) {
 
 func (h previewHost) PanelByID(panelID int) *panel.State { return h.app.panelByID(panelID) }
 
-func (h previewHost) InactivePanelID() int { return h.app.inactivePanelID() }
+func (h previewHost) OtherBrowserPanelID() int { return h.app.otherBrowserPanelID() }
 
-func (h previewHost) ActiveViewportRows() int { return h.app.activeViewportRows() }
+func (h previewHost) FocusedViewportRows() int { return h.app.focusedViewportRows() }
 
 func (h previewHost) PanelViewportRows(panelID int) int { return h.app.panelViewportRows(panelID) }
 

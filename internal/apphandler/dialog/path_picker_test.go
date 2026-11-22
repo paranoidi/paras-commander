@@ -92,7 +92,7 @@ type allPickerHost struct {
 	inactive *panel.State
 }
 
-func (f allPickerHost) InactivePanel() *panel.State { return f.inactive }
+func (f allPickerHost) DestinationPanel() *panel.State { return f.inactive }
 
 func TestPathPickerAllOpensFromStarKeys(t *testing.T) {
 	for _, r := range []rune{'*', '|'} {

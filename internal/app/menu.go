@@ -234,7 +234,7 @@ func (a *App) activateMenuSelection(def menu.Definition, item menu.Item) bool {
 		case keymap.ActionPanelUnselectGroup:
 			a.openGroupSelect("unselect", "panel")
 		case keymap.ActionPanelInvertSelection:
-			a.activePanel().InvertSelection()
+			a.focusedPanel().InvertSelection()
 			a.setTransientMessage("Selection inverted", ui.MessageUrgencyInfo)
 		case keymap.ActionCopy:
 			a.dialogCtrl.ActivateCopyAction()

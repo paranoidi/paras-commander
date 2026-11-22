@@ -97,8 +97,8 @@ func (h *Handler) StartRunForEachBatch(spec RunForEachBatchSpec) {
 
 	// Resolved here because the batch goroutine must not read panel state: every item expands
 	// its macros from this snapshot, taken before the tags go.
-	active := h.host.ActivePanel()
-	spec.macroCtx = usermenu.MacroContext(active, h.host.InactivePanel(), "", "")
+	active := h.host.FocusedPanel()
+	spec.macroCtx = usermenu.MacroContext(active, h.host.DestinationPanel(), "", "")
 
 	// The batch iterates the selection; the tags are already captured in spec.Entries.
 	active.ClearSelection()

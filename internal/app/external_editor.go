@@ -90,8 +90,8 @@ func (a *App) editFileAt(path string) {
 		a.setErrorMessage("Edit", err)
 		return
 	}
-	if a.model.ViewMode == ui.ViewBrowser {
-		if err := a.activePanel().Refresh(a.activeViewportRows()); err != nil {
+	if a.fileListFocused() {
+		if err := a.focusedPanel().Refresh(a.focusedViewportRows()); err != nil {
 			a.setErrorMessage("Edit", err)
 		}
 	}
@@ -111,16 +111,16 @@ func (a *App) editFullscreenPreviewFile() {
 		return
 	}
 	a.previewCtrl.CloseFilePreviewFullscreen()
-	if err := a.activePanel().Refresh(a.activeViewportRows()); err != nil {
+	if err := a.focusedPanel().Refresh(a.focusedViewportRows()); err != nil {
 		a.setErrorMessage("Edit", err)
 	}
 }
 
 func (a *App) resolveLocalEditFilePath() (string, error) {
-	if a.model.ViewMode != ui.ViewBrowser {
+	if !a.fileListFocused() {
 		return "", fmt.Errorf("edit is only available in the file browser")
 	}
-	p := a.activePanel()
+	p := a.focusedPanel()
 	if _, ok := p.Path.HostPath(); !ok {
 		return "", errors.New(pathloc.Unavailable("edit", p.Path))
 	}

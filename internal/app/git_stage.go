@@ -66,7 +66,7 @@ func runGitIndex(root string, op gitIndexOp, paths []string) error {
 
 // activeGitRoot returns the active panel's work tree root, or "" after showing why there is none.
 func (a *App) activeGitRoot() string {
-	dir, err := a.activePanel().Path.FilePath()
+	dir, err := a.focusedPanel().Path.FilePath()
 	if err != nil {
 		a.setTransientMessage("Not a local directory", ui.MessageUrgencyInfo)
 		return ""
@@ -81,7 +81,7 @@ func (a *App) activeGitRoot() string {
 // gitIndexActive runs op on the active panel's selection, or on the cursor entry and then
 // advances the cursor.
 func (a *App) gitIndexActive(op gitIndexOp) {
-	p := a.activePanel()
+	p := a.focusedPanel()
 	root := a.activeGitRoot()
 	if root == "" {
 		return
@@ -91,9 +91,9 @@ func (a *App) gitIndexActive(op gitIndexOp) {
 		return
 	}
 	if len(p.SelectedPaths) == 0 && p.Cursor < p.VisibleEntryCount()-1 {
-		p.Move(1, a.activeViewportRows())
+		p.Move(1, a.focusedViewportRows())
 	}
-	panelID := a.model.ActivePanel
+	panelID := a.focusedPanelID()
 	go func() {
 		err := runGitIndex(root, op, paths)
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(gitStageResultPayload{panelID, root, op, len(paths), err}))
@@ -116,7 +116,7 @@ func (a *App) gitRemoteActive(verb string) {
 	if root == "" {
 		return
 	}
-	panelID := a.model.ActivePanel
+	panelID := a.focusedPanelID()
 	a.setTransientMessage("git "+verb+"…", ui.MessageUrgencyInfo)
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), gitRemoteTimeout)
@@ -160,7 +160,7 @@ func (a *App) reloadGitPanels(panelID int, workRoot, msg string) {
 		other = ui.SecondaryPanel
 	}
 	if dir, err := a.panelByID(other).Path.FilePath(); err == nil && gitignore.ValidWorkTreeRoot(dir) == workRoot {
-		_ = a.panelByID(other).Refresh(a.activeViewportRows())
+		_ = a.panelByID(other).Refresh(a.focusedViewportRows())
 	}
 }
 
@@ -182,5 +182,5 @@ func (a *App) gitCommitActive() {
 		a.setErrorMessage("git commit failed or aborted", err)
 		return
 	}
-	a.reloadPanel(a.model.ActivePanel, "Committed")
+	a.reloadPanel(a.focusedPanelID(), "Committed")
 }

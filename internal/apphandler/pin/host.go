@@ -14,8 +14,8 @@ type Host interface {
 	host.MessageHost         // SetTransientMessage / SetErrorMessage
 	host.PanelNavigationHost // NavigatePanelToPath: OpenSelected cd's the target panel
 
-	// ActivePanel resolves the active panel's cursor entry for ToggleActivePanelCursor.
-	ActivePanel() *panel.State
+	// FocusedPanel resolves the focused panel's cursor entry for ToggleActivePanelCursor.
+	FocusedPanel() *panel.State
 	// PanelByID and PanelViewportRows re-fetch the just-navigated panel and its viewport
 	// rows so OpenSelected can call EnsureCursorVisible after navigating.
 	PanelByID(panelID int) *panel.State

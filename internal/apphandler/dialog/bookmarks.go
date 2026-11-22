@@ -141,11 +141,11 @@ func (h *Handler) applyBookmarkRemove(p BookmarkIOPayload) {
 // GNOME/GTK bookmarks) for navigating the active panel. Marks-file I/O runs on a worker;
 // ApplyBookmarkIO fills the list when the read completes.
 func (h *Handler) OpenBookmarkDialog() {
-	if ui.IsAuxiliaryView(h.model.ViewMode) {
+	if !h.model.FileListFocused() {
 		return
 	}
 	if h.host.InQuickFilterUI() {
-		h.host.ActivePanel().CancelFilter(h.host.ActiveViewportRows())
+		h.host.FocusedPanel().CancelFilter(h.host.FocusedViewportRows())
 	}
 	h.openBookmarkPathPicker(dialog.PathPickerPurposeNavigate, 0)
 }
@@ -173,13 +173,13 @@ func (h *Handler) startBookmarkListLoad(gen uint64) {
 // for the active panel directory. Refuses while jobs view is active and cancels any
 // open quick filter (mirroring OpenBookmarkDialog).
 func (h *Handler) OpenAddBookmarkDialog() {
-	if ui.IsAuxiliaryView(h.model.ViewMode) {
+	if !h.model.FileListFocused() {
 		return
 	}
 	if h.host.InQuickFilterUI() {
-		h.host.ActivePanel().CancelFilter(h.host.ActiveViewportRows())
+		h.host.FocusedPanel().CancelFilter(h.host.FocusedViewportRows())
 	}
-	path := h.host.ActivePanel().PathString()
+	path := h.host.FocusedPanel().PathString()
 	if strings.TrimSpace(path) == "" {
 		h.host.SetErrorMessage("Add bookmark", fmt.Errorf("no active panel path"))
 		return

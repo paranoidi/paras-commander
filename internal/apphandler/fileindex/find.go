@@ -34,7 +34,7 @@ func (h *Handler) OpenFindDialog(panelID int) {
 }
 
 func (h *Handler) openFindDialog(panelID int) {
-	if ui.IsAuxiliaryView(h.model.ViewMode) {
+	if !h.model.FileListFocused() {
 		return
 	}
 	p := h.host.PanelByID(panelID)
@@ -339,7 +339,7 @@ func (h *Handler) ActivateFindOK() {
 	if _, ok := h.navigateTo(panelID); !ok {
 		return
 	}
-	h.model.ActivePanel = panelID
+	h.model.FocusPanel(panelID)
 	h.model.ActiveSubFocus = ui.SubFocusFileList
 	h.CloseFindDialog()
 }
@@ -365,7 +365,7 @@ func (h *Handler) applyMarks() {
 	if len(paths) > 0 {
 		conflicts = p.BulkAddSelections(paths, func(s string) bool { return isDir[s] })
 	}
-	h.model.ActivePanel = st.PanelID
+	h.model.FocusPanel(st.PanelID)
 	h.model.ActiveSubFocus = ui.SubFocusFileList
 	h.CloseFindDialog()
 	apphost.ReportSelectionAdded(h.host, len(paths), conflicts)
@@ -528,7 +528,7 @@ func (h *Handler) selectParentDirs() {
 		return
 	}
 	message, conflicts := p.SelectDirs(dirs)
-	h.model.ActivePanel = st.PanelID
+	h.model.FocusPanel(st.PanelID)
 	h.model.ActiveSubFocus = ui.SubFocusFileList
 	h.CloseFindDialog()
 	if conflicts {

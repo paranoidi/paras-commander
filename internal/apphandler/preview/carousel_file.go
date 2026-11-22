@@ -136,7 +136,7 @@ func (h *Handler) activePanelFileColumnRect() (geom.Rect, bool) {
 		col = lay.Secondary
 	}
 	stripN := ui.SelectedStripLayoutItemCount(
-		h.host.ActivePanel(),
+		h.host.FocusedPanel(),
 		h.model.ActivePanel,
 		h.model.ActivePanel,
 	)
@@ -179,7 +179,7 @@ func (h *Handler) carouselChildPreviewLayoutMetrics() (textW, contentH int, ok b
 	if listH < 1 {
 		return 1, 0, false
 	}
-	state := *h.host.ActivePanel()
+	state := *h.host.FocusedPanel()
 	parent, _, _, _ := panelcarousel.BuildColumns(state, listH, false, true)
 	fitWidths := panelcarousel.MeasureFitColumnWidths(h.model.CarouselLayout, parent, state, h.model.UseNerdfontIcons, true, h.model.PanelScrollbar, listH)
 	_, metaW := ui.FitCarouselMetaColumns(rect, h.model.CarouselLayout, state, h.model.UseNerdfontIcons, true, h.model.PanelScrollbar, listH, fitWidths, h.model.MetaResults[h.model.ActivePanel])
@@ -208,7 +208,7 @@ func (h *Handler) CarouselDirRule(dirPath string) bool {
 // carouselFilePreviewWantPath returns the path to preview in the child column: the highlighted
 // file, or a highlighted directory that a [[preview.commands]] rule previews.
 func (h *Handler) carouselFilePreviewWantPath() (path string, isDir, ok bool) {
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	entry, okEntry := p.CurrentEntry()
 	if !okEntry {
 		return "", false, false
@@ -236,7 +236,7 @@ func (h *Handler) carouselFilePreviewContext() bool {
 	if h.model.ViewMode != ui.ViewBrowser {
 		return false
 	}
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	if !p.CarouselMode {
 		return false
 	}
@@ -281,7 +281,7 @@ func (h *Handler) applyCarouselFilePreviewNow() {
 		h.CloseCarouselFilePreview()
 		return
 	}
-	workDir := h.host.ActivePanel().PathString()
+	workDir := h.host.FocusedPanel().PathString()
 	if isDir {
 		// WorkDir is the directory itself, same as quick view's dir rules.
 		workDir = path
@@ -330,7 +330,7 @@ func (h *Handler) refreshCarouselFilePreview() {
 	if !ok {
 		return
 	}
-	workDir := h.host.ActivePanel().PathString()
+	workDir := h.host.FocusedPanel().PathString()
 	req := h.previewRequest(st.Path, tw, contentH, workDir, h.model.PanelsChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetCarousel, false)
 	ctx, gen := h.beginPreviewRun(previewTargetCarousel)
 	h.postRenderWake()
@@ -343,7 +343,7 @@ func (h *Handler) ReconcileCarouselFilePreview() {
 	if h.model.Menu.Open || h.model.ModalDialogOpen() {
 		return
 	}
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	if !p.CarouselMode {
 		// Active panel is not in carousel mode — do not touch the
 		// global carousel file preview; the inactive panel (still with

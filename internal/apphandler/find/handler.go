@@ -20,11 +20,11 @@ import (
 // OpenDialog opens Find on panelID: the parked Find when it was parked there, else a fresh one
 // (asking first when a Find is parked elsewhere).
 func (h *Handler) OpenDialog(panelID int) {
-	if ui.IsAuxiliaryView(h.model.ViewMode) {
+	if !h.model.FileListFocused() {
 		return
 	}
 	if h.host.InQuickFilterUI() {
-		h.host.ActivePanel().CancelFilter(h.host.ActiveViewportRows())
+		h.host.FocusedPanel().CancelFilter(h.host.FocusedViewportRows())
 	}
 	if st := &h.model.FindDialog; st.Parked {
 		if st.PanelID == panelID && st.RootPath == filepath.Clean(h.host.PanelByID(panelID).PathString()) {
@@ -769,7 +769,7 @@ func (h *Handler) applyFindDialogMarkedSelections() {
 		isDir := h.findPathIsDir(st)
 		conflicts = p.BulkAddSelections(paths, isDir)
 	}
-	h.model.ActivePanel = st.PanelID
+	h.model.FocusPanel(st.PanelID)
 	h.model.ActiveSubFocus = ui.SubFocusFileList
 	h.CloseDialog()
 	host.ReportSelectionAdded(h.host, added, conflicts)
@@ -800,7 +800,7 @@ func (h *Handler) findDialogSelectParentDirs() {
 		return
 	}
 	message, conflicts := p.SelectDirs(dirs)
-	h.model.ActivePanel = st.PanelID
+	h.model.FocusPanel(st.PanelID)
 	h.model.ActiveSubFocus = ui.SubFocusFileList
 	h.CloseDialog()
 	if conflicts {
@@ -868,7 +868,7 @@ func (h *Handler) NavigateFindCursor() {
 	if _, ok := h.navigateFindEntryToPanel(panelID); !ok {
 		return
 	}
-	h.model.ActivePanel = panelID
+	h.model.FocusPanel(panelID)
 	h.model.ActiveSubFocus = ui.SubFocusFileList
 	h.CloseDialog()
 }

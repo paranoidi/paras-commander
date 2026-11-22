@@ -101,8 +101,8 @@ func TestReconcileCarouselFilePreviewPreservesOpenDuringQuickFilter(t *testing.T
 	app.model.CarouselFilePreview.CombinedText = "river delta\n"
 	app.commandsMu.Unlock()
 
-	app.model.Primary.OpenFilter(app.activeViewportRows())
-	app.model.Primary.AppendFilterRune('n', app.activeViewportRows()) // jumps to nested dir match
+	app.model.Primary.OpenFilter(app.focusedViewportRows())
+	app.model.Primary.AppendFilterRune('n', app.focusedViewportRows()) // jumps to nested dir match
 	app.previewCtrl.ReconcileCarouselFilePreview()
 
 	app.commandsMu.RLock()
@@ -134,9 +134,9 @@ func TestReconcileCarouselFilePreviewUpdatesToMatchDuringQuickFilter(t *testing.
 	app.previewCtrl.ReconcileCarouselFilePreview()
 
 	// Fuzzy-filter to beta.txt; the inline preview should follow the matched file.
-	app.model.Primary.OpenFilter(app.activeViewportRows())
+	app.model.Primary.OpenFilter(app.focusedViewportRows())
 	for _, r := range "beta" {
-		app.model.Primary.AppendFilterRune(r, app.activeViewportRows())
+		app.model.Primary.AppendFilterRune(r, app.focusedViewportRows())
 	}
 	app.previewCtrl.ReconcileCarouselFilePreview()
 
@@ -171,9 +171,9 @@ func TestReconcileQuickViewPreviewUpdatesToMatchDuringQuickFilter(t *testing.T) 
 	app.previewCtrl.ReconcileQuickViewPreview()
 
 	// Fuzzy-filter to beta.txt; the quick-view preview should follow the matched file.
-	app.model.Primary.OpenFilter(app.activeViewportRows())
+	app.model.Primary.OpenFilter(app.focusedViewportRows())
 	for _, r := range "beta" {
-		app.model.Primary.AppendFilterRune(r, app.activeViewportRows())
+		app.model.Primary.AppendFilterRune(r, app.focusedViewportRows())
 	}
 	app.previewCtrl.ReconcileQuickViewPreview()
 

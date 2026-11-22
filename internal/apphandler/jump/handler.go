@@ -19,7 +19,7 @@ const errTitle = dialog.JumpDialogTitle
 // Open opens the dialog on panelID: a disk walk on a local panel, an index query on a
 // fileindex:// panel (the caller makes sure the index opens first). Every open starts afresh.
 func (h *Handler) Open(panelID int) {
-	if ui.IsAuxiliaryView(h.model.ViewMode) {
+	if !h.model.FileListFocused() {
 		return
 	}
 	h.Close()
@@ -162,7 +162,7 @@ func (h *Handler) Activate() {
 	if _, ok := h.navigateTo(panelID); !ok {
 		return
 	}
-	h.model.ActivePanel = panelID
+	h.model.FocusPanel(panelID)
 	h.model.ActiveSubFocus = ui.SubFocusFileList
 	h.Close()
 }

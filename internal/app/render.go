@@ -540,7 +540,7 @@ func (a *App) menuBarPermissionText() string {
 	if ui.IsAuxiliaryView(a.model.ViewMode) {
 		return ""
 	}
-	entry, ok := a.activePanel().CurrentEntry()
+	entry, ok := a.activeBrowserPanel().CurrentEntry()
 	if !ok {
 		return ""
 	}
@@ -556,7 +556,7 @@ func (a *App) layoutForTerminalSizePreview(width, height int, filePreviewOpen bo
 
 // applyCarouselPanelZoomPercents widens the active column when carousel view is on so three panes fit.
 func (a *App) applyCarouselPanelZoomPercents(totalWidth int) {
-	if !a.activePanel().CarouselMode || !a.model.PanelZoomEnabled {
+	if !a.activeBrowserPanel().CarouselMode || !a.model.PanelZoomEnabled {
 		return
 	}
 	minPct := panelcarousel.MinActiveWidthPercent(totalWidth, a.model.CarouselLayout)
@@ -589,7 +589,7 @@ func (a *App) visiblePanelPaneSplit(width int, filePreviewOpen bool) ui.PanelPan
 		activePct = a.config.UI.Zoom.ActivePercent
 		inactivePct = a.config.UI.Zoom.InactivePercent
 	}
-	if zoom && a.activePanel().CarouselMode {
+	if zoom && a.activeBrowserPanel().CarouselMode {
 		minPct := panelcarousel.MinActiveWidthPercent(width, a.model.CarouselLayout)
 		if activePct < minPct {
 			activePct = minPct
@@ -610,7 +610,7 @@ func (a *App) visiblePanelPaneSplit(width int, filePreviewOpen bool) ui.PanelPan
 // not engage while sync-follow or quick view is on, since both need both panels visible.
 func (a *App) carouselAutohideWanted() bool {
 	return a.config.Carousel.AutohideInactivePanel &&
-		a.activePanel().CarouselMode &&
+		a.activeBrowserPanel().CarouselMode &&
 		!a.model.SyncFollowEnabled &&
 		!a.model.QuickViewEnabled
 }
@@ -632,7 +632,7 @@ func (a *App) inactivePanelTooNarrow(split ui.PanelPaneSplit, width int) bool {
 	if width <= 0 {
 		width, _ = a.screen.Size()
 	}
-	return ui.PanelNameOnlyWidth(ui.InactivePaneWidth(width, split), *a.inactivePanel(), a.model.UseNerdfontIcons) < config.MinPanelNameWidth
+	return ui.PanelNameOnlyWidth(ui.InactivePaneWidth(width, split), *a.otherBrowserPanel(), a.model.UseNerdfontIcons) < config.MinPanelNameWidth
 }
 
 // narrowAutohideInactivePanel reports whether the inactive panel is hidden for being too narrow
@@ -689,7 +689,7 @@ func (a *App) zoomActivePanelSuppressedByNameWidth(width int) bool {
 	if n <= 0 {
 		return false
 	}
-	p := a.activePanel()
+	p := a.activeBrowserPanel()
 	cols := a.model.MetaResults[a.model.ActivePanel]
 	if len(cols) > 0 && !a.metaCtrl.LayoutSettled(a.model.ActivePanel) {
 		// Mid-navigation meta widths belong to the previous directory: deciding on them zooms
@@ -721,7 +721,7 @@ func (a *App) effectiveZoomActivePanelLayout(width, height int, filePreviewOpen 
 	if filePreviewOpen || ui.LayoutHideInactivePanel(a.model.ViewMode, a.model.HideInactivePanel) {
 		return false
 	}
-	if a.activePanel().CarouselMode {
+	if a.activeBrowserPanel().CarouselMode {
 		return true
 	}
 	if !a.effectiveZoomActivePanel() {

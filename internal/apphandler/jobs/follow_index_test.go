@@ -18,7 +18,7 @@ type activePanelHost struct {
 	msgs   *[]string
 }
 
-func (h activePanelHost) ActivePanel() *panel.State { return h.active }
+func (h activePanelHost) FocusedPanel() *panel.State { return h.active }
 
 func (h activePanelHost) SetTransientMessage(msg string, _ ui.MessageUrgency) {
 	*h.msgs = append(*h.msgs, msg)

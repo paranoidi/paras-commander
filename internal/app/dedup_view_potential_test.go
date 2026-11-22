@@ -41,7 +41,7 @@ func TestDedupHashPotentialRefreshesView(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.activePanel().Path = loc
+	a.focusedPanel().Path = loc
 	a.dedupCtrl.Open()
 	drainInterruptEventsUntil(t, a, screen, 5*time.Second, func() bool {
 		return a.model.DedupSnapshot.Phase == comparepkg.DedupDone && len(a.model.DedupSnapshot.Groups) == 1

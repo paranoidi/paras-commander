@@ -2,6 +2,7 @@ package app
 
 import (
 	"path/filepath"
+	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
@@ -87,9 +88,43 @@ func (a *App) openUniqueDeleteDialog() {
 	a.model.FileDialog = fd
 }
 
-// tryDispatchTreeViews routes an action to whichever results-tree view is open.
+// tryDispatchTreeViews routes an action to whichever results-tree view is open. While the view's
+// embedded panel has focus only the view-level actions reach the view (tryDispatchEmbeddedPanelView).
 func (a *App) tryDispatchTreeViews(actionID string) bool {
+	if a.model.EmbeddedPanelFocused() {
+		return a.tryDispatchEmbeddedPanelView(actionID)
+	}
 	return a.tryDispatchUnique(actionID) || a.tryDispatchDedup(actionID)
+}
+
+// tryDispatchEmbeddedPanelView runs the actions a results-tree view keeps while its embedded panel
+// has focus: leaving for another screen, switching panes, opening the panel's entry in a browser
+// panel, and the view's own dedup.* / unique.* actions (its overlay, menus and Help). In Find unique
+// files, copy and move act on the tree's files through the transfer dialog's view source, and a
+// delete needs the tree focused. Every other action falls through to the panel.
+func (a *App) tryDispatchEmbeddedPanelView(actionID string) bool {
+	unique := a.model.ViewMode == ui.ViewUnique
+	switch {
+	case a.tryDispatchAuxiliaryScreens(actionID):
+	case actionID == keymap.ActionPanelSwitch && unique:
+		a.uniqueCtrl.SwitchPane()
+	case actionID == keymap.ActionPanelSwitch:
+		a.dedupCtrl.SwitchPane()
+	case actionID == keymap.ActionOpenInPrimary, actionID == keymap.ActionOpenInSecondary:
+		if e, ok := a.focusedPanel().CurrentEntry(); ok && unique {
+			a.uniqueCtrl.OpenInPanel(a.openInPanelID(actionID), e.Path, e.ResolvesToDir())
+		} else if ok {
+			a.dedupCtrl.OpenInPanel(a.openInPanelID(actionID), e.Path, e.ResolvesToDir())
+		}
+	case actionID == keymap.ActionFileDelete && unique:
+	case unique && (strings.HasPrefix(actionID, "unique.") || actionID == keymap.ActionFileIndexFindUnique):
+		return a.tryDispatchUnique(actionID)
+	case !unique && strings.HasPrefix(actionID, "dedup."):
+		return a.tryDispatchDedup(actionID)
+	default:
+		return false
+	}
+	return true
 }
 
 // tryDispatchUnique handles the view's actions from keys, the F9 menu and Help.
@@ -205,10 +240,6 @@ func (a *App) handleUniqueViewKey(event *tcell.EventKey) bool {
 	if action != "" && a.tryDispatchAuxiliaryScreens(action) {
 		return false
 	}
-	if a.model.UniqueView.FocusPanel {
-		a.handleUniqueDestKey(action, event)
-		return false
-	}
 	if action == "" && keymap.IsPlainPrintableRune(event) {
 		a.handleListFilterKey(a.uniqueCtrl, event)
 		a.uniqueCtrl.EnsureSelectionVisible(a.uniqueVisibleRows())
@@ -218,33 +249,6 @@ func (a *App) handleUniqueViewKey(event *tcell.EventKey) bool {
 		a.tryDispatchUnique(action)
 	}
 	return false
-}
-
-// handleUniqueDestKey handles keys while the destination panel has focus: it is browsed like the
-// duplicates view's panel, and copy and move still act on the tree's files. A delete needs the
-// tree in focus, so it never acts on files out of view of the cursor by surprise.
-func (a *App) handleUniqueDestKey(action string, event *tcell.EventKey) {
-	id := a.inactivePanelID()
-	p, rows := a.panelByID(id), a.panelViewportRows(id)
-	if action == "" {
-		action = auxPanelRawKeyAction(event)
-	}
-	switch action {
-	case keymap.ActionUniqueClose, keymap.ActionFileIndexFindUnique, auxPanelRawKeyClose:
-		a.closeUniqueView()
-	case keymap.ActionPanelSwitch, keymap.ActionUniquePrevPane:
-		a.uniqueCtrl.SwitchPane()
-	case keymap.ActionCopy:
-		a.dialogCtrl.ActivateCopyAction()
-	case keymap.ActionMove:
-		a.dialogCtrl.ActivateMoveAction()
-	case keymap.ActionUniqueToggleNode:
-		a.handleAuxPanelNavKey(p, rows, keymap.ActionNavOpen)
-	case keymap.ActionUniqueCollapse:
-		a.handleAuxPanelNavKey(p, rows, keymap.ActionNavParent)
-	default:
-		a.handleAuxPanelNavKey(p, rows, action)
-	}
 }
 
 // activateUniqueHelpAction runs a row of the view's Help on the view's own dispatch.
@@ -312,7 +316,7 @@ func (a *App) handleUniqueDestMouse(layout ui.Layout, x, y int, buttons, pressed
 	if !ok {
 		return false
 	}
-	id := a.inactivePanelID()
+	id := a.otherBrowserPanelID()
 	p, rows := a.panelByID(id), a.panelViewportRows(id)
 	switch step := wheelDelta(buttons, config.MouseWheelRows); {
 	case step != 0:

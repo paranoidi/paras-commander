@@ -22,7 +22,7 @@ func (h *Handler) ClearDeleteDialogReconcileCache() {
 	h.deleteDialogScanFP = ""
 	h.deleteDialogSelGen = 0
 	h.deleteDialogPanelPath = ""
-	h.deleteDialogPanelID = h.model.ActivePanel
+	h.deleteDialogPanelID = h.model.FocusedPanelID()
 	h.deleteDialogPrunedPaths = nil
 	h.deleteDialogScanArmedGen = 0
 	h.deleteDialogScanArmedPath = ""
@@ -193,8 +193,9 @@ func (h *Handler) deleteDialogPanel() (*panel.State, bool) {
 	if !h.deleteDialogOpen() || h.deleteDialogPanelID == deleteDialogNoPanel {
 		return nil, false
 	}
-	// These views list their own files and write the summary themselves: a panel has no part in it.
-	if h.model.ViewMode == ui.ViewDedup || h.model.ViewMode == ui.ViewUnique {
+	// These views list their own files and write the summary themselves: a panel has no part in it,
+	// unless the view's embedded panel has focus and the delete is of its files.
+	if (h.model.ViewMode == ui.ViewDedup || h.model.ViewMode == ui.ViewUnique) && !h.model.EmbeddedPanelFocused() {
 		return nil, false
 	}
 	return h.host.PanelByID(h.deleteDialogPanelID), true

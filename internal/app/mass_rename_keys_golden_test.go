@@ -122,7 +122,7 @@ func massRenameKeyDialog(name string, savedPatterns bool) keyGoldenDialog {
 				if n != "timber" {
 					writeFile(t, filepath.Join(harbor, n))
 				}
-				app.activePanel().AddSelection(filepath.Join(harbor, n))
+				app.focusedPanel().AddSelection(filepath.Join(harbor, n))
 			}
 			app.dispatch(keymap.ActionFileRename)
 			if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != dialog.FileDialogMassRename {

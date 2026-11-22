@@ -117,7 +117,7 @@ func (h *Handler) Open() {
 	if ui.IsAuxiliaryView(h.model.ViewMode) {
 		return
 	}
-	root, scope, err := h.scope(h.host.PanelByID(h.model.ActivePanel))
+	root, scope, err := h.scope(h.host.PanelByID(h.model.FocusedPanelID()))
 	switch {
 	case errors.Is(err, errMixedSelection):
 		h.host.SetTransientMessage(mixedSelectionMessage, ui.MessageUrgencyCritical)

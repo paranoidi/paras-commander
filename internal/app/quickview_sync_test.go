@@ -977,7 +977,7 @@ func TestQuickViewDirToFileDebounceShowsPendingChromeImmediately(t *testing.T) {
 	if app.model.QuickViewDirOverlayActive {
 		t.Fatal("dir overlay should be cleared after debounce flush")
 	}
-	if !app.model.InactiveColumnShowsFilePreview(app.inactivePanelID()) {
+	if !app.model.InactiveColumnShowsFilePreview(app.otherBrowserPanelID()) {
 		t.Fatal("inactive column should show file-preview chrome immediately after flush")
 	}
 

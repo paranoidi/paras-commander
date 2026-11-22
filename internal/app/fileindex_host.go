@@ -14,9 +14,9 @@ type fileindexHost struct {
 	appShellHost
 }
 
-func (h fileindexHost) ActivePanelSources() []string { return h.app.dialogCtrl.ActivePanelSources() }
+func (h fileindexHost) FocusedPanelSources() []string { return h.app.dialogCtrl.FocusedPanelSources() }
 
-func (h fileindexHost) InactivePanel() *panel.State { return h.app.inactivePanel() }
+func (h fileindexHost) DestinationPanel() *panel.State { return h.app.destinationPanel() }
 
 func (h fileindexHost) PrimaryPanel() *panel.State { return &h.app.model.Primary }
 

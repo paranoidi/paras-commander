@@ -43,12 +43,12 @@ func (h *Handler) CloseFileDialog() {
 
 // TryDispatchFileOps handles file-operation dialog openers and copy/move/duplicate actions.
 func (h *Handler) TryDispatchFileOps(actionID string) bool {
-	activePanel := h.host.ActivePanel()
+	activePanel := h.host.FocusedPanel()
 	switch actionID {
 	case keymap.ActionFileRename:
 		h.OpenRenameDialog(activePanel)
 	case keymap.ActionFileDelete:
-		h.OpenDeleteDialog(h.model.ActivePanel)
+		h.OpenDeleteDialog(h.model.FocusedPanelID())
 	case keymap.ActionFileMkdir:
 		h.OpenMkdirDialog(false)
 	case keymap.ActionFileMkdirOpenInOther:
@@ -85,19 +85,21 @@ func (h *Handler) TryDispatchFileOps(actionID string) bool {
 	return true
 }
 
-// RefreshBothPanels re-lists both panels, walking up when their directory vanished (e.g. a
-// completed job removed the active panel's cwd), then applies any pending post-transfer focus
+// RefreshBothPanels re-lists both panels (and the dedup browse panel while it is open, see
+// refreshDedupPanel), walking up when their directory vanished (e.g. a completed job removed the
+// active panel's cwd), then applies any pending post-transfer focus
 // (see ReconcilePendingPanelFocus) and refreshes the quick-view preview.
 // When reloads are async, ApplyQuickViewPreviewImmediately also runs from each panel's OnApplied
 // so the overlay tracks the post-reload cursor rather than the stale pre-refresh listing.
 func (h *Handler) RefreshBothPanels() {
-	viewportRows := h.host.ActiveViewportRows()
+	viewportRows := h.host.FocusedViewportRows()
 	onApplied := func() {
 		h.applyPendingPanelFocus()
 		h.preview.ApplyQuickViewPreviewImmediately()
 	}
 	_ = h.model.Primary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, onApplied)
 	_ = h.model.Secondary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, onApplied)
+	h.refreshDedupPanel(nil)
 	// Immediate attempt for the (still common) case where nothing is actually async — e.g. no
 	// scheduler wired. When the reload above is async, this attempt is a harmless no-op (entries
 	// are still stale) and OnApplied / ReconcilePendingPanelFocus retries once the reload lands.
@@ -113,25 +115,33 @@ func (h *Handler) RefreshBothPanels() {
 // mechanism is reserved for post-job focus (duplicate / transfer-to-other-panel; see
 // ReconcilePendingPanelFocus).
 func (h *Handler) RefreshBothPanelsWithFocus(panelID int, onApplied func()) {
-	viewportRows := h.host.ActiveViewportRows()
+	viewportRows := h.host.FocusedViewportRows()
 	wrap := func() {
 		if onApplied != nil {
 			onApplied()
 		}
 		h.preview.ApplyQuickViewPreviewImmediately()
 	}
-	if panelID == ui.PrimaryPanel {
-		_ = h.model.Primary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, wrap)
-		_ = h.model.Secondary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, func() {
-			h.preview.ApplyQuickViewPreviewImmediately()
-		})
-	} else {
-		_ = h.model.Primary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, func() {
-			h.preview.ApplyQuickViewPreviewImmediately()
-		})
-		_ = h.model.Secondary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, wrap)
+	plain := func() { h.preview.ApplyQuickViewPreviewImmediately() }
+	primaryHook, secondaryHook, dedupHook := plain, wrap, func() {}
+	switch panelID {
+	case ui.PrimaryPanel:
+		primaryHook, secondaryHook = wrap, plain
+	case h.model.DedupPanelID:
+		secondaryHook, dedupHook = plain, wrap
 	}
+	_ = h.model.Primary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, primaryHook)
+	_ = h.model.Secondary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, secondaryHook)
+	h.refreshDedupPanel(dedupHook)
 	h.preview.ApplyQuickViewPreviewImmediately()
+}
+
+// refreshDedupPanel re-lists the dedup browse panel while it is open: file operations run from it
+// (and jobs from anywhere) change what it lists, as they do for the browser panels.
+func (h *Handler) refreshDedupPanel(onApplied func()) {
+	if id := h.model.DedupPanelID; id != 0 {
+		_ = h.model.DedupPanel.RefreshOrNavigateToExistingAncestorWithHook(h.host.PanelViewportRows(id), onApplied)
+	}
 }
 
 // ReconcilePendingPanelFocus retries a deferred select scheduled after a transfer job enqueue
@@ -199,7 +209,7 @@ func (h *Handler) openRenameDialogForEntry(entry localfs.Entry, note string) {
 // OpenMkdirDialog opens the mkdir dialog. openInInactive requests navigating the inactive
 // panel to the newly created directory on success.
 func (h *Handler) OpenMkdirDialog(openInInactive bool) {
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	name := ""
 	if entry, ok := p.CurrentEntry(); ok {
 		name = mkdirPrefillName(entry)
@@ -386,7 +396,7 @@ func (h *Handler) openSymlinkDialog(p *panel.State) {
 		return
 	}
 	targetPath := entry.Path
-	defaultLink := filepath.Join(h.host.InactivePanel().PathString(), entry.Name)
+	defaultLink := filepath.Join(h.host.DestinationPanel().PathString(), entry.Name)
 	fields := []dialog.FileDialogField{
 		{Label: "Target", Value: targetPath, Cursor: len([]rune(targetPath)), PathPicker: true},
 		{Label: "Link path", Value: defaultLink, Cursor: len([]rune(defaultLink)), PathPicker: true},
@@ -410,7 +420,7 @@ func (h *Handler) openHardlinkDialog(p *panel.State) {
 		return
 	}
 	sourcePath := entry.Path
-	defaultDest := filepath.Join(h.host.InactivePanel().PathString(), entry.Name)
+	defaultDest := filepath.Join(h.host.DestinationPanel().PathString(), entry.Name)
 	fields := []dialog.FileDialogField{
 		{Label: "Source", Value: sourcePath, Cursor: len([]rune(sourcePath)), PathPicker: true},
 		{Label: "New path", Value: defaultDest, Cursor: len([]rune(defaultDest)), PathPicker: true},
@@ -463,12 +473,12 @@ func (h *Handler) ExecuteFileDialog() {
 }
 
 // renameTargetPanelID is the one source of the panel a rename acts on: the focused column's panel
-// in Compare (which need not be the active panel), otherwise the active panel.
+// in Compare (which need not be the active panel), otherwise the focused panel.
 func (h *Handler) renameTargetPanelID() int {
 	if h.model.ViewMode == ui.ViewCompare {
 		return h.model.CompareView.FocusedPanelID()
 	}
-	return h.model.ActivePanel
+	return h.model.FocusedPanelID()
 }
 
 func (h *Handler) renameTargetPanel() *panel.State {
@@ -588,7 +598,7 @@ func (h *Handler) applyRenameSuccess(st renameApply) {
 	h.addRenameMarks(p, []string{st.plan.NewPath})
 	h.refreshCompareAfterRename()
 	if st.openInOther {
-		if err := h.host.NavigatePanelToPath(h.host.InactivePanelID(), st.plan.NewPath, ""); err != nil {
+		if err := h.host.NavigatePanelToPath(h.host.DestinationPanelID(), st.plan.NewPath, ""); err != nil {
 			h.host.SetErrorMessage("Rename", err)
 			return
 		}
@@ -597,7 +607,7 @@ func (h *Handler) applyRenameSuccess(st renameApply) {
 }
 
 func (h *Handler) executeMkdir() {
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	d := &h.model.FileDialog
 	if len(d.Fields) == 0 {
 		h.CloseFileDialog()
@@ -614,7 +624,7 @@ func (h *Handler) executeMkdir() {
 		priorEntryPath = entry.Path
 	}
 	panelPath := p.CursorDir().String()
-	panelID := h.model.ActivePanel
+	panelID := h.model.FocusedPanelID()
 
 	// For copy/move post-actions, resolve sources up-front so a missing/empty
 	// selection fails fast without leaving an empty directory behind. Remote
@@ -684,8 +694,8 @@ func (h *Handler) applyMkdirSuccess(st mkdirApply) {
 	if loc, err := pathloc.Parse(plan.Path); err == nil {
 		createdName = loc.Base()
 	}
-	active := h.host.ActivePanel()
-	viewportRows := h.host.ActiveViewportRows()
+	active := h.host.FocusedPanel()
+	viewportRows := h.host.FocusedViewportRows()
 	active.InsertEntry(localfs.Entry{
 		Name: createdName,
 		Path: plan.Path,
@@ -723,7 +733,7 @@ func (h *Handler) applyMkdirSuccess(st mkdirApply) {
 			}
 		}
 		active.EnsureCursorInViewport(viewportRows)
-		if err := h.host.NavigatePanelToPath(h.host.InactivePanelID(), plan.Path, ""); err != nil {
+		if err := h.host.NavigatePanelToPath(h.host.DestinationPanelID(), plan.Path, ""); err != nil {
 			h.host.SetErrorMessage("Mkdir", err)
 			return
 		}
@@ -737,14 +747,14 @@ func (h *Handler) applyMkdirSuccess(st mkdirApply) {
 		if !h.AddTransferJob(jobs.TypeCopy, st.sources, plan.Path, false, h.TransferPreserveFromConfig()) {
 			return // refused (shown)
 		}
-		h.host.ActivePanel().ClearSelection()
+		h.host.FocusedPanel().ClearSelection()
 		h.host.SetTransientMessage(fmt.Sprintf("Created %s; copy queued (%d %s)", plan.Name, len(st.sources), jobbridge.Plural(len(st.sources), "file", "files")), ui.MessageUrgencyInfo)
 	case dialog.MkdirActionCreateMoveSelect:
 		h.setEnqueueDestIsDir(true)
 		if !h.AddTransferJob(jobs.TypeMove, st.sources, plan.Path, false, h.TransferPreserveFromConfig()) {
 			return // refused (shown)
 		}
-		h.host.ActivePanel().ClearSelection()
+		h.host.FocusedPanel().ClearSelection()
 		h.host.SetTransientMessage(fmt.Sprintf("Created %s; move queued (%d %s)", plan.Name, len(st.sources), jobbridge.Plural(len(st.sources), "file", "files")), ui.MessageUrgencyInfo)
 	}
 }
@@ -768,12 +778,12 @@ func (h *Handler) ExecuteDelete() {
 	}
 	// Dedup delete: the dialog overlays the dedup view; route to the handler
 	// which enqueues the job and prunes the marked rows.
-	if h.model.ViewMode == ui.ViewDedup {
+	if h.model.ViewMode == ui.ViewDedup && !h.model.EmbeddedPanelFocused() {
 		h.CloseFileDialog()
 		h.openDedupEmptyDirsConfirm()
 		return
 	}
-	if h.model.ViewMode == ui.ViewUnique {
+	if h.model.ViewMode == ui.ViewUnique && !h.model.EmbeddedPanelFocused() {
 		paths := make([]string, len(h.model.FileDialog.DeleteEntries))
 		for i, e := range h.model.FileDialog.DeleteEntries {
 			paths[i] = e.Path
@@ -792,7 +802,7 @@ func (h *Handler) ExecuteDelete() {
 		h.host.SetTransientMessage("Delete queued (1 item)", ui.MessageUrgencyInfo)
 		return
 	}
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	if h.model.ViewMode == ui.ViewCompare {
 		// The delete source is the focused column's panel (its selection), not the active panel.
 		p = h.host.PanelByID(h.model.CompareView.FocusedPanelID())
@@ -876,7 +886,7 @@ func (h *Handler) applyAttrOp(p RemoteFileOpPayload) {
 }
 
 func (h *Handler) executeChmod() {
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	if len(h.model.FileDialog.Fields) == 0 {
 		h.CloseFileDialog()
 		return
@@ -900,7 +910,7 @@ func (h *Handler) executeChmod() {
 }
 
 func (h *Handler) executeChown() {
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	if len(h.model.FileDialog.Fields) < 2 {
 		h.CloseFileDialog()
 		return
@@ -925,14 +935,14 @@ func (h *Handler) executeChown() {
 }
 
 func (h *Handler) executeSymlink() {
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	if len(h.model.FileDialog.Fields) < 2 {
 		h.CloseFileDialog()
 		return
 	}
 	target := h.model.FileDialog.Fields[0].Value
 	linkPath := h.model.FileDialog.Fields[1].Value
-	plan, err := ops.PlanSymlink(target, linkPath, p.PathString(), h.host.InactivePanel().PathString())
+	plan, err := ops.PlanSymlink(target, linkPath, p.PathString(), h.host.DestinationPanel().PathString())
 	if err != nil {
 		h.host.SetErrorMessage("Symlink", err)
 		h.CloseFileDialog()
@@ -955,14 +965,14 @@ func (h *Handler) executeSymlink() {
 }
 
 func (h *Handler) executeHardlink() {
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	if len(h.model.FileDialog.Fields) < 2 {
 		h.CloseFileDialog()
 		return
 	}
 	source := h.model.FileDialog.Fields[0].Value
 	newPath := h.model.FileDialog.Fields[1].Value
-	plan, err := ops.PlanHardlink(source, newPath, p.PathString(), h.host.InactivePanel().PathString())
+	plan, err := ops.PlanHardlink(source, newPath, p.PathString(), h.host.DestinationPanel().PathString())
 	if err != nil {
 		h.host.SetErrorMessage("Hardlink", err)
 		h.CloseFileDialog()

@@ -27,7 +27,7 @@ func TestDeleteDialogSummaryRefreshesAfterDiskScanFlush(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	source := ops.Source{
 		Kind: ops.SourceCursor,
 		Entries: []localfs.Entry{{
@@ -87,7 +87,7 @@ func TestDeleteDialogSummaryRefreshesWhenScanNoLongerNeeded(t *testing.T) {
 		time.Sleep(2 * time.Millisecond)
 	}
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{sub: true}
 	app.model.FileDialog = dialog.FileDialogState{
 		Open:          true,
@@ -164,7 +164,7 @@ func TestDeleteDialogSummaryIgnoresStaleCacheAfterFilesMovedOut(t *testing.T) {
 		t.Fatalf("precondition: cache should still report stale count, got %d", n)
 	}
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{sub: true}
 	app.dialogCtrl.OpenDeleteDialog(app.model.ActivePanel)
 

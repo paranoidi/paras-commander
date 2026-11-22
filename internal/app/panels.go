@@ -45,7 +45,7 @@ func (a *App) switchPanel() {
 
 func (a *App) switchPanelSwap() {
 	if a.model.ActiveSubFocus == ui.SubFocusSelectedStrip {
-		a.activePanel().CancelStripFilter(0)
+		a.activeBrowserPanel().CancelStripFilter(0)
 	}
 	if a.model.HideInactivePanel {
 		a.model.HideInactivePanel = false
@@ -152,14 +152,14 @@ func (a *App) toggleCarousel(panelID int, menu bool) {
 }
 
 func (a *App) reloadActive(successMessage string) {
-	a.userRefreshPanel(a.model.ActivePanel, successMessage)
+	a.userRefreshPanel(a.focusedPanelID(), successMessage)
 }
 
 // userRefreshPanel is the panel.refresh entry point: reloads the listing and recalculates
 // meta columns, bypassing their result cache. It also clears the directory's new-file marks.
 func (a *App) userRefreshPanel(panelID int, successMessage string) {
 	a.panelByID(panelID).ClearNewFileMarks()
-	if a.reloadPanel(panelID, successMessage) {
+	if a.reloadPanel(panelID, successMessage) && ui.IsBrowserPanel(panelID) {
 		a.metaCtrl.RefreshPanel(panelID)
 	}
 }
@@ -180,11 +180,27 @@ func (a *App) reloadPanel(panelID int, successMessage string) bool {
 	return true
 }
 
-func (a *App) activePanel() *panel.State {
-	if a.model.ActivePanel == ui.PrimaryPanel {
-		return &a.model.Primary
-	}
-	return &a.model.Secondary
+// focusedPanelID is the panel keys and file operations act on (ui.Model.FocusedPanelID): the
+// active browser column, or a view's embedded panel while that view gives it focus.
+func (a *App) focusedPanelID() int {
+	return a.model.FocusedPanelID()
+}
+
+// focusedPanel is the panel.State of focusedPanelID.
+func (a *App) focusedPanel() *panel.State {
+	return a.panelByID(a.focusedPanelID())
+}
+
+// activeBrowserPanel is the active browser column (Model.ActivePanel), whatever has focus: what
+// layout, zoom, carousel and the other browser-pair features read.
+func (a *App) activeBrowserPanel() *panel.State {
+	return a.panelByID(a.model.ActivePanel)
+}
+
+// fileListFocused reports whether a file-list panel has focus (ui.Model.FileListFocused): gates
+// for file-list behaviour use it, gates for browser layout and chrome check ui.ViewBrowser.
+func (a *App) fileListFocused() bool {
+	return a.model.FileListFocused()
 }
 
 // panelByID returns the panel.State registered under panelID, or nil when the ID is closed or
@@ -197,8 +213,8 @@ func (a *App) panelByID(panelID int) *panel.State {
 	return nil
 }
 
-func (a *App) activeViewportRows() int {
-	return a.panelViewportRows(a.model.ActivePanel)
+func (a *App) focusedViewportRows() int {
+	return a.panelViewportRows(a.focusedPanelID())
 }
 
 func (a *App) panelViewportRows(panelID int) int {
@@ -274,8 +290,11 @@ func (a *App) selectedStripViewportRows(panelID int) int {
 }
 
 func (a *App) toggleSelectedStripFocus() {
+	if a.model.ViewMode != ui.ViewBrowser {
+		return // the Selected strip is drawn in browser columns only
+	}
 	if a.model.ActiveSubFocus == ui.SubFocusSelectedStrip {
-		a.activePanel().CancelStripFilter(a.selectedStripViewportRows(a.model.ActivePanel))
+		a.focusedPanel().CancelStripFilter(a.selectedStripViewportRows(a.model.ActivePanel))
 		a.model.ActiveSubFocus = ui.SubFocusFileList
 		return
 	}
@@ -285,7 +304,7 @@ func (a *App) toggleSelectedStripFocus() {
 // focusSelectedStrip focuses the active panel's strip, forcing it visible when all
 // selections are in the current directory. Warns and returns false with no selection.
 func (a *App) focusSelectedStrip() bool {
-	p := a.activePanel()
+	p := a.focusedPanel()
 	if p.SelectedStripCount() == 0 {
 		if len(p.SelectedPaths) == 0 {
 			a.setTransientMessage("No selected items", ui.MessageUrgencyWarn)
@@ -319,7 +338,7 @@ func (a *App) reconcileSelectedStripFocus() {
 	if a.model.ActiveSubFocus != ui.SubFocusSelectedStrip {
 		return
 	}
-	p := a.activePanel()
+	p := a.activeBrowserPanel()
 	if p.SelectedStripCount() > 0 {
 		p.RememberStripCursor()
 		return
@@ -332,16 +351,16 @@ func (a *App) reconcileSelectedStripFocus() {
 // selected paths — the directory copy/move is permitted from when selections span
 // multiple parent directories.
 func (a *App) navigateToSelectedRoot() {
-	root, _, ok := a.activePanel().SelectedCommonRoot()
+	root, _, ok := a.focusedPanel().SelectedCommonRoot()
 	if !ok {
 		a.setTransientMessage("No selections", ui.MessageUrgencyInfo)
 		return
 	}
-	if a.activePanel().Path.Equal(root) {
+	if a.focusedPanel().Path.Equal(root) {
 		a.setTransientMessage("Already at selected root", ui.MessageUrgencyInfo)
 		return
 	}
-	if err := a.navigatePanelToDirectory(a.model.ActivePanel, root.String(), ""); err != nil {
+	if err := a.navigatePanelToDirectory(a.focusedPanelID(), root.String(), ""); err != nil {
 		a.setErrorMessage("Navigate failed", err)
 	}
 }
@@ -349,7 +368,7 @@ func (a *App) navigateToSelectedRoot() {
 // selectParentDirs replaces the active panel's whole selection with the unique
 // immediate parent directories of every currently-selected path.
 func (a *App) selectParentDirs() {
-	p := a.activePanel()
+	p := a.focusedPanel()
 	if p.SelectedPathCount() == 0 {
 		a.setTransientMessage("No selections", ui.MessageUrgencyInfo)
 		return
@@ -382,7 +401,7 @@ func (a *App) selectParentDirs() {
 // toggleSelectedStripTree switches the session-wide Selected strip tree mode (shared with the
 // find-duplicates strip), keeping the cursor on the same row when it still exists.
 func (a *App) toggleSelectedStripTree() {
-	p := a.activePanel()
+	p := a.focusedPanel()
 	p.RememberStripCursor()
 	a.model.SetSelectedStripTree(!a.model.SelectedStripTree())
 	p.RestoreStripCursor()
@@ -393,12 +412,12 @@ func (a *App) toggleSelectedStripTree() {
 // active panel, puts the cursor on that entry (file or directory) and focuses the file list. A
 // tree-mode folder row opens that folder itself.
 func (a *App) navigateFromSelectedStrip() {
-	p := a.activePanel()
+	p := a.focusedPanel()
 	dirLoc, name, ok := a.selectedStripOpenTarget()
 	if !ok {
 		return
 	}
-	vr := a.activeViewportRows()
+	vr := a.focusedViewportRows()
 	if err := p.NavigateToPath(dirLoc, name, vr); err != nil {
 		a.setErrorMessage("Open failed", err)
 		return
@@ -419,7 +438,7 @@ func (a *App) openSelectedStripInInactive() {
 // directory, else the row path's parent with the cursor on it. ok is false (after a message) when
 // there is no row or it cannot be opened.
 func (a *App) selectedStripOpenTarget() (dir pathloc.Path, name string, ok bool) {
-	p := a.activePanel()
+	p := a.focusedPanel()
 	selPath, ok := p.SelectedPathAtStripIndex(p.Strip.Cursor)
 	if !ok {
 		return pathloc.Path{}, "", false
@@ -455,7 +474,7 @@ func (a *App) navigatePanelToDirectory(panelID int, dirPath, selectedName string
 // reporting a failure under errTitle and turning latched sync off. When that panel already shows
 // loc it is left untouched so its cursor (preselected row) does not move. ok is false on failure.
 func (a *App) openPathInInactivePanel(loc pathloc.Path, selectedName, errTitle string) (ok bool) {
-	id := a.inactivePanelID()
+	id := a.otherBrowserPanelID()
 	if p := a.panelByID(id); !p.Path.Equal(loc) {
 		if err := p.NavigateToPath(loc, selectedName, a.panelViewportRows(id)); err != nil {
 			a.setErrorMessage(errTitle, err)
@@ -624,7 +643,7 @@ func (a *App) syncFollowFromActive() {
 	if !ok {
 		return
 	}
-	followerID := a.inactivePanelID()
+	followerID := a.otherBrowserPanelID()
 	follower := a.panelByID(followerID)
 	if panel.CleanPathString(follower.PathString()) == targetPath {
 		return
@@ -732,7 +751,7 @@ func (a *App) tryDispatchSelectedStrip(actionID string) bool {
 		return false
 	}
 	vr := a.selectedStripViewportRows(a.model.ActivePanel)
-	p := a.activePanel()
+	p := a.focusedPanel()
 	switch actionID {
 	case keymap.ActionNavUp:
 		p.MoveSelectedStrip(-1, vr)
@@ -853,26 +872,40 @@ func panelLabel(panelID int) string {
 	return "Secondary panel"
 }
 
-func (a *App) inactivePanel() *panel.State {
-	if a.model.ActivePanel == ui.PrimaryPanel {
-		return &a.model.Secondary
-	}
-	return &a.model.Primary
-}
-
-func (a *App) inactivePanelID() int {
+// otherBrowserPanelID is the browser column that is not active: the twin-panel pairing latched
+// sync, swap, compare, quick view, carousel, hide-inactive and layout use.
+func (a *App) otherBrowserPanelID() int {
 	if a.model.ActivePanel == ui.PrimaryPanel {
 		return ui.SecondaryPanel
 	}
 	return ui.PrimaryPanel
 }
 
+// otherBrowserPanel is the panel.State of otherBrowserPanelID.
+func (a *App) otherBrowserPanel() *panel.State {
+	return a.panelByID(a.otherBrowserPanelID())
+}
+
+// destinationPanelID is where operations on the focused panel's files go (the copy/move prefill,
+// a symlink's directory, the "other panel" of open-in-other-panel). A browser panel pairs with the
+// other column. The dedup browse panel targets the browser's inactive panel, which is what the
+// user sees after closing the view. The Find unique files destination is the inactive browser
+// panel itself: the tree's files are copied and moved into it.
+func (a *App) destinationPanelID() int {
+	return a.otherBrowserPanelID()
+}
+
+// destinationPanel is the panel.State of destinationPanelID.
+func (a *App) destinationPanel() *panel.State {
+	return a.panelByID(a.destinationPanelID())
+}
+
 // tryDispatchNavigation handles list-navigation and directory-navigation actions.
 // handled reports whether actionID was consumed; quit reports whether the app should exit
 // (only ActionNavOpen can request this, via handleNavOpen/handleChooserOpen).
 func (a *App) tryDispatchNavigation(actionID string) (handled, quit bool) {
-	viewportRows := a.activeViewportRows()
-	activePanel := a.activePanel()
+	viewportRows := a.focusedViewportRows()
+	activePanel := a.focusedPanel()
 	switch actionID {
 	case keymap.ActionNavUp:
 		a.doListNav(func() { activePanel.Move(-1, viewportRows) })
@@ -929,7 +962,7 @@ func (a *App) tryDispatchNavigation(actionID string) (handled, quit bool) {
 		if a.model.UserHomeDir == "" {
 			break
 		}
-		if err := a.navigatePanelToDirectory(a.model.ActivePanel, a.model.UserHomeDir, ""); err != nil {
+		if err := a.navigatePanelToDirectory(a.focusedPanelID(), a.model.UserHomeDir, ""); err != nil {
 			a.setErrorMessage("Navigate to home failed", err)
 		}
 	case keymap.ActionNavForward, keymap.ActionNavBackward:
@@ -963,8 +996,8 @@ func (a *App) announceRange(res primitive.RangeResult, added int) {
 
 // tryDispatchSelectionActions handles panel selection actions (toggle/group/invert/clear/stash).
 func (a *App) tryDispatchSelectionActions(actionID string) bool {
-	viewportRows := a.activeViewportRows()
-	activePanel := a.activePanel()
+	viewportRows := a.focusedViewportRows()
+	activePanel := a.focusedPanel()
 	switch actionID {
 	case keymap.ActionPanelSelectToggle:
 		_, conflicts := activePanel.ToggleSelectionAndAdvance(viewportRows)
@@ -1010,8 +1043,8 @@ func (a *App) tryDispatchSelectionActions(actionID string) bool {
 
 // tryDispatchPanelLayout handles panel sort/column-profile/carousel/zoom/split/hidden-file actions.
 func (a *App) tryDispatchPanelLayout(actionID string) bool {
-	viewportRows := a.activeViewportRows()
-	activePanel := a.activePanel()
+	viewportRows := a.focusedViewportRows()
+	activePanel := a.focusedPanel()
 	switch actionID {
 	case keymap.ActionPanelToggleHideInactive:
 		a.toggleHideInactivePanel()
@@ -1020,10 +1053,15 @@ func (a *App) tryDispatchPanelLayout(actionID string) bool {
 	case keymap.ActionPanelCycleSort:
 		activePanel.CycleSort(viewportRows)
 		a.setTransientMessage(fmt.Sprintf("Sort: %s", activePanel.Sort.Mode.String()), ui.MessageUrgencyInfo)
-	case keymap.ActionPanelCycleColumnProfile:
-		a.metaCtrl.CycleProfile(a.model.ActivePanel)
-	case keymap.ActionPanelToggleCarousel:
-		a.toggleCarousel(a.model.ActivePanel, false)
+	case keymap.ActionPanelCycleColumnProfile, keymap.ActionPanelToggleCarousel:
+		if a.model.ViewMode != ui.ViewBrowser {
+			break // meta columns and carousel view are browser-column features
+		}
+		if actionID == keymap.ActionPanelCycleColumnProfile {
+			a.metaCtrl.CycleProfile(a.model.ActivePanel)
+		} else {
+			a.toggleCarousel(a.model.ActivePanel, false)
+		}
 	case keymap.ActionPanelToggleTree:
 		if a.toggleTreeForPanel(activePanel, viewportRows) {
 			a.setTransientMessage("Tree view is not available in carousel view", ui.MessageUrgencyInfo)
@@ -1172,7 +1210,7 @@ func (a *App) toggleZoomActivePanelGuarded() {
 		a.setTransientMessage("Zoom disabled while quick view or preview is active", ui.MessageUrgencyInfo)
 		return
 	}
-	activePanel := a.activePanel()
+	activePanel := a.activeBrowserPanel()
 	if activePanel.CarouselMode {
 		a.setTransientMessage("Panel zoom is always on in carousel view", ui.MessageUrgencyInfo)
 		return

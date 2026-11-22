@@ -129,12 +129,12 @@ func (h *Handler) activatePathPickerSelection() {
 
 	switch st.Purpose {
 	case dialog.PathPickerPurposeNavigate:
-		p := h.host.ActivePanel()
-		if err := h.host.NavigatePanelToPath(h.model.ActivePanel, path, ""); err != nil {
+		p := h.host.FocusedPanel()
+		if err := h.host.NavigatePanelToPath(h.model.FocusedPanelID(), path, ""); err != nil {
 			h.host.SetErrorMessage("Bookmark", err)
 			return
 		}
-		p.EnsureCursorVisible(h.host.ActiveViewportRows())
+		p.EnsureCursorVisible(h.host.FocusedViewportRows())
 		h.ClosePathPicker()
 		h.host.SetTransientMessage(path, ui.MessageUrgencyInfo)
 	case dialog.PathPickerPurposeApplyTransferDestination:
@@ -169,7 +169,7 @@ func (h *Handler) activatePathPickerSelection() {
 			extra()
 		}
 	case dialog.PathPickerPurposeNavigateFile:
-		if host.ShowInPanel(h.host, h.model.ActivePanel, filepath.Dir(path), filepath.Base(path), st.IndexPanel, "Show file") {
+		if host.ShowInPanel(h.host, h.model.FocusedPanelID(), filepath.Dir(path), filepath.Base(path), st.IndexPanel, "Show file") {
 			h.host.CloseJobsView() // a picker reopened from the jobs view lands in the browser
 			h.ClosePathPicker()
 		}
@@ -183,7 +183,7 @@ func (h *Handler) activatePathPickerSelection() {
 // when indexPanel, or adds the marked rows to that panel's selection (TryFilePickerShortcut).
 func (h *Handler) OpenFilePicker(title string, items []dialog.PathPickerItem, indexPanel bool) {
 	if h.host.InQuickFilterUI() {
-		h.host.ActivePanel().CancelFilter(h.host.ActiveViewportRows())
+		h.host.FocusedPanel().CancelFilter(h.host.FocusedViewportRows())
 	}
 	h.pathPickerMissingGen++
 	for i := range items {
@@ -252,8 +252,8 @@ func (h *Handler) PathPickerQueryWidth() int {
 // path). PathMissing starts false for every item; startPathPickerMissingScan fills it in
 // asynchronously after the picker opens.
 func (h *Handler) PathPickerItemsHistory() ([]dialog.PathPickerItem, error) {
-	passive := h.host.InactivePanel()
-	active := h.host.ActivePanel()
+	passive := h.host.DestinationPanel()
+	active := h.host.FocusedPanel()
 	seen := make(map[string]struct{})
 	var items []dialog.PathPickerItem
 
@@ -324,7 +324,7 @@ func (h *Handler) startPathPickerMissingScan() {
 	for i, it := range st.Items {
 		paths[i] = it.Path
 	}
-	panelPath := h.host.ActivePanel().PathString()
+	panelPath := h.host.FocusedPanel().PathString()
 	StartPathsMissingScan(h.screen, "picker", h.pathPickerMissingGen, panelPath, h.model.UserHomeDir, paths)
 }
 
@@ -487,7 +487,7 @@ func (h *Handler) ArmPathPickerValidateTimer() {
 	h.pathPickerValidateSeq++
 	seq := h.pathPickerValidateSeq
 	query := st.Query
-	panelPath := h.host.ActivePanel().PathString()
+	panelPath := h.host.FocusedPanel().PathString()
 	home := h.model.UserHomeDir
 	existsFn := h.pathExistsFn
 	screen := h.screen
@@ -513,7 +513,7 @@ func (h *Handler) ApplyPathPickerPathValidation() {
 	if !st.Open {
 		return
 	}
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	h.ApplyPathPickerValidatePayload(PathPickerValidatePayload{
 		Gen:     h.pathPickerValidateSeq,
 		Query:   st.Query,
@@ -552,7 +552,7 @@ func (h *Handler) ApplyTransferDestinationPathValidation() {
 	if !d.Open || d.Phase != dialog.TransferPhaseDestination {
 		return
 	}
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	h.ApplyTransferDestValidatePayload(TransferDestValidatePayload{
 		Gen:     h.transferDestValidateSeq,
 		Query:   d.Destination.Value,
@@ -579,7 +579,7 @@ func (h *Handler) ApplyFlattenDestinationPathValidation() {
 	if !d.Open {
 		return
 	}
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	h.ApplyTransferDestValidatePayload(TransferDestValidatePayload{
 		Gen:     h.transferDestValidateSeq,
 		Query:   d.Destination.Value,
@@ -598,7 +598,7 @@ func (h *Handler) ApplyTransferDestValidatePayload(d TransferDestValidatePayload
 		}
 		st.DestPathCheckPending = false
 		st.DestPathInvalid = d.Invalid
-		p := h.host.ActivePanel()
+		p := h.host.FocusedPanel()
 		h.updateDestinationTargetPanels(p.PathString(), st.Destination.Value, true)
 		h.SyncOpenPathInputsAfterFSChange()
 		return
@@ -610,7 +610,7 @@ func (h *Handler) ApplyTransferDestValidatePayload(d TransferDestValidatePayload
 	}
 	st.DestPathCheckPending = false
 	st.DestPathInvalid = d.Invalid
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	h.updateDestinationTargetPanels(p.PathString(), st.Destination.Value, st.Kind == dialog.TransferKindMove)
 	h.SyncOpenPathInputsAfterFSChange()
 }
@@ -618,7 +618,7 @@ func (h *Handler) ApplyTransferDestValidatePayload(d TransferDestValidatePayload
 func (h *Handler) armTransferDestValidate(query string, flatten bool) {
 	h.transferDestValidateSeq++
 	seq := h.transferDestValidateSeq
-	panelPath := h.host.ActivePanel().PathString()
+	panelPath := h.host.FocusedPanel().PathString()
 	home := h.model.UserHomeDir
 	existsFn := h.pathExistsFn
 	screen := h.screen
@@ -641,7 +641,7 @@ func (h *Handler) armTransferDestValidate(query string, flatten bool) {
 // resolveDestination resolves a typed destination against the active panel and home, matching
 // the dialogs' validation.
 func (h *Handler) resolveDestination(raw string) (pathloc.Path, error) {
-	panel, err := pathloc.Parse(h.host.ActivePanel().PathString())
+	panel, err := pathloc.Parse(h.host.FocusedPanel().PathString())
 	if err != nil {
 		return pathloc.Path{}, err
 	}

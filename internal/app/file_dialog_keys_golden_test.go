@@ -141,7 +141,7 @@ func dispatchFileOp(t *testing.T, app *App, action string) {
 
 func openRenameOn(name string) func(t *testing.T, app *App) {
 	return func(t *testing.T, app *App) {
-		selectPanelEntryByName(t, app.activePanel(), name)
+		selectPanelEntryByName(t, app.focusedPanel(), name)
 		dispatchFileOp(t, app, keymap.ActionFileRename)
 	}
 }
@@ -269,7 +269,7 @@ func TestFileRenameToolKeyScripts(t *testing.T) {
 
 func TestFileDuplicateKeyScripts(t *testing.T) {
 	open := func(t *testing.T, app *App) {
-		selectPanelEntryByName(t, app.activePanel(), "lantern.txt")
+		selectPanelEntryByName(t, app.focusedPanel(), "lantern.txt")
 		dispatchFileOp(t, app, keymap.ActionFileDuplicate)
 	}
 	runKeyGoldenScripts(t, fileKeyDialog("file_duplicate", false, open), []simpleKeyScript{
@@ -299,7 +299,7 @@ func TestFileDuplicateKeyScripts(t *testing.T) {
 
 func TestFileMkdirKeyScripts(t *testing.T) {
 	plain := func(t *testing.T, app *App) {
-		selectPanelEntryByName(t, app.activePanel(), "lantern.txt")
+		selectPanelEntryByName(t, app.focusedPanel(), "lantern.txt")
 		dispatchFileOp(t, app, keymap.ActionFileMkdir)
 	}
 	runKeyGoldenScripts(t, fileKeyDialog("file_mkdir", true, plain), []simpleKeyScript{
@@ -328,7 +328,7 @@ func TestFileMkdirKeyScripts(t *testing.T) {
 		{"esc-from-button", "Down Right Esc"},
 	})
 	withActions := func(t *testing.T, app *App) {
-		p := app.activePanel()
+		p := app.focusedPanel()
 		p.AddSelection(filepath.Join(app.model.UserHomeDir, "projects", "harbor", "willow.txt"))
 		p.AddSelection(filepath.Join(app.model.UserHomeDir, "projects", "harbor", "anchor.txt"))
 		selectPanelEntryByName(t, p, "lantern.txt")
@@ -361,7 +361,7 @@ func TestFileDeleteKeyScripts(t *testing.T) {
 		d.DeleteSummary = fmt.Sprintf("%d files (0 B)", len(d.DeleteEntries))
 	}
 	few := func(t *testing.T, app *App) {
-		p := app.activePanel()
+		p := app.focusedPanel()
 		for _, f := range []string{"lantern.txt", "willow.txt", "anchor.txt"} {
 			p.AddSelection(filepath.Join(app.model.UserHomeDir, "projects", "harbor", f))
 		}
@@ -369,7 +369,7 @@ func TestFileDeleteKeyScripts(t *testing.T) {
 		fix(app)
 	}
 	many := func(t *testing.T, app *App) {
-		p := app.activePanel()
+		p := app.focusedPanel()
 		for i := 1; i <= 25; i++ {
 			p.AddSelection(filepath.Join(app.model.UserHomeDir, "projects", "harbor", fmt.Sprintf("f%02d.txt", i)))
 		}
@@ -377,7 +377,7 @@ func TestFileDeleteKeyScripts(t *testing.T) {
 		fix(app)
 	}
 	one := func(t *testing.T, app *App) {
-		selectPanelEntryByName(t, app.activePanel(), "lantern.txt")
+		selectPanelEntryByName(t, app.focusedPanel(), "lantern.txt")
 		dispatchFileOp(t, app, keymap.ActionFileDelete)
 		fix(app)
 	}
@@ -452,11 +452,11 @@ func attrScripts() []simpleKeyScript {
 
 func TestFileChmodChownKeyScripts(t *testing.T) {
 	chmod := func(t *testing.T, app *App) {
-		selectPanelEntryByName(t, app.activePanel(), "lantern.txt")
+		selectPanelEntryByName(t, app.focusedPanel(), "lantern.txt")
 		dispatchFileOp(t, app, keymap.ActionFileChmod)
 	}
 	chown := func(t *testing.T, app *App) {
-		selectPanelEntryByName(t, app.activePanel(), "lantern.txt")
+		selectPanelEntryByName(t, app.focusedPanel(), "lantern.txt")
 		dispatchFileOp(t, app, keymap.ActionFileChown)
 	}
 	runKeyGoldenScripts(t, fileKeyDialog("file_chmod", false, chmod), []simpleKeyScript{
@@ -506,7 +506,7 @@ func linkScripts() []simpleKeyScript {
 func TestFileSymlinkHardlinkKeyScripts(t *testing.T) {
 	link := func(action string) func(t *testing.T, app *App) {
 		return func(t *testing.T, app *App) {
-			selectPanelEntryByName(t, app.activePanel(), "lantern.txt")
+			selectPanelEntryByName(t, app.focusedPanel(), "lantern.txt")
 			dispatchFileOp(t, app, action)
 			d := &app.model.FileDialog
 			// The default paths hold the temp dir; relative placeholders (resolved against the

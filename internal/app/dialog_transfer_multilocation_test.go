@@ -33,7 +33,7 @@ func setupMultiDirSelection(t *testing.T) (app *App, root, alpha, bravo string) 
 
 func TestTransferMultiDirSelectionOpensTransferDialogWithPreview(t *testing.T) {
 	app, root, alpha, bravo := setupMultiDirSelection(t)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.AddSelection(filepath.Join(alpha, "river.txt"))
 	p.AddSelection(filepath.Join(bravo, "stone.txt"))
 
@@ -62,7 +62,7 @@ func TestTransferMultiDirSelectionOpensTransferDialogWithPreview(t *testing.T) {
 			t.Errorf("unexpected entry label %q", e.Name)
 		}
 	}
-	if got := app.activePanel().PathString(); got != alpha {
+	if got := app.focusedPanel().PathString(); got != alpha {
 		t.Fatalf("panel path = %q, want unchanged %q", got, alpha)
 	}
 }
@@ -72,7 +72,7 @@ func TestTransferMultiDirSelectionOpensTransferDialogWithPreview(t *testing.T) {
 // the selection (previously suppressed in that case).
 func TestTransferMultiDirSelectionOpensAtCommonRoot(t *testing.T) {
 	app, root, alpha, bravo := setupMultiDirSelection(t)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.AddSelection(filepath.Join(alpha, "river.txt"))
 	p.AddSelection(filepath.Join(bravo, "stone.txt"))
 	if err := p.Load(root); err != nil {
@@ -94,7 +94,7 @@ func TestTransferMultiDirSelectionOpensAtCommonRoot(t *testing.T) {
 
 func TestTransferMultiDirSelectionMoveKind(t *testing.T) {
 	app, root, alpha, bravo := setupMultiDirSelection(t)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.AddSelection(filepath.Join(alpha, "river.txt"))
 	p.AddSelection(filepath.Join(bravo, "stone.txt"))
 
@@ -109,7 +109,7 @@ func TestTransferMultiDirSelectionMoveKind(t *testing.T) {
 
 func TestTransferSingleDirSelectionSkipsMultiLocation(t *testing.T) {
 	app, _, alpha, bravo := setupMultiDirSelection(t)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.AddSelection(filepath.Join(alpha, "river.txt"))
 	p.AddSelection(filepath.Join(alpha, "pond.txt"))
 	if err := p.Load(bravo); err != nil {
@@ -130,7 +130,7 @@ func TestTransferSingleDirSelectionSkipsMultiLocation(t *testing.T) {
 
 func TestTransferFlattenToggleAltI(t *testing.T) {
 	app, _, alpha, bravo := setupMultiDirSelection(t)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.AddSelection(filepath.Join(alpha, "river.txt"))
 	p.AddSelection(filepath.Join(bravo, "stone.txt"))
 	app.dialogCtrl.ActivateCopyAction()
@@ -150,7 +150,7 @@ func TestTransferFlattenToggleAltI(t *testing.T) {
 
 func TestTransferFlattenToggleAltIWorksForMove(t *testing.T) {
 	app, _, alpha, bravo := setupMultiDirSelection(t)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.AddSelection(filepath.Join(alpha, "river.txt"))
 	p.AddSelection(filepath.Join(bravo, "stone.txt"))
 	app.dialogCtrl.ActivateMoveAction()
@@ -166,7 +166,7 @@ func TestTransferFlattenToggleAltIWorksForMove(t *testing.T) {
 
 func TestTransferFlattenToggleFocusedSpace(t *testing.T) {
 	app, _, alpha, bravo := setupMultiDirSelection(t)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.AddSelection(filepath.Join(alpha, "river.txt"))
 	p.AddSelection(filepath.Join(bravo, "stone.txt"))
 	app.dialogCtrl.ActivateCopyAction()
@@ -208,7 +208,7 @@ func TestTransferPreviewListPgUpPgDnClampsScroll(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, cedar)
-	panel := app.activePanel()
+	panel := app.focusedPanel()
 	for _, s := range selected {
 		panel.AddSelection(s)
 	}
@@ -253,11 +253,11 @@ func TestTransferConfirmWithFlattenEnqueuesFlatJob(t *testing.T) {
 	if err := os.Mkdir(dst, 0o755); err != nil {
 		t.Fatalf("mkdir dest: %v", err)
 	}
-	if err := app.inactivePanel().Load(dst); err != nil {
+	if err := app.otherBrowserPanel().Load(dst); err != nil {
 		t.Fatalf("inactive Load: %v", err)
 	}
 	applyNextInterruptEvent(t, app, app.screen.(tcell.SimulationScreen)) // async load, inactive panel enters dst
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.AddSelection(filepath.Join(alpha, "river.txt"))
 	p.AddSelection(filepath.Join(bravo, "stone.txt"))
 
@@ -296,10 +296,10 @@ func TestTransferEscClearsDestinationTargetMarks(t *testing.T) {
 	if err := os.Mkdir(dst, 0o755); err != nil {
 		t.Fatalf("mkdir dest: %v", err)
 	}
-	if err := app.inactivePanel().Load(dst); err != nil {
+	if err := app.otherBrowserPanel().Load(dst); err != nil {
 		t.Fatalf("inactive Load: %v", err)
 	}
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.AddSelection(filepath.Join(alpha, "river.txt"))
 	p.AddSelection(filepath.Join(bravo, "stone.txt"))
 
@@ -320,7 +320,7 @@ func TestTransferEscClearsDestinationTargetMarks(t *testing.T) {
 
 func TestOpenSelectedRootNavigatesToCommonRoot(t *testing.T) {
 	app, root, alpha, bravo := setupMultiDirSelection(t)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.AddSelection(filepath.Join(alpha, "river.txt"))
 	p.AddSelection(filepath.Join(bravo, "stone.txt"))
 
@@ -329,7 +329,7 @@ func TestOpenSelectedRootNavigatesToCommonRoot(t *testing.T) {
 		t.Fatal("unexpected quit")
 	}
 	applyNextInterruptEvent(t, app, app.screen.(tcell.SimulationScreen)) // async load, active panel jumps to common root
-	if got := app.activePanel().PathString(); got != root {
+	if got := app.focusedPanel().PathString(); got != root {
 		t.Fatalf("panel path = %q, want common root %q", got, root)
 	}
 
@@ -337,14 +337,14 @@ func TestOpenSelectedRootNavigatesToCommonRoot(t *testing.T) {
 	if quit, _ := app.handleKey(ev); quit {
 		t.Fatal("unexpected quit")
 	}
-	if got := app.activePanel().PathString(); got != root {
+	if got := app.focusedPanel().PathString(); got != root {
 		t.Fatalf("panel path = %q, want unchanged %q", got, root)
 	}
 }
 
 func TestOpenSelectedRootSingleDirNavigatesToParent(t *testing.T) {
 	app, _, alpha, bravo := setupMultiDirSelection(t)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.AddSelection(filepath.Join(alpha, "river.txt"))
 	p.AddSelection(filepath.Join(alpha, "pond.txt"))
 	if err := p.Load(bravo); err != nil {
@@ -354,7 +354,7 @@ func TestOpenSelectedRootSingleDirNavigatesToParent(t *testing.T) {
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyCtrlS, 0, tcell.ModAlt)); quit {
 		t.Fatal("unexpected quit")
 	}
-	if got := app.activePanel().PathString(); got != alpha {
+	if got := app.focusedPanel().PathString(); got != alpha {
 		t.Fatalf("panel path = %q, want single selection dir %q", got, alpha)
 	}
 }
@@ -365,7 +365,7 @@ func TestOpenSelectedRootWithoutSelectionsKeepsLocation(t *testing.T) {
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyCtrlS, 0, tcell.ModAlt)); quit {
 		t.Fatal("unexpected quit")
 	}
-	if got := app.activePanel().PathString(); got != alpha {
+	if got := app.focusedPanel().PathString(); got != alpha {
 		t.Fatalf("panel path = %q, want unchanged %q", got, alpha)
 	}
 }

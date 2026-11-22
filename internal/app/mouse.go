@@ -391,7 +391,7 @@ func (a *App) panelRowHover(layout ui.Layout) ui.PanelRowHover {
 	}
 	if a.inputMode() == InputModeUniqueView {
 		row, ok := ui.UniqueDestEntryAt(layout, &a.model, a.mouse.x, a.mouse.y)
-		return ui.PanelRowHover{Active: ok, Panel: a.inactivePanelID(), Entry: row}
+		return ui.PanelRowHover{Active: ok, Panel: a.otherBrowserPanelID(), Entry: row}
 	}
 	if a.inputMode() != InputModeNormal || a.model.ViewMode != ui.ViewBrowser {
 		return ui.PanelRowHover{}
@@ -445,8 +445,8 @@ func (a *App) focusPanelByMouse(id int) {
 
 // setCursorByMouse moves the active panel's cursor to row through the keyboard nav path.
 func (a *App) setCursorByMouse(row int) {
-	p := a.activePanel()
-	vr := a.activeViewportRows()
+	p := a.focusedPanel()
+	vr := a.focusedViewportRows()
 	a.doListNav(func() { p.Move(row-p.Cursor, vr) })
 }
 
@@ -630,7 +630,7 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 		return false, a.handleDedupMouse(layout, x, y, buttons, pressed)
 	case InputModeUniqueView:
 		return false, a.handleUniqueMouse(layout, x, y, buttons, pressed)
-	case InputModeNormal:
+	case InputModeNormal, InputModeFilter: // a filter on a view's embedded panel is no browser click
 		if a.model.ViewMode != ui.ViewBrowser {
 			return false, false
 		}
@@ -670,7 +670,7 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 		if id != a.model.ActivePanel {
 			return false, a.scrollInactivePanel(id, step)
 		}
-		a.setCursorByMouse(a.activePanel().Cursor + step)
+		a.setCursorByMouse(a.focusedPanel().Cursor + step)
 		return false, true
 	case pressed&tcell.Button1 != 0:
 		a.focusPanelByMouse(id)

@@ -24,8 +24,8 @@ func (h *Handler) OpenRunForEachDialog() {
 	if h.model.ViewMode != ui.ViewBrowser {
 		return
 	}
-	active := h.host.ActivePanel()
-	other := h.host.InactivePanel()
+	active := h.host.FocusedPanel()
+	other := h.host.DestinationPanel()
 	// Resolving the source of a remote panel may do I/O: refuse it first.
 	if !active.Path.IsLocal() {
 		h.host.SetTransientMessage(usermenu.LocalOnlyRefusal, ui.MessageUrgencyWarn)
@@ -132,8 +132,8 @@ func (h *Handler) RecomputeRunForEachValidation() {
 	preview, msg := validateRunForEachCommand(
 		strings.TrimSpace(d.Fields[0].Value),
 		d.RunForEachEntries,
-		h.host.ActivePanel(),
-		h.host.InactivePanel(),
+		h.host.FocusedPanel(),
+		h.host.DestinationPanel(),
 		d.RunForEachInDirs,
 	)
 	d.RunForEachPreview = preview

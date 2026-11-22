@@ -57,7 +57,7 @@ func (h *Handler) maybeScheduleTransferOtherPanelFocus(jobType jobs.Type, source
 	if !destIsDir {
 		destDir = destLoc.Parent()
 	}
-	inactive := h.host.InactivePanel()
+	inactive := h.host.DestinationPanel()
 	if inactive == nil || inactive.Path.IsZero() || !destDir.Equal(inactive.Path) {
 		return
 	}
@@ -69,7 +69,7 @@ func (h *Handler) maybeScheduleTransferOtherPanelFocus(jobType jobs.Type, source
 	if e, ok := inactive.CurrentEntry(); ok {
 		snap = e.Path
 	}
-	h.scheduleTransferOtherPanelFocus(h.host.InactivePanelID(), inactive.PathString(), candidates, snap)
+	h.scheduleTransferOtherPanelFocus(h.host.DestinationPanelID(), inactive.PathString(), candidates, snap)
 }
 
 // applyPendingPanelFocus retries the deferred select scheduled by schedulePanelFocus /

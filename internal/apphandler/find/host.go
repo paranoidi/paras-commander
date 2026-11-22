@@ -15,8 +15,8 @@ type Host interface {
 	host.MessageHost
 
 	PanelByID(panelID int) *panel.State
-	ActivePanel() *panel.State
-	ActiveViewportRows() int
+	FocusedPanel() *panel.State
+	FocusedViewportRows() int
 	InQuickFilterUI() bool
 	host.PanelNavigationHost
 	HandleScrollingQueryKey(ev *tcell.EventKey, inputFocused bool, edit ScrollingQueryEdit) bool

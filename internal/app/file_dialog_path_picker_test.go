@@ -23,7 +23,7 @@ func TestSymlinkDialogRightAtEndIsNoOp(t *testing.T) {
 	screen.SetSize(80, 24)
 
 	app := newTestApp(t, screen, testOptions(root))
-	p := app.activePanel()
+	p := app.focusedPanel()
 	for i := 0; i < p.VisibleEntryCount(); i++ {
 		entry, _, ok := p.VisibleEntry(i)
 		if ok && entry.Name == "a.txt" {
@@ -62,7 +62,7 @@ func TestSymlinkDialogTabAcceptsFilesystemCompletion(t *testing.T) {
 	screen.SetSize(80, 24)
 
 	app := newTestApp(t, screen, testOptions(root))
-	p := app.activePanel()
+	p := app.focusedPanel()
 	for i := 0; i < p.VisibleEntryCount(); i++ {
 		entry, _, ok := p.VisibleEntry(i)
 		if ok && entry.Name == "a.txt" {
@@ -117,7 +117,7 @@ func TestSymlinkDialogBookmarkShortcutOpensPathPicker(t *testing.T) {
 		CWD:    func() (string, error) { return root, nil },
 		Config: cfg,
 	})
-	p := app.activePanel()
+	p := app.focusedPanel()
 	for i := 0; i < p.VisibleEntryCount(); i++ {
 		entry, _, ok := p.VisibleEntry(i)
 		if ok && entry.Name == "a.txt" {

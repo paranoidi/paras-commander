@@ -1540,7 +1540,7 @@ func (h *Handler) applySizeEstimate(job *jobs.Job, sources []string) {
 	if job.Type != jobs.TypeCopy && job.Type != jobs.TypeMove {
 		return
 	}
-	active := h.host.ActivePanel()
+	active := h.host.FocusedPanel()
 	if active == nil {
 		return
 	}

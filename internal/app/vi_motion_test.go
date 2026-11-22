@@ -48,7 +48,7 @@ func TestViMotionHJKLActLikeArrowsOnlyWhenModeOn(t *testing.T) {
 	if got := app.model.Primary.Filter.Query; got != "j" {
 		t.Fatalf("quick filter query = %q, want %q", got, "j")
 	}
-	app.activePanel().CancelFilter(app.activeViewportRows())
+	app.focusedPanel().CancelFilter(app.focusedViewportRows())
 
 	// Mode on: hjkl act exactly like the arrow-key nav actions (nav.down/nav.up here) and
 	// never fall through to the quick filter.
@@ -83,7 +83,7 @@ func TestViMotionLeaderLetterDispatchesDirectlyOnlyWhenModeOn(t *testing.T) {
 	if got := app.model.Primary.Filter.Query; got != "c" {
 		t.Fatalf("quick filter query = %q, want %q", got, "c")
 	}
-	app.activePanel().CancelFilter(app.activeViewportRows())
+	app.focusedPanel().CancelFilter(app.focusedViewportRows())
 
 	// Mode on: 'c' fires file.copy directly without opening the quick filter first.
 	app.model.ViMotionMode = true

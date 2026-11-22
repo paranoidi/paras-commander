@@ -20,15 +20,15 @@ func TestNavHomeInHomeKeepsCursor(t *testing.T) {
 	app := newApp(t, screen, home)
 	app.model.UserHomeDir = home
 	selectEntryByName(t, app, "damson")
-	row := app.activePanel().Cursor
+	row := app.focusedPanel().Cursor
 
 	app.dispatch(keymap.ActionNavHome)
-	if app.activePanel().ListingPending {
+	if app.focusedPanel().ListingPending {
 		applyNextInterruptEvent(t, app, screen)
 	}
 
-	entry, ok := app.activePanel().CurrentEntry()
-	if !ok || entry.Name != "damson" || app.activePanel().Cursor != row {
-		t.Fatalf("cursor = %d on %q, want %d on damson", app.activePanel().Cursor, entry.Name, row)
+	entry, ok := app.focusedPanel().CurrentEntry()
+	if !ok || entry.Name != "damson" || app.focusedPanel().Cursor != row {
+		t.Fatalf("cursor = %d on %q, want %d on damson", app.focusedPanel().Cursor, entry.Name, row)
 	}
 }

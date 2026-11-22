@@ -54,9 +54,9 @@ func TestBookmarkDialogOpensAndNavigates(t *testing.T) {
 	// one interrupt event may be queued (in either order) — drain until the navigation lands.
 	want := filepath.Clean(target)
 	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
-		return app.activePanel().Path.String() == want
+		return app.focusedPanel().Path.String() == want
 	})
-	if got := app.activePanel().Path.String(); got != want {
+	if got := app.focusedPanel().Path.String(); got != want {
 		t.Fatalf("panel path = %q want %q", got, want)
 	}
 }
@@ -245,9 +245,9 @@ func TestHistoryDialogFilterNavigatesToMatch(t *testing.T) {
 	want := filepath.Clean(alpha)
 	// The missing-path scan and the navigation load may queue in either order.
 	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
-		return filepath.Clean(app.activePanel().Path.String()) == want
+		return filepath.Clean(app.focusedPanel().Path.String()) == want
 	})
-	if got := filepath.Clean(app.activePanel().Path.String()); got != want {
+	if got := filepath.Clean(app.focusedPanel().Path.String()); got != want {
 		t.Fatalf("panel path = %q want %q", got, want)
 	}
 }
@@ -459,9 +459,9 @@ func TestBookmarkDialogFilterSelectsRankedFirst(t *testing.T) {
 	// one interrupt event may be queued (in either order) — drain until the navigation lands.
 	wantBeta := filepath.Clean(tBeta)
 	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
-		return app.activePanel().Path.String() == wantBeta
+		return app.focusedPanel().Path.String() == wantBeta
 	})
-	if got := app.activePanel().Path.String(); got != wantBeta {
+	if got := app.focusedPanel().Path.String(); got != wantBeta {
 		t.Fatalf("panel path = %q want %q", got, wantBeta)
 	}
 }
@@ -488,7 +488,7 @@ func TestBookmarkDialogTypingODoesNotActivateWithoutEnter(t *testing.T) {
 		CWD:    func() (string, error) { return root, nil },
 		Config: cfg,
 	})
-	startPath := app.activePanel().Path
+	startPath := app.focusedPanel().Path
 	app.dialogCtrl.OpenBookmarkDialog()
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModNone)); quit {
 		t.Fatal("unexpected quit")
@@ -499,8 +499,8 @@ func TestBookmarkDialogTypingODoesNotActivateWithoutEnter(t *testing.T) {
 	if app.model.PathPicker.Query != "o" {
 		t.Fatalf("query = %q want o", app.model.PathPicker.Query)
 	}
-	if app.activePanel().Path != startPath {
-		t.Fatalf("panel path changed without Enter: %q", app.activePanel().Path.String())
+	if app.focusedPanel().Path != startPath {
+		t.Fatalf("panel path changed without Enter: %q", app.focusedPanel().Path.String())
 	}
 }
 

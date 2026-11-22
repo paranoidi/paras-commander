@@ -47,7 +47,7 @@ func waitCommandsDone(t *testing.T, app *App) {
 
 func selectEntryByName(t *testing.T, app *App, name string) {
 	t.Helper()
-	p := app.activePanel()
+	p := app.focusedPanel()
 	for i := 0; i < p.VisibleEntryCount(); i++ {
 		entry, _, ok := p.VisibleEntry(i)
 		if ok && entry.Name == name {

@@ -23,11 +23,11 @@ func TestActivateMoveActionSamePanelPathOpensMoveDialog(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 	// newApp leaves both panels on dir — previously F6/ActivateMoveAction routed to rename.
-	if app.activePanel().PathString() != app.inactivePanel().PathString() {
+	if app.focusedPanel().PathString() != app.otherBrowserPanel().PathString() {
 		t.Fatalf("panels paths = %q / %q, want same for this regression",
-			app.activePanel().PathString(), app.inactivePanel().PathString())
+			app.focusedPanel().PathString(), app.otherBrowserPanel().PathString())
 	}
-	if len(app.activePanel().SelectedPaths) != 0 {
+	if len(app.focusedPanel().SelectedPaths) != 0 {
 		t.Fatal("want empty selection")
 	}
 
@@ -53,12 +53,12 @@ func TestCopyMoveClearsSelectionOnlyWhenQueued(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	if err := app.inactivePanel().Load(dstDir); err != nil {
+	if err := app.otherBrowserPanel().Load(dstDir); err != nil {
 		t.Fatalf("inactive Load: %v", err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters dstDir
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)); quit {
 		t.Fatal("unexpected quit")
 	}
@@ -146,12 +146,12 @@ func TestTransferDialogEnterFromDestinationConfirms(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	if err := app.inactivePanel().Load(dstDir); err != nil {
+	if err := app.otherBrowserPanel().Load(dstDir); err != nil {
 		t.Fatalf("inactive Load: %v", err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters dstDir
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)); quit {
 		t.Fatal("unexpected quit")
 	}
@@ -181,7 +181,7 @@ func TestTransferDialogDestinationTargetPanel(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	if err := app.inactivePanel().Load(dstDir); err != nil {
+	if err := app.otherBrowserPanel().Load(dstDir); err != nil {
 		t.Fatalf("inactive Load: %v", err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters dstDir
@@ -221,7 +221,7 @@ func TestTransferDialogDestinationTargetPanelBorderColor(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	if err := app.inactivePanel().Load(dstDir); err != nil {
+	if err := app.otherBrowserPanel().Load(dstDir); err != nil {
 		t.Fatalf("inactive Load: %v", err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters dstDir
@@ -257,7 +257,7 @@ func TestMoveDialogDestinationTargetPanelWarningBorderColor(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	if err := app.inactivePanel().Load(dstDir); err != nil {
+	if err := app.otherBrowserPanel().Load(dstDir); err != nil {
 		t.Fatalf("inactive Load: %v", err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters dstDir
@@ -293,12 +293,12 @@ func TestTransferDialogDestinationLeftRightMoveCursor(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	if err := app.inactivePanel().Load(dstDir); err != nil {
+	if err := app.otherBrowserPanel().Load(dstDir); err != nil {
 		t.Fatalf("inactive Load: %v", err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters dstDir
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)); quit {
 		t.Fatal("unexpected quit")
 	}
@@ -351,12 +351,12 @@ func TestTransferDestinationFooterShowsActiveAndInactive(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	if err := app.inactivePanel().Load(dstDir); err != nil {
+	if err := app.otherBrowserPanel().Load(dstDir); err != nil {
 		t.Fatalf("inactive Load: %v", err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters dstDir
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)); quit {
 		t.Fatal("unexpected quit")
 	}
@@ -386,12 +386,12 @@ func TestTransferDestinationShortcutSetsActiveAndInactivePath(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	if err := app.inactivePanel().Load(dstDir); err != nil {
+	if err := app.otherBrowserPanel().Load(dstDir); err != nil {
 		t.Fatalf("inactive Load: %v", err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters dstDir
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)); quit {
 		t.Fatal("unexpected quit")
 	}
@@ -400,8 +400,8 @@ func TestTransferDestinationShortcutSetsActiveAndInactivePath(t *testing.T) {
 	}
 
 	app.dialogCtrl.OpenCopyDialog()
-	wantActive := dialogctrl.TransferPrefilledDestination(app.activePanel().PathString()).Value
-	wantInactive := dialogctrl.TransferPrefilledDestination(app.inactivePanel().PathString()).Value
+	wantActive := dialogctrl.TransferPrefilledDestination(app.focusedPanel().PathString()).Value
+	wantInactive := dialogctrl.TransferPrefilledDestination(app.otherBrowserPanel().PathString()).Value
 
 	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift))
 	if app.model.TransferDialog.Destination.Value != wantInactive {
@@ -422,7 +422,7 @@ func TestTransferDestinationShortcutNoOpDuringSelfCopyRename(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{aaa: true}
 	app.dialogCtrl.OpenCopyDialog()
 	app.dialogCtrl.ConfirmCopy()
@@ -452,7 +452,7 @@ func TestTransferSelfCopyRenameFlow(t *testing.T) {
 		screen := newScreen(t, 80, 24)
 		app := newApp(t, screen, dir)
 
-		p := app.activePanel()
+		p := app.focusedPanel()
 		p.SelectedPaths = map[string]bool{aaa: true}
 
 		app.dialogCtrl.OpenCopyDialog()
@@ -480,7 +480,7 @@ func TestTransferSelfCopyRenameFlow(t *testing.T) {
 		screen := newScreen(t, 80, 24)
 		app := newApp(t, screen, dir)
 
-		p := app.activePanel()
+		p := app.focusedPanel()
 		p.SelectedPaths = map[string]bool{aaa: true}
 		app.dialogCtrl.OpenCopyDialog()
 		app.dialogCtrl.ConfirmCopy()
@@ -508,7 +508,7 @@ func TestTransferSelfCopyRenameFlow(t *testing.T) {
 		screen := newScreen(t, 80, 24)
 		app := newApp(t, screen, dir)
 
-		p := app.activePanel()
+		p := app.focusedPanel()
 		p.SelectedPaths = map[string]bool{aaa: true}
 		app.dialogCtrl.OpenCopyDialog()
 		app.dialogCtrl.ConfirmCopy()
@@ -546,7 +546,7 @@ func TestTransferSelfCopyMultipleSourcesRejected(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{aaa: true, bbb: true}
 	app.dialogCtrl.OpenCopyDialog()
 	app.dialogCtrl.ConfirmCopy()
@@ -578,16 +578,16 @@ func TestConfirmCopyClearsCrossDirectorySelections(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	if err := app.activePanel().Load(here); err != nil {
+	if err := app.focusedPanel().Load(here); err != nil {
 		t.Fatalf("Load here: %v", err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, active panel enters here
-	if err := app.inactivePanel().Load(dst); err != nil {
+	if err := app.otherBrowserPanel().Load(dst); err != nil {
 		t.Fatalf("Load dest: %v", err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters dst
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	hereTxt := filepath.Join(here, "here.txt")
 	otherTxt := filepath.Join(other, "other.txt")
 	p.SelectedPaths = map[string]bool{hereTxt: true, otherTxt: true}
@@ -623,16 +623,16 @@ func TestConfirmMoveClearsCrossDirectorySelections(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	if err := app.activePanel().Load(here); err != nil {
+	if err := app.focusedPanel().Load(here); err != nil {
 		t.Fatalf("Load here: %v", err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, active panel enters here
-	if err := app.inactivePanel().Load(dst); err != nil {
+	if err := app.otherBrowserPanel().Load(dst); err != nil {
 		t.Fatalf("Load dest: %v", err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters dst
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	hereTxt := filepath.Join(here, "here.txt")
 	otherTxt := filepath.Join(other, "other.txt")
 	p.SelectedPaths = map[string]bool{hereTxt: true, otherTxt: true}
@@ -667,7 +667,7 @@ func TestPathPickerHostFooterShowsPathsOnCopyAndSymlinkDialogs(t *testing.T) {
 		CWD:    func() (string, error) { return root, nil },
 		Config: cfg,
 	})
-	p := app.activePanel()
+	p := app.focusedPanel()
 	for i := 0; i < p.VisibleEntryCount(); i++ {
 		entry, _, ok := p.VisibleEntry(i)
 		if ok && entry.Name == "a.txt" {
@@ -751,7 +751,7 @@ func TestPathPickerHostBookmarkOpenOpensPickerFromCopyAndSymlinkDialogs(t *testi
 		CWD:    func() (string, error) { return root, nil },
 		Config: cfg,
 	})
-	p := app.activePanel()
+	p := app.focusedPanel()
 	for i := 0; i < p.VisibleEntryCount(); i++ {
 		entry, _, ok := p.VisibleEntry(i)
 		if ok && entry.Name == "a.txt" {
@@ -811,7 +811,7 @@ func TestDuplicateOpensRenameLikeDialogForSingleDirectory(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{src: true}
 
 	app.dispatch(keymap.ActionFileDuplicate)
@@ -841,7 +841,7 @@ func TestDuplicateRejectsMultipleSelections(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{a: true, b: true}
 
 	app.dispatch(keymap.ActionFileDuplicate)
@@ -861,7 +861,7 @@ func TestDuplicateOpensDialogForFile(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{file: true}
 
 	app.dispatch(keymap.ActionFileDuplicate)
@@ -889,12 +889,12 @@ func TestDuplicateDialogMarksActivePanelAsDestinationTarget(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	if err := app.inactivePanel().Load(otherDir); err != nil {
+	if err := app.otherBrowserPanel().Load(otherDir); err != nil {
 		t.Fatalf("inactive Load: %v", err)
 	}
 	applyNextInterruptEvent(t, app, screen)
 
-	app.activePanel().SelectedPaths = map[string]bool{file: true}
+	app.focusedPanel().SelectedPaths = map[string]bool{file: true}
 	app.dispatch(keymap.ActionFileDuplicate)
 	if !app.model.FileDialog.Open {
 		t.Fatal("expected duplicate dialog open")
@@ -925,7 +925,7 @@ func TestDuplicateSuggestsNextFreeNumberedName(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{file: true}
 
 	app.dispatch(keymap.ActionFileDuplicate)
@@ -943,7 +943,7 @@ func TestDuplicateDialogFocusCheckboxToggle(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{src: true}
 
 	app.dispatch(keymap.ActionFileDuplicate)
@@ -981,7 +981,7 @@ func TestDuplicateWithFocusAfterSelectsAfterJob(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	selectPanelEntryByName(t, p, "10")
 	p.SelectedPaths = map[string]bool{src: true}
 
@@ -1004,11 +1004,11 @@ func TestDuplicateWithFocusAfterSelectsAfterJob(t *testing.T) {
 		if !applied {
 			applied = app.jobsCtrl.ApplyRefreshes()
 		}
-		e, ok := app.activePanel().CurrentEntry()
+		e, ok := app.focusedPanel().CurrentEntry()
 		return ok && e.Name == newName
 	})
 
-	p = app.activePanel()
+	p = app.focusedPanel()
 	entry, ok := p.CurrentEntry()
 	if !ok {
 		t.Fatal("CurrentEntry() ok = false after duplicate job")
@@ -1016,7 +1016,7 @@ func TestDuplicateWithFocusAfterSelectsAfterJob(t *testing.T) {
 	if entry.Name != newName {
 		t.Fatalf("cursor entry = %q, want %s", entry.Name, newName)
 	}
-	vp := app.activeViewportRows()
+	vp := app.focusedViewportRows()
 	wantScroll := p.Cursor - vp/2
 	if wantScroll < 0 {
 		wantScroll = 0
@@ -1041,7 +1041,7 @@ func TestDuplicateConfirmsFromOKButtonWithFocusAfter(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	selectPanelEntryByName(t, p, "note.txt")
 	p.SelectedPaths = map[string]bool{file: true}
 
@@ -1078,7 +1078,7 @@ func TestDuplicateQueuesJobWithNewName(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{src: true}
 
 	app.dispatch(keymap.ActionFileDuplicate)

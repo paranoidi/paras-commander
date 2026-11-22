@@ -213,7 +213,7 @@ func TestExtractDialogEnqueuesJob(t *testing.T) {
 	app := newApp(t, screen, srcDir)
 	app.model.Secondary.Path = pathloc.MustParse(destDir)
 	_ = app.model.Secondary.Refresh(20)
-	if !app.activePanel().SelectVisibleEntry("pack.tar.gz") {
+	if !app.focusedPanel().SelectVisibleEntry("pack.tar.gz") {
 		t.Fatal("pack.tar.gz not visible in panel")
 	}
 
@@ -416,7 +416,7 @@ func TestRenameWithoutFocusAfterDoesNotCenterOnNewFile(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	for i := 0; i < p.VisibleEntryCount(); i++ {
 		entry, _, ok := p.VisibleEntry(i)
 		if ok && entry.Path == target {
@@ -434,7 +434,7 @@ func TestRenameWithoutFocusAfterDoesNotCenterOnNewFile(t *testing.T) {
 	applyNextInterruptEvent(t, app, screen) // async reload, RefreshBothPanels: Primary
 	applyNextInterruptEvent(t, app, screen) // async reload, RefreshBothPanels: Secondary
 
-	p = app.activePanel()
+	p = app.focusedPanel()
 	entry, ok := p.CurrentEntry()
 	if !ok {
 		t.Fatal("CurrentEntry() ok = false after rename")
@@ -456,7 +456,7 @@ func TestRenameWithFocusAfterSelectsAndCentersNewFile(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	for i := 0; i < p.VisibleEntryCount(); i++ {
 		entry, _, ok := p.VisibleEntry(i)
 		if ok && entry.Path == target {
@@ -475,7 +475,7 @@ func TestRenameWithFocusAfterSelectsAndCentersNewFile(t *testing.T) {
 	applyNextInterruptEvent(t, app, screen) // async reload, RefreshBothPanels: Primary
 	applyNextInterruptEvent(t, app, screen) // async reload, RefreshBothPanels: Secondary
 
-	p = app.activePanel()
+	p = app.focusedPanel()
 	entry, ok := p.CurrentEntry()
 	if !ok {
 		t.Fatal("CurrentEntry() ok = false after rename")
@@ -483,7 +483,7 @@ func TestRenameWithFocusAfterSelectsAndCentersNewFile(t *testing.T) {
 	if entry.Name != newName {
 		t.Fatalf("cursor entry = %q, want %s", entry.Name, newName)
 	}
-	vp := app.activeViewportRows()
+	vp := app.focusedViewportRows()
 	wantScroll := p.Cursor - vp/2
 	if wantScroll < 0 {
 		wantScroll = 0
@@ -509,7 +509,7 @@ func TestMassRenameTwoSelectedFiles(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{aPath: true, bPath: true}
 
 	app.dispatch(keymap.ActionFileRename)
@@ -552,8 +552,8 @@ func assertMassRenameDone(t *testing.T, app *App) {
 	if app.model.MessageUrgency != ui.MessageUrgencySuccess {
 		t.Fatalf("toast urgency = %v, want success (message %q)", app.model.MessageUrgency, app.model.Message)
 	}
-	if n := len(app.activePanel().SelectedPaths); n != 0 {
-		t.Fatalf("selection = %+v, want cleared", app.activePanel().SelectedPaths)
+	if n := len(app.focusedPanel().SelectedPaths); n != 0 {
+		t.Fatalf("selection = %+v, want cleared", app.focusedPanel().SelectedPaths)
 	}
 }
 
@@ -570,7 +570,7 @@ func TestMassRenameBangPrefixedDirectory(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{bangPath: true, normalPath: true}
 
 	app.dispatch(keymap.ActionFileRename)
@@ -637,7 +637,7 @@ func TestMassRenameApplyKeepsDialogOpenAndReselects(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{aPath: true, bPath: true}
 
 	app.dispatch(keymap.ActionFileRename)
@@ -674,7 +674,7 @@ func TestMassRenameApplyKeepsDialogOpenAndReselects(t *testing.T) {
 	if d.Focus != dialog.FileFieldID(0) {
 		t.Fatalf("Focus after Apply = %q, want the Find input", d.Focus)
 	}
-	p = app.activePanel()
+	p = app.focusedPanel()
 	if !p.SelectedPaths[bar1Path] || !p.SelectedPaths[bar2Path] {
 		t.Fatalf("expected renamed batch reselected, got %+v", p.SelectedPaths)
 	}
@@ -714,7 +714,7 @@ func TestMassRenameApplyThenCancelClearsSelection(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	app.activePanel().SelectedPaths = map[string]bool{aPath: true, bPath: true}
+	app.focusedPanel().SelectedPaths = map[string]bool{aPath: true, bPath: true}
 
 	app.dispatch(keymap.ActionFileRename)
 	d := &app.model.FileDialog
@@ -727,8 +727,8 @@ func TestMassRenameApplyThenCancelClearsSelection(t *testing.T) {
 	}
 	d.Focus = dialog.MassRenameApply
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
-	if len(app.activePanel().SelectedPaths) != 2 {
-		t.Fatalf("selection after Apply = %+v, want the renamed batch", app.activePanel().SelectedPaths)
+	if len(app.focusedPanel().SelectedPaths) != 2 {
+		t.Fatalf("selection after Apply = %+v, want the renamed batch", app.focusedPanel().SelectedPaths)
 	}
 
 	app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
@@ -745,15 +745,15 @@ func TestMassRenameCancelWithoutApplyKeepsSelection(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	app.activePanel().SelectedPaths = map[string]bool{aPath: true}
+	app.focusedPanel().SelectedPaths = map[string]bool{aPath: true}
 
 	app.dispatch(keymap.ActionFileRename)
 	app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if app.model.FileDialog.Open {
 		t.Fatal("dialog should be closed after Escape")
 	}
-	if !app.activePanel().SelectedPaths[aPath] {
-		t.Fatalf("selection = %+v, want kept after a plain cancel", app.activePanel().SelectedPaths)
+	if !app.focusedPanel().SelectedPaths[aPath] {
+		t.Fatalf("selection = %+v, want kept after a plain cancel", app.focusedPanel().SelectedPaths)
 	}
 }
 
@@ -764,7 +764,7 @@ func TestMassRenameNoMatchMarksFindInvalid(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{aPath: true}
 
 	app.dispatch(keymap.ActionFileRename)
@@ -784,7 +784,7 @@ func TestMassRenameModeShortcutKeepsFindFocus(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{aPath: true}
 
 	app.dispatch(keymap.ActionFileRename)
@@ -826,7 +826,7 @@ func TestMassRenameModeShortcutKeepsReplaceFocus(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{aPath: true}
 
 	app.dispatch(keymap.ActionFileRename)
@@ -864,7 +864,7 @@ func TestMassRenameRadioFocusDoesNotApplyModeUntilActivated(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{aPath: true}
 
 	app.dispatch(keymap.ActionFileRename)
@@ -902,7 +902,7 @@ func TestMassRenameTabIntoModeRadiosKeepsCurrentMode(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{aPath: true}
 
 	app.dispatch(keymap.ActionFileRename)
@@ -972,7 +972,7 @@ func TestMassRenameCapitalizeTabCyclesThroughCheckboxes(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{aPath: true}
 
 	app.dispatch(keymap.ActionFileRename)
@@ -1041,7 +1041,7 @@ func TestMassRenameClampFocusIntoAndOutOfCapitalize(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{aPath: true}
 
 	app.dispatch(keymap.ActionFileRename)
@@ -1091,7 +1091,7 @@ func TestMassRenameCapPunctSepToggleEnablesCapEachWord(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{aPath: true}
 
 	app.dispatch(keymap.ActionFileRename)
@@ -1143,7 +1143,7 @@ func TestMassRenameRegexCaptureGroupPreviewWithShiftDollar(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{season1: true}
 
 	app.dispatch(keymap.ActionFileRename)
@@ -1172,7 +1172,7 @@ func TestMassRenameRegexpCompileHintForBackslashPattern(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{aPath: true}
 
 	app.dispatch(keymap.ActionFileRename)
@@ -1200,7 +1200,7 @@ func TestMassRenameEnterCancelClosesWithInvalidRegex(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{aPath: true}
 
 	app.dispatch(keymap.ActionFileRename)
@@ -1239,7 +1239,7 @@ func TestMassRenameConflictBlocksOKWithCriticalToast(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = make(map[string]bool, len(paths))
 	for _, path := range paths {
 		p.SelectedPaths[path] = true
@@ -1421,8 +1421,8 @@ func TestRenameDialogEncodingF4ApplyConvertsLegacyName(t *testing.T) {
 
 	screen := newScreen(t, 80, 20)
 	app := newApp(t, screen, dir)
-	_ = app.activePanel().Refresh(app.activeViewportRows())
-	if !app.activePanel().SelectVisibleEntry(sjis) {
+	_ = app.focusedPanel().Refresh(app.focusedViewportRows())
+	if !app.focusedPanel().SelectVisibleEntry(sjis) {
 		t.Fatal("SelectVisibleEntry(sjis) failed")
 	}
 
@@ -1480,9 +1480,9 @@ func TestMkdirScrollsToCreatedDirectory(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.ScrollMode = panel.ScrollModeMinimal
-	vr := app.activeViewportRows()
+	vr := app.focusedViewportRows()
 	p.Cursor = 20
 	p.ScrollOffset = 15
 
@@ -1494,7 +1494,7 @@ func TestMkdirScrollsToCreatedDirectory(t *testing.T) {
 	applyNextInterruptEvent(t, app, screen) // async reload, RefreshBothPanels: Primary
 	applyNextInterruptEvent(t, app, screen) // async reload, RefreshBothPanels: Secondary
 
-	p = app.activePanel()
+	p = app.focusedPanel()
 	entry, ok := p.CurrentEntry()
 	if !ok || entry.Name != "zz-new" {
 		name := ""
@@ -1660,9 +1660,9 @@ func TestDeleteDialogWarningPluralDirectories(t *testing.T) {
 
 	screen := newScreen(t, 80, 20)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{d1: true, d2: true}
-	if err := p.Refresh(app.activeViewportRows()); err != nil {
+	if err := p.Refresh(app.focusedViewportRows()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1706,7 +1706,7 @@ func TestDeleteDialogShowsContextPathWhenSelectionOffPanel(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	if err := p.Load(other); err != nil {
 		t.Fatal(err)
 	}
@@ -1730,12 +1730,12 @@ func TestDeleteDialogListScrollsWithPageDown(t *testing.T) {
 
 	screen := newScreen(t, 80, 20)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = make(map[string]bool)
 	for i := range 25 {
 		p.SelectedPaths[filepath.Join(dir, fmt.Sprintf("selection-%02d.txt", i))] = true
 	}
-	if err := p.Refresh(app.activeViewportRows()); err != nil {
+	if err := p.Refresh(app.focusedViewportRows()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1756,7 +1756,7 @@ func TestMkdirDialogExtractFooterHiddenWithSingleSelection(t *testing.T) {
 
 	screen := newScreen(t, 80, 20)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{src: true}
 
 	app.dispatch(keymap.ActionFileMkdir)
@@ -1776,7 +1776,7 @@ func TestMkdirDialogExtractFooterShownWithMultipleSelections(t *testing.T) {
 
 	screen := newScreen(t, 80, 20)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{a: true, b: true}
 
 	app.dispatch(keymap.ActionFileMkdir)
@@ -1821,7 +1821,7 @@ func TestMkdirDialogExtractCommonNameF7(t *testing.T) {
 
 	screen := newScreen(t, 80, 20)
 	app := newApp(t, screen, dir)
-	app.activePanel().SelectedPaths = selected
+	app.focusedPanel().SelectedPaths = selected
 
 	app.dispatch(keymap.ActionFileMkdir)
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyF7, 0, tcell.ModNone))
@@ -1859,7 +1859,7 @@ func TestMkdirDialogWithSelectionShowsActionRadiosAndNav(t *testing.T) {
 
 	screen := newScreen(t, 80, 20)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{src: true}
 
 	app.dispatch(keymap.ActionFileMkdir)
@@ -1912,7 +1912,7 @@ func TestMkdirDialogAltShortcutsSelectActionFromInputField(t *testing.T) {
 
 	screen := newScreen(t, 80, 20)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{src: true}
 
 	app.dispatch(keymap.ActionFileMkdir)
@@ -1962,7 +1962,7 @@ func TestMkdirDialogRadioRowsRejectTextInput(t *testing.T) {
 
 	screen := newScreen(t, 80, 20)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{src: true}
 
 	app.dispatch(keymap.ActionFileMkdir)
@@ -2045,7 +2045,7 @@ func TestMkdirActionCreateOnlyDoesNotQueueJob(t *testing.T) {
 	screen := newScreen(t, 80, 20)
 	app := newApp(t, screen, dir)
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{src: true}
 
 	app.dispatch(keymap.ActionFileMkdir)
@@ -2078,7 +2078,7 @@ func TestMkdirActionCreateAndCopyQueuesCopyJob(t *testing.T) {
 	screen := newScreen(t, 80, 20)
 	app := newApp(t, screen, dir)
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{src: true}
 
 	app.dispatch(keymap.ActionFileMkdir)
@@ -2124,7 +2124,7 @@ func TestMkdirActionCreateAndMoveQueuesMoveJob(t *testing.T) {
 	screen := newScreen(t, 80, 20)
 	app := newApp(t, screen, dir)
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{src: true}
 
 	app.dispatch(keymap.ActionFileMkdir)
@@ -2190,7 +2190,7 @@ func TestMassRenameExternalEditorPreviewHighlightsBothColumns(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{aPath: true, bPath: true}
 
 	app.dispatch(keymap.ActionFileRename)

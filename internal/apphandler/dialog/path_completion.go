@@ -10,7 +10,7 @@ import (
 
 // syncPathCompletion recomputes filesystem completion candidates for a path input's value.
 func (h *Handler) syncPathCompletion(c *dialog.PathCompletion, value string, cursor int, dirsOnly bool) {
-	panelPath := h.host.ActivePanel().PathString()
+	panelPath := h.host.FocusedPanel().PathString()
 	start, cands, ok := pathpick.Suggest(panelPath, h.model.UserHomeDir, value, cursor, h.host.Config().Panels.ShowHidden, dirsOnly)
 	if ok {
 		c.Set(value, start, cands)

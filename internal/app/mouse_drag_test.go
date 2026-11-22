@@ -107,7 +107,7 @@ func TestMouseClickNearEdgeDoesNotSelect(t *testing.T) {
 		app, _ := mouseTestApp(t)
 		p := &app.model.Primary
 		p.ScrollMode = mode
-		x, y := cellOf(t, app, ui.PrimaryPanel, app.activeViewportRows()-1)
+		x, y := cellOf(t, app, ui.PrimaryPanel, app.focusedViewportRows()-1)
 		click(app, x, y, tcell.Button1)
 		wantRows(t, p)
 		if p.RangeAnchor != "" || app.mouse.drag.armed {
@@ -243,7 +243,7 @@ func TestMouseDragScrollsPastListEdge(t *testing.T) {
 	app.handleMouse(mouseEv(x, y, tcell.Button1))
 	_, h := app.screen.Size()
 	below := h - 1 // the footer row, past the list's bottom
-	rows := app.activeViewportRows()
+	rows := app.focusedViewportRows()
 	for i := 0; i < rows+2; i++ {
 		app.handleMouse(mouseEv(x, below, tcell.Button1))
 	}

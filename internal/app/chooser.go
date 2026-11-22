@@ -41,7 +41,7 @@ func writePathFile(file, path string) error {
 // writeCwdFile writes the active panel's directory to file (--cwd-file) so a shell wrapper
 // can cd there. SFTP panels have no host directory: the file is left untouched.
 func (a *App) writeCwdFile(file string) error {
-	p := a.activePanel()
+	p := a.focusedPanel()
 	dir, ok := p.Path.HostPath()
 	if !ok {
 		return nil
@@ -101,7 +101,7 @@ func (a *App) handleNavOpen(activePanel *panel.State, viewportRows int) bool {
 	if a.chooserMode() {
 		return a.handleChooserOpen(activePanel)
 	}
-	if a.model.ViewMode != ui.ViewBrowser {
+	if !a.fileListFocused() {
 		return false
 	}
 	if paths := a.selectedFilesToOpen(activePanel); paths != nil {
@@ -142,7 +142,7 @@ func (a *App) selectedFilesToOpen(activePanel *panel.State) []string {
 }
 
 func (a *App) handleChooserOpen(activePanel *panel.State) bool {
-	if a.model.ViewMode != ui.ViewBrowser {
+	if !a.fileListFocused() {
 		return false
 	}
 	entry, ok := activePanel.CurrentEntry()

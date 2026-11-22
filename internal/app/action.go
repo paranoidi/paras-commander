@@ -74,5 +74,35 @@ func (a *App) actionFromKeyEvent(ev *tcell.EventKey) string {
 			return id
 		}
 	}
-	return lookupActionForView(ev, a.keys.Global, a.keys.Jobs, a.keys.Commands, a.keys.Messages, a.keys.FilePreview, a.keys.Compare, a.keys.Dedup, a.keys.Unique, a.model.ViewMode)
+	id := lookupActionForView(ev, a.keys.Global, a.keys.Jobs, a.keys.Commands, a.keys.Messages, a.keys.FilePreview, a.keys.Compare, a.keys.Dedup, a.keys.Unique, a.model.ViewMode)
+	if ev != nil && a.model.EmbeddedPanelFocused() {
+		return a.embeddedPanelAction(ev, id)
+	}
+	return id
+}
+
+// embeddedPanelAction resolves a key while a view's embedded file-list panel has focus. The view
+// keeps its close, pane and open-in-panel bindings; its bindings that shadow panel navigation
+// become that navigation; any other binding of the view gives way to the browser keymap, so the
+// panel takes every file-list key.
+func (a *App) embeddedPanelAction(ev *tcell.EventKey, id string) string {
+	switch id {
+	case keymap.ActionDedupToggleNode, keymap.ActionUniqueToggleNode:
+		return keymap.ActionNavOpen
+	case keymap.ActionDedupCollapse, keymap.ActionUniqueCollapse:
+		return keymap.ActionNavParent
+	case keymap.ActionDedupExpandCopies:
+		return keymap.ActionNavForward
+	case keymap.ActionDedupCollapseCopies:
+		return keymap.ActionNavBackward
+	case keymap.ActionDedupClose, keymap.ActionDedupPrevPane, keymap.ActionUniqueClose, keymap.ActionUniquePrevPane,
+		keymap.ActionOpenInPrimary, keymap.ActionOpenInSecondary:
+		return id
+	}
+	if overlay := a.viewOverlayKeys(); overlay != nil {
+		if _, ok := overlay.Lookup(ev); ok {
+			id, _ = a.keys.Global.Lookup(ev)
+		}
+	}
+	return id
 }

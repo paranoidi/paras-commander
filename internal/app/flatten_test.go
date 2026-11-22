@@ -28,15 +28,15 @@ func flattenDialogTestSetup(t *testing.T) (app *App, activeDir, inactiveDir stri
 	}
 	screen := newScreen(t, 80, 24)
 	app = newApp(t, screen, dir)
-	if err := app.activePanel().Load(activeDir); err != nil {
+	if err := app.focusedPanel().Load(activeDir); err != nil {
 		t.Fatal(err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, active panel enters activeDir
-	if err := app.inactivePanel().Load(inactiveDir); err != nil {
+	if err := app.otherBrowserPanel().Load(inactiveDir); err != nil {
 		t.Fatal(err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters inactiveDir
-	app.activePanel().SelectedPaths = map[string]bool{filepath.Clean(root): true}
+	app.focusedPanel().SelectedPaths = map[string]bool{filepath.Clean(root): true}
 	app.dialogCtrl.OpenFlattenDialog()
 	if !app.model.FlattenDialog.Open {
 		t.Fatal("flatten dialog should be open")
@@ -110,7 +110,7 @@ func TestFlattenMixedSelectionShowsError(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{
 		filepath.Clean(filePath): true,
 		filepath.Clean(subDir):   true,
@@ -139,13 +139,13 @@ func TestFileMenuFlattenOpensDialog(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	if err := app.activePanel().Load(dir); err != nil {
+	if err := app.focusedPanel().Load(dir); err != nil {
 		t.Fatal(err)
 	}
-	if err := app.inactivePanel().Load(dst); err != nil {
+	if err := app.otherBrowserPanel().Load(dst); err != nil {
 		t.Fatal(err)
 	}
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{filepath.Clean(sub): true}
 
 	activateFileMenuItem(t, app, 'F')
@@ -184,13 +184,13 @@ func TestFlattenConfirmQueuesJob(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 	app.stopWorker()
-	if err := app.activePanel().Load(dir); err != nil {
+	if err := app.focusedPanel().Load(dir); err != nil {
 		t.Fatal(err)
 	}
-	if err := app.inactivePanel().Load(dst); err != nil {
+	if err := app.otherBrowserPanel().Load(dst); err != nil {
 		t.Fatal(err)
 	}
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.SelectedPaths = map[string]bool{filepath.Clean(root): true}
 
 	app.dialogCtrl.OpenFlattenDialog()
@@ -292,16 +292,16 @@ func TestFlattenInactivePanelIsSourceUsesActive(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	if err := app.activePanel().Load(activeDir); err != nil {
+	if err := app.focusedPanel().Load(activeDir); err != nil {
 		t.Fatal(err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, active panel enters activeDir
 	// inactive panel is navigated into the directory being flattened
-	if err := app.inactivePanel().Load(sourceDir); err != nil {
+	if err := app.otherBrowserPanel().Load(sourceDir); err != nil {
 		t.Fatal(err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters sourceDir
-	app.activePanel().SelectedPaths = map[string]bool{filepath.Clean(sourceDir): true}
+	app.focusedPanel().SelectedPaths = map[string]bool{filepath.Clean(sourceDir): true}
 	app.dialogCtrl.OpenFlattenDialog()
 	if !app.model.FlattenDialog.Open {
 		t.Fatal("flatten dialog should be open")
@@ -326,15 +326,15 @@ func TestFlattenDefaultLocationActivePrefill(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 	app.config.Operations.FlattenDefaultLocation = "active"
-	if err := app.activePanel().Load(activeDir); err != nil {
+	if err := app.focusedPanel().Load(activeDir); err != nil {
 		t.Fatal(err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, active panel enters activeDir
-	if err := app.inactivePanel().Load(inactiveDir); err != nil {
+	if err := app.otherBrowserPanel().Load(inactiveDir); err != nil {
 		t.Fatal(err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters inactiveDir
-	app.activePanel().SelectedPaths = map[string]bool{filepath.Clean(root): true}
+	app.focusedPanel().SelectedPaths = map[string]bool{filepath.Clean(root): true}
 	app.dialogCtrl.OpenFlattenDialog()
 	want := dialogctrl.TransferPrefilledDestination(activeDir).Value
 	if app.model.FlattenDialog.Destination.Value != want {

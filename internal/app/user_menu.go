@@ -34,7 +34,7 @@ func (a *App) userMenuConfigDir() string {
 }
 
 func (a *App) resolveUserMenuContext() (menuPath string, warns []string) {
-	return usermenu.ResolveMenuTOML(a.config, a.model.UserHomeDir, a.userMenuConfigDir(), a.activePanel().PathString())
+	return usermenu.ResolveMenuTOML(a.config, a.model.UserHomeDir, a.userMenuConfigDir(), a.focusedPanel().PathString())
 }
 
 func (a *App) ensureGlobalUserMenuStub() (path string, err error) {
@@ -159,8 +159,8 @@ func (a *App) loadUserMenuVisible(menuPath string) (visible []usermenu.MenuEntry
 		return nil, nil, "User menu: no entries", ui.MessageUrgencyWarn
 	}
 
-	active := a.panelByID(a.model.ActivePanel)
-	other := a.panelByID(a.inactivePanelID())
+	active := a.focusedPanel()
+	other := a.destinationPanel()
 	ctx := &usermenu.EvalContext{Active: active, Other: other}
 	v, _, err := usermenu.FilterVisible(mf, ctx)
 	if err != nil {
@@ -229,8 +229,8 @@ func userMenuLeaderMenuItems(entries []usermenu.MenuEntry, styles theme.Theme) [
 
 // runUserMenuEntry executes a resolved F2 user-menu entry (dialog already closed).
 func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
-	active := a.activePanel()
-	other := a.inactivePanel()
+	active := a.focusedPanel()
+	other := a.destinationPanel()
 	launch := usermenu.Launch{Command: entry.Command, CwdPanel: entry.CwdPanel}
 	var src ops.Source
 	var srcErr error
@@ -414,7 +414,7 @@ func (a *App) runUserMenuDetached(argv []string, workDir, toast string) bool {
 
 func (a *App) refreshAfterBackgroundCommand() {
 	if a.model.ViewMode == ui.ViewBrowser {
-		if err := a.activePanel().Refresh(a.activeViewportRows()); err != nil {
+		if err := a.focusedPanel().Refresh(a.focusedViewportRows()); err != nil {
 			a.setErrorMessage("User menu", err)
 		}
 	}

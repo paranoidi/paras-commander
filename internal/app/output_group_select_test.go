@@ -44,7 +44,7 @@ func TestOutputGroupSelect(t *testing.T) {
 			t.Fatal("quit")
 		}
 	}
-	p := app.activePanel()
+	p := app.focusedPanel()
 
 	press(tcell.KeyRune, '+')
 	gs := &app.model.GroupSelect

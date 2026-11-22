@@ -193,7 +193,7 @@ func TestDirWatchUpdatesRowsOnExternalChanges(t *testing.T) {
 	writeFile(t, filepath.Join(dir, "amber.txt"))
 	writeFile(t, filepath.Join(dir, "birch.txt"))
 	app, screen := watchApp(t, dir, nil)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	wakes := 0
 	armDirWatch(t, app, screen, &wakes, dir)
 
@@ -403,7 +403,7 @@ func indexedFixture(t *testing.T) (*App, tcell.SimulationScreen, string, time.Ti
 	}
 	app.dispatch(keymap.ActionFileIndexBrowseWith)
 	drainInterruptEventsUntil(t, app, screen, 5*time.Second, func() bool {
-		p := app.activePanel()
+		p := app.focusedPanel()
 		st, _ := entryStatus(app, "orchard")
 		return p.WithIndex && !p.ListingPending && st == localfs.IndexStatusIndexed
 	})
@@ -412,11 +412,11 @@ func indexedFixture(t *testing.T) (*App, tcell.SimulationScreen, string, time.Ti
 
 func TestDesiredWatchDirsWatchBrowseWithIndexButNotFileIndexOrSFTP(t *testing.T) {
 	app, _, dir, _ := indexedFixture(t)
-	if !app.activePanel().WithIndex {
+	if !app.focusedPanel().WithIndex {
 		t.Fatal("fixture is not browsing with the index")
 	}
 	other := realDir(t)
-	sec := app.inactivePanel()
+	sec := app.otherBrowserPanel()
 	sec.Path = pathloc.MustParse(other)
 	if got := app.desiredWatchDirs(); !slices.Equal(got, []string{dir, other}) {
 		t.Fatalf("local panels: %v", got)
@@ -510,7 +510,7 @@ func TestDirWatchRearmsRecreatedDirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 	app, screen := watchApp(t, dir, nil)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	wakes := 0
 	armDirWatch(t, app, screen, &wakes, dir)
 

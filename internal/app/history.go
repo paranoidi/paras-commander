@@ -18,11 +18,11 @@ import (
 )
 
 func (a *App) mergedPanelHistories() []string {
-	return panel.MergeNavigationHistories(a.inactivePanel().History, a.activePanel().History)
+	return panel.MergeNavigationHistories(a.destinationPanel().History, a.focusedPanel().History)
 }
 
 func (a *App) openHistoryDialog(panelID int) {
-	if ui.IsAuxiliaryView(a.model.ViewMode) {
+	if !a.fileListFocused() {
 		return
 	}
 	if a.inQuickFilterUI() {
@@ -296,7 +296,7 @@ func (a *App) activateHistorySelection() {
 		a.setErrorMessage("History", err)
 		return
 	}
-	a.model.ActivePanel = st.PanelID
+	a.model.FocusPanel(st.PanelID)
 	a.model.ActiveSubFocus = ui.SubFocusFileList
 	a.closeHistoryDialog()
 	a.setTransientMessage(path, ui.MessageUrgencyInfo)

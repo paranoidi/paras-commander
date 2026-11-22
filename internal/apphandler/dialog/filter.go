@@ -19,12 +19,13 @@ import (
 // cursor row (empty when it has none). The target is the active panel, or the Compare / Find
 // duplicates rows when that view is showing.
 func (h *Handler) OpenFilterDialog() {
-	metaCount := len(h.model.MetaResults[h.model.ActivePanel])
+	metaCount := len(h.model.PanelMetaResults(h.model.FocusedPanelID()))
 	target := dialog.FilterTargetPanel
-	switch h.model.ViewMode {
-	case ui.ViewCompare:
+	switch {
+	case h.model.EmbeddedPanelFocused():
+	case h.model.ViewMode == ui.ViewCompare:
 		target = dialog.FilterTargetCompare
-	case ui.ViewDedup:
+	case h.model.ViewMode == ui.ViewDedup:
 		target = dialog.FilterTargetDedup
 	}
 	if target != dialog.FilterTargetPanel {
@@ -85,8 +86,8 @@ func (h *Handler) updateFilterDialogPreview() {
 		fd.PreviewFiles, fd.PreviewFolders = n, 0
 		return
 	}
-	meta := ui.MetaMatchData(h.model.MetaResults[h.model.ActivePanel], fd.IncludeMetaColumns, fd.OnlyMetaColumns)
-	files, dirs, err := h.host.ActivePanel().CountPatternMatches(spec, meta)
+	meta := ui.MetaMatchData(h.model.PanelMetaResults(h.model.FocusedPanelID()), fd.IncludeMetaColumns, fd.OnlyMetaColumns)
+	files, dirs, err := h.host.FocusedPanel().CountPatternMatches(spec, meta)
 	if err != nil {
 		fd.PreviewShow = false
 		return
@@ -257,8 +258,8 @@ func (h *Handler) executeFilterDialog() {
 		h.executeDedupFilterDialog(spec)
 		return
 	}
-	p := h.host.ActivePanel()
-	panelID := h.model.ActivePanel
+	p := h.host.FocusedPanel()
+	panelID := h.model.FocusedPanelID()
 	if spec.Empty() {
 		h.removeTargetFilter()
 		h.CloseFilterDialog()
@@ -270,7 +271,7 @@ func (h *Handler) executeFilterDialog() {
 		// Closure re-reads live MetaResults on every filter rebuild rather than snapshotting: meta
 		// results arrive asynchronously and the underlying maps are replaced on a directory change.
 		metaFn = func() panel.GroupSelectMeta {
-			return ui.MetaMatchData(h.model.MetaResults[panelID], true, only)
+			return ui.MetaMatchData(h.model.PanelMetaResults(panelID), true, only)
 		}
 	}
 	filter, err := panel.PatternFilter(spec, metaFn)
@@ -278,7 +279,7 @@ func (h *Handler) executeFilterDialog() {
 		h.host.SetTransientMessage(err.Error(), ui.MessageUrgencyCritical)
 		return
 	}
-	meta := ui.MetaMatchData(h.model.MetaResults[panelID], fd.IncludeMetaColumns, fd.OnlyMetaColumns)
+	meta := ui.MetaMatchData(h.model.PanelMetaResults(panelID), fd.IncludeMetaColumns, fd.OnlyMetaColumns)
 	files, dirs, _ := p.CountPatternMatches(spec, meta)
 	filter.Source = fd.SavedPattern("", "")
 	p.SetEntryFilter(filter)
@@ -329,7 +330,7 @@ func (h *Handler) activeFilterPattern(target dialog.FilterTarget) (filterpattern
 	case dialog.FilterTargetDedup:
 		return h.dedupFilter, h.targetHasFilter(target)
 	}
-	f := h.host.ActivePanel().ActiveEntryFilter
+	f := h.host.FocusedPanel().ActiveEntryFilter
 	if f == nil {
 		return filterpattern.Pattern{}, false
 	}
@@ -345,7 +346,7 @@ func (h *Handler) targetHasFilter(target dialog.FilterTarget) bool {
 	case dialog.FilterTargetDedup:
 		return h.model.DedupView.GroupFilter != nil
 	}
-	return h.host.ActivePanel().ActiveEntryFilter != nil
+	return h.host.FocusedPanel().ActiveEntryFilter != nil
 }
 
 // removeTargetFilter removes every filter of the dialog's target: the panel's entry filter
@@ -358,7 +359,7 @@ func (h *Handler) removeTargetFilter() {
 	case dialog.FilterTargetDedup:
 		h.dedup.SetGroupFilter(nil, "")
 	default:
-		h.host.ActivePanel().SetEntryFilter(nil)
+		h.host.FocusedPanel().SetEntryFilter(nil)
 	}
 }
 

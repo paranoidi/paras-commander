@@ -14,7 +14,7 @@ type commandsHost struct {
 	appShellHost
 }
 
-func (h commandsHost) InactivePanel() *panel.State { return h.app.inactivePanel() }
+func (h commandsHost) DestinationPanel() *panel.State { return h.app.destinationPanel() }
 
 func (h commandsHost) BrowserMenuDefinitions() []menu.Definition {
 	return h.app.browserMenuDefinitions()

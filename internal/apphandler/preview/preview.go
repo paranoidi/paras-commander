@@ -127,7 +127,7 @@ func (h *Handler) inactivePanelPreviewLayoutMetrics(filePreviewOpenForLayout boo
 	if lay.TooSmall {
 		return 1, 0, false
 	}
-	inactiveID := h.host.InactivePanelID()
+	inactiveID := h.host.OtherBrowserPanelID()
 	col := lay.Primary
 	p := &h.model.Primary
 	if inactiveID == ui.SecondaryPanel {
@@ -224,9 +224,9 @@ func (h *Handler) previewScrollTo(scroll int) {
 func (h *Handler) CycleSubFocusForTabWithPreview() {
 	switch h.model.ActiveSubFocus {
 	case ui.SubFocusFileList:
-		if h.host.ActivePanel().SelectedStripCount() > 0 {
+		if h.host.FocusedPanel().SelectedStripCount() > 0 {
 			h.model.ActiveSubFocus = ui.SubFocusSelectedStrip
-			h.host.ActivePanel().EnsureSelectedStripCursorVisible(h.host.SelectedStripViewportRows(h.model.ActivePanel))
+			h.host.FocusedPanel().EnsureSelectedStripCursorVisible(h.host.SelectedStripViewportRows(h.model.ActivePanel))
 			return
 		}
 		h.model.ActiveSubFocus = ui.SubFocusInactivePreview
@@ -383,10 +383,10 @@ func (h *Handler) TryDispatchQuickViewPreviewScroll(actionID string) bool {
 		h.model.QuickViewDirOverlay.Page(pageDir, viewportRows)
 		return true
 	}
-	viewportRows := h.host.ActiveViewportRows()
+	viewportRows := h.host.FocusedViewportRows()
 	h.EnsureCarouselChildCacheBeforeListNav()
 	h.BeginCarouselPreviewNavCoalesce()
-	h.host.ActivePanel().Page(pageDir, viewportRows)
+	h.host.FocusedPanel().Page(pageDir, viewportRows)
 	h.host.ArmPanelSyncFollowNavCoalesceAfterListNav()
 	h.ArmQuickViewNavCoalesceAfterListNav()
 	h.ArmCarouselPreviewNavCoalesceAfterListNav()
@@ -569,7 +569,7 @@ func (h *Handler) quickViewFingerprint() string {
 	case quickViewWantEmpty:
 		return "z:" + path
 	case quickViewWantDir:
-		if path, ok := h.host.SyncFollowTargetPath(h.host.ActivePanel()); ok {
+		if path, ok := h.host.SyncFollowTargetPath(h.host.FocusedPanel()); ok {
 			return "d:" + path
 		}
 		return "d:none"
@@ -598,9 +598,9 @@ var stripStat = os.Stat
 // or quickViewWantEmpty. Empty (0-byte) files are skipped by inactive-column quick view but
 // remain valid targets for explicit F3 / file.view.
 func (h *Handler) quickViewWantFile() (path string, workDir string, mode quickViewWantMode) {
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	workDir = p.PathString()
-	if h.model.ActiveSubFocus == ui.SubFocusSelectedStrip && p.SelectedStripCount() > 0 {
+	if h.model.ViewMode == ui.ViewBrowser && h.model.ActiveSubFocus == ui.SubFocusSelectedStrip && p.SelectedStripCount() > 0 {
 		selPath, ok := p.SelectedPathAtStripIndex(p.Strip.Cursor)
 		if !ok {
 			return "", workDir, quickViewWantNone
@@ -708,7 +708,7 @@ func (h *Handler) initQuickViewDirOverlayFromFollower(ov *panel.State, driver, f
 // quickViewFollowDirectory loads the highlighted directory into the inactive-column overlay
 // (same target-path rules and Load semantics as latched panel sync; real panel unchanged).
 func (h *Handler) quickViewFollowDirectory() {
-	driver := h.host.ActivePanel()
+	driver := h.host.FocusedPanel()
 	targetPath, ok := h.host.SyncFollowTargetPath(driver)
 	if !ok {
 		h.ClearQuickViewDirOverlay()
@@ -716,7 +716,7 @@ func (h *Handler) quickViewFollowDirectory() {
 		return
 	}
 	h.CloseFilePreview()
-	followerID := h.host.InactivePanelID()
+	followerID := h.host.OtherBrowserPanelID()
 	follower := h.host.PanelByID(followerID)
 	targetPath = panel.CleanPathString(targetPath)
 	if targetPath == "" {
@@ -789,7 +789,7 @@ func (h *Handler) ApplyQuickViewSlow(p QuickViewSlowPayload) bool {
 // rule could match it, so callers can route it through a rule preview instead of the built-in
 // directory-listing overlay.
 func (h *Handler) activeDirRuleTarget() (string, bool) {
-	dirPath, ok := h.host.SyncFollowTargetPath(h.host.ActivePanel())
+	dirPath, ok := h.host.SyncFollowTargetPath(h.host.FocusedPanel())
 	if !ok || !previewrun.MatchAnyCommandRule(h.host.Config().Preview, dirPath, localfs.EntryDirectory, filepath.Dir(dirPath)) {
 		return "", false
 	}
@@ -962,7 +962,7 @@ func (h *Handler) refreshInactiveFilePreview() {
 	if !ok {
 		return
 	}
-	workDir := h.host.ActivePanel().PathString()
+	workDir := h.host.FocusedPanel().PathString()
 	req := h.previewRequest(st.Path, tw, contentH, workDir, h.model.PanelsChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetInactive, false)
 	ctx, gen := h.beginPreviewRun(previewTargetInactive)
 	h.postRenderWake()
@@ -1143,7 +1143,7 @@ func (h *Handler) quickViewDebounceDelay() time.Duration {
 		// cursor's entry) is only trustworthy as the type source outside strip focus.
 		entryType := localfs.EntryFile
 		if h.model.ActiveSubFocus != ui.SubFocusSelectedStrip {
-			if entry, ok := h.host.ActivePanel().CurrentEntry(); ok {
+			if entry, ok := h.host.FocusedPanel().CurrentEntry(); ok {
 				entryType = entry.Type
 			}
 		}
@@ -1306,7 +1306,7 @@ func gitCellForPath(by map[string]gitstatus.Cell, path string) *gitstatus.Cell {
 // App.primeGitStatusForCLIPreview).
 func (h *Handler) gitStatusForPath(path string) *gitstatus.Cell {
 	path = filepath.Clean(path)
-	if p := h.host.ActivePanel(); p != nil {
+	if p := h.host.FocusedPanel(); p != nil {
 		if cell := gitCellForPath(p.GitByPath, path); cell != nil {
 			return cell
 		}

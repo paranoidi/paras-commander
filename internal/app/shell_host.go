@@ -21,7 +21,7 @@ func (h appShellHost) SetErrorMessage(title string, err error) {
 	h.app.setErrorMessage(title, err)
 }
 
-func (h appShellHost) ActivePanel() *panel.State { return h.app.activePanel() }
+func (h appShellHost) FocusedPanel() *panel.State { return h.app.focusedPanel() }
 
 func (h appShellHost) HandleQuit() bool { return h.app.handleQuit() }
 

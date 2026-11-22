@@ -16,9 +16,9 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
-	"github.com/paranoidi/paras-commander/internal/ui/menu"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
+	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
 type jobsHostStub struct{}
@@ -45,9 +45,9 @@ func (jobsHostStub) SetTransientMessage(string, ui.MessageUrgency) {}
 func (jobsHostStub) SetErrorMessage(string, error)                 {}
 func (jobsHostStub) RefreshBothPanels()                            {}
 func (jobsHostStub) RequestBothPanelsVolumeSpaceRefreshAsync()     {}
-func (jobsHostStub) ActivePanel() *panel.State                     { return nil }
-func (jobsHostStub) ActivePanelSources() []string                  { return nil }
-func (jobsHostStub) InactivePanel() *panel.State                   { return nil }
+func (jobsHostStub) FocusedPanel() *panel.State                    { return nil }
+func (jobsHostStub) FocusedPanelSources() []string                 { return nil }
+func (jobsHostStub) DestinationPanel() *panel.State                { return nil }
 func (jobsHostStub) PrimaryPanel() *panel.State                    { return &panel.State{} }
 func (jobsHostStub) SecondaryPanel() *panel.State                  { return &panel.State{} }
 func (jobsHostStub) HandleQuit() bool                              { return false }

@@ -72,7 +72,7 @@ func rsyncKeyDialog(name string, dirs bool) keyGoldenDialog {
 			app.model.Message = ""
 			app.model.UserHomeDir = dir
 			app.dialogCtrl.SetLookPathForTest(func(string) (string, error) { return "/usr/bin/rsync", nil })
-			selectPanelEntryByName(t, app.activePanel(), "lantern.txt")
+			selectPanelEntryByName(t, app.focusedPanel(), "lantern.txt")
 			app.dispatch(keymap.ActionFileRsync)
 			fd := &app.model.FileDialog
 			if !fd.Open || fd.DialogType != dialog.FileDialogRsync {

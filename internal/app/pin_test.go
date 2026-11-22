@@ -90,7 +90,7 @@ func TestPinToggleActivePanelCursorPinsCurrentEntry(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	entry, ok := app.activePanel().CurrentEntry()
+	entry, ok := app.focusedPanel().CurrentEntry()
 	if !ok {
 		t.Fatal("expected a current entry in the freshly loaded panel")
 	}

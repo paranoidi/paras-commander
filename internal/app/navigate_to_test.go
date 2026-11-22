@@ -24,8 +24,8 @@ func TestSlashOpensNavigateToDialogPrefilledWithRoot(t *testing.T) {
 	if len(d.Fields) != 1 || d.Fields[0].Value != "/" || d.Fields[0].Cursor != 1 || !d.Fields[0].PathPicker {
 		t.Fatalf("fields = %+v, want one path field prefilled with \"/\"", d.Fields)
 	}
-	if app.activePanel().Filter.Editing || app.activePanel().Filter.Query != "" {
-		t.Fatalf("quick filter = %+v, want untouched", app.activePanel().Filter)
+	if app.focusedPanel().Filter.Editing || app.focusedPanel().Filter.Query != "" {
+		t.Fatalf("quick filter = %+v, want untouched", app.focusedPanel().Filter)
 	}
 }
 
@@ -49,10 +49,10 @@ func TestNavigateToDialogEnterMovesActivePanel(t *testing.T) {
 		t.Fatalf("dialog still open: %+v", app.model.FileDialog)
 	}
 	drainInterruptEventsUntil(t, app, screen, 3*time.Second, func() bool {
-		p := app.activePanel()
+		p := app.focusedPanel()
 		return p.PathString() == target && !p.ListingPending
 	})
-	if got := app.activePanel().PathString(); got != target {
+	if got := app.focusedPanel().PathString(); got != target {
 		t.Fatalf("active panel path = %q, want %q", got, target)
 	}
 }
@@ -68,9 +68,9 @@ func TestNavigateToDialogMissingPathLeavesPanel(t *testing.T) {
 	app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	drainInterruptEventsUntil(t, app, screen, 3*time.Second, func() bool {
-		return !app.activePanel().ListingPending
+		return !app.focusedPanel().ListingPending
 	})
-	if got := app.activePanel().PathString(); got != start {
+	if got := app.focusedPanel().PathString(); got != start {
 		t.Fatalf("active panel path = %q, want unchanged %q", got, start)
 	}
 }

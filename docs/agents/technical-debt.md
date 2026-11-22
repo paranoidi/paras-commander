@@ -42,7 +42,7 @@ The minimal (`default:`) branch of `ensureSelectionVisible` reimplements `panel.
 
 ## File-op dialogs other than delete assume the active panel
 
-`OpenDeleteDialog(panelID int)` keeps its source panel, which Compare needs when deleting from a column that is not the active panel. Copy, move, rename and mkdir still resolve through `host.ActivePanel()`. For: in the browser view the active panel is always correct, and the delete-only fix kept the change focused. Against: these dialogs have the same latent bug for any Compare or Dedup entry point, and it will repeat when one is added. The fix is for every `Open*Dialog` to take an explicit panel ID kept in dialog state. Relevance: medium. It becomes high as soon as any of those dialogs is reachable from Compare or Dedup.
+`OpenDeleteDialog(panelID int)` keeps its source panel, which Compare needs when deleting from a column that is not the active panel. Copy, move and mkdir resolve through `Host.FocusedPanel()` (the active browser column or a view's focused embedded panel), rename through `renameTargetPanelID`. For: the focused panel is correct in the browser and in views with an embedded panel. Against: Compare's columns are not a focused panel, so these dialogs carry the same latent bug for any Compare entry point, and it will repeat when one is added. The fix is for every `Open*Dialog` to take an explicit panel ID kept in dialog state. Relevance: medium. It becomes high as soon as any of those dialogs is reachable from Compare.
 
 ## Delete-dialog source fields are a data clump
 

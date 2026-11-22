@@ -11,7 +11,7 @@ import (
 // RunUnflatten queues an unflatten job for the active panel's files-only selection (or the cursor
 // file). A source with a directory, or a file without an extension, is refused with an error toast.
 func (h *Handler) RunUnflatten() {
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	sources, err := ops.ValidateUnflattenSource(p)
 	if err != nil {
 		var opsErr *ops.Error

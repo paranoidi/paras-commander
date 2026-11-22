@@ -31,7 +31,7 @@ func (a *App) dropToShell() {
 	if a.config.Shell.Persistent && a.persistentShellToggle() {
 		return
 	}
-	p := a.activePanel()
+	p := a.focusedPanel()
 	panelDir, ok := p.Path.HostPath()
 	if !ok {
 		a.setErrorMessage("Shell", errors.New(pathloc.Unavailable("shell", p.Path)))
@@ -91,7 +91,7 @@ func (a *App) shellArgv() ([]string, error) {
 // The panel path is also compared symlink-resolved: /proc/<pid>/cwd is fully resolved while
 // the panel may display a path through a symlink.
 func (a *App) syncActivePanelToDir(shellWd string) {
-	active := a.activePanel()
+	active := a.activeBrowserPanel()
 	panelPath := panel.CleanPathString(active.PathString())
 	if panelPath == panel.CleanPathString(shellWd) {
 		return
@@ -222,7 +222,7 @@ func (a *App) shellInsertPaths() {
 		a.setTransientMessage("Send paths to shell requires the persistent shell", ui.MessageUrgencyWarn)
 		return
 	}
-	p := a.activePanel()
+	p := a.focusedPanel()
 	if _, ok := p.Path.HostPath(); !ok {
 		a.setTransientMessage(pathloc.Unavailable("Send paths to shell", p.Path), ui.MessageUrgencyWarn)
 		return
@@ -282,7 +282,7 @@ func shellInsertPathList(p *panel.State) []string {
 // unavailable (the persistent shell then keeps its current cwd). A fileindex panel yields the
 // nearest existing ancestor of its indexed directory.
 func (a *App) localActivePanelDir() string {
-	p := a.activePanel()
+	p := a.focusedPanel()
 	dir, ok := p.Path.HostPath()
 	if !ok {
 		return ""
@@ -336,7 +336,7 @@ func (a *App) refreshAfterDropToShell() {
 	if a.model.ViewMode != ui.ViewBrowser {
 		return
 	}
-	if err := a.activePanel().Refresh(a.activeViewportRows()); err != nil {
+	if err := a.focusedPanel().Refresh(a.focusedViewportRows()); err != nil {
 		a.setErrorMessage("Shell", err)
 	}
 }

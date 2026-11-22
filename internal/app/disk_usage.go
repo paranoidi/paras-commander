@@ -293,7 +293,7 @@ func (a *App) scanCursorDirSize() {
 	if a.disk.engine == nil || a.disk.ignore == nil || a.model.ViewMode != ui.ViewBrowser {
 		return
 	}
-	p := a.activePanel()
+	p := a.focusedPanel()
 	if !p.Path.HasSubtreeSizes() {
 		a.setTransientMessage(pathloc.Unavailable("Disk usage", p.Path), ui.MessageUrgencyWarn)
 		return
@@ -312,7 +312,7 @@ func (a *App) scanCursorDirSize() {
 		p.RequestIndexDrift(entry.Name)
 	}
 	if p.Cursor < p.VisibleEntryCount()-1 {
-		p.Move(1, a.activeViewportRows())
+		p.Move(1, a.focusedViewportRows())
 	}
 }
 

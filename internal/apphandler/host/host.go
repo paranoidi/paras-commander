@@ -19,9 +19,9 @@ type MessageHost interface {
 
 // PanelHost supplies twin-panel accessors used by the jobs handler.
 type PanelHost interface {
-	ActivePanel() *panel.State
-	ActivePanelSources() []string
-	InactivePanel() *panel.State
+	FocusedPanel() *panel.State
+	FocusedPanelSources() []string
+	DestinationPanel() *panel.State
 	PrimaryPanel() *panel.State
 	SecondaryPanel() *panel.State
 }

@@ -29,7 +29,7 @@ func TestFilePanelPlusMinusStarSelectionShortcuts(t *testing.T) {
 		if !app.model.GroupSelect.Open || app.model.GroupSelect.Mode != "unselect" {
 			t.Fatalf("want unselect group dialog, got %+v", app.model.GroupSelect)
 		}
-		f := app.activePanel().Filter
+		f := app.focusedPanel().Filter
 		if f.Active || f.Editing || f.Query != "" {
 			t.Fatalf("quick filter should stay off, got %+v", f)
 		}
@@ -61,7 +61,7 @@ func TestFilePanelPlusMinusStarSelectionShortcuts(t *testing.T) {
 		if !strings.Contains(app.model.Message, "Selection inverted") {
 			t.Fatalf("status message = %q, want selection inverted", app.model.Message)
 		}
-		f := app.activePanel().Filter
+		f := app.focusedPanel().Filter
 		if f.Active || f.Editing {
 			t.Fatalf("invert must not open quick filter, got %+v", f)
 		}
@@ -112,7 +112,7 @@ func TestGroupSelectEnterOnPatternInputConfirms(t *testing.T) {
 	if app.model.GroupSelect.Open {
 		t.Fatal("Enter on pattern input should close dialog")
 	}
-	p := app.activePanel()
+	p := app.focusedPanel()
 	if p.SelectedPaths == nil || !p.SelectedPaths[foo] || !p.SelectedPaths[bar] {
 		t.Fatalf("selection after Enter = %v, want foo.txt and bar.txt", p.SelectedPaths)
 	}
@@ -526,7 +526,7 @@ func TestGroupSelectGhostExtensionPrefill(t *testing.T) {
 	gs := &app.model.GroupSelect
 	open := func(name string) {
 		t.Helper()
-		if !app.activePanel().SelectVisibleEntry(name) {
+		if !app.focusedPanel().SelectVisibleEntry(name) {
 			t.Fatalf("no entry %q", name)
 		}
 		app.openGroupSelect("select", "panel")
@@ -560,7 +560,7 @@ func TestFilterDialogGhostExtensionPrefill(t *testing.T) {
 	writeFile(t, filepath.Join(dir, "lantern.stl"))
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	if !app.activePanel().SelectVisibleEntry("lantern.stl") {
+	if !app.focusedPanel().SelectVisibleEntry("lantern.stl") {
 		t.Fatal("no entry lantern.stl")
 	}
 	app.dialogCtrl.OpenFilterDialog()

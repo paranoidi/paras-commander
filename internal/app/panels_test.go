@@ -38,7 +38,7 @@ func TestRefreshBothPanelsInactiveWalksUpWhenDirectoryDeleted(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, parent)
-	loadPanelSync(t, app.inactivePanel(), child)
+	loadPanelSync(t, app.otherBrowserPanel(), child)
 	if err := os.RemoveAll(child); err != nil {
 		t.Fatal(err)
 	}
@@ -49,10 +49,10 @@ func TestRefreshBothPanelsInactiveWalksUpWhenDirectoryDeleted(t *testing.T) {
 	})
 
 	want := filepath.Clean(parent)
-	if got := app.inactivePanel().PathString(); got != want {
+	if got := app.otherBrowserPanel().PathString(); got != want {
 		t.Fatalf("inactive path = %q, want %q", got, want)
 	}
-	if got := app.activePanel().PathString(); got != want {
+	if got := app.focusedPanel().PathString(); got != want {
 		t.Fatalf("active path = %q, want unchanged %q", got, want)
 	}
 }
@@ -67,7 +67,7 @@ func TestRefreshBothPanelsActiveWalksUpWhenDirectoryDeleted(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, parent)
-	loadPanelSync(t, app.activePanel(), child)
+	loadPanelSync(t, app.focusedPanel(), child)
 	if err := os.RemoveAll(child); err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func TestRefreshBothPanelsActiveWalksUpWhenDirectoryDeleted(t *testing.T) {
 	})
 
 	want := filepath.Clean(parent)
-	if got := app.activePanel().PathString(); got != want {
+	if got := app.focusedPanel().PathString(); got != want {
 		t.Fatalf("active path = %q, want %q", got, want)
 	}
 }
@@ -93,7 +93,7 @@ func TestRefreshBothPanelsReturnsImmediatelyWhenListingBlocks(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, parent)
-	loadPanelSync(t, app.activePanel(), child)
+	loadPanelSync(t, app.focusedPanel(), child)
 	if err := os.RemoveAll(child); err != nil {
 		t.Fatal(err)
 	}
@@ -115,14 +115,14 @@ func TestRefreshBothPanelsReturnsImmediatelyWhenListingBlocks(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("RefreshBothPanels blocked on listing/Stat")
 	}
-	if got := app.activePanel().PathString(); got != filepath.Clean(child) {
+	if got := app.focusedPanel().PathString(); got != filepath.Clean(child) {
 		t.Fatalf("active path after schedule = %q, want vanished cwd %q", got, child)
 	}
 	close(block)
 	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
 		return !app.model.Primary.ListingPending && !app.model.Secondary.ListingPending
 	})
-	if got := app.activePanel().PathString(); got != filepath.Clean(parent) {
+	if got := app.focusedPanel().PathString(); got != filepath.Clean(parent) {
 		t.Fatalf("active path after apply = %q, want ancestor %q", got, parent)
 	}
 }
@@ -141,7 +141,7 @@ func TestRefreshBothPanelsStaleClimbDoesNotNavigate(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, parent)
-	active := app.activePanel()
+	active := app.focusedPanel()
 	loadPanelSync(t, active, child)
 	if err := os.RemoveAll(child); err != nil {
 		t.Fatal(err)

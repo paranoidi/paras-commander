@@ -34,7 +34,7 @@ func openRsyncOn(t *testing.T, srcDir, destDir string, names ...string) *App {
 	app := newApp(t, newScreen(t, 100, 40), srcDir)
 	app.model.Secondary.Path = pathloc.MustParse(destDir)
 	_ = app.model.Secondary.Refresh(20)
-	selectPanelEntryByName(t, app.activePanel(), names[0])
+	selectPanelEntryByName(t, app.focusedPanel(), names[0])
 	app.dispatch(keymap.ActionFileRsync)
 	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != dialog.FileDialogRsync {
 		t.Fatal("rsync dialog not open")
@@ -47,7 +47,7 @@ func TestFileMenuRsyncOpensRsyncDialog(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "lantern.txt"))
 	app := newApp(t, newScreen(t, 100, 40), dir)
-	selectPanelEntryByName(t, app.activePanel(), "lantern.txt")
+	selectPanelEntryByName(t, app.focusedPanel(), "lantern.txt")
 
 	activateFileMenuItem(t, app, 'R')
 
@@ -71,7 +71,7 @@ func TestRsyncDialogWithoutRsyncShowsErrorAndOpensNothing(t *testing.T) {
 	writeFile(t, filepath.Join(dir, "lantern.txt"))
 	app := newApp(t, newScreen(t, 100, 40), dir)
 	app.dialogCtrl.SetLookPathForTest(func(string) (string, error) { return "", exec.ErrNotFound })
-	selectPanelEntryByName(t, app.activePanel(), "lantern.txt")
+	selectPanelEntryByName(t, app.focusedPanel(), "lantern.txt")
 
 	app.dispatch(keymap.ActionFileRsync)
 
@@ -113,7 +113,7 @@ func TestRsyncDialogEnqueuesRsyncJobAndSyncs(t *testing.T) {
 	needRsyncBinary(t)
 	srcDir, destDir := t.TempDir(), t.TempDir()
 	app := openRsyncOn(t, srcDir, destDir, "lantern.txt", "willow.txt")
-	app.activePanel().AddSelection(filepath.Join(srcDir, "lantern.txt"))
+	app.focusedPanel().AddSelection(filepath.Join(srcDir, "lantern.txt"))
 
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	flushBackgroundJobs(t, app)
@@ -147,7 +147,7 @@ func TestRsyncDialogRemembersLastOptionsForTheSession(t *testing.T) {
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	flushBackgroundJobs(t, app)
 
-	selectPanelEntryByName(t, app.activePanel(), "orchard.txt")
+	selectPanelEntryByName(t, app.focusedPanel(), "orchard.txt")
 	app.dispatch(keymap.ActionFileRsync)
 
 	fd := app.model.FileDialog

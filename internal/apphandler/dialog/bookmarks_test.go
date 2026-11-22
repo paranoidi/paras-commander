@@ -239,7 +239,7 @@ type bookmarkTestHost struct {
 	active *panel.State
 }
 
-func (f *bookmarkTestHost) ActivePanel() *panel.State { return f.active }
+func (f *bookmarkTestHost) FocusedPanel() *panel.State { return f.active }
 
 func newBookmarkTestHandler(t *testing.T) (*Handler, *bookmarkTestHost) {
 	t.Helper()

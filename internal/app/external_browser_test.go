@@ -37,7 +37,7 @@ func setupMultiOpen(t *testing.T, appFor func(name string) string, names ...stri
 	}
 	t.Cleanup(func() { defaultAppForPath, runDetachedLaunch = oldApp, oldLaunch })
 	for _, n := range names {
-		app.activePanel().AddSelection(filepath.Join(root, n))
+		app.focusedPanel().AddSelection(filepath.Join(root, n))
 	}
 	selectEntryByName(t, app, names[0])
 	app.dispatch(keymap.ActionNavOpen)

@@ -37,11 +37,11 @@ func (f *fakeMassRenamePatternHost) SetErrorMessage(title string, err error) {
 	}
 }
 func (f *fakeMassRenamePatternHost) NavigatePanelToPath(int, string, string) error { return nil }
-func (f *fakeMassRenamePatternHost) ActivePanel() *panel.State                     { return &panel.State{} }
-func (f *fakeMassRenamePatternHost) InactivePanel() *panel.State                   { return &panel.State{} }
-func (f *fakeMassRenamePatternHost) InactivePanelID() int                          { return 1 }
+func (f *fakeMassRenamePatternHost) FocusedPanel() *panel.State                    { return &panel.State{} }
+func (f *fakeMassRenamePatternHost) DestinationPanel() *panel.State                { return &panel.State{} }
+func (f *fakeMassRenamePatternHost) DestinationPanelID() int                       { return 1 }
 func (f *fakeMassRenamePatternHost) PanelByID(int) *panel.State                    { return &panel.State{} }
-func (f *fakeMassRenamePatternHost) ActiveViewportRows() int                       { return 20 }
+func (f *fakeMassRenamePatternHost) FocusedViewportRows() int                      { return 20 }
 func (f *fakeMassRenamePatternHost) PanelViewportRows(int) int                     { return 20 }
 func (f *fakeMassRenamePatternHost) CloseJobsView()                                {}
 func (f *fakeMassRenamePatternHost) ClearTransientMessage()                        {}

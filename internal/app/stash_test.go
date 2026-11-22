@@ -51,7 +51,7 @@ func TestPanelStashRestoreWithoutLiveSelection(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	panel := app.activePanel()
+	panel := app.focusedPanel()
 	panel.AddSelection(p)
 	app.togglePanelSelectionStash()
 	app.togglePanelSelectionStash()
@@ -75,7 +75,7 @@ func TestPanelStashRestoreDialogMerge(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	panel := app.activePanel()
+	panel := app.focusedPanel()
 	panel.AddSelection(stashed)
 	app.togglePanelSelectionStash()
 	panel.AddSelection(live)
@@ -122,7 +122,7 @@ func TestStripCursorSurvivesStash(t *testing.T) {
 		sel = append(sel, p)
 	}
 	app := newApp(t, newScreen(t, 80, 24), dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	for _, s := range sel {
 		p.AddSelection(s)
 	}
@@ -160,7 +160,7 @@ func TestStripCursorBelongsToSelectionSet(t *testing.T) {
 	old := mk("lantern.txt", "quartz.txt", "willow.txt", "ember.txt")
 	fresh := mk("meadow.txt", "falcon.txt", "copper.txt")
 	app := newApp(t, newScreen(t, 80, 24), dir)
-	p := app.activePanel()
+	p := app.focusedPanel()
 	for _, s := range old {
 		p.AddSelection(s)
 	}
@@ -214,7 +214,7 @@ func TestStashRestoreDialogCancelKeepsStashAndSelection(t *testing.T) {
 				}
 			}
 			app := newApp(t, newScreen(t, 80, 24), dir)
-			panel := app.activePanel()
+			panel := app.focusedPanel()
 			panel.AddSelection(stashed)
 			app.togglePanelSelectionStash()
 			panel.AddSelection(live)

@@ -16,7 +16,7 @@ type findHost struct {
 
 func (h findHost) PanelByID(panelID int) *panel.State { return h.app.panelByID(panelID) }
 
-func (h findHost) ActiveViewportRows() int { return h.app.activeViewportRows() }
+func (h findHost) FocusedViewportRows() int { return h.app.focusedViewportRows() }
 
 func (h findHost) InQuickFilterUI() bool { return h.app.inQuickFilterUI() }
 

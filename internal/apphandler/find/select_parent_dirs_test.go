@@ -30,8 +30,8 @@ func (f *fakeFindHost) SetTransientMessage(text string, urgency ui.MessageUrgenc
 }
 func (f *fakeFindHost) SetErrorMessage(title string, err error) {}
 func (f *fakeFindHost) PanelByID(panelID int) *panel.State      { return f.p }
-func (f *fakeFindHost) ActivePanel() *panel.State               { return f.p }
-func (f *fakeFindHost) ActiveViewportRows() int                 { return 0 }
+func (f *fakeFindHost) FocusedPanel() *panel.State              { return f.p }
+func (f *fakeFindHost) FocusedViewportRows() int                { return 0 }
 func (f *fakeFindHost) InQuickFilterUI() bool                   { return false }
 func (f *fakeFindHost) NavigatePanelToPath(int, string, string) error {
 	return nil

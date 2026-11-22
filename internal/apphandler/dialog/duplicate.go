@@ -40,7 +40,7 @@ func (h *Handler) activateDuplicateAction() {
 }
 
 func (h *Handler) openDuplicateDialog() {
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	entry, err := ops.ValidateDuplicateSource(p)
 	if err != nil {
 		h.host.SetErrorMessage("Duplicate", err)
@@ -70,7 +70,7 @@ func (h *Handler) openDuplicateDialog() {
 }
 
 func (h *Handler) executeDuplicate() {
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	d := &h.model.FileDialog
 	if len(d.Fields) == 0 {
 		h.CloseFileDialog()
@@ -101,7 +101,7 @@ func (h *Handler) executeDuplicate() {
 	}
 	focusAfter := d.RenameFocusAfter
 	listDir := p.PathString()
-	panelID := h.model.ActivePanel
+	panelID := h.model.FocusedPanelID()
 	h.CloseFileDialog()
 	if !h.AddTransferJob(jobs.TypeCopy, []string{plan.SourcePath}, plan.DestPath, false, h.TransferPreserveFromConfig()) {
 		return // refused (shown)

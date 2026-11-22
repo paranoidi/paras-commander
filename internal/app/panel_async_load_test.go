@@ -53,7 +53,7 @@ func TestAsyncLoadSchedulerTimesOutStuckFetch(t *testing.T) {
 
 	pan := app.panelByID(ui.PrimaryPanel)
 	before := pan.PathString()
-	if err := pan.NavigateTo(sub, "", app.activeViewportRows()); err != nil {
+	if err := pan.NavigateTo(sub, "", app.focusedViewportRows()); err != nil {
 		t.Fatalf("NavigateTo: %v", err)
 	}
 	<-started // the fetch goroutine has read/invoked the swapped-in fake before cleanup can restore it
@@ -102,7 +102,7 @@ func TestDirLoadingIndicatorArmsAfterDelayThenClears(t *testing.T) {
 	})
 
 	pan := app.panelByID(ui.PrimaryPanel)
-	if err := pan.NavigateTo(sub, "", app.activeViewportRows()); err != nil {
+	if err := pan.NavigateTo(sub, "", app.focusedViewportRows()); err != nil {
 		t.Fatalf("NavigateTo: %v", err)
 	}
 	<-started
@@ -146,7 +146,7 @@ func TestAsyncLoadSchedulerAppliesFastResult(t *testing.T) {
 	})
 
 	pan := app.panelByID(ui.PrimaryPanel)
-	if err := pan.NavigateTo(sub, "", app.activeViewportRows()); err != nil {
+	if err := pan.NavigateTo(sub, "", app.focusedViewportRows()); err != nil {
 		t.Fatalf("NavigateTo: %v", err)
 	}
 
@@ -225,7 +225,7 @@ func TestPanelAsyncLoadSurvivesSaturatedEventQueue(t *testing.T) {
 	pan := app.panelByID(ui.PrimaryPanel)
 	var applies int
 	pan.OnDirectoryChange = func() { applies++ }
-	if err := pan.NavigateTo(sub, "", app.activeViewportRows()); err != nil {
+	if err := pan.NavigateTo(sub, "", app.focusedViewportRows()); err != nil {
 		t.Fatalf("NavigateTo: %v", err)
 	}
 	<-started
@@ -381,7 +381,7 @@ func TestAsyncNavigationHistoryOmitsSupersededVisits(t *testing.T) {
 			start := pan.PathString()
 			for _, st := range tc.steps {
 				if st.nav != "" {
-					if err := pan.NavigateTo(locs[st.nav].String(), "", app.activeViewportRows()); err != nil {
+					if err := pan.NavigateTo(locs[st.nav].String(), "", app.focusedViewportRows()); err != nil {
 						t.Fatalf("NavigateTo(%s): %v", st.nav, err)
 					}
 					select {

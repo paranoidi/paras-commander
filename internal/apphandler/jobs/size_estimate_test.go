@@ -18,7 +18,7 @@ type estimateHost struct {
 	painter ui.DiskUsagePainter
 }
 
-func (h estimateHost) ActivePanel() *panel.State             { return h.active }
+func (h estimateHost) FocusedPanel() *panel.State            { return h.active }
 func (h estimateHost) DiskUsagePainter() ui.DiskUsagePainter { return h.painter }
 
 type sizeOnlyPainter map[string]int64

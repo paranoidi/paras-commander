@@ -148,7 +148,7 @@ func (h *Handler) Dispatch(actionID string) bool {
 		h.WithIndex(h.OpenTagDialog)
 	case keymap.ActionFileIndexFind:
 		if h.localOrIndex() {
-			h.OpenFindDialog(h.model.ActivePanel)
+			h.OpenFindDialog(h.model.FocusedPanelID())
 		}
 	case keymap.ActionFileIndexFindUnique:
 		if h.localOrIndex() {
@@ -212,16 +212,16 @@ const messageTitle = "fileindex"
 
 // targets returns the active panel's selection, else its cursor entry, else its directory.
 func (h *Handler) targets() []string {
-	if src := h.host.ActivePanelSources(); len(src) > 0 {
+	if src := h.host.FocusedPanelSources(); len(src) > 0 {
 		return src
 	}
-	return []string{h.host.ActivePanel().PathString()}
+	return []string{h.host.FocusedPanel().PathString()}
 }
 
 // localOrIndex reports whether the active panel's scheme has index paths (local or fileindex://);
 // otherwise it says why not.
 func (h *Handler) localOrIndex() bool {
-	if h.host.ActivePanel().Path.Scheme() == pathloc.SchemeSFTP {
+	if h.host.FocusedPanel().Path.Scheme() == pathloc.SchemeSFTP {
 		h.host.SetTransientMessage("fileindex covers local paths only", ui.MessageUrgencyWarn)
 		return false
 	}
@@ -266,8 +266,8 @@ func (h *Handler) queueScan(title string, task func([]string) *jobs.Task) {
 		return
 	}
 	// Explicit selections only; never the cursor entry.
-	targets := []string{h.host.ActivePanel().PathString()}
-	if len(h.host.ActivePanel().SelectedPaths) > 0 {
+	targets := []string{h.host.FocusedPanel().PathString()}
+	if len(h.host.FocusedPanel().SelectedPaths) > 0 {
 		targets = h.targets()
 	}
 	var paths []string
@@ -280,7 +280,7 @@ func (h *Handler) queueScan(title string, task func([]string) *jobs.Task) {
 		paths = append(paths, p)
 	}
 	h.queueTask(title, task(paths), paths)
-	h.host.ActivePanel().ClearSelection()
+	h.host.FocusedPanel().ClearSelection()
 }
 
 // ScanAfterCommand queues a scan of dir (user-menu fileindex_scan, the command already ran). It
@@ -305,7 +305,7 @@ func (h *Handler) Prune() {
 	if !h.localOrIndex() {
 		return
 	}
-	dir, err := hostPath(h.host.ActivePanel().PathString())
+	dir, err := hostPath(h.host.FocusedPanel().PathString())
 	if err != nil {
 		h.host.SetErrorMessage(messageTitle, err)
 		return
@@ -320,7 +320,7 @@ func (h *Handler) BrowseWith() {
 	if !h.localOrIndex() {
 		return
 	}
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	if p.Path.Scheme() == pathloc.SchemeFileIndex {
 		h.reveal(true)
 		return
@@ -330,8 +330,8 @@ func (h *Handler) BrowseWith() {
 
 // setBrowseWith turns the overlay on or off for the active panel and reloads it.
 func (h *Handler) setBrowseWith(on bool) {
-	h.host.ActivePanel().WithIndex = on
-	h.host.ReloadPanel(h.model.ActivePanel)
+	h.host.FocusedPanel().WithIndex = on
+	h.host.ReloadPanel(h.model.FocusedPanelID())
 	msg := "Browse with fileindex off"
 	if on {
 		msg = "Browse with fileindex on"
@@ -342,7 +342,7 @@ func (h *Handler) setBrowseWith(on bool) {
 // Browse shows the active panel's directory in fileindex://, keeping the cursor entry; on a
 // fileindex:// panel it goes back to the real location.
 func (h *Handler) Browse() {
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	if p.Path.Scheme() == pathloc.SchemeFileIndex {
 		h.Reveal() // toggle back to the real location
 		return
@@ -350,7 +350,7 @@ func (h *Handler) Browse() {
 	if !h.localOrIndex() {
 		return
 	}
-	panelID, dir := h.model.ActivePanel, p.PathString()
+	panelID, dir := h.model.FocusedPanelID(), p.PathString()
 	var sel string
 	if e, ok := p.CurrentEntry(); ok {
 		sel = e.Name
@@ -371,7 +371,7 @@ func (h *Handler) Browse() {
 // directory on disk, the entry highlighted), or the panel's own directory with no entry. With
 // browse with fileindex on, the panel already is the real directory, so it turns the overlay off.
 func (h *Handler) Reveal() {
-	if p := h.host.ActivePanel(); p.WithIndex && p.Path.Scheme() != pathloc.SchemeFileIndex {
+	if p := h.host.FocusedPanel(); p.WithIndex && p.Path.Scheme() != pathloc.SchemeFileIndex {
 		h.setBrowseWith(false)
 		return
 	}
@@ -380,12 +380,12 @@ func (h *Handler) Reveal() {
 
 // reveal is Reveal; withIndex also turns the browse-with-fileindex overlay on for the target.
 func (h *Handler) reveal(withIndex bool) {
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	if p.Path.Scheme() != pathloc.SchemeFileIndex {
 		h.host.SetTransientMessage("Browse filesystem works on index panels", ui.MessageUrgencyWarn)
 		return
 	}
-	panelID := h.model.ActivePanel
+	panelID := h.model.FocusedPanelID()
 	target := p.PathString()
 	if e, ok := p.CurrentEntry(); ok {
 		target = e.Path

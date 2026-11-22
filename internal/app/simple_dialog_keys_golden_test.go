@@ -540,7 +540,7 @@ var stashKeyDialog = keyGoldenDialog{
 		}
 		app := newApp(t, newScreen(t, 80, 24), dir)
 		app.model.Message = ""
-		p := app.activePanel()
+		p := app.focusedPanel()
 		p.AddSelection(harbor)
 		app.togglePanelSelectionStash()
 		p.AddSelection(orchard)
@@ -551,7 +551,7 @@ var stashKeyDialog = keyGoldenDialog{
 	state: func(app *App) string { return "focus=" + stashName(app.model.StashRestoreDialog) },
 	open:  func(app *App) bool { return app.model.StashRestoreDialog.Open },
 	outcome: func(app *App, _ bool) string {
-		p := app.activePanel()
+		p := app.focusedPanel()
 		return fmt.Sprintf("live=%d stash=%d message=%q", p.SelectedPathCount(), p.StashPathCount(), app.model.Message)
 	},
 }

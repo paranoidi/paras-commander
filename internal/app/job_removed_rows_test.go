@@ -36,7 +36,7 @@ func removedRowsFixture(t *testing.T, dirs ...string) (app *App, screen tcell.Si
 	}
 	screen = newScreen(t, 80, 24)
 	app = newApp(t, screen, source)
-	if err := app.inactivePanel().Load(dest); err != nil {
+	if err := app.otherBrowserPanel().Load(dest); err != nil {
 		t.Fatal(err)
 	}
 	applyNextInterruptEvent(t, app, screen)
@@ -64,7 +64,7 @@ func TestMoveDropsMovedSourceRowWhileJobRuns(t *testing.T) {
 	app, screen, source, dest := removedRowsFixture(t, "alder")
 	writeFile(t, filepath.Join(source, "birch.txt"))
 	writeFile(t, filepath.Join(dest, "birch.txt")) // blocks the job on a conflict
-	p := app.activePanel()
+	p := app.focusedPanel()
 	p.AddSelection(filepath.Join(source, "alder"))
 	p.AddSelection(filepath.Join(source, "birch.txt"))
 
@@ -95,7 +95,7 @@ func TestFinishedJobsDropRemovedSourceRows(t *testing.T) {
 	cases := map[string]func(app *App, source string){
 		"move": func(app *App, source string) {
 			for _, n := range names {
-				app.activePanel().AddSelection(filepath.Join(source, n))
+				app.focusedPanel().AddSelection(filepath.Join(source, n))
 			}
 			app.dialogCtrl.OpenMoveDialog()
 			app.dialogCtrl.ApplyTransferEvent(dlg.Event{ID: dlg.OK})
@@ -111,7 +111,7 @@ func TestFinishedJobsDropRemovedSourceRows(t *testing.T) {
 	for name, start := range cases {
 		t.Run(name, func(t *testing.T) {
 			app, screen, source, _ := removedRowsFixture(t, append([]string{"keeper"}, names...)...)
-			p := app.activePanel()
+			p := app.focusedPanel()
 			start(app, source)
 			pumpJobsUntil(t, app, screen, func() bool {
 				return !app.jobState.HasUnfinishedWork() && !p.ListingPending && !slices.ContainsFunc(names, func(n string) bool { return panelListsRow(p, n) })
@@ -127,7 +127,7 @@ func TestFinishedJobsDropRemovedSourceRows(t *testing.T) {
 // removing rows from: there it is the safety net when no job refresh arrives.
 func TestPeriodicRefreshDropsRowOfVanishedJobSource(t *testing.T) {
 	app, screen, source, dest := removedRowsFixture(t, "alder", "birch")
-	p := app.activePanel()
+	p := app.focusedPanel()
 	app.jobState.AddJob(&jobs.Job{
 		ID:          "moving",
 		Type:        jobs.TypeMove,
@@ -153,7 +153,7 @@ func TestPeriodicRefreshDropsRowOfVanishedJobSource(t *testing.T) {
 // listing epoch, and the reload's newer result would then be dropped as stale.
 func TestPeriodicRefreshYieldsToPendingReload(t *testing.T) {
 	app, _, source, _ := removedRowsFixture(t, "alder")
-	p := app.activePanel()
+	p := app.focusedPanel()
 	entries := panel.BackendEntriesFromPanel(p.Entries)
 	entries = append(entries, fsbackend.Entry{Name: "ghost", Type: fsbackend.EntryDirectory})
 	epoch := p.ListingEpoch

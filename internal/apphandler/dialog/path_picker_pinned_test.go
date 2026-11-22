@@ -21,7 +21,7 @@ type fakePathPickerHost struct {
 	panelPath string
 }
 
-func (f fakePathPickerHost) ActivePanel() *panel.State {
+func (f fakePathPickerHost) FocusedPanel() *panel.State {
 	return &panel.State{Path: pathloc.FileMust(f.panelPath)}
 }
 

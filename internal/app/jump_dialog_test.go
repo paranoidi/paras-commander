@@ -109,7 +109,7 @@ func TestJumpOnFileIndexPanelQueriesIndex(t *testing.T) {
 	}
 	a.dispatch(keymap.ActionFileIndexBrowse)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
-		p := a.activePanel()
+		p := a.focusedPanel()
 		return p.PathString() == "fileindex://"+dir && !p.ListingPending
 	})
 	a.dispatch(keymap.ActionPanelJumpDialog)
@@ -129,7 +129,7 @@ func TestJumpOnFileIndexPanelQueriesIndex(t *testing.T) {
 	}
 	a.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
-		return a.activePanel().PathString() == "fileindex://"+orchard
+		return a.focusedPanel().PathString() == "fileindex://"+orchard
 	})
 	if a.model.JumpDialog.Open {
 		t.Fatal("Enter should close the dialog")

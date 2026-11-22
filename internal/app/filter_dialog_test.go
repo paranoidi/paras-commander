@@ -32,7 +32,7 @@ func TestFilterDialogMAltFOpensAndNarrows(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	if got := app.activePanel().VisibleEntryCount(); got != 3 {
+	if got := app.focusedPanel().VisibleEntryCount(); got != 3 {
 		t.Fatalf("initial VisibleEntryCount = %d, want 3", got)
 	}
 
@@ -54,7 +54,7 @@ func TestFilterDialogMAltFOpensAndNarrows(t *testing.T) {
 		t.Fatal("expected Filter dialog closed after confirm")
 	}
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	if got := p.VisibleEntryCount(); got != 2 {
 		t.Fatalf("VisibleEntryCount after filter = %d, want 2", got)
 	}
@@ -76,10 +76,10 @@ func TestFilterDialogMAltFOpensAndNarrows(t *testing.T) {
 	if app.model.FilterDialog.Open {
 		t.Fatal("expected Filter dialog closed after Clear")
 	}
-	if app.activePanel().ActiveEntryFilter != nil {
-		t.Fatalf("expected filter cleared, got %+v", app.activePanel().ActiveEntryFilter)
+	if app.focusedPanel().ActiveEntryFilter != nil {
+		t.Fatalf("expected filter cleared, got %+v", app.focusedPanel().ActiveEntryFilter)
 	}
-	if got := app.activePanel().VisibleEntryCount(); got != 3 {
+	if got := app.focusedPanel().VisibleEntryCount(); got != 3 {
 		t.Fatalf("VisibleEntryCount after clear = %d, want 3", got)
 	}
 }
@@ -134,7 +134,7 @@ func TestFilterDialogOnlyMetaColumnsMatchesMetaValue(t *testing.T) {
 		t.Fatal("expected Filter dialog closed after confirm")
 	}
 
-	p := app.activePanel()
+	p := app.focusedPanel()
 	if got := p.VisibleEntryCount(); got != 1 {
 		t.Fatalf("VisibleEntryCount after meta filter = %d, want 1", got)
 	}

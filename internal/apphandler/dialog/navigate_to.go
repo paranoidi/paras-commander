@@ -38,17 +38,17 @@ func (h *Handler) executeNavigateTo() {
 	if len(d.Fields) < 1 || strings.TrimSpace(d.Fields[0].Value) == "" {
 		return
 	}
-	p := h.host.ActivePanel()
+	p := h.host.FocusedPanel()
 	loc, err := pathpick.ResolveDestination(p.Path, h.model.UserHomeDir, d.Fields[0].Value)
 	if err != nil {
 		h.host.SetErrorMessage("Navigate to", err)
 		return
 	}
-	if err := h.host.NavigatePanelToPath(h.model.ActivePanel, loc.String(), ""); err != nil {
+	if err := h.host.NavigatePanelToPath(h.model.FocusedPanelID(), loc.String(), ""); err != nil {
 		h.host.SetErrorMessage("Navigate to", err)
 		return
 	}
-	p.EnsureCursorVisible(h.host.ActiveViewportRows())
+	p.EnsureCursorVisible(h.host.FocusedViewportRows())
 	h.CloseFileDialog()
 	h.host.SetTransientMessage(loc.String(), ui.MessageUrgencyInfo)
 }

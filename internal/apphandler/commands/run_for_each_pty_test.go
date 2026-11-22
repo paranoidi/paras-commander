@@ -428,8 +428,8 @@ func (ptyHostStub) LayoutForTerminalSize(w, h int) ui.Layout {
 
 func (ptyHostStub) SetTransientMessage(string, ui.MessageUrgency)               {}
 func (ptyHostStub) SetErrorMessage(string, error)                               {}
-func (p ptyHostStub) ActivePanel() *panel.State                                 { return p.panel }
-func (ptyHostStub) InactivePanel() *panel.State                                 { return &panel.State{} }
+func (p ptyHostStub) FocusedPanel() *panel.State                                { return p.panel }
+func (ptyHostStub) DestinationPanel() *panel.State                              { return &panel.State{} }
 func (ptyHostStub) FilterOptions() quickfilter.Options                          { return quickfilter.Options{} }
 func (ptyHostStub) Styles() theme.Theme                                         { return theme.Theme{} }
 func (ptyHostStub) BrowserMenuDefinitions() []menu.Definition                   { return nil }
