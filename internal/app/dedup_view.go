@@ -118,6 +118,42 @@ func (a *App) answerDedupEmptyDirsConfirm(id dlg.ID) {
 	}
 }
 
+// dedupKeepConfirmView is the Keep Directory confirmation's widget spec, the one the renderer draws.
+func (a *App) dedupKeepConfirmView() dlg.Spec {
+	return dialog.DedupKeepConfirmView(a.model.DedupKeepConfirm)
+}
+
+func (a *App) handleDedupKeepConfirmKey(event *tcell.EventKey) bool {
+	st := &a.model.DedupKeepConfirm
+	if ev, ok := dlg.HandleKey(a.dedupKeepConfirmView(), &st.Focus, event); ok {
+		a.applyDedupKeepConfirmEvent(ev)
+	}
+	return false
+}
+
+// applyDedupKeepConfirmEvent acts on a widget event of the Keep Directory confirmation.
+func (a *App) applyDedupKeepConfirmEvent(ev dlg.Event) {
+	if ev.ID != "" {
+		a.answerDedupKeepConfirm(ev.ID)
+	}
+}
+
+// answerDedupKeepConfirm closes the confirmation and applies the pending directory keep: Keep
+// this replaces the keeps elsewhere, Keep previous leaves those groups alone, anything else
+// (Cancel) drops it. Every way of answering (buttons, mnemonics, the central OK chord) comes
+// through here.
+func (a *App) answerDedupKeepConfirm(id dlg.ID) {
+	a.model.DedupKeepConfirm = dialog.DedupKeepConfirmState{}
+	switch id {
+	case dialog.DedupKeepThis:
+		a.dedupCtrl.ResolveDirKeep(true)
+	case dialog.DedupKeepPrevious:
+		a.dedupCtrl.ResolveDirKeep(false)
+	default:
+		a.dedupCtrl.CancelDirKeep()
+	}
+}
+
 // closeDedupView leaves the view but keeps its results for ActionDedupOpen.
 func (a *App) closeDedupView() {
 	a.dedupCtrl.Leave()

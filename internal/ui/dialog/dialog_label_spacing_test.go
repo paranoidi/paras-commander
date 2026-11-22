@@ -301,6 +301,15 @@ func TestDialogLabelsAreFollowedByContentRow(t *testing.T) {
 			labels: []string{"Directory:"},
 		},
 		{
+			name: "dedup keep confirm",
+			draw: func(screen tcell.Screen) {
+				DrawDedupKeepConfirmDialog(screen, layout, DedupKeepConfirmState{
+					Open: true, Dir: "orchard/meadow", Groups: 2, Kept: []string{"harbor/amber.txt", "harbor/birch.txt"},
+				}, DialogRenderContext{Styles: styles})
+			},
+			labels: []string{"Directory:"},
+		},
+		{
 			name: "sftp connect",
 			draw: func(screen tcell.Screen) {
 				DrawSFTPConnectDialog(screen, layout, SFTPConnectDialogState{

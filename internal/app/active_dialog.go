@@ -236,6 +236,12 @@ func (a *App) modalActiveDialog(event *tcell.EventKey) (activeDialog, bool) {
 			OK:     func() { a.answerDedupEmptyDirsConfirm(m.DedupEmptyDirsConfirm.Focus) },
 			Cancel: func() { a.answerDedupEmptyDirsConfirm(dlg.Cancel) },
 		})
+	case m.DedupKeepConfirm.Open:
+		// Cancel backs out: the directory keep is dropped and the marks stay.
+		return found(a.dedupKeepConfirmView, &m.DedupKeepConfirm.Focus, noQuit(a.applyDedupKeepConfirmEvent), dialogButtons{
+			OK:     func() { a.answerDedupKeepConfirm(m.DedupKeepConfirm.Focus) },
+			Cancel: func() { a.answerDedupKeepConfirm(dlg.Cancel) },
+		})
 	case m.UndoConfirm.Open:
 		return found(func() dlg.Spec { return dialog.UndoConfirmView(m.UndoConfirm) }, &m.UndoConfirm.Focus, noQuit(a.applyUndoConfirmEvent), dialogButtons{
 			OK:     func() { a.answerUndoConfirm(m.UndoConfirm.Focus == dialog.UndoYes) },

@@ -20,6 +20,7 @@ const (
 	PrimaryModalConflict
 	PrimaryModalQuit
 	PrimaryModalDedupEmptyDirs
+	PrimaryModalDedupKeep
 	PrimaryModalUndo
 	PrimaryModalDiskUsagePrompt
 	PrimaryModalFindRelocate

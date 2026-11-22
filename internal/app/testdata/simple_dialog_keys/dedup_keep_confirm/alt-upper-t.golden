@@ -1,0 +1,4 @@
+== open ==
+focus=previous
+== Alt+T ==
+CLOSED: quit=false kept=[amber/widget.txt] marked=[birch/widget.txt,cedar/widget.txt]

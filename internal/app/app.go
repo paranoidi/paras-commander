@@ -1653,6 +1653,8 @@ func (a *App) handleDialogKey(event *tcell.EventKey) bool {
 		return a.handleQuitConfirmKey(event)
 	case a.model.DedupEmptyDirsConfirm.Open:
 		return a.handleDedupEmptyDirsConfirmKey(event)
+	case a.model.DedupKeepConfirm.Open:
+		return a.handleDedupKeepConfirmKey(event)
 	case a.model.UndoConfirm.Open:
 		return a.handleUndoConfirmKey(event)
 	case a.model.DiskUsagePrompt.Open:

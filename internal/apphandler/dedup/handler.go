@@ -82,6 +82,8 @@ type Handler struct {
 	outsideOf string
 	wake      host.WakeCoalescer
 	pending   *dedupPendingState
+	// pendingKeep is the directory keep the Keep Directory dialog is asking about.
+	pendingKeep *pendingDirKeep
 	// hashedRoot is the scan root of a finished HashPotential job, set from its goroutine:
 	// PollUpdates reopens the results if they still show that root.
 	hashedRoot atomic.Pointer[pathloc.Path]
@@ -1776,30 +1778,54 @@ func (h *Handler) notifyDuplicateKeep(replaced bool) {
 	}
 }
 
-func (h *Handler) keepCopyFilesUnderDir(dirRow ui.DedupRow) bool {
-	mainSel, ok := h.paneRow(&h.model.DedupView.Main, h.model.DedupList)
-	if !ok {
-		return false
+// pendingDirKeep is a directory keep waiting for the Keep Directory dialog's answer: the keep
+// set of every affected group, the groups whose existing keep it would drop, and the pane it
+// came from (the cursor step after the answer depends on it).
+type pendingDirKeep struct {
+	keeps     map[int]map[string]bool
+	conflicts map[int]bool
+	copies    bool
+}
+
+// dirKeepConflicts returns the groups in keeps whose current keep set holds a file outside the
+// new one: applying would silently drop that keep. A current keep equal to the new set (toggle
+// off) or inside it is no conflict.
+func (h *Handler) dirKeepConflicts(keeps map[int]map[string]bool) map[int]bool {
+	var out map[int]bool
+	for gi, keepAbs := range keeps {
+		for _, f := range h.model.DedupSnapshot.Groups[gi].Files {
+			if abs := f.Abs.String(); h.model.DedupView.Kept[abs] && !keepAbs[abs] {
+				if out == nil {
+					out = map[int]bool{}
+				}
+				out[gi] = true
+				break
+			}
+		}
 	}
-	files := ui.DedupCopyFilesUnderDir(h.model.DedupSnapshot, mainSel, dirRow.Value.DirRel)
-	if len(files) == 0 {
-		return false
+	return out
+}
+
+// applyDirKeeps applies every group's keep set except the skipped groups, and reports whether an
+// existing keep was replaced.
+func (h *Handler) applyDirKeeps(keeps map[int]map[string]bool, skip map[int]bool) (replaced bool) {
+	for gi, keepAbs := range keeps {
+		if skip[gi] {
+			continue
+		}
+		if _, r := h.applyGroupKeep(gi, keepAbs); r {
+			replaced = true
+		}
 	}
-	_, replaced := h.applyGroupKeep(mainSel.Value.GroupIdx, keepAbsSetFromFiles(files))
 	return replaced
 }
 
-// KeepSelection marks the focused file or folder contents as survivors (green)
-// and marks every other copy in the affected duplicate group(s) for deletion.
-func (h *Handler) KeepSelection() {
-	row, ok := h.selectedRow()
-	if !ok {
-		return
-	}
+// advanceAfterDirKeep moves the cursor past the folder just kept: the next folder row in the
+// copies pane, else past the folder's subtree in the focused pane (its rows are kept now too).
+func (h *Handler) advanceAfterDirKeep(copies bool) {
 	st := &h.model.DedupView
-	if st.FocusCopies && row.Value.Kind == ui.DedupRowDir && h.copiesFollowFile() {
-		h.notifyDuplicateKeep(h.keepCopyFilesUnderDir(row))
-		_, rows := h.focusedPane()
+	pane, rows := h.focusedPane()
+	if copies {
 		next := ui.DedupNextDirRowIndex(rows, st.Copies.Selected)
 		if next >= len(rows) {
 			next = len(rows) - 1
@@ -1807,21 +1833,83 @@ func (h *Handler) KeepSelection() {
 		st.Copies.Selected = next
 		return
 	}
-	if row.Value.Kind == ui.DedupRowDir {
-		replaced := false
-		byGroup := ui.DedupSnapshotFilesUnderDir(h.model.DedupSnapshot, h.model.DedupView, row.Value.DirRel)
-		for gi, files := range byGroup {
-			if _, groupReplaced := h.applyGroupKeep(gi, keepAbsSetFromFiles(files)); groupReplaced {
-				replaced = true
+	if next := ui.DedupSubtreeEndIndex(rows, pane.Selected); next < len(rows) {
+		pane.Selected = next
+		h.followMainCursor()
+	}
+}
+
+// startDirKeep keeps a directory: applied at once when it drops no existing keep, otherwise the
+// Keep Directory dialog asks first and the answer applies it (ResolveDirKeep).
+func (h *Handler) startDirKeep(keeps map[int]map[string]bool, copies bool, dirRel string) {
+	for gi, keepAbs := range keeps {
+		if gi < 0 || gi >= len(h.model.DedupSnapshot.Groups) || len(keepAbs) == 0 {
+			delete(keeps, gi)
+		}
+	}
+	conflicts := h.dirKeepConflicts(keeps)
+	if len(conflicts) == 0 {
+		h.notifyDuplicateKeep(h.applyDirKeeps(keeps, nil))
+		h.advanceAfterDirKeep(copies)
+		return
+	}
+	h.pendingKeep = &pendingDirKeep{keeps: keeps, conflicts: conflicts, copies: copies}
+	st := dialog.DedupKeepConfirmState{Open: true, Focus: dialog.DedupKeepPrevious, Dir: dirRel, Groups: len(conflicts)}
+	for _, gi := range slices.Sorted(maps.Keys(conflicts)) {
+		for _, f := range h.model.DedupSnapshot.Groups[gi].Files {
+			if abs := f.Abs.String(); h.model.DedupView.Kept[abs] && !keeps[gi][abs] {
+				st.Kept = append(st.Kept, f.Rel)
 			}
 		}
-		h.notifyDuplicateKeep(replaced)
-		// Step past the folder's subtree: its rows are kept now too.
-		pane, rows := h.focusedPane()
-		if next := ui.DedupSubtreeEndIndex(rows, pane.Selected); next < len(rows) {
-			pane.Selected = next
-			h.followMainCursor()
+	}
+	h.model.DedupKeepConfirm = st
+}
+
+// ResolveDirKeep answers the Keep Directory dialog: replace applies the directory keep to every
+// group, dropping the old keeps; otherwise the conflicting groups stay as they are. Without a
+// pending keep it does nothing.
+func (h *Handler) ResolveDirKeep(replace bool) {
+	p := h.pendingKeep
+	if p == nil {
+		return
+	}
+	h.pendingKeep = nil
+	var skip map[int]bool
+	if !replace {
+		skip = p.conflicts
+	}
+	h.notifyDuplicateKeep(h.applyDirKeeps(p.keeps, skip))
+	h.advanceAfterDirKeep(p.copies)
+}
+
+// CancelDirKeep drops the pending directory keep, leaving marks and cursor as they were.
+func (h *Handler) CancelDirKeep() { h.pendingKeep = nil }
+
+// KeepSelection marks the focused file or folder contents as survivors (green)
+// and marks every other copy in the affected duplicate group(s) for deletion. A folder keep
+// that would drop an existing keep elsewhere asks first.
+func (h *Handler) KeepSelection() {
+	row, ok := h.selectedRow()
+	if !ok {
+		return
+	}
+	st := &h.model.DedupView
+	if st.FocusCopies && row.Value.Kind == ui.DedupRowDir && h.copiesFollowFile() {
+		keeps := map[int]map[string]bool{}
+		if mainSel, ok := h.paneRow(&st.Main, h.model.DedupList); ok {
+			if files := ui.DedupCopyFilesUnderDir(h.model.DedupSnapshot, mainSel, row.Value.DirRel); len(files) > 0 {
+				keeps[mainSel.Value.GroupIdx] = keepAbsSetFromFiles(files)
+			}
 		}
+		h.startDirKeep(keeps, true, row.Value.DirRel)
+		return
+	}
+	if row.Value.Kind == ui.DedupRowDir {
+		keeps := map[int]map[string]bool{}
+		for gi, files := range ui.DedupSnapshotFilesUnderDir(h.model.DedupSnapshot, h.model.DedupView, row.Value.DirRel) {
+			keeps[gi] = keepAbsSetFromFiles(files)
+		}
+		h.startDirKeep(keeps, false, row.Value.DirRel)
 		return
 	}
 	if row.Value.Kind != ui.DedupRowFile {
