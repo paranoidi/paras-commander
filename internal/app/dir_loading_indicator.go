@@ -15,12 +15,12 @@ func (a *App) armDirLoadingIndicatorTimer(panelID int) {
 	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
 		return
 	}
-	if t := a.dirLoadIndicatorTimer[panelID]; t != nil {
+	if t := a.panelInst(panelID).dirLoadIndicatorTimer; t != nil {
 		t.Stop()
 	}
-	a.dirLoadIndicatorEpoch[panelID]++
-	epoch := a.dirLoadIndicatorEpoch[panelID]
-	a.dirLoadIndicatorTimer[panelID] = time.AfterFunc(panel.LoadingIndicatorDelay, func() {
+	a.panelInst(panelID).dirLoadIndicatorEpoch++
+	epoch := a.panelInst(panelID).dirLoadIndicatorEpoch
+	a.panelInst(panelID).dirLoadIndicatorTimer = time.AfterFunc(panel.LoadingIndicatorDelay, func() {
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(dirLoadingIndicatorPayload{PanelID: panelID, Epoch: epoch}))
 	})
 }
@@ -32,7 +32,7 @@ func (a *App) applyDirLoadingIndicator(panelID int, epoch uint64) {
 	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
 		return
 	}
-	if a.dirLoadIndicatorEpoch[panelID] != epoch {
+	if a.panelInst(panelID).dirLoadIndicatorEpoch != epoch {
 		return
 	}
 	p := a.panelByID(panelID)
@@ -47,9 +47,9 @@ func (a *App) invalidateDirLoadingIndicator(panelID int) {
 	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
 		return
 	}
-	if t := a.dirLoadIndicatorTimer[panelID]; t != nil {
+	if t := a.panelInst(panelID).dirLoadIndicatorTimer; t != nil {
 		t.Stop()
-		a.dirLoadIndicatorTimer[panelID] = nil
+		a.panelInst(panelID).dirLoadIndicatorTimer = nil
 	}
-	a.dirLoadIndicatorEpoch[panelID]++
+	a.panelInst(panelID).dirLoadIndicatorEpoch++
 }

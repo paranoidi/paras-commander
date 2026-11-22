@@ -39,7 +39,7 @@ func TestMaybeScheduleMetaIdleSort_requiresColumnResolved(t *testing.T) {
 	}
 
 	app.maybeScheduleMetaIdleSort(ui.PrimaryPanel)
-	if app.metaSort.idleSort[ui.PrimaryPanel].timer != nil {
+	if app.panelInst(ui.PrimaryPanel).metaIdle.timer != nil {
 		t.Fatal("timer armed while a cell is still pending")
 	}
 
@@ -47,7 +47,7 @@ func TestMaybeScheduleMetaIdleSort_requiresColumnResolved(t *testing.T) {
 	app.model.MetaResults[ui.PrimaryPanel][0].Results[filepath.Join(root, "aardvark.txt")] = "2"
 	app.model.MetaResults[ui.PrimaryPanel][0].PendingCount = 0
 	app.maybeScheduleMetaIdleSort(ui.PrimaryPanel)
-	if app.metaSort.idleSort[ui.PrimaryPanel].timer == nil {
+	if app.panelInst(ui.PrimaryPanel).metaIdle.timer == nil {
 		t.Fatal("expected timer armed once the column fully resolved")
 	}
 	app.invalidateMetaIdleSortPanel(ui.PrimaryPanel)
@@ -80,7 +80,7 @@ func TestApplyMetaIdleSort_reordersOnceResolved(t *testing.T) {
 		},
 	}
 
-	ep := app.metaSort.idleSort[ui.PrimaryPanel].epoch
+	ep := app.panelInst(ui.PrimaryPanel).metaIdle.epoch
 	app.applyMetaIdleSort(ui.PrimaryPanel, ep)
 
 	if len(left.Entries) < 2 {

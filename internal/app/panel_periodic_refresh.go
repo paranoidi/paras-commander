@@ -119,10 +119,11 @@ func (a *App) scheduleListingRefresh(panelID int, opts listingRefreshOpts) (retr
 	}
 	// A prior slow refresh for this panel set a start-to-start deadline; skipped ticks must
 	// never flip the in-flight flag, since nothing will clear it for them.
-	if time.Now().UnixNano() < a.panelRefreshNotBefore[panelID].Load() {
+	inst := a.panelInst(panelID) // captured: the refresh goroutine never touches the registry
+	if time.Now().UnixNano() < inst.panelRefreshNotBefore.Load() {
 		return true
 	}
-	if !a.panelRefreshInFlight[panelID].CompareAndSwap(false, true) {
+	if !inst.panelRefreshInFlight.CompareAndSwap(false, true) {
 		return true
 	}
 	timeout := time.Duration(a.config.SFTP.ListTimeoutSecs) * time.Second
@@ -149,8 +150,8 @@ func (a *App) scheduleListingRefresh(panelID int, opts listingRefreshOpts) (retr
 			// than resetting it: the directory was just explicitly listed by the navigation
 			// itself, and resetting here would race this deferred write.
 			elapsed := time.Since(start)
-			a.panelRefreshNotBefore[panelID].Store(start.Add(time.Duration(config.DefaultPanelRefreshSlowBackoffFactor) * elapsed).UnixNano())
-			a.panelRefreshInFlight[panelID].Store(false)
+			inst.panelRefreshNotBefore.Store(start.Add(time.Duration(config.DefaultPanelRefreshSlowBackoffFactor) * elapsed).UnixNano())
+			inst.panelRefreshInFlight.Store(false)
 		}()
 		entries, listingLoc, gitignoreActive, dotfilesHiddenActive, err := fetch(context.Background(), snap)
 		if err != nil {

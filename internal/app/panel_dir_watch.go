@@ -154,11 +154,11 @@ func (a *App) reconcileDirWatch() {
 		return
 	}
 	changed := false
-	for i, id := range []int{ui.PrimaryPanel, ui.SecondaryPanel} {
+	for _, id := range []int{ui.PrimaryPanel, ui.SecondaryPanel} {
 		p := a.panelByID(id)
 		sig := dirWatchSig{p.Path, p.ListingEpoch, p.TreeExpandGen, p.ListLayout == panel.ListLayoutTree}
-		if sig != a.dirWatchSig[i] {
-			a.dirWatchSig[i] = sig
+		if inst := a.panelInst(id); sig != inst.dirWatchSig {
+			inst.dirWatchSig = sig
 			changed = true
 		}
 	}

@@ -20,20 +20,6 @@ import (
 const (
 	PrimaryPanel = iota
 	SecondaryPanel
-	// QuickViewOverlayPanel is a synthetic panel ID for QuickViewDirOverlay, letting the async
-	// directory-load and git-status schedulers (internal/app) resolve it through the same
-	// panelByID path as the two real panels instead of forking a quickview-only copy of each
-	// scheduler/gen-counter/payload/apply quartet. It never appears as an ActivePanel or
-	// inactivePanelID value and is not one of the two rendered/navigable panels — callers that
-	// loop over "the two panels" or derive "the other panel" must keep using
-	// PrimaryPanel/SecondaryPanel explicitly, not a range over this const block.
-	QuickViewOverlayPanel
-	// DedupBrowsePanel is the synthetic panel ID for Model.DedupPanel (the file-list panel under
-	// the dedup view's Copies pane), with the same async-scheduler role and restrictions as
-	// QuickViewOverlayPanel.
-	DedupBrowsePanel
-	// PanelIDCount sizes every array indexed by panel ID, synthetic IDs included.
-	PanelIDCount
 )
 
 func dialogRenderContext(model Model, styles theme.Theme) dialog.DialogRenderContext {
@@ -326,12 +312,18 @@ type Model struct {
 	QuickViewPanel int
 	// QuickViewDirOverlay holds a transient directory listing for quick-view directory preview (paint only).
 	QuickViewDirOverlay panel.State
-	// DedupPanel is the file-list panel under the dedup view's Copies pane (Dirs view; DedupBrowsePanel ID).
+	// DedupPanel is the file-list panel under the dedup view's Copies pane (Dirs view).
 	DedupPanel panel.State
+	// DedupPanelID is DedupPanel's panel registry ID (internal/app), or 0 while it is not open.
+	// 0 is never an overlay's ID: it is PrimaryPanel, which is never closed.
+	DedupPanelID int
 	// QuickViewDirOverlayActive is true when QuickViewDirOverlay should replace the inactive file list.
 	QuickViewDirOverlayActive bool
 	// QuickViewDirOverlayPanelID is PrimaryPanel or SecondaryPanel for the inactive column, or -1 when inactive.
 	QuickViewDirOverlayPanelID int
+	// QuickViewDirOverlayID is QuickViewDirOverlay's panel registry ID (internal/app), or 0 while
+	// the overlay is not open (see DedupPanelID).
+	QuickViewDirOverlayID int
 	// QuickViewSlowPath is the driver-panel entry whose quick-view preview (file preview or
 	// directory overlay) has been loading longer than panel.LoadingIndicatorDelay; set by the
 	// preview handler's slow-indicator timer. QuickViewSlowRowPath gates it on the load still

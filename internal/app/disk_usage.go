@@ -174,9 +174,8 @@ func (a *App) diskIdleSortPanelEligible(p *panel.State) bool {
 // requires all of them together for arm/apply/schedule, same as before.
 func (a *App) diskIdleSortSpec() idleSortSpec {
 	return idleSortSpec{
-		kind:        idleSortKindDisk,
-		slots:       &a.disk.idleSort,
-		idleNavPath: &a.disk.idleNavPath,
+		kind: idleSortKindDisk,
+		slot: func(i *panelInstance) *diskIdleSortPanel { return &i.diskIdle },
 		eligible: func(panelID int) bool {
 			p := a.panelByID(panelID)
 			return a.model.ViewMode == ui.ViewBrowser && p.Sort.DiskUsageIdleSizeSort

@@ -137,6 +137,8 @@ func (f *identityTestHost) PanelSyncFollowHeldListNav(string, *tcell.EventKey) b
 func (f *identityTestHost) ArmPanelSyncFollowNavCoalesceAfterListNav() {}
 func (f *identityTestHost) ClearPanelSyncFollowNavCoalesce()           {}
 func (f *identityTestHost) ArmCursorNameHintNavCoalesceAfterListNav()  {}
+func (f *identityTestHost) OpenPanel(*panel.State) int                 { return 2 }
+func (f *identityTestHost) ClosePanel(int)                             {}
 func (f *identityTestHost) GitStatusScheduler(int) panel.GitStatusScheduler {
 	return nil
 }

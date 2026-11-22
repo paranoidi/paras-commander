@@ -193,7 +193,7 @@ func (a *App) holdBrowserPaintForCarouselParent(panelID int) bool {
 	if !a.carouselParentPaintPending(panelID) {
 		return false
 	}
-	a.carouselPaintDefer[panelID].active = true
+	a.panelInst(panelID).carouselPaintDefer.active = true
 	a.armCarouselPaintDeferTimer(panelID)
 	return true
 }

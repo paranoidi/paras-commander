@@ -93,7 +93,7 @@ func (a *App) nextSFTPConnectGen(panelID int) uint64 {
 	if !ok {
 		idx = ui.PrimaryPanel
 	}
-	return a.sftp.connectGen[idx].Add(1)
+	return a.panelInst(idx).connectGen.Add(1)
 }
 
 func (a *App) currentSFTPConnectGen(panelID int) uint64 {
@@ -101,7 +101,7 @@ func (a *App) currentSFTPConnectGen(panelID int) uint64 {
 	if !ok {
 		return 0
 	}
-	return a.sftp.connectGen[idx].Load()
+	return a.panelInst(idx).connectGen.Load()
 }
 
 func (a *App) configureSFTP() error {

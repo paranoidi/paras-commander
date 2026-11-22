@@ -78,18 +78,19 @@ func (a *App) requestVolumeSpaceRefreshAsync(panelID int) {
 	if panelID < 0 || panelID > ui.SecondaryPanel {
 		return
 	}
-	if !a.volumeRefreshInFlight[panelID].CompareAndSwap(false, true) {
+	inst := a.panelInst(panelID) // captured: the goroutine below never touches the registry
+	if !inst.volumeRefreshInFlight.CompareAndSwap(false, true) {
 		return
 	}
 	go func(panelID int, path string) {
 		// Contention suppression stats the panel path; on a mount saturated by a copy
 		// that stat can block for seconds, so it runs here with the statfs, off the UI thread.
 		if a.pathVolumeContendsWithActiveJob(path) {
-			a.volumeRefreshInFlight[panelID].Store(false)
+			inst.volumeRefreshInFlight.Store(false)
 			return
 		}
 		avail, total, ok := fsvol.VolumeBytes(path)
-		a.volumeRefreshInFlight[panelID].Store(false)
+		inst.volumeRefreshInFlight.Store(false)
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(volumeSpaceRefreshPayload{
 			PanelID: panelID,
 			Path:    path,

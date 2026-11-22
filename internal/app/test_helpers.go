@@ -173,7 +173,7 @@ func newTestApp(t *testing.T, screen tcell.SimulationScreen, opts Options) *App 
 func settleStartupPanelListings(t *testing.T, app *App) {
 	t.Helper()
 	for i, p := range []*panel.State{&app.model.Primary, &app.model.Secondary} {
-		app.panelAsyncLoadGen[i].Add(1)
+		app.panelInst(i).panelAsyncLoadGen.Add(1)
 		// A start-path or chooser navigation scheduled during construction is still in flight;
 		// land that target rather than the pre-navigation path.
 		target := p.PathString()

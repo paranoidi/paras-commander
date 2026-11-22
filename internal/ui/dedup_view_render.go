@@ -103,11 +103,11 @@ func drawDedupBrowsePanel(screen tcell.Screen, layout Layout, model Model, style
 		return
 	}
 	focus := model.DedupView.FocusPanel
-	rowHover, rowHoverEntry := model.PanelRowHover.at(DedupBrowsePanel)
+	rowHover, rowHoverEntry := model.PanelRowHover.at(model.DedupPanelID)
 	drawPanel(screen, rect, model.DedupPanel,
 		PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
 		PanelContext{
-			PanelID: DedupBrowsePanel, FileListActive: focus, CursorRowActive: focus,
+			PanelID: model.DedupPanelID, FileListActive: focus, CursorRowActive: focus,
 			ChromeBlocked: chromeBlocked, ActivePanel: model.ActivePanel,
 			RowHover: rowHover, RowHoverEntry: rowHoverEntry,
 			SyncDriverPanelID: -1, QuickViewDriverPanelID: -1, SplitOrientation: model.SplitOrientation,

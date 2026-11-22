@@ -1118,7 +1118,7 @@ func TestMouseDedupBrowsePanelHoverAndClick(t *testing.T) {
 	}
 	x, y := rect.X+3, ui.PanelListTop(rect)+want
 	app.handleMouse(mouseEv(x, y, tcell.ButtonNone))
-	if got := app.model.PanelRowHover; !got.Active || got.Panel != ui.DedupBrowsePanel || got.Entry != want {
+	if got := app.model.PanelRowHover; !got.Active || got.Panel != app.model.DedupPanelID || got.Entry != want {
 		t.Fatalf("hover = %+v, want browse entry %d", got, want)
 	}
 	if app.model.DedupPanel.Cursor == want || app.model.DedupView.FocusPanel {

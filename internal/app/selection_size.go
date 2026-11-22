@@ -26,28 +26,28 @@ func (a *App) reconcileSelectionSizeScans(panelID int) {
 	}
 	p := a.panelByID(panelID)
 	if p.SelectedPathCount() == 0 {
-		a.selectionSizeScanFP[panelID] = ""
-		a.selectionSizeScanGen[panelID] = 0
-		a.selectionSizeScanPath[panelID] = ""
-		a.selectionSizeScanDebounce[panelID].Invalidate()
+		a.panelInst(panelID).selectionSizeScanFP = ""
+		a.panelInst(panelID).selectionSizeScanGen = 0
+		a.panelInst(panelID).selectionSizeScanPath = ""
+		a.panelInst(panelID).selectionSizeScanDebounce.Invalidate()
 		return
 	}
 	if !p.Path.HasSubtreeSizes() {
-		a.selectionSizeScanFP[panelID] = ""
-		a.selectionSizeScanGen[panelID] = 0
-		a.selectionSizeScanPath[panelID] = ""
-		a.selectionSizeScanDebounce[panelID].Invalidate()
+		a.panelInst(panelID).selectionSizeScanFP = ""
+		a.panelInst(panelID).selectionSizeScanGen = 0
+		a.panelInst(panelID).selectionSizeScanPath = ""
+		a.panelInst(panelID).selectionSizeScanDebounce.Invalidate()
 		return
 	}
 	// The listing epoch is part of the key: a refresh that drops a selected file turns it into an
 	// off-listing root, which needs the background Lstat pass (and vanished-path removal) too.
 	path := fmt.Sprintf("%s\x00%d", p.Path.String(), p.ListingEpoch)
 	gen := p.SelectionDerivedGen()
-	if a.selectionSizeScanGen[panelID] == gen && a.selectionSizeScanPath[panelID] == path {
+	if a.panelInst(panelID).selectionSizeScanGen == gen && a.panelInst(panelID).selectionSizeScanPath == path {
 		return
 	}
-	a.selectionSizeScanGen[panelID] = gen
-	a.selectionSizeScanPath[panelID] = path
+	a.panelInst(panelID).selectionSizeScanGen = gen
+	a.panelInst(panelID).selectionSizeScanPath = path
 
 	// PrunedSelectionRoots returns a live cache slice that later selection edits mutate in
 	// place, so it must be copied before crossing the goroutine boundary. EntriesByPath already
@@ -80,8 +80,8 @@ func (a *App) reconcileSelectionSizeScans(panelID int) {
 	}
 	hasDirs := p.SelectionHasDirs() && a.disk.engine != nil
 	if !hasDirs && len(offListing) == 0 {
-		a.selectionSizeScanFP[panelID] = ""
-		a.selectionSizeScanDebounce[panelID].Invalidate()
+		a.panelInst(panelID).selectionSizeScanFP = ""
+		a.panelInst(panelID).selectionSizeScanDebounce.Invalidate()
 		return
 	}
 	byPath := p.EntriesByPath()
@@ -92,7 +92,7 @@ func (a *App) reconcileSelectionSizeScans(panelID int) {
 	engine, descend, ignore := a.disk.engine, a.config.DiskUsage.DescendIntoMountPoints, a.disk.ignore
 	var meta map[string]localfs.Entry // written by compute, read by post: same goroutine
 	var vanished []string             // likewise
-	a.armSelectionSizeScanDebounce(&a.selectionSizeScanDebounce[panelID], func() []string {
+	a.armSelectionSizeScanDebounce(&a.panelInst(panelID).selectionSizeScanDebounce, func() []string {
 		if len(offListing) > 0 {
 			meta = make(map[string]localfs.Entry, len(offListing))
 			for _, r := range offListing {
@@ -154,13 +154,13 @@ func (a *App) applySelectionScanNeed(d selectionScanNeedPayload) bool {
 	need := a.filterJobContendedPaths(d.Need)
 	fp := strings.Join(need, "\n")
 	if fp == "" {
-		a.selectionSizeScanFP[d.PanelID] = ""
+		a.panelInst(d.PanelID).selectionSizeScanFP = ""
 		return changed
 	}
-	if fp == a.selectionSizeScanFP[d.PanelID] {
+	if fp == a.panelInst(d.PanelID).selectionSizeScanFP {
 		return changed
 	}
-	a.selectionSizeScanFP[d.PanelID] = fp
+	a.panelInst(d.PanelID).selectionSizeScanFP = fp
 	a.disk.engine.StartScanFromListing(
 		need,
 		a.disk.ignore,

@@ -5,18 +5,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-// metaIdleSortState groups meta-column idle re-sort bookkeeping, one slot per panel. Same
-// timer/epoch shape as disk usage's idle sort (diskIdleSortPanel) — both mechanisms share the
-// idleSortSpec machinery in idle_sort.go, gated on a resolved meta column instead of a fully
-// disk-cached listing.
-type metaIdleSortState struct {
-	idleSort [2]diskIdleSortPanel
-	// idleNavPath records the last panel path reconciled by handleMetaIdleSortPanelDirChanged,
-	// so a directory change invalidates any pending timer even when the new directory's meta
-	// column happens to already read as resolved.
-	idleNavPath [2]string
-}
-
 // metaIdleSortEligible reports whether panelID is currently sorted by an active meta column at
 // all (the coarse gate; metaCtrl.ColumnResolved decides whether it's actually ready to re-sort).
 func (a *App) metaIdleSortEligible(p *panel.State) bool {
@@ -29,9 +17,8 @@ func (a *App) metaIdleSortEligible(p *panel.State) bool {
 // by its current sort state.
 func (a *App) metaIdleSortSpec() idleSortSpec {
 	return idleSortSpec{
-		kind:        idleSortKindMeta,
-		slots:       &a.metaSort.idleSort,
-		idleNavPath: &a.metaSort.idleNavPath,
+		kind: idleSortKindMeta,
+		slot: func(i *panelInstance) *diskIdleSortPanel { return &i.metaIdle },
 		eligible: func(panelID int) bool {
 			return a.metaIdleSortEligible(a.panelByID(panelID))
 		},

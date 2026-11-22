@@ -54,7 +54,7 @@ func TestCarouselKeyboardNavPaintDeferredUntilParentSnapshotLands(t *testing.T) 
 	if id, ok := app.keys.Global.Lookup(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone)); !ok || id != keymap.ActionNavParent {
 		t.Fatalf("Left lookup = %q ok=%v, want %s", id, ok, keymap.ActionNavParent)
 	}
-	if !app.carouselPaintDefer[ui.PrimaryPanel].active {
+	if !app.panelInst(ui.PrimaryPanel).carouselPaintDefer.active {
 		t.Fatal("keyboard folder-change partial paint should defer while the carousel parent snapshot is stale")
 	}
 }

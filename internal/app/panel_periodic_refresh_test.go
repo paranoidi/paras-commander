@@ -27,7 +27,7 @@ func swapFetchListingForPanelRefresh(t *testing.T, fn func(context.Context, pane
 func pollUntilPanelRefreshIdle(t *testing.T, app *App, panelID int, timeout time.Duration) {
 	t.Helper()
 	deadline := time.Now().Add(timeout)
-	for app.panelRefreshInFlight[panelID].Load() {
+	for app.panelInst(panelID).panelRefreshInFlight.Load() {
 		if time.Now().After(deadline) {
 			t.Fatal("timeout waiting for panel refresh to go idle")
 		}
@@ -49,10 +49,10 @@ func TestSchedulePanelListingRefreshHonoursBackoffDeadline(t *testing.T) {
 		return panel.FetchListing(ctx, snap)
 	})
 
-	app.panelRefreshNotBefore[ui.PrimaryPanel].Store(time.Now().Add(time.Hour).UnixNano())
+	app.panelInst(ui.PrimaryPanel).panelRefreshNotBefore.Store(time.Now().Add(time.Hour).UnixNano())
 	app.schedulePanelListingRefresh(ui.PrimaryPanel)
 
-	if app.panelRefreshInFlight[ui.PrimaryPanel].Load() {
+	if app.panelInst(ui.PrimaryPanel).panelRefreshInFlight.Load() {
 		t.Fatal("refresh blocked by a future deadline must not flip in-flight")
 	}
 	select {
@@ -61,7 +61,7 @@ func TestSchedulePanelListingRefreshHonoursBackoffDeadline(t *testing.T) {
 	default:
 	}
 
-	app.panelRefreshNotBefore[ui.PrimaryPanel].Store(0)
+	app.panelInst(ui.PrimaryPanel).panelRefreshNotBefore.Store(0)
 	app.schedulePanelListingRefresh(ui.PrimaryPanel)
 
 	select {
@@ -69,7 +69,7 @@ func TestSchedulePanelListingRefreshHonoursBackoffDeadline(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("timeout waiting for fetch to start once the deadline has passed")
 	}
-	if !app.panelRefreshInFlight[ui.PrimaryPanel].Load() {
+	if !app.panelInst(ui.PrimaryPanel).panelRefreshInFlight.Load() {
 		t.Fatal("refresh past its deadline should be in-flight")
 	}
 	close(block)
@@ -101,7 +101,7 @@ func TestPanelListingRefreshRecordsStartToStartDeadline(t *testing.T) {
 	pollUntilPanelRefreshIdle(t, app, ui.PrimaryPanel, 2*time.Second)
 	after := time.Now()
 
-	d := time.Unix(0, app.panelRefreshNotBefore[ui.PrimaryPanel].Load())
+	d := time.Unix(0, app.panelInst(ui.PrimaryPanel).panelRefreshNotBefore.Load())
 
 	minElapsed := 20 * time.Millisecond
 	lowerBound := before.Add(time.Duration(config.DefaultPanelRefreshSlowBackoffFactor) * minElapsed)

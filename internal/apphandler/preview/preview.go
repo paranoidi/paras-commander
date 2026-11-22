@@ -647,6 +647,10 @@ func (h *Handler) quickViewWantFile() (path string, workDir string, mode quickVi
 
 // ClearQuickViewDirOverlay clears the inactive-column directory overlay state.
 func (h *Handler) ClearQuickViewDirOverlay() {
+	if h.model.QuickViewDirOverlayID != 0 {
+		h.host.ClosePanel(h.model.QuickViewDirOverlayID)
+		h.model.QuickViewDirOverlayID = 0
+	}
 	h.model.QuickViewDirOverlay = panel.State{}
 	h.model.QuickViewDirOverlayActive = false
 	h.model.QuickViewDirOverlayPanelID = -1
@@ -680,14 +684,18 @@ func (h *Handler) populateQuickViewDirOverlay(ov *panel.State, driver, follower 
 // initQuickViewDirOverlayFromFollower prepares QuickViewDirOverlay for a directory preview load.
 // The real inactive panel path, cursor, and selection are not modified. Async listing/git-status
 // requests the overlay dispatches are scheduled and applied through the same per-panel-ID
-// machinery as the two real panels, via the synthetic ui.QuickViewOverlayPanel ID — followerID
+// machinery as the two real panels, via a registry ID opened with the overlay and kept until it
+// is cleared (Model.QuickViewDirOverlayID) — followerID
 // (the real inactive panel this overlay stands in for) is only used for viewport-row sizing,
 // which must keep following the real follower panel's layout slot, not the overlay's.
 func (h *Handler) initQuickViewDirOverlayFromFollower(ov *panel.State, driver, follower *panel.State, followerID int) {
 	prev := *ov
 	*ov = panel.NewSideListing(driver, follower)
-	ov.ScheduleAsyncLoad = h.host.AsyncLoadScheduler(ui.QuickViewOverlayPanel)
-	ov.ScheduleGitStatus = h.host.GitStatusScheduler(ui.QuickViewOverlayPanel)
+	if h.model.QuickViewDirOverlayID == 0 {
+		h.model.QuickViewDirOverlayID = h.host.OpenPanel(ov)
+	}
+	ov.ScheduleAsyncLoad = h.host.AsyncLoadScheduler(h.model.QuickViewDirOverlayID)
+	ov.ScheduleGitStatus = h.host.GitStatusScheduler(h.model.QuickViewDirOverlayID)
 	ov.FileListViewportRows = func() int { return h.host.PanelViewportRows(followerID) }
 	// Stale-while-revalidate: keep the previous overlay's rows painted until the new directory's
 	// async listing lands (or the slow indicator fires and clears them), instead of flashing an

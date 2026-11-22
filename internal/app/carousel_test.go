@@ -298,14 +298,14 @@ func TestCarouselNavPaintDeferredUntilParentSnapshotLands(t *testing.T) {
 	}
 
 	app.renderAfterAsyncApply(ui.PrimaryPanel)
-	if !app.carouselPaintDefer[ui.PrimaryPanel].active {
+	if !app.panelInst(ui.PrimaryPanel).carouselPaintDefer.active {
 		t.Fatal("repaint should be deferred while the carousel parent snapshot is stale")
 	}
 
 	// The parent snapshot landing releases the held paint.
 	app.scheduleCarouselParentSnapshot(ui.PrimaryPanel, 20)
 	drainInterruptEventsUntil(t, app, screen, 3*time.Second, func() bool {
-		return !app.carouselPaintDefer[ui.PrimaryPanel].active
+		return !app.panelInst(ui.PrimaryPanel).carouselPaintDefer.active
 	})
 	if !left.CarouselParentCacheValid() {
 		t.Fatal("parent cache should be valid for the current directory once the snapshot landed")
@@ -338,7 +338,7 @@ func TestCarouselDeferredPaintNotReleasedByChildSnapshot(t *testing.T) {
 	left.CarouselSideCache.ParentOK = true
 	left.CarouselSideCache.ParentSourceDir = root
 	app.renderAfterAsyncApply(ui.PrimaryPanel)
-	if !app.carouselPaintDefer[ui.PrimaryPanel].active {
+	if !app.panelInst(ui.PrimaryPanel).carouselPaintDefer.active {
 		t.Fatal("repaint should be deferred while the carousel parent snapshot is stale")
 	}
 
@@ -347,16 +347,16 @@ func TestCarouselDeferredPaintNotReleasedByChildSnapshot(t *testing.T) {
 	drainInterruptEventsUntil(t, app, screen, 3*time.Second, func() bool {
 		return left.CarouselSideCache.ChildOK
 	})
-	if !app.carouselPaintDefer[ui.PrimaryPanel].active {
+	if !app.panelInst(ui.PrimaryPanel).carouselPaintDefer.active {
 		t.Fatal("child snapshot must not release a paint deferred on the parent column's geometry")
 	}
 
 	// The parent landing is what releases it.
 	app.scheduleCarouselParentSnapshot(ui.PrimaryPanel, 20)
 	drainInterruptEventsUntil(t, app, screen, 3*time.Second, func() bool {
-		return !app.carouselPaintDefer[ui.PrimaryPanel].active
+		return !app.panelInst(ui.PrimaryPanel).carouselPaintDefer.active
 	})
-	if app.carouselPaintDefer[ui.PrimaryPanel].active {
+	if app.panelInst(ui.PrimaryPanel).carouselPaintDefer.active {
 		t.Fatal("parent snapshot landing should release the deferred paint")
 	}
 }

@@ -16,18 +16,6 @@ func (a *App) dedupBrowseWanted() bool {
 	return a.model.DedupSnapshot.Phase == comparepkg.DedupDone
 }
 
-// syntheticPanelActive reports whether an async result for a synthetic panel ID may still land.
-// Real panels are always live.
-func (a *App) syntheticPanelActive(panelID int) bool {
-	switch panelID {
-	case ui.QuickViewOverlayPanel:
-		return a.model.QuickViewDirOverlayActive
-	case ui.DedupBrowsePanel:
-		return a.dedupBrowseOn
-	}
-	return true
-}
-
 func (a *App) dedupBrowseRows(layout ui.Layout) int {
 	_, browse := ui.DedupSecondaryRects(layout.Secondary)
 	return ui.PanelListRows(browse)
@@ -36,10 +24,12 @@ func (a *App) dedupBrowseRows(layout ui.Layout) int {
 func (a *App) initDedupPanel() {
 	act := a.activePanel()
 	st := panel.NewSideListing(act, act)
-	st.ScheduleAsyncLoad = a.asyncLoadScheduler(ui.DedupBrowsePanel)
-	st.ScheduleGitStatus = a.gitStatusScheduler(ui.DedupBrowsePanel)
-	st.FileListViewportRows = func() int { return a.panelViewportRows(ui.DedupBrowsePanel) }
+	id := a.openPanel(&a.model.DedupPanel)
+	st.ScheduleAsyncLoad = a.asyncLoadScheduler(id)
+	st.ScheduleGitStatus = a.gitStatusScheduler(id)
+	st.FileListViewportRows = func() int { return a.panelViewportRows(id) }
 	a.model.DedupPanel = st
+	a.model.DedupPanelID = id
 }
 
 // reconcileDedupPanel keeps the browse panel on the row of the pane whose cursor last moved: the
@@ -52,12 +42,12 @@ func (a *App) reconcileDedupPanel() {
 			a.dedupBrowseOn = false
 			a.dedupBrowseFP = [2]string{}
 			a.model.DedupPanel = panel.State{}
+			a.closePanel(a.model.DedupPanelID)
+			a.model.DedupPanelID = 0
 			if a.model.DedupView.FocusPanel {
 				a.model.DedupView.FocusPanel = false
 				a.model.DedupView.FocusCopies = false // panel gone: fall back to the main tree
 			}
-			a.panelAsyncLoadGen[ui.DedupBrowsePanel].Add(1)
-			a.gitStatusLoadGen[ui.DedupBrowsePanel].Add(1)
 		}
 		return
 	}
@@ -103,7 +93,7 @@ func (a *App) reconcileDedupPanel() {
 	if a.model.DedupPanel.ScheduleAsyncLoad == nil {
 		a.initDedupPanel()
 	}
-	if err := a.model.DedupPanel.LoadWithViewport(dir, name, a.panelViewportRows(ui.DedupBrowsePanel), 0); err != nil {
+	if err := a.model.DedupPanel.LoadWithViewport(dir, name, a.panelViewportRows(a.model.DedupPanelID), 0); err != nil {
 		a.setErrorMessage("Browse", err)
 	}
 }
@@ -112,7 +102,7 @@ func (a *App) reconcileDedupPanel() {
 // enter/parent, F3 view and F4 edit. Everything else is swallowed.
 func (a *App) handleDedupPanelKey(action string, event *tcell.EventKey) bool {
 	p := &a.model.DedupPanel
-	rows := a.panelViewportRows(ui.DedupBrowsePanel)
+	rows := a.panelViewportRows(a.model.DedupPanelID)
 	if action == "" {
 		action = auxPanelRawKeyAction(event)
 	}

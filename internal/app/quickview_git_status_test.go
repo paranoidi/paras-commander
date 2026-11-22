@@ -14,7 +14,7 @@ import (
 
 // TestQuickViewDirOverlayLoadsGitStatus checks that a Quick View directory overlay
 // on a path neither panel currently lists schedules its own git-status fetch through
-// ui.QuickViewOverlayPanel and paints the overlay's GitByPath, not a real panel's.
+// its own registered panel ID and paints the overlay's GitByPath, not a real panel's.
 func TestQuickViewDirOverlayLoadsGitStatus(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not in PATH")
@@ -49,7 +49,7 @@ func TestQuickViewDirOverlayLoadsGitStatus(t *testing.T) {
 	if !app.model.QuickViewDirOverlayActive {
 		t.Fatal("quick view dir overlay should be active")
 	}
-	// Overlay listing and git status are both async under ui.QuickViewOverlayPanel; the
+	// Overlay listing and git status are both async under the overlay's registered panel ID; the
 	// primary panel's own cwd (also a Git work tree) schedules its own fetch alongside.
 	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
 		ov := app.model.QuickViewDirOverlay

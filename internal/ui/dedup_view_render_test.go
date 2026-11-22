@@ -1591,7 +1591,7 @@ func TestDrawDedupBrowsePanel(t *testing.T) {
 		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 20},
 		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 20},
 	}
-	model := Model{DedupSnapshot: comparepkg.DedupSnapshot{Phase: comparepkg.DedupDone}}
+	model := Model{DedupSnapshot: comparepkg.DedupSnapshot{Phase: comparepkg.DedupDone}, DedupPanelID: 2}
 	model.DedupPanel.Path = pathloc.MustParse("/quartz")
 	model.DedupPanel.Entries = []localfs.Entry{{Name: "harbor.txt", Path: "/quartz/harbor.txt"}}
 	_, browse := DedupSecondaryRects(layout.Secondary)

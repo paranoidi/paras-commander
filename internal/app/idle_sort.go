@@ -12,18 +12,16 @@ import (
 
 // idleSortSpec parameterizes the shared "wait for idle input, then re-sort" machinery behind
 // both disk-usage and meta-column idle sort (see disk_usage.go's diskIdleSortSpec and
-// meta_idle_sort.go's metaIdleSortSpec): which per-panel timer/epoch slots and last-reconciled
-// nav-path bookkeeping to use, which idleSortPayload Kind to post, and the mechanism-specific
+// meta_idle_sort.go's metaIdleSortSpec): which per-panel timer/epoch/nav-path slot (panelInstance field) to use, which idleSortPayload Kind to post, and the mechanism-specific
 // predicates. eligible is the coarse "is this turned on for the panel at all" gate (view mode,
 // sort mode/toggle); resolved is "is the data behind it ready to sort by right now"; apply
 // performs the actual sort.
 type idleSortSpec struct {
-	kind        idleSortKind
-	slots       *[2]diskIdleSortPanel
-	idleNavPath *[2]string
-	eligible    func(panelID int) bool
-	resolved    func(panelID int) bool
-	apply       func(panelID int)
+	kind     idleSortKind
+	slot     func(*panelInstance) *diskIdleSortPanel
+	eligible func(panelID int) bool
+	resolved func(panelID int) bool
+	apply    func(panelID int)
 }
 
 func (a *App) idleSortReady(s idleSortSpec, panelID int) bool {
@@ -44,7 +42,7 @@ func (a *App) idleSortArm(s idleSortSpec, panelID int) {
 	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
 		return
 	}
-	ps := &s.slots[panelID]
+	ps := s.slot(a.panelInst(panelID))
 	if ps.timer != nil {
 		ps.timer.Stop()
 		ps.timer = nil
@@ -75,7 +73,7 @@ func (a *App) idleSortApplyPayload(s idleSortSpec, panelID int, epoch uint64) {
 	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
 		return
 	}
-	ps := &s.slots[panelID]
+	ps := s.slot(a.panelInst(panelID))
 	if ps.epoch != epoch {
 		return
 	}
@@ -89,7 +87,7 @@ func (a *App) idleSortInvalidate(s idleSortSpec, panelID int) {
 	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
 		return
 	}
-	ps := &s.slots[panelID]
+	ps := s.slot(a.panelInst(panelID))
 	if ps.timer != nil {
 		ps.timer.Stop()
 		ps.timer = nil
@@ -120,9 +118,9 @@ func (a *App) idleSortDirChanged(s idleSortSpec, panelID int) bool {
 	}
 	p := a.panelByID(panelID)
 	cur := filepath.Clean(p.PathString())
-	if s.idleNavPath[panelID] != cur {
+	if ps := s.slot(a.panelInst(panelID)); ps.navPath != cur {
 		a.idleSortInvalidate(s, panelID)
-		s.idleNavPath[panelID] = cur
+		ps.navPath = cur
 		return true
 	}
 	return false

@@ -2051,16 +2051,16 @@ func TestReloadIndexPanelsSupersedesListingInFlight(t *testing.T) {
 	p.WithIndex = true
 
 	p.ListingPending, p.ListingPendingPath = true, p.Path.String()
-	before := app.panelAsyncLoadGen[ui.PrimaryPanel].Load()
+	before := app.panelInst(ui.PrimaryPanel).panelAsyncLoadGen.Load()
 	app.refreshIndexViews()
-	if app.panelAsyncLoadGen[ui.PrimaryPanel].Load() == before {
+	if app.panelInst(ui.PrimaryPanel).panelAsyncLoadGen.Load() == before {
 		t.Fatal("the refresh was dropped because a listing of the same directory was in flight")
 	}
 
 	p.ListingPending, p.ListingPendingPath = true, filepath.Join(dir, "elsewhere")
-	before = app.panelAsyncLoadGen[ui.PrimaryPanel].Load()
+	before = app.panelInst(ui.PrimaryPanel).panelAsyncLoadGen.Load()
 	app.refreshIndexViews()
-	if app.panelAsyncLoadGen[ui.PrimaryPanel].Load() != before {
+	if app.panelInst(ui.PrimaryPanel).panelAsyncLoadGen.Load() != before {
 		t.Fatal("the refresh replaced a navigation in flight")
 	}
 }
@@ -2107,9 +2107,10 @@ func TestFileIndexDriftPendingEndsWithThePass(t *testing.T) {
 			p.Entries[i].IndexStatus = localfs.IndexStatusIndexed
 		}
 	}
-	a.indexDrift.mu.Lock()
-	a.indexDrift.cancel[a.model.ActivePanel]()
-	a.indexDrift.mu.Unlock()
+	drift := &a.panelInst(a.model.ActivePanel).drift
+	drift.mu.Lock()
+	drift.cancel()
+	drift.mu.Unlock()
 	p.RequestIndexDrift(name)
 	if !pending() {
 		t.Fatal("not pending while the cancelled pass winds down")

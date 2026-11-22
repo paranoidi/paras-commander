@@ -43,7 +43,7 @@ type explicitDriftNames struct {
 func (a *App) explicitDriftFor(panelID int) *explicitDriftNames {
 	p := a.panelByID(panelID)
 	key := fmt.Sprintf("%s\x00%d", p.Path.String(), p.ListingEpoch)
-	ex := &a.explicitDrift[panelID]
+	ex := &a.panelInst(panelID).explicitDrift
 	if ex.key != key || ex.asked == nil {
 		*ex = explicitDriftNames{key: key, asked: map[string]bool{}, done: map[string]bool{}}
 	}
@@ -59,14 +59,14 @@ type indexChangedPayload struct{ dirs []string }
 // wait in asyncWakeQueues.indexScan.
 type indexScanWakePayload struct{}
 
-// indexDriftState is the per-panel cancel and directory of the drift passes: walks for
-// different subdirectories of one panel directory run side by side under one context, and a
-// request for another directory cancels them.
+// indexDriftState is a panel's cancel and directory of the drift passes: walks for different
+// subdirectories of one panel directory run side by side under one context, and a request for
+// another directory cancels them.
 type indexDriftState struct {
 	mu     sync.Mutex
-	cancel [ui.PanelIDCount]context.CancelFunc
-	ctx    [ui.PanelIDCount]context.Context
-	dir    [ui.PanelIDCount]pathloc.Path
+	cancel context.CancelFunc
+	ctx    context.Context
+	dir    pathloc.Path
 }
 
 // wireIndexOverlay installs the overlay and drift hooks on both panels.
@@ -197,17 +197,18 @@ func (a *App) refreshIndexViewsIn(dirs []string) {
 // for the panel's current directory share one context; a request for another directory cancels
 // the old one.
 func (a *App) indexDriftScheduler(panelID int) panel.IndexDriftScheduler {
+	inst := a.panelInst(panelID) // captured: the goroutine below never touches the registry
 	return func(req panel.IndexDriftRequest) bool {
-		st := &a.indexDrift
+		st := &inst.drift
 		st.mu.Lock()
-		if st.cancel[panelID] == nil || !st.dir[panelID].Equal(req.Dir) {
-			if st.cancel[panelID] != nil {
-				st.cancel[panelID]()
+		if st.cancel == nil || !st.dir.Equal(req.Dir) {
+			if st.cancel != nil {
+				st.cancel()
 			}
-			st.ctx[panelID], st.cancel[panelID] = context.WithCancel(context.Background())
-			st.dir[panelID] = req.Dir
+			st.ctx, st.cancel = context.WithCancel(context.Background())
+			st.dir = req.Dir
 		}
-		ctx := st.ctx[panelID]
+		ctx := st.ctx
 		st.mu.Unlock()
 		go func() {
 			post := func(p indexDriftPayload) {
@@ -237,10 +238,13 @@ func (a *App) applyIndexDrift(p indexDriftPayload) bool {
 		items = []indexDriftPayload{p}
 	}
 	changed := false
-	var results [ui.PanelIDCount]map[string]string
-	var finished [ui.PanelIDCount]map[string]uint64
+	results := map[int]map[string]string{}
+	finished := map[int]map[string]uint64{}
 	for _, it := range items {
 		pan := a.panelByID(it.panelID)
+		if pan == nil {
+			continue
+		}
 		if it.done && pan.FinishIndexDrift(it.seq) {
 			changed = true
 		}
@@ -271,11 +275,9 @@ func (a *App) applyIndexDrift(p indexDriftPayload) bool {
 		changed = true
 	}
 	for id, res := range results {
-		if res != nil {
-			pan := a.panelByID(id)
-			pan.ApplyIndexDrift(res)
-			pan.FinishIndexDriftDirs(finished[id])
-		}
+		pan := a.panelByID(id)
+		pan.ApplyIndexDrift(res)
+		pan.FinishIndexDriftDirs(finished[id])
 	}
 	return changed
 }

@@ -100,7 +100,7 @@ func TestDiskUsageIdleArmingSurvivesPanelSwitchViaReconciler(t *testing.T) {
 	right.DiskUsageIdleSortActivated = true
 	right.IdleDiskTotalsSort = false
 
-	if app.disk.idleSort[ui.SecondaryPanel].timer != nil {
+	if app.panelInst(ui.SecondaryPanel).diskIdle.timer != nil {
 		t.Fatal("right idle timer should be nil before reconcile")
 	}
 
@@ -110,7 +110,7 @@ func TestDiskUsageIdleArmingSurvivesPanelSwitchViaReconciler(t *testing.T) {
 	}
 	app.reconcileAfterEvent()
 
-	if app.disk.idleSort[ui.SecondaryPanel].timer != nil {
+	if app.panelInst(ui.SecondaryPanel).diskIdle.timer != nil {
 		t.Fatal("uncached listing must not arm idle-sort timer from reconcile alone")
 	}
 	if right.IdleDiskTotalsSort {
@@ -141,7 +141,7 @@ func TestApplyIdleDiskSortRequiresFullListingCache(t *testing.T) {
 		return 0, false
 	}
 
-	app.applyIdleDiskSort(ui.PrimaryPanel, app.disk.idleSort[ui.PrimaryPanel].epoch)
+	app.applyIdleDiskSort(ui.PrimaryPanel, app.panelInst(ui.PrimaryPanel).diskIdle.epoch)
 
 	if left.IdleDiskTotalsSort {
 		t.Fatal("IdleDiskTotalsSort should stay false when listing is not fully disk-cached")
@@ -168,9 +168,9 @@ func TestHandlePanelDirChangedRightDoesNotInvalidateLeftIdleTimer(t *testing.T) 
 	app.setDiskUsageShown(true)
 	app.setDiskUsageScanScope(leftRoot, []string{filepath.Clean(alpha)})
 
-	app.disk.idleNavPath[ui.PrimaryPanel] = leftRoot
+	app.panelInst(ui.PrimaryPanel).diskIdle.navPath = leftRoot
 	app.armIdleDiskSortTimer(ui.PrimaryPanel)
-	if app.disk.idleSort[ui.PrimaryPanel].timer == nil {
+	if app.panelInst(ui.PrimaryPanel).diskIdle.timer == nil {
 		t.Fatal("expected idle timer armed")
 	}
 
@@ -185,7 +185,7 @@ func TestHandlePanelDirChangedRightDoesNotInvalidateLeftIdleTimer(t *testing.T) 
 
 	app.handlePanelDirChanged(ui.SecondaryPanel)
 
-	if app.disk.idleSort[ui.PrimaryPanel].timer == nil {
+	if app.panelInst(ui.PrimaryPanel).diskIdle.timer == nil {
 		t.Fatal("only the navigated panel should reset idle-sort debounce")
 	}
 	app.invalidateIdleDiskSortPanel(ui.PrimaryPanel)
@@ -212,7 +212,7 @@ func TestHandlePanelDirChangedLeftClearsIdleTimerOnChdir(t *testing.T) {
 	app.setDiskUsageShown(true)
 	app.setDiskUsageScanScope(leftRoot, []string{filepath.Clean(alpha)})
 
-	app.disk.idleNavPath[ui.PrimaryPanel] = leftRoot
+	app.panelInst(ui.PrimaryPanel).diskIdle.navPath = leftRoot
 	app.armIdleDiskSortTimer(ui.PrimaryPanel)
 
 	vr := app.panelViewportRows(ui.PrimaryPanel)
@@ -222,7 +222,7 @@ func TestHandlePanelDirChangedLeftClearsIdleTimerOnChdir(t *testing.T) {
 	applyNextInterruptEvent(t, app, screen) // async load lands before handlePanelDirChanged checks Path
 	app.handlePanelDirChanged(ui.PrimaryPanel)
 
-	if app.disk.idleSort[ui.PrimaryPanel].timer != nil {
+	if app.panelInst(ui.PrimaryPanel).diskIdle.timer != nil {
 		t.Fatal("idle timer should clear when panel cwd changes")
 	}
 }
@@ -256,7 +256,7 @@ func TestDiskIdleSortActivatesAfterScanWhenListingCached(t *testing.T) {
 		t.Fatalf("listing not fully cached after scan busy=%v", app.diskUsageScanBusy())
 	}
 
-	ep := app.disk.idleSort[ui.PrimaryPanel].epoch
+	ep := app.panelInst(ui.PrimaryPanel).diskIdle.epoch
 	app.applyIdleDiskSort(ui.PrimaryPanel, ep)
 
 	if !left.IdleDiskTotalsSort {
@@ -324,7 +324,7 @@ func TestPollDiskUsageUpdatesRechecksIdleSortOnceRegardlessOfEventBacklog(t *tes
 	if left.IdleDiskTotalsSort {
 		t.Fatal("IdleDiskTotalsSort must wait for the idle timer, not latch when the scan finishes")
 	}
-	if app.disk.idleSort[ui.PrimaryPanel].timer == nil {
+	if app.panelInst(ui.PrimaryPanel).diskIdle.timer == nil {
 		t.Fatal("expected idle timer armed once the listing was fully cached")
 	}
 	app.invalidateIdleDiskSortPanel(ui.PrimaryPanel)
@@ -407,14 +407,14 @@ func TestInvertSelectionDoesNotActivateIdleDiskSort(t *testing.T) {
 	}
 
 	// Drain any armed idle-sort timer as if the delay elapsed.
-	ep := app.disk.idleSort[ui.PrimaryPanel].epoch
+	ep := app.panelInst(ui.PrimaryPanel).diskIdle.epoch
 	app.applyIdleDiskSort(ui.PrimaryPanel, ep)
 	app.handlePanelDirChanged(ui.PrimaryPanel)
 	app.deferDiskIdleSortOnUserActivity()
-	if timer := app.disk.idleSort[ui.PrimaryPanel].timer; timer != nil {
+	if timer := app.panelInst(ui.PrimaryPanel).diskIdle.timer; timer != nil {
 		timer.Stop()
-		app.disk.idleSort[ui.PrimaryPanel].timer = nil
-		app.applyIdleDiskSort(ui.PrimaryPanel, app.disk.idleSort[ui.PrimaryPanel].epoch)
+		app.panelInst(ui.PrimaryPanel).diskIdle.timer = nil
+		app.applyIdleDiskSort(ui.PrimaryPanel, app.panelInst(ui.PrimaryPanel).diskIdle.epoch)
 	}
 
 	if left.IdleDiskTotalsSort {
@@ -483,7 +483,7 @@ func TestNavigateOutsideDiskUsageScanScopeClearsIdleSort(t *testing.T) {
 		time.Sleep(2 * time.Millisecond)
 	}
 	app.handlePanelDirChanged(ui.PrimaryPanel)
-	app.applyIdleDiskSort(ui.PrimaryPanel, app.disk.idleSort[ui.PrimaryPanel].epoch)
+	app.applyIdleDiskSort(ui.PrimaryPanel, app.panelInst(ui.PrimaryPanel).diskIdle.epoch)
 	if !left.IdleDiskTotalsSort {
 		t.Fatal("IdleDiskTotalsSort should apply inside scan scope when fully cached")
 	}
@@ -546,7 +546,7 @@ func TestApplyIdleDiskSortIgnoresStaleEpoch(t *testing.T) {
 	left.IdleDiskTotalsSort = false
 	left.DiskSorter = func(abs string) (int64, bool) { return 1, true }
 
-	stale := app.disk.idleSort[ui.PrimaryPanel].epoch
+	stale := app.panelInst(ui.PrimaryPanel).diskIdle.epoch
 	app.invalidateIdleDiskSortPanel(ui.PrimaryPanel)
 	app.applyIdleDiskSort(ui.PrimaryPanel, stale)
 

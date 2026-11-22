@@ -30,7 +30,7 @@ func waitForSelectionSizeScanFP(t *testing.T, app *App, panelID int) {
 				app.handleInterruptPayload(ev.Data())
 			}
 		}
-		if app.selectionSizeScanFP[panelID] != "" {
+		if app.panelInst(panelID).selectionSizeScanFP != "" {
 			return
 		}
 		time.Sleep(2 * time.Millisecond)
@@ -64,13 +64,13 @@ func TestReconcileSelectionSizeScansIdempotentFingerprint(t *testing.T) {
 
 	app.reconcileSelectionSizeScans(ui.PrimaryPanel)
 	waitForSelectionSizeScanFP(t, app, ui.PrimaryPanel)
-	if app.selectionSizeScanFP[ui.PrimaryPanel] == "" {
+	if app.panelInst(ui.PrimaryPanel).selectionSizeScanFP == "" {
 		t.Fatal("fingerprint empty after first reconcile with pending directory")
 	}
-	firstFP := app.selectionSizeScanFP[ui.PrimaryPanel]
+	firstFP := app.panelInst(ui.PrimaryPanel).selectionSizeScanFP
 	app.reconcileSelectionSizeScans(ui.PrimaryPanel)
 	waitForSelectionSizeScanFP(t, app, ui.PrimaryPanel)
-	if app.selectionSizeScanFP[ui.PrimaryPanel] != firstFP {
+	if app.panelInst(ui.PrimaryPanel).selectionSizeScanFP != firstFP {
 		t.Fatal("fingerprint changed without selection change")
 	}
 }

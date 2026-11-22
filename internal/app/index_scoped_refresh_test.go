@@ -41,11 +41,11 @@ func scopedPanels(t *testing.T) (*App, string, string) {
 }
 
 func reloads(a *App, f func()) []int {
-	before := []uint64{a.panelAsyncLoadGen[ui.PrimaryPanel].Load(), a.panelAsyncLoadGen[ui.SecondaryPanel].Load()}
+	before := []uint64{a.panelInst(ui.PrimaryPanel).panelAsyncLoadGen.Load(), a.panelInst(ui.SecondaryPanel).panelAsyncLoadGen.Load()}
 	f()
 	var out []int
 	for _, id := range []int{ui.PrimaryPanel, ui.SecondaryPanel} {
-		if a.panelAsyncLoadGen[id].Load() != before[id] {
+		if a.panelInst(id).panelAsyncLoadGen.Load() != before[id] {
 			out = append(out, id)
 		}
 	}
@@ -77,7 +77,7 @@ func TestIndexChangeReloadsOnlyAffectedPanels(t *testing.T) {
 func inFlight(a *App) []int {
 	var out []int
 	for _, id := range []int{ui.PrimaryPanel, ui.SecondaryPanel} {
-		if a.panelRefreshInFlight[id].Load() {
+		if a.panelInst(id).panelRefreshInFlight.Load() {
 			out = append(out, id)
 		}
 	}

@@ -86,7 +86,7 @@ func TestSchedulePanelListingRefreshSkipsJobContendedVolume(t *testing.T) {
 
 	app.schedulePanelListingRefresh(ui.PrimaryPanel)
 
-	if app.panelRefreshInFlight[ui.PrimaryPanel].Load() {
+	if app.panelInst(ui.PrimaryPanel).panelRefreshInFlight.Load() {
 		t.Fatal("contended panel refresh must not flip the in-flight flag")
 	}
 }

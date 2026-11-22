@@ -65,6 +65,10 @@ func (h previewHost) PathVolumeContendsWithActiveJob(path string) bool {
 	return h.app.pathVolumeContendsWithActiveJob(path)
 }
 
+func (h previewHost) OpenPanel(state *panel.State) int { return h.app.openPanel(state) }
+
+func (h previewHost) ClosePanel(panelID int) { h.app.closePanel(panelID) }
+
 func (h previewHost) GitStatusScheduler(panelID int) panel.GitStatusScheduler {
 	return h.app.gitStatusScheduler(panelID)
 }

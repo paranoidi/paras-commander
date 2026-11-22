@@ -46,18 +46,17 @@ func (q *coalescingQueue[T]) drain() []T {
 	return items
 }
 
-// asyncWakeQueues is per-App storage for the listing/git/carousel coalescing queues.
+// asyncWakeQueues is per-App storage for the app-wide coalescing queues; the per-panel listing
+// and carousel queues live on panelInstance.
 type asyncWakeQueues struct {
-	panel [ui.PanelIDCount]coalescingQueue[panelAsyncLoadPayload]
-	git   coalescingQueue[gitStatusPayload]
+	git coalescingQueue[gitStatusPayload]
 	// indexDrift holds fileindex directory-drift results (index_overlay.go).
 	indexDrift coalescingQueue[indexDriftPayload]
 	// dirWatch holds the directories the inotify watcher reported (panel_dir_watch.go).
 	dirWatch  coalescingQueue[string]
 	indexScan coalescingQueue[string]
 	// metaFS holds the filesystem change batches on their way to the meta columns (meta_fs_sink.go).
-	metaFS   coalescingQueue[[]fschange.Change]
-	carousel [ui.PanelIDCount]coalescingQueue[carouselSnapshotPayload]
+	metaFS coalescingQueue[[]fschange.Change]
 }
 
 func asyncWakes(a *App) *asyncWakeQueues {
@@ -253,14 +252,18 @@ func (a *App) wireAsyncPanelLoaders() {
 }
 
 // asyncLoadScheduler runs a directory listing off the UI thread for panelID (one of
-// ui.PrimaryPanel, ui.SecondaryPanel, or ui.QuickViewOverlayPanel — see
-// internal/apphandler/preview.Handler.initQuickViewDirOverlayFromFollower for the overlay's own
-// wiring). A local path can stall just as badly as a remote one (network mount, autofs trigger) —
+// ui.PrimaryPanel, ui.SecondaryPanel, or a registered overlay panel — see
+// internal/apphandler/preview.Handler.initQuickViewDirOverlayFromFollower for the quick-view
+// overlay's own wiring). A local path can stall just as badly as a remote one (network mount, autofs trigger) —
 // see raceAsyncListingFetch for how the give-up timeout works. This is independent of
 // panelAsyncLoadGen, which separately drops a result superseded by a newer navigation.
 func (a *App) asyncLoadScheduler(panelID int) panel.AsyncLoadScheduler {
 	return func(req panel.AsyncLoadRequest) bool {
-		gen := a.panelAsyncLoadGen[panelID].Add(1)
+		inst := a.panelInst(panelID) // captured: onResult below runs off the main goroutine
+		if inst == nil {
+			return false
+		}
+		gen := inst.panelAsyncLoadGen.Add(1)
 		timeout := time.Duration(a.config.SFTP.ListTimeoutSecs) * time.Second
 		pan := a.panelByID(panelID)
 		snap := pan.ListingRefreshSnapshot(req.Loc, timeout)
@@ -277,7 +280,7 @@ func (a *App) asyncLoadScheduler(panelID int) panel.AsyncLoadScheduler {
 				req:     req,
 				res:     res,
 			}
-			if asyncWakes(a).panel[panelID].push(p) {
+			if inst.asyncQ.push(p) {
 				postGuaranteedWake(a.screen, panelAsyncLoadPayload{panelID: panelID})
 			}
 		})
@@ -286,16 +289,17 @@ func (a *App) asyncLoadScheduler(panelID int) panel.AsyncLoadScheduler {
 }
 
 // applyPanelAsyncLoad applies an async directory-listing result to the panel it targets — one of
-// the two real panels or the QuickViewDirOverlay (panelID == ui.QuickViewOverlayPanel). The
-// overlay gets two deliberate deviations from real-panel handling, both preserved from before the
-// panelByID generalization: failures are dropped silently rather than surfaced via
-// setErrorMessage (a background preview load failing shouldn't spam an error toast for something
-// the user didn't directly request), and a result is dropped once the overlay has been
-// deactivated (closed) even if its generation still matches, since the overlay — unlike the two
-// real panels — can go from "the thing this load was for" to "not currently shown" without any
-// new load being scheduled to bump the generation counter.
+// the two real panels or an overlay panel (QuickViewDirOverlay, the dedup browse panel). Overlays
+// get two deliberate deviations from real-panel handling: failures are dropped silently rather
+// than surfaced via setErrorMessage (a background preview load failing shouldn't spam an error
+// toast for something the user didn't directly request), and a result is dropped once the overlay
+// has been closed (its ID no longer resolves; closePanel also bumps the generations).
 func (a *App) applyPanelAsyncLoad(p panelAsyncLoadPayload) bool {
-	items := asyncWakes(a).panel[p.panelID].drain()
+	inst := a.panelInst(p.panelID)
+	if inst == nil {
+		return false // panel closed: its queue went with it
+	}
+	items := inst.asyncQ.drain()
 	if len(items) == 0 {
 		return a.applyOnePanelAsyncLoad(p)
 	}
@@ -309,19 +313,18 @@ func (a *App) applyPanelAsyncLoad(p panelAsyncLoadPayload) bool {
 }
 
 func (a *App) applyOnePanelAsyncLoad(p panelAsyncLoadPayload) bool {
-	if a.panelAsyncLoadGen[p.panelID].Load() != p.gen {
+	inst := a.panelInst(p.panelID)
+	if inst == nil {
+		return false
+	}
+	pan := inst.state
+	if inst.panelAsyncLoadGen.Load() != p.gen {
 		if p.req.HistoryVisit != 0 {
-			if pan := a.panelByID(p.panelID); pan != nil {
-				pan.RevertHistoryVisit(p.req.HistoryPath, p.req.HistoryVisit)
-			}
+			pan.RevertHistoryVisit(p.req.HistoryPath, p.req.HistoryVisit)
 		}
 		return false
 	}
-	isOverlay := p.panelID == ui.QuickViewOverlayPanel || p.panelID == ui.DedupBrowsePanel
-	if !a.syntheticPanelActive(p.panelID) {
-		return false
-	}
-	pan := a.panelByID(p.panelID)
+	isOverlay := p.panelID != ui.PrimaryPanel && p.panelID != ui.SecondaryPanel
 	pan.ListingPending = false
 	pan.ListingPendingPath = ""
 	pan.ShowLoadingIcon = false

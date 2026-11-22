@@ -39,7 +39,7 @@ type carouselPaintDeferState struct {
 // armCarouselPaintDeferTimer starts (or restarts) the deadline that force-releases panelID's
 // deferred repaint.
 func (a *App) armCarouselPaintDeferTimer(panelID int) {
-	d := &a.carouselPaintDefer[panelID]
+	d := &a.panelInst(panelID).carouselPaintDefer
 	d.epoch++
 	epoch := d.epoch
 	d.deadline.Arm(carouselPaintDeferMaxMS*time.Millisecond, func() {
@@ -50,7 +50,7 @@ func (a *App) armCarouselPaintDeferTimer(panelID int) {
 // clearCarouselPaintDefer drops panelID's deferred-paint flag and cancels its deadline, bumping
 // the epoch so a deadline already in flight becomes a no-op when its event lands.
 func (a *App) clearCarouselPaintDefer(panelID int) {
-	d := &a.carouselPaintDefer[panelID]
+	d := &a.panelInst(panelID).carouselPaintDefer
 	d.active = false
 	d.deadline.Invalidate()
 	d.epoch++
@@ -66,7 +66,11 @@ func (a *App) clearCarouselPaintDefer(panelID int) {
 // on the child's arrival would produce exactly the two-phase relayout the deferral exists to avoid.
 // The carouselPaintDeferMaxMS deadline still guarantees release if the parent fetch never lands.
 func (a *App) applyCarouselSnapshotAndRender(d carouselSnapshotPayload) bool {
-	items := asyncWakes(a).carousel[d.panelID].drain()
+	inst := a.panelInst(d.panelID)
+	if inst == nil {
+		return false
+	}
+	items := inst.carouselQ.drain()
 	if len(items) == 0 {
 		items = []carouselSnapshotPayload{d}
 	}
@@ -76,7 +80,7 @@ func (a *App) applyCarouselSnapshotAndRender(d carouselSnapshotPayload) bool {
 			applied = true
 		}
 	}
-	deferred := a.carouselPaintDefer[d.panelID].active
+	deferred := a.panelInst(d.panelID).carouselPaintDefer.active
 	if deferred && a.carouselParentPaintPending(d.panelID) {
 		return false
 	}
@@ -91,7 +95,7 @@ func (a *App) applyCarouselSnapshotAndRender(d carouselSnapshotPayload) bool {
 // applyCarouselPaintRelease repaints panelID when its deferred paint is still outstanding and the
 // deadline that fired is the current one.
 func (a *App) applyCarouselPaintRelease(p carouselPaintReleasePayload) bool {
-	if a.carouselPaintDefer[p.panelID].epoch != p.epoch || !a.carouselPaintDefer[p.panelID].active {
+	if a.panelInst(p.panelID).carouselPaintDefer.epoch != p.epoch || !a.panelInst(p.panelID).carouselPaintDefer.active {
 		return false
 	}
 	a.clearCarouselPaintDefer(p.panelID)
@@ -156,15 +160,16 @@ func (a *App) scheduleCarouselChildSnapshot(panelID int, viewportRows int) {
 
 func (a *App) carouselSnapshotGenSlot(panelID int, isChild bool) *atomic.Uint64 {
 	if isChild {
-		return &a.carouselChildSnapshotGen[panelID]
+		return &a.panelInst(panelID).carouselChildSnapshotGen
 	}
-	return &a.carouselParentSnapshotGen[panelID]
+	return &a.panelInst(panelID).carouselParentSnapshotGen
 }
 
 func (a *App) scheduleCarouselSnapshot(panelID int, isChild bool, loc pathloc.Path, target, selectedName string, indexFallback int, centerRecalled bool, viewportRows int) {
+	inst := a.panelInst(panelID) // captured: the result callback runs off the main goroutine
 	gen := a.carouselSnapshotGenSlot(panelID, isChild).Add(1)
 	timeout := time.Duration(a.config.SFTP.ListTimeoutSecs) * time.Second
-	snap := a.panelByID(panelID).ListingRefreshSnapshot(loc, timeout)
+	snap := inst.state.ListingRefreshSnapshot(loc, timeout)
 	a.raceAsyncListingFetch(snap, timeout, false, nil, 0, func(res asyncListingResult) {
 		p := carouselSnapshotPayload{
 			panelID:        panelID,
@@ -179,7 +184,7 @@ func (a *App) scheduleCarouselSnapshot(panelID int, isChild bool, loc pathloc.Pa
 			centerRecalled: centerRecalled,
 			err:            res.err,
 		}
-		if asyncWakes(a).carousel[panelID].push(p) {
+		if inst.carouselQ.push(p) {
 			postGuaranteedWake(a.screen, carouselSnapshotPayload{panelID: panelID})
 		}
 	})

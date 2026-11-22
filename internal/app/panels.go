@@ -187,17 +187,14 @@ func (a *App) activePanel() *panel.State {
 	return &a.model.Secondary
 }
 
+// panelByID returns the panel.State registered under panelID, or nil when the ID is closed or
+// unknown. Callers that may see a stale ID (async results, overlay panels) must check
+// panelInst(panelID) != nil first.
 func (a *App) panelByID(panelID int) *panel.State {
-	switch panelID {
-	case ui.PrimaryPanel:
-		return &a.model.Primary
-	case ui.QuickViewOverlayPanel:
-		return &a.model.QuickViewDirOverlay
-	case ui.DedupBrowsePanel:
-		return &a.model.DedupPanel
-	default:
-		return &a.model.Secondary
+	if inst := a.panelInst(panelID); inst != nil {
+		return inst.state
 	}
+	return nil
 }
 
 func (a *App) activeViewportRows() int {
@@ -210,7 +207,7 @@ func (a *App) panelViewportRows(panelID int) int {
 	if layout.TooSmall {
 		return 0
 	}
-	if panelID == ui.DedupBrowsePanel {
+	if a.model.DedupPanelID != 0 && panelID == a.model.DedupPanelID {
 		return a.dedupBrowseRows(layout)
 	}
 	col := layout.Primary

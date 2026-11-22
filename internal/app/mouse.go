@@ -387,7 +387,7 @@ func (a *App) panelRowHover(layout ui.Layout) ui.PanelRowHover {
 	}
 	if a.inputMode() == InputModeDedupView {
 		row, ok := ui.DedupBrowseEntryAt(layout, &a.model, a.mouse.x, a.mouse.y)
-		return ui.PanelRowHover{Active: ok, Panel: ui.DedupBrowsePanel, Entry: row}
+		return ui.PanelRowHover{Active: ok, Panel: a.model.DedupPanelID, Entry: row}
 	}
 	if a.inputMode() == InputModeUniqueView {
 		row, ok := ui.UniqueDestEntryAt(layout, &a.model, a.mouse.x, a.mouse.y)

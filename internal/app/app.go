@@ -125,6 +125,9 @@ type dirLoadingIndicatorPayload struct {
 type diskIdleSortPanel struct {
 	timer *time.Timer
 	epoch uint64
+	// navPath records the last reconciled panel cwd so the debounce survives a benign reconcile
+	// but resets on chdir.
+	navPath string
 }
 
 // diskUsageState groups the disk-usage engine and its scan/idle-sort bookkeeping.
@@ -135,16 +138,13 @@ type diskUsageState struct {
 	// after the "scan finished" toast fires. Selection-size background scans do not set it, so
 	// their EventJobFinished completions never trigger the toast even when DiskUsageShown is true.
 	scanToastArmed bool
-	idleSort       [2]diskIdleSortPanel // indexed by ui.PrimaryPanel / ui.SecondaryPanel (0/1)
-	// idleNavPath records last reconciled panel cwd so idle-sort debounce survives benign reconcile but resets on chdir.
-	idleNavPath [2]string
-	redrawTimer sched.Debouncer
+	redrawTimer    sched.Debouncer
 	// deferPoll skips one pollDiskUsageUpdates drain after partial file-list nav while a scan is busy.
 	deferPoll atomic.Bool
 }
 
 // sftpState groups SFTP connection-prompt state (host-key/password waiters),
-// prompt serialization and per-panel connect generations, and the SFTP connect
+// prompt serialization, and the SFTP connect
 // dialog's target panel and host list.
 type sftpState struct {
 	touchConn          func(context.Context, pathloc.Path) error // defaults to sftpTouchConn; tests set it per App
@@ -156,7 +156,6 @@ type sftpState struct {
 	promptOnce         sync.Once
 	promptSem          chan struct{}
 	promptID           atomic.Uint64
-	connectGen         [2]atomic.Uint64
 }
 
 // syncFollowNavFlushPayload applies latched panel sync after file-list cursor debounce elapses.
@@ -231,21 +230,8 @@ type App struct {
 	jobStopCh      chan struct{}
 	jobStopOnce    bool
 	disk           diskUsageState
-	metaSort       metaIdleSortState
 	gitignoreCache *gitignore.Cache
 	gitStatusCache *gitstatus.Cache
-	// selectionSizeScanFP is the last enqueued directory set fingerprint per panel for selection-size scans.
-	selectionSizeScanFP [2]string
-	// selectionSizeScanGen / selectionSizeScanPath (path + listing epoch) skip reconcile work when
-	// selection-derived input is unchanged.
-	selectionSizeScanGen  [2]uint64
-	selectionSizeScanPath [2]string
-	// explicitDrift is the per-panel record of explicit index drift requests and results.
-	explicitDrift [2]explicitDriftNames
-	// selectionSizeScanDebounce defers the per-directory mount-exclusion stat check (which
-	// selected directories still need a background disk-usage scan) to a background goroutine
-	// instead of running it inline in reconcileSelectionSizeScans on the main goroutine.
-	selectionSizeScanDebounce [2]sched.Debouncer
 	// findDialogSelectionScanFP is the last enqueued directory set fingerprint for find-dialog selection-size scans.
 	findDialogSelectionScanFP string
 	// findDialogSelectionScanGen skips reconcile work when marked-selection derived input is unchanged.
@@ -337,18 +323,8 @@ type App struct {
 	// painters consult it so a shorter replacement cannot leave fragments of the previous banner.
 	lastFullRenderToast string
 
-	volumeRefreshInFlight [2]atomic.Bool
-	panelRefreshInFlight  [2]atomic.Bool
-
-	// panelRefreshNotBefore holds, per panel, the unix-nanos earliest start time for the next
-	// periodic refresh (see config.DefaultPanelRefreshSlowBackoffFactor). Written by the refresh
-	// goroutine, read on the main goroutine in schedulePanelListingRefresh, hence atomic.
-	panelRefreshNotBefore [2]atomic.Int64
-
-	// dirWatcher is nil when [panels].watch_directories is off; dirWatchSig is the per-panel
-	// signature the current watch set was computed from (panel_dir_watch.go).
-	dirWatcher  *dirwatch.Watcher
-	dirWatchSig [2]dirWatchSig
+	// dirWatcher is nil when [panels].watch_directories is off (panel_dir_watch.go).
+	dirWatcher *dirwatch.Watcher
 
 	// statusCmds are the shown status commands (status.toml); statusCmdGen tags their results
 	// so a restart drops output from the previous set; statusCmdStopCh stops their tickers.
@@ -368,30 +344,11 @@ type App struct {
 	placeholderImg placeholderImage
 	ueberzug       ueberzugDaemon
 
-	// Indexed by panel ID (ui.PrimaryPanel, ui.SecondaryPanel, and the synthetic
-	// ui.QuickViewOverlayPanel / ui.DedupBrowsePanel).
-	panelAsyncLoadGen [ui.PanelIDCount]atomic.Uint64
-	gitStatusLoadGen  [ui.PanelIDCount]atomic.Uint64
-	indexDrift        indexDriftState
+	// panels is the registry of live file-list panels (panel_registry.go).
+	panels panelRegistry
 	// dedupBrowseOn / dedupBrowseFP track the dedup Dirs-view browse panel (dedup_browse.go).
 	dedupBrowseOn bool
 	dedupBrowseFP [2]string
-
-	// carouselParentSnapshotGen/carouselChildSnapshotGen guard async carousel side-column
-	// snapshot fetches against a superseded result landing late; indexed by ui.PrimaryPanel/
-	// ui.SecondaryPanel. See carousel_async.go.
-	carouselParentSnapshotGen [2]atomic.Uint64
-	carouselChildSnapshotGen  [2]atomic.Uint64
-	// carouselPaintDefer holds back a repaint for this panel while its carousel parent-column
-	// snapshot for the newly navigated-to directory has not landed yet; the parent snapshot's own
-	// arrival — or the deadline — releases it. See renderAfterAsyncApply and carousel_async.go.
-	carouselPaintDefer [2]carouselPaintDeferState
-
-	// dirLoadIndicatorTimer/dirLoadIndicatorEpoch arm the row working-indicator icon for a
-	// panel navigation load pending longer than panel.LoadingIndicatorDelay; indexed by
-	// ui.PrimaryPanel/ui.SecondaryPanel. See dir_loading_indicator.go.
-	dirLoadIndicatorTimer [2]*time.Timer
-	dirLoadIndicatorEpoch [2]uint64
 
 	// lastScreenContentHash is the FNV hash of the logical buffer after the last full-render Show
 	// when ScreenRenderHashCache is enabled (see emitScreenAfterFullRender); zero after a partial
@@ -712,6 +669,9 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		gitignoreCache: giCache,
 		gitStatusCache: gitstatus.NewCache(),
 	}
+	// Registry IDs follow allocation order: 0 = ui.PrimaryPanel, 1 = ui.SecondaryPanel.
+	app.openPanel(&app.model.Primary)
+	app.openPanel(&app.model.Secondary)
 	app.setStyles(styles) // the one path that applies a theme: startup and every switch
 	applyConfigToModel(&app.model, cfg)
 	app.syncCarouselQuickViewOrdering()

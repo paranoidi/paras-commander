@@ -164,24 +164,24 @@ func TestScheduleReportsTransientSkipsAsRetry(t *testing.T) {
 	}
 	p.ListingPending = false
 
-	app.panelRefreshNotBefore[ui.PrimaryPanel].Store(time.Now().Add(time.Hour).UnixNano())
+	app.panelInst(ui.PrimaryPanel).panelRefreshNotBefore.Store(time.Now().Add(time.Hour).UnixNano())
 	if !app.schedulePanelListingRefresh(ui.PrimaryPanel) {
 		t.Error("the slow-refresh deadline is transient")
 	}
-	app.panelRefreshNotBefore[ui.PrimaryPanel].Store(0)
+	app.panelInst(ui.PrimaryPanel).panelRefreshNotBefore.Store(0)
 
-	app.panelRefreshInFlight[ui.PrimaryPanel].Store(true)
+	app.panelInst(ui.PrimaryPanel).panelRefreshInFlight.Store(true)
 	if !app.schedulePanelListingRefresh(ui.PrimaryPanel) {
 		t.Error("a read in flight is transient")
 	}
-	app.panelRefreshInFlight[ui.PrimaryPanel].Store(false)
+	app.panelInst(ui.PrimaryPanel).panelRefreshInFlight.Store(false)
 
 	if app.schedulePanelListingRefresh(ui.PrimaryPanel) {
 		t.Error("a started refresh needs no retry")
 	}
 	pollUntilPanelRefreshIdle(t, app, ui.PrimaryPanel, 2*time.Second)
 
-	app.panelRefreshNotBefore[ui.PrimaryPanel].Store(0)
+	app.panelInst(ui.PrimaryPanel).panelRefreshNotBefore.Store(0)
 	addPausedJobOn(t, app, p.PathString())
 	if app.schedulePanelListingRefresh(ui.PrimaryPanel) {
 		t.Error("a contended volume is not retried")
@@ -217,7 +217,7 @@ func TestDirWatchRetriesTransientSkip(t *testing.T) {
 	armDirWatch(t, app, screen, &wakes, dir)
 
 	before := wakes
-	app.panelRefreshNotBefore[ui.PrimaryPanel].Store(time.Now().Add(time.Second).UnixNano())
+	app.panelInst(ui.PrimaryPanel).panelRefreshNotBefore.Store(time.Now().Add(time.Second).UnixNano())
 	writeFile(t, filepath.Join(dir, "meadow.txt"))
 	pumpWakes(t, app, screen, &wakes, func() bool { return panelListsRow(p, "meadow.txt") })
 	if wakes-before < 2 {
@@ -489,7 +489,7 @@ func TestIdleIndexPanelDriftStatesDoNotReapply(t *testing.T) {
 	}
 
 	for range 3 {
-		app.panelRefreshNotBefore[ui.PrimaryPanel].Store(0)
+		app.panelInst(ui.PrimaryPanel).panelRefreshNotBefore.Store(0)
 		app.schedulePanelListingRefresh(ui.PrimaryPanel)
 		pollUntilPanelRefreshIdle(t, app, ui.PrimaryPanel, 5*time.Second)
 	}

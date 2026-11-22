@@ -41,9 +41,14 @@ type Host interface {
 	ClearPanelSyncFollowNavCoalesce()
 	ArmCursorNameHintNavCoalesceAfterListNav()
 	PathVolumeContendsWithActiveJob(path string) bool
+	// OpenPanel registers state in the app's panel registry and returns its ID; ClosePanel
+	// retires it (in-flight results for the ID are dropped). The quick-view directory overlay is
+	// opened while it is shown and closed when cleared.
+	OpenPanel(state *panel.State) int
+	ClosePanel(panelID int)
 	// GitStatusScheduler and AsyncLoadScheduler return the shared per-panel-ID schedulers
-	// (internal/app), for panelID one of ui.PrimaryPanel, ui.SecondaryPanel, or
-	// ui.QuickViewOverlayPanel — the latter used to populate QuickViewDirOverlay through the same
+	// (internal/app), for panelID one of ui.PrimaryPanel, ui.SecondaryPanel, or an ID from
+	// OpenPanel — the latter populates QuickViewDirOverlay through the same
 	// scheduling/gen-counter/apply machinery as a real panel instead of a quickview-only fork.
 	GitStatusScheduler(panelID int) panel.GitStatusScheduler
 	AsyncLoadScheduler(panelID int) panel.AsyncLoadScheduler

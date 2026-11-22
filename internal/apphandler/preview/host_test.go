@@ -101,6 +101,8 @@ func (f *fakeHost) ArmPanelSyncFollowNavCoalesceAfterListNav()              {}
 func (f *fakeHost) ClearPanelSyncFollowNavCoalesce()                        {}
 func (f *fakeHost) ArmCursorNameHintNavCoalesceAfterListNav()               {}
 func (f *fakeHost) PathVolumeContendsWithActiveJob(string) bool             { return false }
+func (f *fakeHost) OpenPanel(*panel.State) int                              { return 2 }
+func (f *fakeHost) ClosePanel(int)                                          {}
 func (f *fakeHost) GitStatusScheduler(int) panel.GitStatusScheduler         { return nil }
 func (f *fakeHost) AsyncLoadScheduler(int) panel.AsyncLoadScheduler         { return nil }
 func (f *fakeHost) ScheduleCarouselParentSnapshot(panelID, _ int) {

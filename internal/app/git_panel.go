@@ -65,7 +65,7 @@ func (a *App) wireGitStatusLoaders() {
 }
 
 // gitStatusScheduler dispatches an async git status fetch for req.ListDir, for panelID one of
-// ui.PrimaryPanel, ui.SecondaryPanel, or ui.QuickViewOverlayPanel. Two kinds of request share
+// ui.PrimaryPanel, ui.SecondaryPanel, or a registered overlay panel. Two kinds of request share
 // this scheduler: the cwd-level fetch from panel.State.prepareGitColumn/
 // RescheduleGitStatusIfNeeded (req.ListDir == the panel's current directory), and, in tree mode,
 // per-directory fetches for newly-expanded children (req.ListDir a subdirectory of it) from
@@ -77,17 +77,18 @@ func (a *App) wireGitStatusLoaders() {
 // panel layer only ever dispatches one per directory per tree "session" (setTreeNodeExpanded's
 // Loading guard + Children-cached-once-loaded), so no duplicate/overlapping dispatch is possible
 // for the same directory. The QuickViewDirOverlay never enters tree mode, so every fetch it
-// dispatches is cwd-level and tracked by gitStatusLoadGen[ui.QuickViewOverlayPanel] like a real
+// dispatches is cwd-level and tracked by its gitStatusLoadGen like a real
 // panel's cwd fetch.
 func (a *App) gitStatusScheduler(panelID int) panel.GitStatusScheduler {
 	return func(req panel.GitStatusRequest) bool {
 		if a.gitStatusCache == nil {
 			return false
 		}
-		pan := a.panelByID(panelID)
-		if pan == nil {
+		inst := a.panelInst(panelID)
+		if inst == nil {
 			return false
 		}
+		pan := inst.state
 		listDir := filepath.Clean(req.ListDir)
 		if a.pathVolumeContendsWithActiveJob(listDir) {
 			// A job is already saturating this volume. false means "not scheduled", so the
@@ -98,7 +99,7 @@ func (a *App) gitStatusScheduler(panelID int) panel.GitStatusScheduler {
 		cwdLevel := hostErr == nil && filepath.Clean(host) == listDir
 		var gen uint64
 		if cwdLevel {
-			gen = a.gitStatusLoadGen[panelID].Add(1)
+			gen = inst.gitStatusLoadGen.Add(1)
 		}
 		paths := append([]gitstatus.ListingPaths(nil), req.Paths...)
 		workRoot := req.WorkRoot
@@ -128,10 +129,8 @@ func (a *App) gitStatusScheduler(panelID int) panel.GitStatusScheduler {
 // should drop stale cells for files that disappeared), which is safe because prepareGitColumn
 // already reset GitByPath to nil synchronously when it dispatched that fetch.
 //
-// For the QuickViewDirOverlay (p.panelID == ui.QuickViewOverlayPanel) a result is also dropped
-// once the overlay has been deactivated (closed), even if its generation still matches: unlike
-// the two real panels, the overlay can go from "the thing this fetch was for" to "not currently
-// shown" without any new fetch being scheduled to bump the generation counter.
+// A result for a panel that has been closed (an overlay panel; its ID no longer resolves) is
+// dropped even if its generation still matches.
 func (a *App) applyGitStatusLoad(p gitStatusPayload) bool {
 	items := asyncWakes(a).git.drain()
 	if len(items) == 0 {
@@ -147,20 +146,18 @@ func (a *App) applyGitStatusLoad(p gitStatusPayload) bool {
 }
 
 func (a *App) applyOneGitStatusLoad(p gitStatusPayload) bool {
-	if !a.syntheticPanelActive(p.panelID) {
+	inst := a.panelInst(p.panelID)
+	if inst == nil {
 		return false
 	}
-	pan := a.panelByID(p.panelID)
-	if pan == nil {
-		return false
-	}
+	pan := inst.state
 	host, err := pan.Path.FilePath()
 	if err != nil {
 		return false
 	}
 	host = filepath.Clean(host)
 	if p.cwdLevel {
-		if a.gitStatusLoadGen[p.panelID].Load() != p.gen || p.listDir != host {
+		if inst.gitStatusLoadGen.Load() != p.gen || p.listDir != host {
 			return false
 		}
 		pan.GitPending = false
