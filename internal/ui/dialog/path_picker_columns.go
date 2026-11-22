@@ -53,13 +53,13 @@ func pathPickerSeparatorCount(nameW int) int {
 // pathPickerRowMarksWidth scans all items for the widest RowMarksWidth so the fixed column
 // grid (sourceW/nameW/pathW computed once outside the render loop) reserves one uniform
 // trailing marks column, rather than a per-row width that would misalign the grid.
-func pathPickerRowMarksWidth(items []PathPickerItem, rowMarks RowMarksFunc) int {
+func pathPickerRowMarksWidth(state PathPickerState, rowMarks RowMarksFunc) int {
 	max := 0
-	for _, item := range items {
-		m := RowMarks{Missing: item.PathMissing}
+	for _, item := range state.Items {
+		m := RowMarks{Missing: state.rowMissing(item)}
 		if rowMarks != nil {
 			m = rowMarks(item.Path)
-			m.Missing = item.PathMissing
+			m.Missing = state.rowMissing(item)
 		}
 		if w := dlg.RowMarksWidth(m); w > max {
 			max = w
@@ -69,6 +69,12 @@ func pathPickerRowMarksWidth(items []PathPickerItem, rowMarks RowMarksFunc) int 
 		}
 	}
 	return max
+}
+
+// rowMissing reports whether item gets the missing-path variant (invalid style and mark). The
+// file-list picker (differences report) leaves it off: its source column already names the state.
+func (s PathPickerState) rowMissing(item PathPickerItem) bool {
+	return item.PathMissing && s.Purpose != PathPickerPurposeNavigateFile
 }
 
 func pathPickerColumnWidths(items []PathPickerItem, rowWidth int) (sourceW, nameW, pathW int) {

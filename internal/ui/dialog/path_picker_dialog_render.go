@@ -50,7 +50,7 @@ func pathPickerSize(state PathPickerState, layout Layout) (width, listH int) {
 // changes), its fuzzy highlights mapped onto the columns, the missing-path variant and the
 // pinned / job marks rowMarks resolves.
 func pathPickerList(state PathPickerState, listRows, rowWidth int, rowMarks RowMarksFunc) dlg.Item {
-	marksW := pathPickerRowMarksWidth(state.Items, rowMarks)
+	marksW := pathPickerRowMarksWidth(state, rowMarks)
 	sourceW, nameW, pathW := pathPickerColumnWidths(state.Items, max(rowWidth-marksW, 1))
 	list := dlg.Item{
 		ID: PathPickerList, Kind: dlg.KindList, Driven: true, Fit: dlg.FitNone, Scrollbar: true,
@@ -68,7 +68,7 @@ func pathPickerList(state PathPickerState, listRows, rowWidth int, rowMarks RowM
 				ranges = state.MatchRanges[ent]
 			}
 			text, spans := pathPickerRowContent(item, ranges, sourceW, nameW, pathW, tcell.StyleDefault)
-			row = dlg.ListRow{Text: text, Missing: item.PathMissing, Marked: state.Marked[item.Path]}
+			row = dlg.ListRow{Text: text, Missing: state.rowMissing(item), Marked: state.Marked[item.Path]}
 			for _, sp := range spans {
 				row.Match = append(row.Match, search.Range{Start: sp.Start, End: sp.End})
 			}
