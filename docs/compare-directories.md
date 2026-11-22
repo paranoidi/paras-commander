@@ -21,6 +21,8 @@ Two columns, one per side, list the path of each file (only the differing part w
 
 Files are compared in parallel (`hash_concurrency`); rows show Pending or Hashing until settled. Same-path files of different size are marked as different without being read. Same-path files of equal size are read side by side, `read_buffer_kib` at a time, and stop at the first differing block, the same check the [conflict rules](jobs.md#verify-both-to-see-if-identical) use. The Hashed count in the border counts both files of a pair. Zero-byte files are hidden by default (`N empty hidden` in the border).
 
+Compare includes hidden files and folders and gitignored files regardless of the panel's hidden-files setting; folders excluded from disk usage are still skipped.
+
 ## Keys
 
 | Key | Action |

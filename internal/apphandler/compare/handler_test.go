@@ -77,7 +77,7 @@ func TestCloseFiresOnCloseOnce(t *testing.T) {
 	}
 	h := New(Deps{Host: compareHandlerHost{}, Model: model})
 	var calls atomic.Int32
-	if !h.OpenPaths(pathloc.MustParse("/alpha"), pathloc.MustParse("/beta"), false, func() {
+	if !h.OpenPaths(pathloc.MustParse("/alpha"), pathloc.MustParse("/beta"), func() {
 		calls.Add(1)
 	}) {
 		t.Fatal("OpenPaths failed")
@@ -99,7 +99,7 @@ func TestRefreshDoesNotFireOnClose(t *testing.T) {
 	}
 	h := New(Deps{Host: compareHandlerHost{}, Model: model})
 	var calls atomic.Int32
-	if !h.OpenPaths(pathloc.MustParse("/alpha"), pathloc.MustParse("/beta"), false, func() {
+	if !h.OpenPaths(pathloc.MustParse("/alpha"), pathloc.MustParse("/beta"), func() {
 		calls.Add(1)
 	}) {
 		t.Fatal("OpenPaths failed")
@@ -127,7 +127,7 @@ func TestOpenPathsOverlapLeavesViewUntouched(t *testing.T) {
 	h := New(Deps{Host: compareHandlerHost{}, Model: model})
 	parent := pathloc.MustParse("/warehouse")
 	child := pathloc.MustParse("/warehouse/cellar")
-	if h.OpenPaths(parent, child, false, func() { t.Fatal("onClose should not run") }) {
+	if h.OpenPaths(parent, child, func() { t.Fatal("onClose should not run") }) {
 		t.Fatal("OpenPaths on overlapping trees: ok = true, want false")
 	}
 	if model.ViewMode != ui.ViewDedup {
@@ -141,7 +141,7 @@ func TestOpenPathsOverlapLeavesViewUntouched(t *testing.T) {
 func TestDiscardReturnSkipsOnClose(t *testing.T) {
 	model := &ui.Model{}
 	h := New(Deps{Host: compareHandlerHost{}, Model: model})
-	if !h.OpenPaths(pathloc.MustParse("/alpha"), pathloc.MustParse("/beta"), false, func() {
+	if !h.OpenPaths(pathloc.MustParse("/alpha"), pathloc.MustParse("/beta"), func() {
 		t.Fatal("onClose should not run")
 	}) {
 		t.Fatal("OpenPaths failed")

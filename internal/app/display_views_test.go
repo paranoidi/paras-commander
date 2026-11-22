@@ -142,7 +142,7 @@ func TestAuxiliaryScreensSwitchFromCompareDropsDedupReturnHook(t *testing.T) {
 
 	other := t.TempDir()
 	rescans := 0
-	if !app.compareCtrl.OpenPaths(pathloc.MustParse(dir), pathloc.MustParse(other), false, func() {
+	if !app.compareCtrl.OpenPaths(pathloc.MustParse(dir), pathloc.MustParse(other), func() {
 		rescans++
 		app.dedupCtrl.ReopenPreservingState()
 	}) {

@@ -12,7 +12,6 @@ import (
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
-	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/primitive"
@@ -29,7 +28,6 @@ type Deps struct {
 	Config      config.Config
 	Keys        *keymap.Map
 	KeysCompare *keymap.Map
-	Gitignore   *gitignore.Cache
 	DiskIgnore  diskusage.ShouldIgnoreFolder
 	Jobs        *jobsctrl.Handler
 }
@@ -57,7 +55,6 @@ type Handler struct {
 	config      config.Config
 	keys        *keymap.Map
 	keysCompare *keymap.Map
-	gitignore   *gitignore.Cache
 	diskIgnore  diskusage.ShouldIgnoreFolder
 	jobsCtrl    *jobsctrl.Handler
 
@@ -66,11 +63,10 @@ type Handler struct {
 
 	// Open arguments replayed by Refresh; onClose is the return hook fired once
 	// by Close (dedup detour), never by Refresh.
-	openedPrimary    pathloc.Path
-	openedSecondary  pathloc.Path
-	openedShowHidden bool
-	openedGate       diskusage.ListingVolumeGate
-	onClose          func()
+	openedPrimary   pathloc.Path
+	openedSecondary pathloc.Path
+	openedGate      diskusage.ListingVolumeGate
+	onClose         func()
 }
 
 // WakePayload wakes PollEvent when compare session updates.
@@ -85,7 +81,6 @@ func New(d Deps) *Handler {
 		config:      d.Config,
 		keys:        d.Keys,
 		keysCompare: d.KeysCompare,
-		gitignore:   d.Gitignore,
 		diskIgnore:  d.DiskIgnore,
 		jobsCtrl:    d.Jobs,
 	}
@@ -114,7 +109,7 @@ func (h *Handler) Open() {
 			Valid:   left.ListingDeviceValid,
 		}
 	}
-	h.open(left.Path, right.Path, left.ShowHidden, volGate, swap, nil)
+	h.open(left.Path, right.Path, volGate, swap, nil)
 }
 
 // OpenPaths opens compare on two arbitrary local roots (the dedup entry point).
@@ -122,11 +117,11 @@ func (h *Handler) Open() {
 // gate (the roots may live on any device). onClose fires exactly once when the
 // view is closed — but not on Refresh. Returns false when validation fails,
 // leaving the current view untouched.
-func (h *Handler) OpenPaths(primary, secondary pathloc.Path, showHidden bool, onClose func()) bool {
-	return h.open(primary, secondary, showHidden, diskusage.ListingVolumeGate{}, false, onClose)
+func (h *Handler) OpenPaths(primary, secondary pathloc.Path, onClose func()) bool {
+	return h.open(primary, secondary, diskusage.ListingVolumeGate{}, false, onClose)
 }
 
-func (h *Handler) open(primary, secondary pathloc.Path, showHidden bool, volGate diskusage.ListingVolumeGate, swap bool, onClose func()) bool {
+func (h *Handler) open(primary, secondary pathloc.Path, volGate diskusage.ListingVolumeGate, swap bool, onClose func()) bool {
 	// Validate before any teardown so a failed open is a true no-op for the
 	// caller's view (dedup stays up when the pair overlaps).
 	if primary.IsZero() || secondary.IsZero() {
@@ -139,7 +134,6 @@ func (h *Handler) open(primary, secondary pathloc.Path, showHidden bool, volGate
 	}
 	h.teardown()
 	h.openedPrimary, h.openedSecondary = primary, secondary
-	h.openedShowHidden = showHidden
 	h.openedGate = volGate
 	h.onClose = onClose
 
@@ -157,8 +151,8 @@ func (h *Handler) open(primary, secondary pathloc.Path, showHidden bool, volGate
 
 	h.session = comparepkg.Start(context.Background(), primary, secondary, comparepkg.Options{
 		Walk: comparepkg.WalkOptions{
-			ShowHidden:    showHidden,
-			Gitignore:     h.gitignore,
+			// Compare walks whole trees: hidden and gitignored entries included.
+			ShowHidden:    true,
 			ShouldSkipDir: hs.ShouldSkip,
 		},
 		HashWorkers:     hs.HashWorkers,
@@ -217,7 +211,7 @@ func (h *Handler) Refresh() {
 	// open resets the view state; keep cursor, scroll, focus and filters so a refresh after a
 	// delete does not jump to the top (EnsureSelectionVisible clamps once rows arrive).
 	view := h.model.CompareView
-	h.open(h.openedPrimary, h.openedSecondary, h.openedShowHidden, h.openedGate, h.model.CompareView.SwapPanels, h.onClose)
+	h.open(h.openedPrimary, h.openedSecondary, h.openedGate, h.model.CompareView.SwapPanels, h.onClose)
 	h.model.CompareView = view
 	h.model.CompareView.RangeAnchor = ""
 }

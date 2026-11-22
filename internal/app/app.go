@@ -764,7 +764,6 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Config:      cfg,
 		Keys:        keys.Global,
 		KeysCompare: keys.Compare,
-		Gitignore:   giCache,
 		DiskIgnore:  duIgnorer,
 		Jobs:        app.jobsCtrl,
 	})

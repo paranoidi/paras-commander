@@ -45,7 +45,7 @@ func waitCompareDone(t *testing.T, app *App) {
 
 func openCompareOn(t *testing.T, app *App, left, right string) {
 	t.Helper()
-	if !app.compareCtrl.OpenPaths(pathloc.MustParse(left), pathloc.MustParse(right), false, nil) {
+	if !app.compareCtrl.OpenPaths(pathloc.MustParse(left), pathloc.MustParse(right), nil) {
 		t.Fatal("OpenPaths refused")
 	}
 	waitCompareDone(t, app)
