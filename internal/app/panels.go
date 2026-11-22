@@ -579,6 +579,10 @@ func (a *App) reconcileAfterEvent() {
 	a.reconcileDedupPanel()
 	a.reconcileCopiesPanel()
 	a.dedupCtrl.ReconcileStripFocus()
+	if a.model.ViewMode == ui.ViewDedup {
+		// Marks resize the Selected strip and with it the tree: keep the focused pane's cursor in its rect.
+		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
+	}
 	a.previewCtrl.ReconcileQuickViewPreview()
 	a.previewCtrl.ReconcileCarouselFilePreview()
 	a.previewCtrl.ReconcileCarouselSidePreview(ui.PrimaryPanel)
