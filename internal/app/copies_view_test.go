@@ -1,6 +1,7 @@
 package app
 
 import (
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
@@ -321,5 +323,34 @@ func TestCopiesViewFooterAndHelp(t *testing.T) {
 	a.openHelpDialog()
 	if !a.model.HelpView.Open || a.model.HelpView.Title != "Help — Other copies" || len(a.model.HelpView.Entries) == 0 {
 		t.Fatalf("help = %+v", a.model.HelpView)
+	}
+}
+
+// A hidden view panel is not re-listed by a job refresh, only marked stale, and re-lists when
+// its view is shown again.
+func TestCopiesPanelRefreshDeferredWhileHidden(t *testing.T) {
+	a, screen, dir := copiesAppWith(t, "meadow/harbor.txt", "orchard/harbor.txt")
+	panelDir := filepath.Join(dir, "meadow")
+	openCopiesFor(t, a, screen, panelDir)
+	has := func(name string) bool {
+		return slices.ContainsFunc(a.model.CopiesPanel.Entries, func(e localfs.Entry) bool { return e.Name == name })
+	}
+	if err := os.WriteFile(filepath.Join(panelDir, "lantern.txt"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	a.model.ViewMode = ui.ViewBrowser
+	a.dialogCtrl.RefreshBothPanels()
+	if !a.model.CopiesPanelStale || a.model.CopiesPanel.ListingPending || has("lantern.txt") {
+		t.Fatalf("hidden panel: stale=%v pending=%v", a.model.CopiesPanelStale, a.model.CopiesPanel.ListingPending)
+	}
+
+	a.model.ViewMode = ui.ViewCopies
+	drainInterruptEventsUntil(t, a, screen, 5*time.Second, func() bool {
+		a.reconcileAfterEvent()
+		return !a.model.CopiesPanel.ListingPending && has("lantern.txt")
+	})
+	if a.model.CopiesPanelStale {
+		t.Fatal("stale flag survives the re-list")
 	}
 }

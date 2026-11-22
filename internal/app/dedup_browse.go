@@ -34,11 +34,22 @@ func (a *App) initEmbeddedPanel(dst *panel.State) int {
 
 // closeEmbeddedPanel unregisters the embedded panel *dst (registry ID *id), clears it and forgets what
 // follow followed.
-func (a *App) closeEmbeddedPanel(dst *panel.State, id *int, follow *panelFollow) {
+func (a *App) closeEmbeddedPanel(dst *panel.State, id *int, stale *bool, follow *panelFollow) {
 	follow.reset()
+	*stale = false
 	*dst = panel.State{}
 	a.closePanel(*id)
 	*id = 0
+}
+
+// refreshStaleViewPanel re-lists a shown view panel that skipped refreshes while hidden
+// (refreshViewPanels in the dialog handler only marks a hidden one stale).
+func (a *App) refreshStaleViewPanel(p *panel.State, id int, stale *bool) {
+	if !*stale {
+		return
+	}
+	*stale = false
+	_ = p.Refresh(a.panelViewportRows(id))
 }
 
 // reconcileDedupPanel keeps the browse panel on the row of the pane whose cursor last moved
@@ -48,7 +59,7 @@ func (a *App) reconcileDedupPanel() {
 	if !a.dedupBrowseWanted() {
 		if a.dedupBrowseOn {
 			a.dedupBrowseOn = false
-			a.closeEmbeddedPanel(&a.model.DedupPanel, &a.model.DedupPanelID, &a.dedupFollow)
+			a.closeEmbeddedPanel(&a.model.DedupPanel, &a.model.DedupPanelID, &a.model.DedupPanelStale, &a.dedupFollow)
 			if a.model.DedupView.FocusPanel {
 				a.model.DedupView.FocusPanel = false
 				a.model.DedupView.FocusCopies = false // panel gone: fall back to the main tree
@@ -63,6 +74,7 @@ func (a *App) reconcileDedupPanel() {
 	if a.model.DedupPanelID == 0 {
 		a.model.DedupPanelID = a.initEmbeddedPanel(&a.model.DedupPanel)
 	}
+	a.refreshStaleViewPanel(&a.model.DedupPanel, a.model.DedupPanelID, &a.model.DedupPanelStale)
 	if a.dedupCtrl.NavHeld() {
 		return // fingerprint stays stale so the flush sees the final cursor move
 	}

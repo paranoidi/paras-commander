@@ -144,13 +144,21 @@ func (h *Handler) RefreshBothPanelsWithFocus(panelID int, onApplied func()) {
 
 // refreshViewPanels re-lists the dedup browse panel and the Other copies panel while open: file
 // operations run from them (and jobs from anywhere) change what they list, as they do for the
-// browser panels.
+// browser panels. A panel whose view is hidden is only marked stale (re-listing it is wasted
+// work if the view is never shown again); the view's reconcile re-lists it on return.
 func (h *Handler) refreshViewPanels(dedupApplied, copiesApplied func()) {
-	if id := h.model.DedupPanelID; id != 0 {
-		_ = h.model.DedupPanel.RefreshWithHook(h.host.PanelViewportRows(id), dedupApplied)
-	}
-	if id := h.model.CopiesPanelID; id != 0 {
-		_ = h.model.CopiesPanel.RefreshWithHook(h.host.PanelViewportRows(id), copiesApplied)
+	m := h.model
+	h.refreshViewPanel(&m.DedupPanel, m.DedupPanelID, m.ViewMode == ui.ViewDedup, &m.DedupPanelStale, dedupApplied)
+	h.refreshViewPanel(&m.CopiesPanel, m.CopiesPanelID, m.ViewMode == ui.ViewCopies, &m.CopiesPanelStale, copiesApplied)
+}
+
+func (h *Handler) refreshViewPanel(p *panel.State, id int, shown bool, stale *bool, onApplied func()) {
+	switch {
+	case id == 0:
+	case shown:
+		_ = p.RefreshWithHook(h.host.PanelViewportRows(id), onApplied)
+	default:
+		*stale = true
 	}
 }
 
