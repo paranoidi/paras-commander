@@ -223,11 +223,8 @@ func (a *App) panelViewportRows(panelID int) int {
 	if layout.TooSmall {
 		return 0
 	}
-	switch {
-	case a.model.DedupPanelID != 0 && panelID == a.model.DedupPanelID:
-		return a.dedupBrowseRows(layout)
-	case a.model.CopiesPanelID != 0 && panelID == a.model.CopiesPanelID:
-		return a.copiesPanelRows(layout)
+	if inst := a.panelInst(panelID); inst != nil && inst.rows != nil {
+		return inst.rows(layout)
 	}
 	col := layout.Primary
 	p := &a.model.Primary

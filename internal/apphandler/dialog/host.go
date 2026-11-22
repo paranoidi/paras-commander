@@ -24,6 +24,11 @@ type Host interface {
 	PanelByID(panelID int) *panel.State
 	FocusedViewportRows() int
 	PanelViewportRows(panelID int) int
+	// RefreshEmbeddedPanels re-lists every open view panel (dedup browse, Other copies) whose view
+	// is shown, marking the others stale; onApplied(id) is the reload hook of panel id (may be nil).
+	RefreshEmbeddedPanels(onApplied func(id int) func())
+	// IsEmbeddedPanel reports whether id is an open view panel.
+	IsEmbeddedPanel(id int) bool
 
 	// FilterCursorEntry is the basename and kind of the row under the cursor of what the Filter
 	// dialog targets (active panel, Compare or Find duplicates); its extension seeds the ghost

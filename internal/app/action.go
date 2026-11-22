@@ -2,55 +2,29 @@ package app
 
 import (
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/app/helpkeys"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
-// overlayForView picks the map that handles vm's keys before the global map (nil when vm has none).
-func overlayForView(jobs, commands, messages, filePreview, compare, dedup, unique, copies *keymap.Map, vm ui.ViewMode) *keymap.Map {
-	switch vm {
-	case ui.ViewCommands:
-		return commands
-	case ui.ViewCompare:
-		return compare
-	case ui.ViewDedup:
-		return dedup
-	case ui.ViewUnique:
-		return unique
-	case ui.ViewCopies:
-		return copies
-	case ui.ViewJobs:
-		return jobs
-	case ui.ViewMessages:
-		return messages
-	case ui.ViewFilePreview:
-		return filePreview
-	default:
-		return nil
-	}
-}
-
-// lookupActionForView resolves an action from global and optional view overlays.
-func lookupActionForView(ev *tcell.EventKey, global, jobs, commands, messages, filePreview, compare, dedup, unique, copies *keymap.Map, vm ui.ViewMode) string {
-	if ev == nil || global == nil {
+// lookupActionForView resolves an action from the view's overlay, then the global map.
+func lookupActionForView(ev *tcell.EventKey, b *keymap.Bundle, vm ui.ViewMode) string {
+	if ev == nil || b == nil || b.Global == nil {
 		return ""
 	}
-	if overlay := overlayForView(jobs, commands, messages, filePreview, compare, dedup, unique, copies, vm); overlay != nil {
+	if overlay := b.OverlayFor(helpkeys.ViewMask(vm)); overlay != nil {
 		if id, ok := overlay.Lookup(ev); ok {
 			return id
 		}
 	}
-	id, ok := global.Lookup(ev)
-	if !ok {
-		return ""
-	}
+	id, _ := b.Global.Lookup(ev)
 	return id
 }
 
 // viewOverlayKeys returns the current view's overlay map.
 func (a *App) viewOverlayKeys() *keymap.Map {
-	return overlayForView(a.keys.Jobs, a.keys.Commands, a.keys.Messages, a.keys.FilePreview, a.keys.Compare, a.keys.Dedup, a.keys.Unique, a.keys.Copies, a.model.ViewMode)
+	return a.keys.OverlayFor(helpkeys.ViewMask(a.model.ViewMode))
 }
 
 // stripHasFocus reports whether a Selected strip (the file panel's or the find-duplicates one) has keyboard focus.
@@ -76,7 +50,7 @@ func (a *App) actionFromKeyEvent(ev *tcell.EventKey) string {
 			return id
 		}
 	}
-	id := lookupActionForView(ev, a.keys.Global, a.keys.Jobs, a.keys.Commands, a.keys.Messages, a.keys.FilePreview, a.keys.Compare, a.keys.Dedup, a.keys.Unique, a.keys.Copies, a.model.ViewMode)
+	id := lookupActionForView(ev, a.keys, a.model.ViewMode)
 	if ev != nil && a.model.EmbeddedPanelFocused() {
 		return a.embeddedPanelAction(ev, id)
 	}

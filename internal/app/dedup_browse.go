@@ -21,10 +21,13 @@ func (a *App) dedupBrowseRows(layout ui.Layout) int {
 // initEmbeddedPanel registers *dst as a new file-list panel instance listing what the active browser
 // panel lists, and returns its ID. It is registered before its first target, so focusing it always
 // finds it.
-func (a *App) initEmbeddedPanel(dst *panel.State) int {
+// view is the view that shows it and rows its viewport rows (panelViewportRows).
+func (a *App) initEmbeddedPanel(dst *panel.State, view ui.ViewMode, rows func(ui.Layout) int) int {
 	act := a.activeBrowserPanel()
 	st := panel.NewSideListing(act, act)
 	id := a.openPanel(dst)
+	inst := a.panelInst(id)
+	inst.rows, inst.view = rows, view
 	st.ScheduleAsyncLoad = a.asyncLoadScheduler(id)
 	st.ScheduleGitStatus = a.gitStatusScheduler(id)
 	st.FileListViewportRows = func() int { return a.panelViewportRows(id) }
@@ -34,22 +37,45 @@ func (a *App) initEmbeddedPanel(dst *panel.State) int {
 
 // closeEmbeddedPanel unregisters the embedded panel *dst (registry ID *id), clears it and forgets what
 // follow followed.
-func (a *App) closeEmbeddedPanel(dst *panel.State, id *int, stale *bool, follow *panelFollow) {
+func (a *App) closeEmbeddedPanel(dst *panel.State, id *int, follow *panelFollow) {
 	follow.reset()
-	*stale = false
 	*dst = panel.State{}
 	a.closePanel(*id)
 	*id = 0
 }
 
 // refreshStaleViewPanel re-lists a shown view panel that skipped refreshes while hidden
-// (refreshViewPanels in the dialog handler only marks a hidden one stale).
-func (a *App) refreshStaleViewPanel(p *panel.State, id int, stale *bool) {
-	if !*stale {
+// (refreshEmbeddedPanels only marks a hidden one stale).
+func (a *App) refreshStaleViewPanel(id int) {
+	inst := a.panelInst(id)
+	if inst == nil || !inst.stale {
 		return
 	}
-	*stale = false
-	_ = p.Refresh(a.panelViewportRows(id))
+	inst.stale = false
+	_ = inst.state.Refresh(a.panelViewportRows(id))
+}
+
+// refreshEmbeddedPanels re-lists every open view panel whose view is shown, with the reload hook
+// onApplied(id) returns (nil for none); file operations run from them (and jobs from anywhere)
+// change what they list, as they do for the browser panels. A panel whose view is hidden is only
+// marked stale (re-listing it is wasted work if the view is never shown again); the view's
+// reconcile re-lists it on return.
+func (a *App) refreshEmbeddedPanels(onApplied func(id int) func()) {
+	for id, inst := range a.panels.byID {
+		switch {
+		case inst.rows == nil:
+		case inst.view == a.model.ViewMode:
+			_ = inst.state.RefreshWithHook(a.panelViewportRows(id), onApplied(id))
+		default:
+			inst.stale = true
+		}
+	}
+}
+
+// isEmbeddedPanel reports whether id is an open view panel.
+func (a *App) isEmbeddedPanel(id int) bool {
+	inst := a.panelInst(id)
+	return inst != nil && inst.rows != nil
 }
 
 // reconcileDedupPanel keeps the browse panel on the row of the pane whose cursor last moved
@@ -59,7 +85,7 @@ func (a *App) reconcileDedupPanel() {
 	if !a.dedupBrowseWanted() {
 		if a.dedupBrowseOn {
 			a.dedupBrowseOn = false
-			a.closeEmbeddedPanel(&a.model.DedupPanel, &a.model.DedupPanelID, &a.model.DedupPanelStale, &a.dedupFollow)
+			a.closeEmbeddedPanel(&a.model.DedupPanel, &a.model.DedupPanelID, &a.dedupFollow)
 			if a.model.DedupView.FocusPanel {
 				a.model.DedupView.FocusPanel = false
 				a.model.DedupView.FocusCopies = false // panel gone: fall back to the main tree
@@ -72,9 +98,9 @@ func (a *App) reconcileDedupPanel() {
 		return // hidden: keep the panel as-is for the return trip
 	}
 	if a.model.DedupPanelID == 0 {
-		a.model.DedupPanelID = a.initEmbeddedPanel(&a.model.DedupPanel)
+		a.model.DedupPanelID = a.initEmbeddedPanel(&a.model.DedupPanel, ui.ViewDedup, a.dedupBrowseRows)
 	}
-	a.refreshStaleViewPanel(&a.model.DedupPanel, a.model.DedupPanelID, &a.model.DedupPanelStale)
+	a.refreshStaleViewPanel(a.model.DedupPanelID)
 	if a.dedupCtrl.NavHeld() {
 		return // fingerprint stays stale so the flush sees the final cursor move
 	}

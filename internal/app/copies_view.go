@@ -52,7 +52,7 @@ func (a *App) reconcileCopiesPanel() {
 	m := &a.model
 	if !m.CopiesView.Open {
 		if m.CopiesPanelID != 0 {
-			a.closeEmbeddedPanel(&m.CopiesPanel, &m.CopiesPanelID, &m.CopiesPanelStale, &a.copiesFollow)
+			a.closeEmbeddedPanel(&m.CopiesPanel, &m.CopiesPanelID, &a.copiesFollow)
 		}
 		return
 	}
@@ -60,9 +60,9 @@ func (a *App) reconcileCopiesPanel() {
 		return // hidden: keep the panel as-is for the return trip
 	}
 	if m.CopiesPanelID == 0 {
-		m.CopiesPanelID = a.initEmbeddedPanel(&m.CopiesPanel)
+		m.CopiesPanelID = a.initEmbeddedPanel(&m.CopiesPanel, ui.ViewCopies, a.copiesPanelRows)
 	}
-	a.refreshStaleViewPanel(&m.CopiesPanel, m.CopiesPanelID, &m.CopiesPanelStale)
+	a.refreshStaleViewPanel(m.CopiesPanelID)
 	path, ok := a.copiesCtrl.Target()
 	t, follow := a.copiesFollow.next(0, followTargetOf(path, false, ok))
 	if !follow {

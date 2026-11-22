@@ -19,6 +19,13 @@ import (
 type panelInstance struct {
 	state *panel.State
 
+	// rows is set for a view's embedded panel (initEmbeddedPanel) and reports the entry rows it
+	// shows in a layout; view is the view that shows it and stale marks a refresh skipped while
+	// that view was hidden (re-listed on return, refreshStaleViewPanel).
+	rows  func(ui.Layout) int
+	view  ui.ViewMode
+	stale bool
+
 	// panelAsyncLoadGen / gitStatusLoadGen drop a listing / cwd-level git result superseded by a
 	// newer dispatch (or by closePanel).
 	panelAsyncLoadGen atomic.Uint64

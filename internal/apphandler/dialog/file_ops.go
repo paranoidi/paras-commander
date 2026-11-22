@@ -86,7 +86,7 @@ func (h *Handler) TryDispatchFileOps(actionID string) bool {
 }
 
 // RefreshBothPanels re-lists both panels (and the views' embedded panels while open, see
-// refreshViewPanels), walking up when their directory vanished (e.g. a completed job removed the
+// Host.RefreshEmbeddedPanels), walking up when their directory vanished (e.g. a completed job removed the
 // active panel's cwd), then applies any pending post-transfer focus
 // (see ReconcilePendingPanelFocus) and refreshes the quick-view preview.
 // When reloads are async, ApplyQuickViewPreviewImmediately also runs from each panel's OnApplied
@@ -99,7 +99,7 @@ func (h *Handler) RefreshBothPanels() {
 	}
 	_ = h.model.Primary.RefreshWithHook(viewportRows, onApplied)
 	_ = h.model.Secondary.RefreshWithHook(viewportRows, onApplied)
-	h.refreshViewPanels(nil, nil)
+	h.host.RefreshEmbeddedPanels(func(int) func() { return nil })
 	// Immediate attempt for the (still common) case where nothing is actually async — e.g. no
 	// scheduler wired. When the reload above is async, this attempt is a harmless no-op (entries
 	// are still stale) and OnApplied / ReconcilePendingPanelFocus retries once the reload lands.
@@ -125,7 +125,7 @@ func (h *Handler) RefreshBothPanelsWithFocus(panelID int, onApplied func()) {
 	// An unknown panelID (a view panel closed under the dialog) falls back to Secondary so
 	// onApplied still runs.
 	target := panelID
-	if target != ui.PrimaryPanel && target != h.model.DedupPanelID && target != h.model.CopiesPanelID {
+	if target != ui.PrimaryPanel && !h.host.IsEmbeddedPanel(target) {
 		target = ui.SecondaryPanel
 	}
 	// hook is the reload hook of panel id: wrap on the target panel, otherwise.
@@ -138,28 +138,8 @@ func (h *Handler) RefreshBothPanelsWithFocus(panelID int, onApplied func()) {
 	noop := func() {}
 	_ = h.model.Primary.RefreshWithHook(viewportRows, hook(ui.PrimaryPanel, plain))
 	_ = h.model.Secondary.RefreshWithHook(viewportRows, hook(ui.SecondaryPanel, plain))
-	h.refreshViewPanels(hook(h.model.DedupPanelID, noop), hook(h.model.CopiesPanelID, noop))
+	h.host.RefreshEmbeddedPanels(func(id int) func() { return hook(id, noop) })
 	h.preview.ApplyQuickViewPreviewImmediately()
-}
-
-// refreshViewPanels re-lists the dedup browse panel and the Other copies panel while open: file
-// operations run from them (and jobs from anywhere) change what they list, as they do for the
-// browser panels. A panel whose view is hidden is only marked stale (re-listing it is wasted
-// work if the view is never shown again); the view's reconcile re-lists it on return.
-func (h *Handler) refreshViewPanels(dedupApplied, copiesApplied func()) {
-	m := h.model
-	h.refreshViewPanel(&m.DedupPanel, m.DedupPanelID, m.ViewMode == ui.ViewDedup, &m.DedupPanelStale, dedupApplied)
-	h.refreshViewPanel(&m.CopiesPanel, m.CopiesPanelID, m.ViewMode == ui.ViewCopies, &m.CopiesPanelStale, copiesApplied)
-}
-
-func (h *Handler) refreshViewPanel(p *panel.State, id int, shown bool, stale *bool, onApplied func()) {
-	switch {
-	case id == 0:
-	case shown:
-		_ = p.RefreshWithHook(h.host.PanelViewportRows(id), onApplied)
-	default:
-		*stale = true
-	}
 }
 
 // ReconcilePendingPanelFocus retries a deferred select scheduled after a transfer job enqueue

@@ -322,9 +322,6 @@ type Model struct {
 	CopiesPanel panel.State
 	// CopiesPanelID is CopiesPanel's panel registry ID (internal/app), or 0 while it is not open.
 	CopiesPanelID int
-	// DedupPanelStale / CopiesPanelStale mark a view panel that skipped a refresh while its view
-	// was hidden; the view's reconcile re-lists it once the view is shown again.
-	DedupPanelStale, CopiesPanelStale bool
 	// QuickViewDirOverlayActive is true when QuickViewDirOverlay should replace the inactive file list.
 	QuickViewDirOverlayActive bool
 	// QuickViewDirOverlayPanelID is PrimaryPanel or SecondaryPanel for the inactive column, or -1 when inactive.

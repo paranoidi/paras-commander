@@ -58,6 +58,8 @@ func (f *identityTestHost) PanelByID(panelID int) *panel.State {
 }
 func (f *identityTestHost) FocusedViewportRows() int                    { return 20 }
 func (f *identityTestHost) PanelViewportRows(int) int                   { return 20 }
+func (f *identityTestHost) RefreshEmbeddedPanels(func(int) func())      {}
+func (f *identityTestHost) IsEmbeddedPanel(int) bool                    { return false }
 func (f *identityTestHost) SelectedStripViewportRows(int) int           { return 0 }
 func (f *identityTestHost) FocusSelectedStrip() bool                    { return false }
 func (f *identityTestHost) PathVolumeContendsWithActiveJob(string) bool { return false }

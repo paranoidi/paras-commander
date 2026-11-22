@@ -32,6 +32,12 @@ func (h dialogHost) FocusedViewportRows() int { return h.app.focusedViewportRows
 
 func (h dialogHost) PanelViewportRows(panelID int) int { return h.app.panelViewportRows(panelID) }
 
+func (h dialogHost) RefreshEmbeddedPanels(onApplied func(id int) func()) {
+	h.app.refreshEmbeddedPanels(onApplied)
+}
+
+func (h dialogHost) IsEmbeddedPanel(id int) bool { return h.app.isEmbeddedPanel(id) }
+
 func (h dialogHost) ClearTransientMessage() { h.app.clearTransientMessage() }
 
 func (h dialogHost) FilterCursorEntry(target dialog.FilterTarget) (string, bool, bool) {

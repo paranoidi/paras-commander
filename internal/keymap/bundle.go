@@ -149,3 +149,28 @@ func (b *Bundle) ReplaceFrom(src *Bundle) {
 	b.PreviewMenuKey = src.PreviewMenuKey
 	b.FileIndexMenuKey = src.FileIndexMenuKey
 }
+
+// OverlayFor picks the map that handles vm's keys before Global (nil when the view has none).
+// The view is a HelpViews bit because internal/ui imports keymap.
+func (b *Bundle) OverlayFor(vm HelpViews) *Map {
+	switch vm {
+	case HelpCommands:
+		return b.Commands
+	case HelpCompare:
+		return b.Compare
+	case HelpDedup:
+		return b.Dedup
+	case HelpUnique:
+		return b.Unique
+	case HelpCopies:
+		return b.Copies
+	case HelpJobs:
+		return b.Jobs
+	case HelpMessages:
+		return b.Messages
+	case HelpFilePreview:
+		return b.FilePreview
+	default:
+		return nil
+	}
+}

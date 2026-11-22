@@ -341,8 +341,8 @@ func TestCopiesPanelRefreshDeferredWhileHidden(t *testing.T) {
 
 	a.model.ViewMode = ui.ViewBrowser
 	a.dialogCtrl.RefreshBothPanels()
-	if !a.model.CopiesPanelStale || a.model.CopiesPanel.ListingPending || has("lantern.txt") {
-		t.Fatalf("hidden panel: stale=%v pending=%v", a.model.CopiesPanelStale, a.model.CopiesPanel.ListingPending)
+	if !a.panelInst(a.model.CopiesPanelID).stale || a.model.CopiesPanel.ListingPending || has("lantern.txt") {
+		t.Fatalf("hidden panel: stale=%v pending=%v", a.panelInst(a.model.CopiesPanelID).stale, a.model.CopiesPanel.ListingPending)
 	}
 
 	a.model.ViewMode = ui.ViewCopies
@@ -350,7 +350,7 @@ func TestCopiesPanelRefreshDeferredWhileHidden(t *testing.T) {
 		a.reconcileAfterEvent()
 		return !a.model.CopiesPanel.ListingPending && has("lantern.txt")
 	})
-	if a.model.CopiesPanelStale {
+	if a.panelInst(a.model.CopiesPanelID).stale {
 		t.Fatal("stale flag survives the re-list")
 	}
 }
