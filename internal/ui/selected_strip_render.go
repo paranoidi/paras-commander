@@ -256,14 +256,18 @@ func paintSelectedStripBottomSize(screen tcell.Screen, rect Rect, rawLabel strin
 }
 
 // selectionStripDisplayPath shows the path relative to the current directory
-// (name.txt, child/name.txt, ../sibling.txt); tilde-absolute when Rel fails (e.g. remote vs local).
+// (name.txt, child/name.txt, ../sibling.txt); tilde-absolute when Rel fails (e.g. remote vs local)
+// or when the relative form climbs out of the directory and the tilde form is shorter.
 func selectionStripDisplayPath(absPath, curDir, userHomeDir string, width int) string {
 	if width <= 0 {
 		return ""
 	}
+	tilde := primitive.PathWithHomeTilde(absPath, userHomeDir)
 	label, err := filepath.Rel(curDir, absPath)
 	if err != nil {
-		label = primitive.PathWithHomeTilde(absPath, userHomeDir)
+		label = tilde
+	} else {
+		label = selstrip.ShorterLabel(label, tilde)
 	}
 	return primitive.FitPathForWidth(label, width)
 }

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/paranoidi/paras-commander/internal/quickfilter"
 	"github.com/paranoidi/paras-commander/internal/search"
@@ -114,13 +115,23 @@ func FlatRows(paths []string) []Row {
 }
 
 // Label is p's tree label: its "/"-separated path relative to baseDir, or p itself when
-// that cannot be expressed. The single source of the labels fed to treeflat.PathTree.
+// that cannot be expressed or when the relative form climbs out of baseDir ("..") and p is
+// strictly shorter (ShorterLabel). The single source of the labels fed to treeflat.PathTree.
 func Label(baseDir, p string) string {
-	label, err := filepath.Rel(baseDir, p)
+	rel, err := filepath.Rel(baseDir, p)
 	if err != nil {
-		label = p
+		return filepath.ToSlash(p)
 	}
-	return filepath.ToSlash(label)
+	return ShorterLabel(rel, filepath.ToSlash(p))
+}
+
+// ShorterLabel is rel unless rel climbs out of its base ("..") and alt is shorter.
+func ShorterLabel(rel, alt string) string {
+	rel = filepath.ToSlash(rel)
+	if (rel == ".." || strings.HasPrefix(rel, "../")) && utf8.RuneCountInString(alt) < utf8.RuneCountInString(rel) {
+		return alt
+	}
+	return rel
 }
 
 // TreeRows flattens a path tree (labels from Label, ids the paths) into strip rows, with the

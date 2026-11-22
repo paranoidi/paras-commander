@@ -140,3 +140,17 @@ func TestBulkFold(t *testing.T) {
 		t.Fatal("bulk fold must ignore a flat list")
 	}
 }
+
+func TestLabel(t *testing.T) {
+	t.Parallel()
+	cases := []struct{ base, p, want string }{
+		{"/home/rover/notebook", "/home/rover/notebook/child/inside.txt", "child/inside.txt"},
+		{"/home/rover/notebook", "/home/rover/sibling.txt", "../sibling.txt"},
+		{"/tmp/harbor", "/home/rover/orchard/willow/bin", "/home/rover/orchard/willow/bin"},
+	}
+	for _, c := range cases {
+		if got := Label(c.base, c.p); got != c.want {
+			t.Fatalf("Label(%q, %q) = %q, want %q", c.base, c.p, got, c.want)
+		}
+	}
+}

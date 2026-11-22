@@ -253,11 +253,27 @@ func TestSelectionStripDisplayPathRelative(t *testing.T) {
 	cases := []struct{ abs, want string }{
 		{"/home/rover/notebook/current.txt", "current.txt"},
 		{"/home/rover/notebook/child/inside.txt", "child/inside.txt"},
-		{"/home/rover/sibling.txt", "../sibling.txt"},
+		// relative form climbs and is longer than the tilde form
+		{"/home/rover/sibling.txt", "~/sibling.txt"},
+		{"/home/rover/lantern/meadow/pebble.txt", "~/lantern/meadow/pebble.txt"},
 	}
 	for _, c := range cases {
 		if got := selectionStripDisplayPath(c.abs, cur, "/home/rover", 60); got != c.want {
 			t.Fatalf("selectionStripDisplayPath(%q) = %q, want %q", c.abs, got, c.want)
+		}
+	}
+}
+
+func TestSelectionStripDisplayPathOutsideHome(t *testing.T) {
+	t.Parallel()
+	cases := []struct{ abs, cur, want string }{
+		{"/home/rover/orchard/bin", "/tmp/harbor/willow", "~/orchard/bin"},
+		// climbing relative form is still the shorter one
+		{"/tmp/harbor/sibling.txt", "/tmp/harbor/willow", "../sibling.txt"},
+	}
+	for _, c := range cases {
+		if got := selectionStripDisplayPath(c.abs, c.cur, "/home/rover", 60); got != c.want {
+			t.Fatalf("selectionStripDisplayPath(%q, %q) = %q, want %q", c.abs, c.cur, got, c.want)
 		}
 	}
 }
