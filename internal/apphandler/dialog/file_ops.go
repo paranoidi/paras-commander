@@ -97,8 +97,8 @@ func (h *Handler) RefreshBothPanels() {
 		h.applyPendingPanelFocus()
 		h.preview.ApplyQuickViewPreviewImmediately()
 	}
-	_ = h.model.Primary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, onApplied)
-	_ = h.model.Secondary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, onApplied)
+	_ = h.model.Primary.RefreshWithHook(viewportRows, onApplied)
+	_ = h.model.Secondary.RefreshWithHook(viewportRows, onApplied)
 	h.refreshViewPanels(nil, nil)
 	// Immediate attempt for the (still common) case where nothing is actually async — e.g. no
 	// scheduler wired. When the reload above is async, this attempt is a harmless no-op (entries
@@ -108,8 +108,7 @@ func (h *Handler) RefreshBothPanels() {
 }
 
 // RefreshBothPanelsWithFocus is RefreshBothPanels, except the panel matching panelID reloads via
-// RefreshOrNavigateToExistingAncestorWithHook so onApplied runs once, right after that panel's
-// own reload lands (sync or async) — used by rename/mkdir, whose target already exists on disk by
+// RefreshWithHook so onApplied runs once, right after that panel's own reload lands (sync or async) — used by rename/mkdir, whose target already exists on disk by
 // the time this runs, so the very next reload of that specific panel is guaranteed to contain it.
 // Unlike RefreshBothPanels this does not touch pendingPanelFocus/applyPendingPanelFocus — that
 // mechanism is reserved for post-job focus (duplicate / transfer-to-other-panel; see
@@ -132,8 +131,8 @@ func (h *Handler) RefreshBothPanelsWithFocus(panelID int, onApplied func()) {
 	case h.model.CopiesPanelID:
 		secondaryHook, copiesHook = plain, wrap
 	}
-	_ = h.model.Primary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, primaryHook)
-	_ = h.model.Secondary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, secondaryHook)
+	_ = h.model.Primary.RefreshWithHook(viewportRows, primaryHook)
+	_ = h.model.Secondary.RefreshWithHook(viewportRows, secondaryHook)
 	h.refreshViewPanels(dedupHook, copiesHook)
 	h.preview.ApplyQuickViewPreviewImmediately()
 }
@@ -143,10 +142,10 @@ func (h *Handler) RefreshBothPanelsWithFocus(panelID int, onApplied func()) {
 // browser panels.
 func (h *Handler) refreshViewPanels(dedupApplied, copiesApplied func()) {
 	if id := h.model.DedupPanelID; id != 0 {
-		_ = h.model.DedupPanel.RefreshOrNavigateToExistingAncestorWithHook(h.host.PanelViewportRows(id), dedupApplied)
+		_ = h.model.DedupPanel.RefreshWithHook(h.host.PanelViewportRows(id), dedupApplied)
 	}
 	if id := h.model.CopiesPanelID; id != 0 {
-		_ = h.model.CopiesPanel.RefreshOrNavigateToExistingAncestorWithHook(h.host.PanelViewportRows(id), copiesApplied)
+		_ = h.model.CopiesPanel.RefreshWithHook(h.host.PanelViewportRows(id), copiesApplied)
 	}
 }
 

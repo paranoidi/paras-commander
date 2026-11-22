@@ -5,7 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
@@ -77,5 +79,42 @@ func TestDanglingPromptAllRemovedReportsSuccess(t *testing.T) {
 	flushBackgroundJobs(t, app)
 	if app.model.MessageUrgency != ui.MessageUrgencySuccess || app.model.Message != "Job completed" {
 		t.Fatalf("urgency = %v message = %q", app.model.MessageUrgency, app.model.Message)
+	}
+}
+
+// A panel browsing with fileindex inside a directory the left-empty prompt removes walks up to its
+// parent: the index change that follows the removal reloads the panel, and that reload must not
+// list the vanished directory ("List failed").
+func TestDanglingPromptRemovesPanelDirectoryWithIndex(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	hollow := filepath.Join(dir, "meadow")
+	if err := os.Mkdir(hollow, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []int{ui.PrimaryPanel, ui.SecondaryPanel} {
+		p := a.panelByID(id)
+		p.WithIndex = true
+		sched := p.ScheduleAsyncLoad
+		p.ScheduleAsyncLoad = nil
+		if err := p.Load(hollow); err != nil {
+			t.Fatal(err)
+		}
+		p.ScheduleAsyncLoad = sched
+	}
+	a.dialogCtrl.PromptDanglingDirDelete([]string{hollow})
+	a.dialogCtrl.ExecuteDelete()
+	flushBackgroundJobs(t, a)
+	// The removal reaches the index asynchronously; it reloads the panels again.
+	a.refreshIndexViewsIn([]string{hollow, dir})
+	drainInterruptEventsUntil(t, a, screen, 2*time.Second, func() bool {
+		return !a.model.Primary.ListingPending && !a.model.Secondary.ListingPending
+	})
+	if a.model.MessageUrgency == ui.MessageUrgencyError {
+		t.Fatalf("error message %q", a.model.Message)
+	}
+	for _, p := range []*panel.State{&a.model.Primary, &a.model.Secondary} {
+		if p.PathString() != dir {
+			t.Fatalf("panel path = %q, want %q", p.PathString(), dir)
+		}
 	}
 }

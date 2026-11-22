@@ -283,10 +283,10 @@ type State struct {
 	// ScheduleTreeChildLoad (set by app; nil-safe, same convention as ScheduleTreeChildLoad — nil
 	// in tests). Called by abandonTreeChildLoads.
 	CancelTreeChildLoads func()
-	// climbToExistingAncestor is set for the duration of RefreshOrNavigateToExistingAncestor
+	// climbToExistingAncestor is set for the duration of refresh
 	// so ListingRefreshSnapshot can ask FetchListing to Stat-climb on the worker goroutine.
 	climbToExistingAncestor bool
-	// ancestorClimbOrigin is the path RefreshOrNavigateToExistingAncestor started from.
+	// ancestorClimbOrigin is the path refresh started from.
 	// ApplyListing uses it to highlight the first missing child after a climb.
 	ancestorClimbOrigin pathloc.Path
 
@@ -405,6 +405,8 @@ func (s *State) Load(path string) error {
 
 // Refresh reloads the current path. When the entry under the cursor still exists, it is re-selected by name;
 // otherwise the prior row index is restored (clamped), matching MC-style behavior after moves/deletes.
+// When the current path vanished (a job removed it), it walks up to the nearest existing ancestor
+// in one step instead, highlighting the first missing child name.
 // A no-op while a load is already in flight to a *different* directory (ListingPendingPath != Path):
 // Path still holds the pre-navigation directory until that load lands, so scheduling a same-dir
 // refresh here would race it on the shared generation counter and could clobber a real navigation.
@@ -414,37 +416,18 @@ func (s *State) Refresh(viewportRows int) error {
 	return s.RefreshWithHook(viewportRows, nil)
 }
 
-// RefreshWithHook is Refresh, running onApplied once after the reload lands (sync or async).
-// When a same-directory load is already pending, a new load is scheduled (superseding the old
-// one); onApplied from the superseded request is dropped with its generation. When a
-// cross-directory navigation is pending, this is a no-op and onApplied is not queued.
+// RefreshWithHook is Refresh, running onApplied once after the reload (or ancestor climb) lands
+// (sync or async). When a same-directory load is already pending, a new load is scheduled
+// (superseding the old one); onApplied from the superseded request is dropped with its generation.
+// When a cross-directory navigation is pending, this is a no-op and onApplied is not queued.
 func (s *State) RefreshWithHook(viewportRows int, onApplied func()) error {
-	if s.ListingPending {
-		pending := s.ListingPendingPath
-		if pending != "" && pending != s.Path.String() {
-			return nil
-		}
-	}
-	priorCursor := s.Cursor
-	entry, ok := s.CurrentEntry()
-	selectedName := ""
-	if ok {
-		selectedName = entry.Name
-	}
-	return s.load(s.Path, selectedName, viewportRows, priorCursor, asyncLoadOpts{onApplied: onApplied})
+	return s.refresh(viewportRows, asyncLoadOpts{onApplied: onApplied})
 }
 
 // RefreshIfChanged is Refresh that applies the reload only when the listing differs from the rows
 // shown (ListingUnchanged): for a reload that usually confirms what a refresh already showed.
 func (s *State) RefreshIfChanged(viewportRows int) error {
-	if s.ListingPending && s.ListingPendingPath != "" && s.ListingPendingPath != s.Path.String() {
-		return nil
-	}
-	selectedName := ""
-	if e, ok := s.CurrentEntry(); ok {
-		selectedName = e.Name
-	}
-	return s.load(s.Path, selectedName, viewportRows, s.Cursor, asyncLoadOpts{skipUnchanged: true})
+	return s.refresh(viewportRows, asyncLoadOpts{skipUnchanged: true})
 }
 
 // ListingUnchanged reports whether a listing of loc equals the flat listing shown. A tree reload
@@ -453,29 +436,24 @@ func (s *State) ListingUnchanged(loc pathloc.Path, entries []fsbackend.Entry) bo
 	return s.ListLayout != ListLayoutTree && loc.Equal(s.Path) && fsbackend.EntriesListingEqual(entries, BackendEntriesFromPanel(s.Entries))
 }
 
-// RefreshOrNavigateToExistingAncestor reloads the current directory when it still exists.
-// When the current path is missing, it walks up to the nearest existing ancestor and navigates
-// there in one step (highlighting the first missing child name when possible).
-func (s *State) RefreshOrNavigateToExistingAncestor(viewportRows int) error {
-	return s.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, nil)
-}
-
-// RefreshOrNavigateToExistingAncestorWithHook is RefreshOrNavigateToExistingAncestor, running
-// onApplied once after the reload (or ancestor navigation) lands.
+// refresh reloads the current path with opts (see Refresh).
 //
-// Existence climb is part of the listing fetch (ListingRefreshSnapshot.ClimbToExistingAncestor),
+// The existence climb is part of the listing fetch (ListingRefreshSnapshot.ClimbToExistingAncestor),
 // not a Stat walk on this goroutine. Path stays on the vanished directory until the listing
 // applies; ApplyListing then highlights the first missing child when the fetch landed on an ancestor.
-func (s *State) RefreshOrNavigateToExistingAncestorWithHook(viewportRows int, onApplied func()) error {
-	if s.Path.IsZero() {
-		return s.RefreshWithHook(viewportRows, onApplied)
+func (s *State) refresh(viewportRows int, opts asyncLoadOpts) error {
+	if s.ListingPending && s.ListingPendingPath != "" && s.ListingPendingPath != s.Path.String() {
+		return nil
 	}
-	pendingOther := s.ListingPending && s.ListingPendingPath != "" && s.ListingPendingPath != s.Path.String()
+	selectedName := ""
+	if e, ok := s.CurrentEntry(); ok {
+		selectedName = e.Name
+	}
 	s.climbToExistingAncestor = true
 	s.ancestorClimbOrigin = s.Path
-	err := s.RefreshWithHook(viewportRows, onApplied)
+	err := s.load(s.Path, selectedName, viewportRows, s.Cursor, opts)
 	s.climbToExistingAncestor = false
-	if err != nil || pendingOther {
+	if err != nil {
 		s.ancestorClimbOrigin = pathloc.Path{}
 	}
 	return err

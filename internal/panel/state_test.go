@@ -318,7 +318,7 @@ func TestRefreshPreservesSelectedEntryByName(t *testing.T) {
 	}
 }
 
-func TestRefreshOrNavigateToExistingAncestorWalksUpOnce(t *testing.T) {
+func TestRefreshClimbsToExistingAncestorWalksUpOnce(t *testing.T) {
 	root := t.TempDir()
 	parent := filepath.Join(root, "parent")
 	child := filepath.Join(parent, "child")
@@ -335,8 +335,8 @@ func TestRefreshOrNavigateToExistingAncestorWalksUpOnce(t *testing.T) {
 	if err := os.RemoveAll(child); err != nil {
 		t.Fatal(err)
 	}
-	if err := state.RefreshOrNavigateToExistingAncestor(5); err != nil {
-		t.Fatalf("RefreshOrNavigateToExistingAncestor() error = %v", err)
+	if err := state.Refresh(5); err != nil {
+		t.Fatalf("Refresh() error = %v", err)
 	}
 	want := filepath.Clean(parent)
 	if got := state.Path.String(); got != want {
@@ -346,7 +346,7 @@ func TestRefreshOrNavigateToExistingAncestorWalksUpOnce(t *testing.T) {
 
 // A deleted cwd climbs to the parent and lands on the entry after the vanished dir,
 // not on the cursor index the panel had inside the vanished dir.
-func TestRefreshOrNavigateToExistingAncestorSelectsNextAfterVanishedDir(t *testing.T) {
+func TestRefreshClimbsToExistingAncestorSelectsNextAfterVanishedDir(t *testing.T) {
 	root := t.TempDir()
 	for _, name := range []string{"apple", "banana", "cherry", "damson"} {
 		if err := os.Mkdir(filepath.Join(root, name), 0o755); err != nil {
@@ -366,7 +366,7 @@ func TestRefreshOrNavigateToExistingAncestorSelectsNextAfterVanishedDir(t *testi
 	if err := os.Remove(filepath.Join(root, "cherry")); err != nil {
 		t.Fatal(err)
 	}
-	if err := state.RefreshOrNavigateToExistingAncestor(5); err != nil {
+	if err := state.Refresh(5); err != nil {
 		t.Fatal(err)
 	}
 	entry, ok := state.CurrentEntry()
@@ -375,10 +375,10 @@ func TestRefreshOrNavigateToExistingAncestorSelectsNextAfterVanishedDir(t *testi
 	}
 }
 
-// TestRefreshOrNavigateToExistingAncestorDoesNotStatOnCaller proves a deleted cwd is
+// TestRefreshClimbsToExistingAncestorDoesNotStatOnCaller proves a deleted cwd is
 // scheduled as the same-path refresh (existence climb happens inside the listing fetch),
 // so a blocking Stat cannot stall the caller, and Path stays on the vanished dir until apply.
-func TestRefreshOrNavigateToExistingAncestorDoesNotStatOnCaller(t *testing.T) {
+func TestRefreshClimbsToExistingAncestorDoesNotStatOnCaller(t *testing.T) {
 	root := t.TempDir()
 	parent := filepath.Join(root, "harbor")
 	child := filepath.Join(parent, "pruned")
@@ -405,15 +405,15 @@ func TestRefreshOrNavigateToExistingAncestorDoesNotStatOnCaller(t *testing.T) {
 
 	done := make(chan error, 1)
 	go func() {
-		done <- state.RefreshOrNavigateToExistingAncestor(5)
+		done <- state.Refresh(5)
 	}()
 	select {
 	case err := <-done:
 		if err != nil {
-			t.Fatalf("RefreshOrNavigateToExistingAncestor: %v", err)
+			t.Fatalf("Refresh: %v", err)
 		}
 	case <-time.After(2 * time.Second):
-		t.Fatal("RefreshOrNavigateToExistingAncestor blocked (must not Stat on the caller)")
+		t.Fatal("Refresh blocked (must not Stat on the caller)")
 	}
 	close(block)
 	if !started.Load() {
@@ -458,7 +458,7 @@ func TestApplyListingClimbHighlightsMissingChild(t *testing.T) {
 	}
 }
 
-func TestRefreshOrNavigateToExistingAncestorRefreshesWhenPathExists(t *testing.T) {
+func TestRefreshClimbsToExistingAncestorRefreshesWhenPathExists(t *testing.T) {
 	dir := t.TempDir()
 	testutil.WriteFile(t, filepath.Join(dir, "keep.txt"))
 	state, err := New(dir)
@@ -466,8 +466,8 @@ func TestRefreshOrNavigateToExistingAncestorRefreshesWhenPathExists(t *testing.T
 		t.Fatalf("New() error = %v", err)
 	}
 	state.Cursor = 0
-	if err := state.RefreshOrNavigateToExistingAncestor(5); err != nil {
-		t.Fatalf("RefreshOrNavigateToExistingAncestor() error = %v", err)
+	if err := state.Refresh(5); err != nil {
+		t.Fatalf("Refresh() error = %v", err)
 	}
 	if state.Path.String() != filepath.Clean(dir) {
 		t.Fatalf("Path = %q, want %q", state.Path.String(), dir)
