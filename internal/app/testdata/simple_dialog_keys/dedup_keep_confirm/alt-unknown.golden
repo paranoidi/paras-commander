@@ -5,4 +5,4 @@ focus=previous
 == Alt+q ==
 focus=previous
 == Right ==
-focus=cancel
+focus=this

@@ -37,13 +37,13 @@ func dedupKeepConfirmWidth(state DedupKeepConfirmState, lines []string) int {
 
 // DedupKeepConfirmView describes the confirmation: the directory, how many groups already keep a
 // copy elsewhere, those copies (capped at dedupKeepConfirmMaxListRows rows, a trailing "(+N more)"
-// line replacing the last one), what each choice does, and Keep this / Keep previous / Cancel.
+// line replacing the last one), what each choice does, and Keep previous / Keep this / Cancel.
 func DedupKeepConfirmView(state DedupKeepConfirmState) dlg.Spec {
 	groups := fmt.Sprintf("%d duplicate groups already keep a copy elsewhere:", state.Groups)
 	if state.Groups == 1 {
 		groups = "1 duplicate group already keeps a copy elsewhere:"
 	}
-	help := []string{"Keep this: replace those keeps with this directory.", "Keep previous: leave those groups as they are."}
+	help := []string{"Keep previous: leave those groups as they are.", "Keep this: replace those keeps with this directory."}
 	items := []dlg.Item{
 		{Kind: dlg.KindLabel, Prefix: dedupKeepConfirmDirPrefix, Label: dedupKeepConfirmDir(state), Fit: dlg.FitPath},
 		{Kind: dlg.KindLabel, Label: groups},
@@ -67,8 +67,8 @@ func DedupKeepConfirmView(state DedupKeepConfirmState) dlg.Spec {
 		Title: "Keep Directory", Width: dedupKeepConfirmWidth(state, append(help, groups)), Unclamped: true, AltOnly: true,
 		Groups: []dlg.Group{{Columns: [][]dlg.Item{items}}},
 		Buttons: []dlg.Button{
-			{ID: DedupKeepThis, Label: "Keep this", Mnemonic: 'T'},
 			{ID: DedupKeepPrevious, Label: "Keep previous", Mnemonic: 'P'},
+			{ID: DedupKeepThis, Label: "Keep this", Mnemonic: 'T'},
 			dlg.CancelButton,
 		},
 	}

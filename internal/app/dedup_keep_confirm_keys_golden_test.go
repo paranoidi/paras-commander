@@ -87,16 +87,16 @@ func dedupKeepKeyDialog(name string) keyGoldenDialog {
 func TestDedupKeepConfirmKeyScripts(t *testing.T) {
 	runKeyGoldenScripts(t, dedupKeepKeyDialog("dedup_keep_confirm"), []simpleKeyScript{
 		{"enter-previous", "Enter"},
-		{"enter-this", "Left Enter"},
-		{"enter-cancel", "Right Enter"},
+		{"enter-this", "Right Enter"},
+		{"enter-cancel", "Right Right Enter"},
 		{"space", "Space"},
 		{"alt-t", "Alt+t"},
-		{"alt-p", "Left Alt+p"},
+		{"alt-p", "Right Alt+p"},
 		{"alt-upper-t", "Alt+T"},
 		{"alt-c", "Alt+c"},
-		{"alt-enter", "Right Alt+Enter"},
+		{"alt-enter", "Right Right Alt+Enter"},
 		{"alt-unknown", "Alt+x Alt+q Right"},
-		{"esc", "Left Esc"},
+		{"esc", "Right Esc"},
 		{"plain-letters", "t p c x q"},
 	})
 }

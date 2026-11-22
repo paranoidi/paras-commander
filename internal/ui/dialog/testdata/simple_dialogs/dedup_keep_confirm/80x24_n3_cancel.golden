@@ -12,10 +12,10 @@
             │   birch/kestrel.txt                                 │             
             │   cinder/river.txt                                  │             
             │                                                     │             
-            │ Keep this: replace those keeps with this directory. │             
             │ Keep previous: leave those groups as they are.      │             
+            │ Keep this: replace those keeps with this directory. │             
             ├─────────────────────────────────────────────────────┤             
-            │    [ Keep this ]  [ Keep previous ]  [ Cancel ]     │             
+            │    [ Keep previous ]  [ Keep this ]  [ Cancel ]     │             
             └─────────────────────────────────────────────────────┘             
                                                                                 
                                                                                 
@@ -48,7 +48,7 @@ aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
 aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
 aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
 aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbdddddddedddddbbdddddedddddddddddbbffgfffffffbbbbbbaaaaaaaaaaaaa
+aaaaaaaaaaaabbbbbdddddedddddddddddbbdddddddedddddbbffgfffffffbbbbbbaaaaaaaaaaaaa
 aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

@@ -1,6 +1,8 @@
 == open ==
 focus=previous
 == Right ==
+focus=this
+== Right ==
 focus=cancel
 == Enter ==
 CLOSED: quit=false kept=[birch/widget.txt] marked=[amber/widget.txt,cedar/widget.txt]
