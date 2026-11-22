@@ -105,7 +105,7 @@ type DedupViewState struct {
 	Strip                 selstrip.State  // Selected strip cursor, scroll and quick filter
 	Marked                map[string]bool // absolute paths marked for deletion
 	MarkedCount           int
-	HasPotential          bool // a shown group is a potential duplicate set: dedup.hash-potential has work (menus dim it otherwise)
+	HasPotential          bool   // a shown group is a potential duplicate set: dedup.hash-potential has work (menus dim it otherwise)
 	RangeAnchor           string // focused pane's file AbsKey marked as the pending range-select start ("" when none); cleared on pane switch
 	MarkedReclaimBytes    int64
 	Kept                  map[string]bool                    // absolute paths designated as survivors
@@ -522,6 +522,50 @@ func DedupNextDirRowIndex(rows []DedupRow, from int) int {
 		}
 	}
 	return end
+}
+
+// MoveBy moves the cursor by delta rows of total, clamped.
+func (p *DedupPane) MoveBy(delta, total int) {
+	if total > 0 {
+		p.Selected = min(max(p.Selected+delta, 0), total-1)
+	}
+}
+
+// SelectEdge moves the cursor to the first row, or the last of total.
+func (p *DedupPane) SelectEdge(last bool, total int) {
+	p.Selected = 0
+	if last {
+		p.Selected = max(total-1, 0)
+	}
+}
+
+// ApplyFilter sets the quick filter's query over names and jumps the cursor to its match.
+func (p *DedupPane) ApplyFilter(query string, names []string, opts quickfilter.Options) {
+	if cur, ok := p.Filter.Apply(query, names, opts); ok {
+		p.Selected = cur
+	}
+}
+
+// AppendFilterRune types r into the quick filter over names.
+func (p *DedupPane) AppendFilterRune(r rune, names []string, opts quickfilter.Options) {
+	p.ApplyFilter(p.Filter.InsertRune(r), names, opts)
+}
+
+// BackspaceFilter deletes the rune before the quick filter's caret.
+func (p *DedupPane) BackspaceFilter(names []string, opts quickfilter.Options) {
+	if next, changed := p.Filter.Backspace(); changed {
+		p.ApplyFilter(next, names, opts)
+	}
+}
+
+// CycleFilterMatch steps the cursor through the filter's matches, or moves plainly over total rows
+// when nothing matches.
+func (p *DedupPane) CycleFilterMatch(delta, total int, opts quickfilter.Options) {
+	if cur, ok := p.Filter.Cycle(p.Selected, delta, opts); ok {
+		p.Selected = cur
+		return
+	}
+	p.MoveBy(delta, total)
 }
 
 // EnsureSelectionVisible clamps the pane's selected row and scroll offset.

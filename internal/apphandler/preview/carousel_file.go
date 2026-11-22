@@ -262,7 +262,7 @@ func (h *Handler) carouselFilePreviewContext() bool {
 	if h.model.ActiveSubFocus != ui.SubFocusFileList {
 		return false
 	}
-	if h.model.ActivePanel != ui.PrimaryPanel && h.model.ActivePanel != ui.SecondaryPanel {
+	if !ui.IsBrowserPanel(h.model.ActivePanel) {
 		return false
 	}
 	if _, _, ok := h.carouselFilePreviewWantPath(); !ok {

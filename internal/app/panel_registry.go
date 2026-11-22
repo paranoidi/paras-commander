@@ -92,7 +92,7 @@ func (a *App) openPanel(state *panel.State) int {
 // browser panels (ui.PrimaryPanel, ui.SecondaryPanel) are a no-op.
 func (a *App) closePanel(id int) {
 	inst := a.panelInst(id)
-	if inst == nil || id == ui.PrimaryPanel || id == ui.SecondaryPanel {
+	if inst == nil || ui.IsBrowserPanel(id) {
 		return
 	}
 	inst.panelAsyncLoadGen.Add(1)

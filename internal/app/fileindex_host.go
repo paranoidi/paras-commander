@@ -17,7 +17,7 @@ type fileindexHost struct {
 
 func (h fileindexHost) FocusedPanelSources() []string { return h.app.dialogCtrl.FocusedPanelSources() }
 
-func (h fileindexHost) DestinationPanel() *panel.State { return h.app.destinationPanel() }
+func (h fileindexHost) DestinationPanel() *panel.State { return h.app.otherBrowserPanel() }
 
 func (h fileindexHost) PrimaryPanel() *panel.State { return &h.app.model.Primary }
 

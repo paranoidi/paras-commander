@@ -17,7 +17,7 @@ type Host interface {
 	host.PanelNavigationHost
 
 	// FocusedPanel is the panel file operations act on (the active browser column or a view's
-	// focused embedded panel); DestinationPanel is where they go (App.destinationPanelID).
+	// focused embedded panel); DestinationPanel is where they go (App.otherBrowserPanelID).
 	FocusedPanel() *panel.State
 	DestinationPanel() *panel.State
 	DestinationPanelID() int

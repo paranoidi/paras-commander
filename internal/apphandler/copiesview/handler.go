@@ -7,7 +7,6 @@ import (
 	"slices"
 
 	"github.com/paranoidi/paras-commander/internal/apphandler/host"
-	"github.com/paranoidi/paras-commander/internal/config"
 	fi "github.com/paranoidi/paras-commander/internal/fileindex"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/quickfilter"
@@ -24,7 +23,7 @@ type Host interface {
 	host.PanelNavigationHost
 	CopiesMenuDefinitions() []menu.Definition
 	BrowserMenuDefinitions() []menu.Definition
-	Config() config.Config
+	FilterOptions() quickfilter.Options
 }
 
 // Deps wires the handler at app construction.
@@ -49,7 +48,8 @@ func (h *Handler) Open(origin string, indexPanel bool, copies []fi.CopyFile) {
 	for i, c := range copies {
 		files[i] = ui.UniqueFile{Path: c.Path, Size: c.Size}
 	}
-	h.model.CopiesView = ui.CopiesViewState{Open: true, Origin: origin, IndexPanel: indexPanel, Files: files}
+	h.model.CopiesView = ui.CopiesViewState{Open: true, Origin: origin, IndexPanel: indexPanel}
+	h.model.CopiesView.SetFiles(files)
 	h.model.ViewMode = ui.ViewCopies
 	h.model.MenuDefinitions = h.host.CopiesMenuDefinitions()
 	h.model.Menu.ActiveMenu = menu.DefaultIndexDedup()
@@ -72,18 +72,13 @@ func (h *Handler) EnsureSelectionVisible(visibleRows int) {
 // MoveSelection moves the cursor by delta rows (clamped).
 func (h *Handler) MoveSelection(delta int) {
 	st := &h.model.CopiesView
-	if n := len(st.Files); n > 0 {
-		st.Pane.Selected = min(max(st.Pane.Selected+delta, 0), n-1)
-	}
+	st.Pane.MoveBy(delta, len(st.Files))
 }
 
 // SelectEdge moves the cursor to the first or last row.
 func (h *Handler) SelectEdge(last bool) {
 	st := &h.model.CopiesView
-	st.Pane.Selected = 0
-	if last {
-		st.Pane.Selected = max(len(st.Files)-1, 0)
-	}
+	st.Pane.SelectEdge(last, len(st.Files))
 }
 
 // SelectRow moves the cursor to row and gives the list focus (a click).
@@ -181,10 +176,14 @@ func (h *Handler) FilesQueued(paths []string, gone bool) {
 	if !gone {
 		return
 	}
-	st.Files = slices.DeleteFunc(slices.Clone(st.Files), func(f ui.UniqueFile) bool { return slices.Contains(paths, f.Path) })
+	drop := make(map[string]bool, len(paths))
+	for _, p := range paths {
+		drop[p] = true
+	}
+	st.SetFiles(slices.DeleteFunc(slices.Clone(st.Files), func(f ui.UniqueFile) bool { return drop[f.Path] }))
 	st.Pane.Selected = min(st.Pane.Selected, max(len(st.Files)-1, 0))
 	if st.Pane.Filter.Query != "" {
-		st.Pane.Filter.Rebuild(h.names(), h.filterOptions())
+		st.Pane.Filter.Rebuild(h.names(), h.host.FilterOptions())
 	}
 }
 
@@ -199,35 +198,23 @@ func (h *Handler) names() []string {
 	return names
 }
 
-func (h *Handler) filterOptions() quickfilter.Options {
-	f := h.host.Config().Filter
-	return quickfilter.OptionsFrom(f.CaseInsensitive, f.CycleMatches)
-}
-
-func (h *Handler) applyFilter(query string) {
-	st := &h.model.CopiesView
-	if cur, ok := st.Pane.Filter.Apply(query, h.names(), h.filterOptions()); ok {
-		st.Pane.Selected = cur
-	}
-}
-
 // Filter is the list's quick filter.
 func (h *Handler) Filter() quickfilter.Filter { return h.model.CopiesView.Pane.Filter }
 
 // AppendFilterRune types r into the filter.
 func (h *Handler) AppendFilterRune(r rune) {
-	h.applyFilter(h.model.CopiesView.Pane.Filter.InsertRune(r))
+	h.model.CopiesView.Pane.AppendFilterRune(r, h.names(), h.host.FilterOptions())
 }
 
 // BackspaceFilter deletes the rune before the filter caret.
 func (h *Handler) BackspaceFilter() {
-	if next, changed := h.model.CopiesView.Pane.Filter.Backspace(); changed {
-		h.applyFilter(next)
-	}
+	h.model.CopiesView.Pane.BackspaceFilter(h.names(), h.host.FilterOptions())
 }
 
 // ClearFilter empties the query while the filter stays open.
-func (h *Handler) ClearFilter() { h.applyFilter("") }
+func (h *Handler) ClearFilter() {
+	h.model.CopiesView.Pane.ApplyFilter("", h.names(), h.host.FilterOptions())
+}
 
 // CancelFilter closes the filter.
 func (h *Handler) CancelFilter() { h.model.CopiesView.Pane.Filter = quickfilter.Filter{} }
@@ -235,9 +222,5 @@ func (h *Handler) CancelFilter() { h.model.CopiesView.Pane.Filter = quickfilter.
 // CycleFilterMatch steps the cursor through the matches, or moves plainly when nothing matches.
 func (h *Handler) CycleFilterMatch(delta int) {
 	st := &h.model.CopiesView
-	if cur, ok := st.Pane.Filter.Cycle(st.Pane.Selected, delta, h.filterOptions()); ok {
-		st.Pane.Selected = cur
-		return
-	}
-	h.MoveSelection(delta)
+	st.Pane.CycleFilterMatch(delta, len(st.Files), h.host.FilterOptions())
 }

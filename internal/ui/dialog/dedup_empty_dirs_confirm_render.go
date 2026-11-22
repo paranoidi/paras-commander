@@ -19,13 +19,33 @@ func dedupEmptyDirsConfirmWidth(state DedupEmptyDirsConfirmState, msg string, ic
 			width = w
 		}
 	}
-	if width < 50 {
-		width = 50
+	return clampDedupConfirmWidth(width)
+}
+
+// clampDedupConfirmWidth keeps a dedup confirmation's width between 50 and 78 cells.
+func clampDedupConfirmWidth(width int) int { return min(max(width, 50), 78) }
+
+// dedupConfirmPathRows are the path rows of a dedup confirmation: paths indented by indent, at most
+// maxRows of them, the last slot a "(+N more)" line when the list is longer. rowID (may be nil)
+// names the row of path i.
+func dedupConfirmPathRows(paths []string, maxRows, indent int, rowID func(i int) dlg.ID) []dlg.Item {
+	shown := len(paths)
+	truncated := shown > maxRows
+	if truncated {
+		shown = maxRows - 1
 	}
-	if width > 78 {
-		width = 78
+	var items []dlg.Item
+	for i, p := range paths[:shown] {
+		it := dlg.Item{Kind: dlg.KindLabel, Label: p, Fit: dlg.FitPath, Indent: indent}
+		if rowID != nil {
+			it.ID = rowID(i)
+		}
+		items = append(items, it)
 	}
-	return width
+	if truncated {
+		items = append(items, dlg.Item{Kind: dlg.KindLabel, Label: fmt.Sprintf("(+%d more)", len(paths)-shown), Indent: indent})
+	}
+	return items
 }
 
 // dedupEmptyDirsRowID is the label ID of directory row i, so the caller can find the row's rect
@@ -43,17 +63,7 @@ func DedupEmptyDirsConfirmView(state DedupEmptyDirsConfirmState, iconLead int) d
 	}
 	msg := fmt.Sprintf("Remove %d empty %s left by this delete?", len(state.Dirs), noun)
 	items := []dlg.Item{{Kind: dlg.KindLabel, Label: msg}, {Kind: dlg.KindLabel}}
-	shown := len(state.Dirs)
-	truncated := shown > dedupEmptyDirsConfirmMaxListRows
-	if truncated {
-		shown = dedupEmptyDirsConfirmMaxListRows - 1
-	}
-	for i := 0; i < shown; i++ {
-		items = append(items, dlg.Item{ID: dedupEmptyDirsRowID(i), Kind: dlg.KindLabel, Label: state.Dirs[i], Fit: dlg.FitPath, Indent: iconLead})
-	}
-	if truncated {
-		items = append(items, dlg.Item{Kind: dlg.KindLabel, Label: fmt.Sprintf("(+%d more)", len(state.Dirs)-shown), Indent: iconLead})
-	}
+	items = append(items, dedupConfirmPathRows(state.Dirs, dedupEmptyDirsConfirmMaxListRows, iconLead, dedupEmptyDirsRowID)...)
 	if len(state.Dirs) == 0 {
 		items = append(items, dlg.Item{Kind: dlg.KindLabel}) // an empty list keeps one blank row
 	}

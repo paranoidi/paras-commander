@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"path/filepath"
+	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
@@ -25,30 +26,23 @@ type CopiesViewState struct {
 	// Find unique files (Unverified is unused), so the transfer and delete dialogs read both views
 	// alike.
 	Files []UniqueFile
+	// nameW and sizeW are the widest name and size text of Files (SetFiles).
+	nameW, sizeW int
 	// Pane holds the cursor (Selected), scroll and type-to-jump filter over Files.
 	Pane DedupPane
 	// FocusPanel: the embedded panel has focus instead of the list.
 	FocusPanel bool
-	// Marked holds the marked paths; MarkedBytes their total size.
-	Marked      map[string]bool
-	MarkedBytes int64
+	MarkSet
 }
 
-// SetMark marks or unmarks one copy, keeping MarkedBytes in step.
-func (s *CopiesViewState) SetMark(f UniqueFile, on bool) {
-	if s.Marked[f.Path] == on {
-		return
+// SetFiles replaces the listed copies and measures the name and size columns they need.
+func (s *CopiesViewState) SetFiles(files []UniqueFile) {
+	s.Files = files
+	s.nameW, s.sizeW = 0, 0
+	for _, f := range files {
+		s.sizeW = max(s.sizeW, utf8.RuneCountInString(formatByteSizeListed(f.Size)))
+		s.nameW = max(s.nameW, utf8.RuneCountInString(filepath.Base(f.Path)))
 	}
-	if on {
-		if s.Marked == nil {
-			s.Marked = map[string]bool{}
-		}
-		s.Marked[f.Path] = true
-		s.MarkedBytes += f.Size
-		return
-	}
-	delete(s.Marked, f.Path)
-	s.MarkedBytes -= f.Size
 }
 
 // MarkedFiles is the marked copies in list order.
@@ -92,11 +86,8 @@ type copiesColumns struct {
 }
 
 func copiesColumnLayout(view *CopiesViewState, contentX, innerRight int) copiesColumns {
-	sizeW, nameW := len([]rune(dedupListSizeTitle)), len([]rune(copiesNameTitle))
-	for _, f := range view.Files {
-		sizeW = max(sizeW, len([]rune(formatByteSizeListed(f.Size))))
-		nameW = max(nameW, len([]rune(filepath.Base(f.Path))))
-	}
+	sizeW := max(view.sizeW, utf8.RuneCountInString(dedupListSizeTitle))
+	nameW := max(view.nameW, utf8.RuneCountInString(copiesNameTitle))
 	sizeRight := innerRight - 1
 	sizeX := sizeRight - sizeW + 1
 	avail := max(sizeX-1-contentX, 2)
@@ -114,14 +105,14 @@ const (
 )
 
 // drawCopiesView paints the copies list and the embedded panel.
-func drawCopiesView(screen tcell.Screen, layout Layout, model Model, styles theme.Theme, chromeBlocked bool) {
+func drawCopiesView(screen tcell.Screen, layout Layout, model *Model, styles theme.Theme, chromeBlocked bool) {
 	view := &model.CopiesView
 	listRect, panelRect := CopiesRects(layout, model.ActivePanel)
 	drawCopiesList(screen, listRect, view, model, styles, chromeBlocked)
-	drawEmbeddedPanel(screen, panelRect, model.CopiesPanel, model.CopiesPanelID, view.FocusPanel, model, styles, chromeBlocked)
+	drawEmbeddedPanel(screen, panelRect, &model.CopiesPanel, model.CopiesPanelID, view.FocusPanel, model, styles, chromeBlocked)
 }
 
-func drawCopiesList(screen tcell.Screen, rect Rect, view *CopiesViewState, model Model, styles theme.Theme, chromeBlocked bool) {
+func drawCopiesList(screen tcell.Screen, rect Rect, view *CopiesViewState, model *Model, styles theme.Theme, chromeBlocked bool) {
 	focused := !view.FocusPanel
 	filterUI := focused && view.Pane.Filter.UIActive()
 	title, endLabel := copiesViewTitle(view), ""
@@ -171,22 +162,9 @@ func drawCopiesList(screen tcell.Screen, rect Rect, view *CopiesViewState, model
 		selected := view.Marked[f.Path]
 		rowSelected := idx == view.Pane.Selected
 
-		// Cursor, hover and selection follow the main file list (panelRowStyle).
-		lineStyle := base
-		if selected {
-			lineStyle = styles.PanelListingSelectedStyle(chromeBlocked).Background(bg)
-		}
-		var cursorRow theme.PanelListingCursorRow
-		switch {
-		case rowSelected:
-			cursorRow = styles.PanelListingCursor(base, base, theme.PanelListingCursorOpts{
-				ChromeBlocked: chromeBlocked, FileListActive: focused, Selected: selected,
-			})
-			lineStyle = cursorRow.Line
-		case !chromeBlocked && model.AuxListHover.Active && model.AuxListHover.Row == idx:
-			cursorRow = styles.PanelListingHover(base, lineStyle, selected)
-			lineStyle = cursorRow.Line
-		}
+		lineStyle, cursorRow := treeListRowStyle(styles, base, bg, selected, rowSelected,
+			!chromeBlocked && model.AuxListHover.Active && model.AuxListHover.Row == idx,
+			theme.PanelListingCursorOpts{ChromeBlocked: chromeBlocked, FileListActive: focused})
 		primitive.Text(screen, rect.X+1, lineY, rect.Width-2, "", lineStyle)
 
 		name := primitive.TruncateRight(filepath.Base(f.Path), cols.nameW)

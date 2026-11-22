@@ -483,7 +483,7 @@ func (m *Model) SyncDriverPanelID() int {
 	if !m.SyncFollowEnabled {
 		return -1
 	}
-	if m.SyncFollowPanel != PrimaryPanel && m.SyncFollowPanel != SecondaryPanel {
+	if !IsBrowserPanel(m.SyncFollowPanel) {
 		return -1
 	}
 	return m.SyncFollowPanel
@@ -511,10 +511,10 @@ func (m *Model) quickViewDriverPanel() int {
 	if !m.QuickViewEnabled {
 		return -1
 	}
-	if m.QuickViewPanel == PrimaryPanel || m.QuickViewPanel == SecondaryPanel {
+	if IsBrowserPanel(m.QuickViewPanel) {
 		return m.QuickViewPanel
 	}
-	if m.ActivePanel == PrimaryPanel || m.ActivePanel == SecondaryPanel {
+	if IsBrowserPanel(m.ActivePanel) {
 		return m.ActivePanel
 	}
 	return -1
@@ -958,7 +958,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) (out RenderedO
 	case ViewUnique:
 		drawUniqueView(screen, layout, model, styles, chromeBlocked)
 	case ViewCopies:
-		drawCopiesView(screen, layout, model, styles, chromeBlocked)
+		drawCopiesView(screen, layout, &model, styles, chromeBlocked)
 	case ViewMessages:
 		drawMessagesView(screen, layout, model.MessagesView, model.MessageLog, styles, chromeBlocked, model.SplitOrientation, model.AuxListHover)
 	default:

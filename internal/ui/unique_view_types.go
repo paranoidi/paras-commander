@@ -38,9 +38,7 @@ type UniqueViewState struct {
 	PrevExpandable []string
 	// FocusPanel: the destination panel has focus instead of the tree.
 	FocusPanel bool
-	// Marked holds the marked paths; MarkedBytes their total size.
-	Marked      map[string]bool
-	MarkedBytes int64
+	MarkSet
 	// RangeAnchor is the file marked as the pending range-select start ("" = none).
 	RangeAnchor string
 	// HideHidden leaves out files with a dot-prefixed path component below Root.
@@ -51,6 +49,32 @@ type UniqueViewState struct {
 	// Cache memoizes the shown files, the node tree and the column widths (see UniqueCache). A
 	// pointer so value copies of the view share it; nil computes directly.
 	Cache *UniqueCache
+}
+
+// MarkSet is the marked paths of a list view and their total size.
+type MarkSet struct {
+	// Marked holds the marked paths; MarkedBytes their total size.
+	Marked      map[string]bool
+	MarkedBytes int64
+}
+
+// SetMark marks or unmarks one file, keeping MarkedBytes in step; it reports whether the set
+// changed.
+func (m *MarkSet) SetMark(f UniqueFile, on bool) bool {
+	if m.Marked[f.Path] == on {
+		return false
+	}
+	if on {
+		if m.Marked == nil {
+			m.Marked = map[string]bool{}
+		}
+		m.Marked[f.Path] = true
+		m.MarkedBytes += f.Size
+		return true
+	}
+	delete(m.Marked, f.Path)
+	m.MarkedBytes -= f.Size
+	return true
 }
 
 // UniqueRowData is the payload of one tree row.
@@ -117,22 +141,12 @@ func (s *UniqueViewState) MarkedFiles() []UniqueFile {
 // UnverifiedCount is how many shown files are flagged.
 func (s *UniqueViewState) UnverifiedCount() int { return s.shown().unverified }
 
-// SetMark marks or unmarks one file, keeping MarkedBytes in step.
+// SetMark marks or unmarks one file, keeping MarkedBytes in step and bumping MarksRev when the
+// set changed.
 func (s *UniqueViewState) SetMark(f UniqueFile, on bool) {
-	if s.Marked[f.Path] == on {
-		return
+	if s.MarkSet.SetMark(f, on) {
+		s.MarksRev++
 	}
-	s.MarksRev++
-	if on {
-		if s.Marked == nil {
-			s.Marked = map[string]bool{}
-		}
-		s.Marked[f.Path] = true
-		s.MarkedBytes += f.Size
-		return
-	}
-	delete(s.Marked, f.Path)
-	s.MarkedBytes -= f.Size
 }
 
 // markedUnderDirs counts the marked files below each directory path; the result is shared (and

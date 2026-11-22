@@ -82,7 +82,7 @@ func (a *App) nextSFTPPromptID() uint64 {
 }
 
 func sftpConnectPanelIndex(panelID int) (int, bool) {
-	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
+	if !ui.IsBrowserPanel(panelID) {
 		return 0, false
 	}
 	return panelID, true
@@ -135,7 +135,7 @@ func (a *App) executeSFTPConnectURI(panelID int, raw string) {
 		a.setErrorMessage("SFTP", fmt.Errorf("expected sftp:// URI, got %s", loc.Scheme()))
 		return
 	}
-	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
+	if !ui.IsBrowserPanel(panelID) {
 		panelID = a.model.ActivePanel
 	}
 	a.startSFTPConnect(panelID, loc)

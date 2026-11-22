@@ -153,9 +153,6 @@ func TestCopiesViewPanelActsAsFileList(t *testing.T) {
 	}
 
 	// Its destination is the browser's inactive panel.
-	if a.destinationPanelID() != a.otherBrowserPanelID() {
-		t.Fatalf("destination = %d, want the inactive browser panel", a.destinationPanelID())
-	}
 	copiesKey(a, tcell.KeyF5, 0, tcell.ModNone)
 	if !a.model.TransferDialog.Open || !strings.HasPrefix(a.model.TransferDialog.Destination.Value, dest) {
 		t.Fatalf("copy dialog from the panel: %+v", a.model.TransferDialog)

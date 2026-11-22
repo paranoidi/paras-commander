@@ -12,15 +12,16 @@ import (
 // armDirLoadingIndicatorTimer starts (or restarts) the working-indicator delay for panelID's
 // currently pending navigation load. Mirrors armIdleDiskSortTimer's arm/epoch pattern.
 func (a *App) armDirLoadingIndicatorTimer(panelID int) {
-	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
+	if !ui.IsBrowserPanel(panelID) {
 		return
 	}
-	if t := a.panelInst(panelID).dirLoadIndicatorTimer; t != nil {
+	inst := a.panelInst(panelID)
+	if t := inst.dirLoadIndicatorTimer; t != nil {
 		t.Stop()
 	}
-	a.panelInst(panelID).dirLoadIndicatorEpoch++
-	epoch := a.panelInst(panelID).dirLoadIndicatorEpoch
-	a.panelInst(panelID).dirLoadIndicatorTimer = time.AfterFunc(panel.LoadingIndicatorDelay, func() {
+	inst.dirLoadIndicatorEpoch++
+	epoch := inst.dirLoadIndicatorEpoch
+	inst.dirLoadIndicatorTimer = time.AfterFunc(panel.LoadingIndicatorDelay, func() {
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(dirLoadingIndicatorPayload{PanelID: panelID, Epoch: epoch}))
 	})
 }
@@ -29,7 +30,7 @@ func (a *App) armDirLoadingIndicatorTimer(panelID int) {
 // delay fires. A stale epoch (superseded by a newer load or already-cleared by
 // invalidateDirLoadingIndicator) is a no-op.
 func (a *App) applyDirLoadingIndicator(panelID int, epoch uint64) {
-	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
+	if !ui.IsBrowserPanel(panelID) {
 		return
 	}
 	if a.panelInst(panelID).dirLoadIndicatorEpoch != epoch {
@@ -44,12 +45,13 @@ func (a *App) applyDirLoadingIndicator(panelID int, epoch uint64) {
 // invalidateDirLoadingIndicator cancels panelID's pending working-indicator timer (if any) and
 // bumps its epoch so a timer already in flight becomes a no-op when it fires.
 func (a *App) invalidateDirLoadingIndicator(panelID int) {
-	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
+	if !ui.IsBrowserPanel(panelID) {
 		return
 	}
-	if t := a.panelInst(panelID).dirLoadIndicatorTimer; t != nil {
+	inst := a.panelInst(panelID)
+	if t := inst.dirLoadIndicatorTimer; t != nil {
 		t.Stop()
-		a.panelInst(panelID).dirLoadIndicatorTimer = nil
+		inst.dirLoadIndicatorTimer = nil
 	}
-	a.panelInst(panelID).dirLoadIndicatorEpoch++
+	inst.dirLoadIndicatorEpoch++
 }

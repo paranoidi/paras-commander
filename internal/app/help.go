@@ -448,18 +448,28 @@ func (a *App) activateHelpAction(actionID string) bool {
 	return a.dispatchActionLikeKeyboardShortcut(actionID)
 }
 
+// activateShellHelpAction runs the actions every view's Help row shares: quitting and opening the
+// menu. handled says the action was one of them; quit is what a quit asked for (true: leave the
+// event loop).
+func (a *App) activateShellHelpAction(actionID string) (handled, quit bool) {
+	switch actionID {
+	case keymap.ActionAppQuit:
+		return true, a.handleQuit()
+	case keymap.ActionAppQuitImmediate:
+		return true, a.handleQuitImmediate()
+	case keymap.ActionAppOpenMenu:
+		a.openMenu()
+		return true, false
+	}
+	return false, false
+}
+
 // activateJobsHelpAction runs a help-dialog action while the jobs view is active. Nav
 // actions bypass dispatch() (which assumes file-browser panel navigation) and move the
 // jobs-list cursor directly, mirroring what the raw arrow-key handler does.
 func (a *App) activateJobsHelpAction(actionID string) bool {
-	switch actionID {
-	case keymap.ActionAppQuit:
-		return a.handleQuit()
-	case keymap.ActionAppQuitImmediate:
-		return a.handleQuitImmediate()
-	case keymap.ActionAppOpenMenu:
-		a.openMenu()
-		return false
+	if handled, quit := a.activateShellHelpAction(actionID); handled {
+		return quit
 	}
 	if a.jobsCtrl.TryDispatch(actionID) {
 		return false
@@ -486,14 +496,8 @@ func (a *App) activateJobsHelpAction(actionID string) bool {
 
 // activateCommandsHelpAction runs a help-dialog action while the Commands view is active.
 func (a *App) activateCommandsHelpAction(actionID string) bool {
-	switch actionID {
-	case keymap.ActionAppQuit:
-		return a.handleQuit()
-	case keymap.ActionAppQuitImmediate:
-		return a.handleQuitImmediate()
-	case keymap.ActionAppOpenMenu:
-		a.openMenu()
-		return false
+	if handled, quit := a.activateShellHelpAction(actionID); handled {
+		return quit
 	}
 	if a.commandsCtrl.TryDispatch(actionID) {
 		return false
@@ -524,14 +528,8 @@ func (a *App) activateCommandsHelpAction(actionID string) bool {
 
 // activateMessagesHelpAction runs a help-dialog action while the Messages view is active.
 func (a *App) activateMessagesHelpAction(actionID string) bool {
-	switch actionID {
-	case keymap.ActionAppQuit:
-		return a.handleQuit()
-	case keymap.ActionAppQuitImmediate:
-		return a.handleQuitImmediate()
-	case keymap.ActionAppOpenMenu:
-		a.openMenu()
-		return false
+	if handled, quit := a.activateShellHelpAction(actionID); handled {
+		return quit
 	}
 	if a.tryDispatchMessages(actionID) {
 		return false
@@ -564,13 +562,9 @@ func (a *App) activateCompareHelpAction(actionID string) bool {
 			a.openHelpDialog()
 		}
 		return false
-	case keymap.ActionAppQuit:
-		return a.handleQuit()
-	case keymap.ActionAppQuitImmediate:
-		return a.handleQuitImmediate()
-	case keymap.ActionAppOpenMenu:
-		a.openMenu()
-		return false
+	}
+	if handled, quit := a.activateShellHelpAction(actionID); handled {
+		return quit
 	}
 	if a.tryDispatchCompare(actionID) {
 		return false
@@ -606,14 +600,8 @@ func (a *App) activateCompareHelpAction(actionID string) bool {
 }
 
 func (a *App) activateDedupHelpAction(actionID string) bool {
-	switch actionID {
-	case keymap.ActionAppQuit:
-		return a.handleQuit()
-	case keymap.ActionAppQuitImmediate:
-		return a.handleQuitImmediate()
-	case keymap.ActionAppOpenMenu:
-		a.openMenu()
-		return false
+	if handled, quit := a.activateShellHelpAction(actionID); handled {
+		return quit
 	}
 
 	visible := a.dedupVisibleRows()

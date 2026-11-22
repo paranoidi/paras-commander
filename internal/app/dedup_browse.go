@@ -32,6 +32,15 @@ func (a *App) initEmbeddedPanel(dst *panel.State) int {
 	return id
 }
 
+// closeEmbeddedPanel unregisters the embedded panel *dst (registry ID *id), clears it and forgets what
+// follow followed.
+func (a *App) closeEmbeddedPanel(dst *panel.State, id *int, follow *panelFollow) {
+	follow.reset()
+	*dst = panel.State{}
+	a.closePanel(*id)
+	*id = 0
+}
+
 // reconcileDedupPanel keeps the browse panel on the row of the pane whose cursor last moved
 // (panelFollow): the directory itself for a dir row, else the file's parent with the cursor on the
 // file.
@@ -39,10 +48,7 @@ func (a *App) reconcileDedupPanel() {
 	if !a.dedupBrowseWanted() {
 		if a.dedupBrowseOn {
 			a.dedupBrowseOn = false
-			a.dedupFollow.reset()
-			a.model.DedupPanel = panel.State{}
-			a.closePanel(a.model.DedupPanelID)
-			a.model.DedupPanelID = 0
+			a.closeEmbeddedPanel(&a.model.DedupPanel, &a.model.DedupPanelID, &a.dedupFollow)
 			if a.model.DedupView.FocusPanel {
 				a.model.DedupView.FocusPanel = false
 				a.model.DedupView.FocusCopies = false // panel gone: fall back to the main tree

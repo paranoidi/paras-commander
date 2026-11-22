@@ -894,20 +894,6 @@ func (a *App) otherBrowserPanel() *panel.State {
 	return a.panelByID(a.otherBrowserPanelID())
 }
 
-// destinationPanelID is where operations on the focused panel's files go (the copy/move prefill,
-// a symlink's directory, the "other panel" of open-in-other-panel). A browser panel pairs with the
-// other column. The dedup browse panel targets the browser's inactive panel, which is what the
-// user sees after closing the view. The Find unique files destination is the inactive browser
-// panel itself: the tree's files are copied and moved into it.
-func (a *App) destinationPanelID() int {
-	return a.otherBrowserPanelID()
-}
-
-// destinationPanel is the panel.State of destinationPanelID.
-func (a *App) destinationPanel() *panel.State {
-	return a.panelByID(a.destinationPanelID())
-}
-
 // tryDispatchNavigation handles list-navigation and directory-navigation actions.
 // handled reports whether actionID was consumed; quit reports whether the app should exit
 // (only ActionNavOpen can request this, via handleNavOpen/handleChooserOpen).
@@ -1061,13 +1047,12 @@ func (a *App) tryDispatchPanelLayout(actionID string) bool {
 	case keymap.ActionPanelCycleSort:
 		activePanel.CycleSort(viewportRows)
 		a.setTransientMessage(fmt.Sprintf("Sort: %s", activePanel.Sort.Mode.String()), ui.MessageUrgencyInfo)
-	case keymap.ActionPanelCycleColumnProfile, keymap.ActionPanelToggleCarousel:
-		if a.model.ViewMode != ui.ViewBrowser {
-			break // meta columns and carousel view are browser-column features
-		}
-		if actionID == keymap.ActionPanelCycleColumnProfile {
+	case keymap.ActionPanelCycleColumnProfile:
+		if a.model.ViewMode == ui.ViewBrowser { // meta columns are a browser-column feature
 			a.metaCtrl.CycleProfile(a.model.ActivePanel)
-		} else {
+		}
+	case keymap.ActionPanelToggleCarousel:
+		if a.model.ViewMode == ui.ViewBrowser { // carousel view is a browser-column feature
 			a.toggleCarousel(a.model.ActivePanel, false)
 		}
 	case keymap.ActionPanelToggleTree:

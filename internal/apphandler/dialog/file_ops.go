@@ -122,18 +122,23 @@ func (h *Handler) RefreshBothPanelsWithFocus(panelID int, onApplied func()) {
 		h.preview.ApplyQuickViewPreviewImmediately()
 	}
 	plain := func() { h.preview.ApplyQuickViewPreviewImmediately() }
-	primaryHook, secondaryHook, dedupHook, copiesHook := plain, wrap, func() {}, func() {}
-	switch panelID {
-	case ui.PrimaryPanel:
-		primaryHook, secondaryHook = wrap, plain
-	case h.model.DedupPanelID:
-		secondaryHook, dedupHook = plain, wrap
-	case h.model.CopiesPanelID:
-		secondaryHook, copiesHook = plain, wrap
+	// An unknown panelID (a view panel closed under the dialog) falls back to Secondary so
+	// onApplied still runs.
+	target := panelID
+	if target != ui.PrimaryPanel && target != h.model.DedupPanelID && target != h.model.CopiesPanelID {
+		target = ui.SecondaryPanel
 	}
-	_ = h.model.Primary.RefreshWithHook(viewportRows, primaryHook)
-	_ = h.model.Secondary.RefreshWithHook(viewportRows, secondaryHook)
-	h.refreshViewPanels(dedupHook, copiesHook)
+	// hook is the reload hook of panel id: wrap on the target panel, otherwise.
+	hook := func(id int, otherwise func()) func() {
+		if id == target {
+			return wrap
+		}
+		return otherwise
+	}
+	noop := func() {}
+	_ = h.model.Primary.RefreshWithHook(viewportRows, hook(ui.PrimaryPanel, plain))
+	_ = h.model.Secondary.RefreshWithHook(viewportRows, hook(ui.SecondaryPanel, plain))
+	h.refreshViewPanels(hook(h.model.DedupPanelID, noop), hook(h.model.CopiesPanelID, noop))
 	h.preview.ApplyQuickViewPreviewImmediately()
 }
 

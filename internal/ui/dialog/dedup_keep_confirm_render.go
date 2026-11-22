@@ -32,7 +32,7 @@ func dedupKeepConfirmWidth(state DedupKeepConfirmState, lines []string) int {
 	for _, p := range state.Kept {
 		width = max(width, utf8.RuneCountInString(p)+4+dedupKeepConfirmListIndent)
 	}
-	return min(max(width, 50), 78)
+	return clampDedupConfirmWidth(width)
 }
 
 // DedupKeepConfirmView describes the confirmation: the directory, how many groups already keep a
@@ -48,17 +48,7 @@ func DedupKeepConfirmView(state DedupKeepConfirmState) dlg.Spec {
 		{Kind: dlg.KindLabel, Prefix: dedupKeepConfirmDirPrefix, Label: dedupKeepConfirmDir(state), Fit: dlg.FitPath},
 		{Kind: dlg.KindLabel, Label: groups},
 	}
-	shown := len(state.Kept)
-	truncated := shown > dedupKeepConfirmMaxListRows
-	if truncated {
-		shown = dedupKeepConfirmMaxListRows - 1
-	}
-	for _, p := range state.Kept[:shown] {
-		items = append(items, dlg.Item{Kind: dlg.KindLabel, Label: p, Fit: dlg.FitPath, Indent: dedupKeepConfirmListIndent})
-	}
-	if truncated {
-		items = append(items, dlg.Item{Kind: dlg.KindLabel, Label: fmt.Sprintf("(+%d more)", len(state.Kept)-shown), Indent: dedupKeepConfirmListIndent})
-	}
+	items = append(items, dedupConfirmPathRows(state.Kept, dedupKeepConfirmMaxListRows, dedupKeepConfirmListIndent, nil)...)
 	items = append(items, dlg.Item{Kind: dlg.KindLabel})
 	for _, l := range help {
 		items = append(items, dlg.Item{Kind: dlg.KindLabel, Label: l})

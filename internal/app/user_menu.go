@@ -160,7 +160,7 @@ func (a *App) loadUserMenuVisible(menuPath string) (visible []usermenu.MenuEntry
 	}
 
 	active := a.focusedPanel()
-	other := a.destinationPanel()
+	other := a.otherBrowserPanel()
 	ctx := &usermenu.EvalContext{Active: active, Other: other}
 	v, _, err := usermenu.FilterVisible(mf, ctx)
 	if err != nil {
@@ -230,7 +230,7 @@ func userMenuLeaderMenuItems(entries []usermenu.MenuEntry, styles theme.Theme) [
 // runUserMenuEntry executes a resolved F2 user-menu entry (dialog already closed).
 func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 	active := a.focusedPanel()
-	other := a.destinationPanel()
+	other := a.otherBrowserPanel()
 	launch := usermenu.Launch{Command: entry.Command, CwdPanel: entry.CwdPanel}
 	var src ops.Source
 	var srcErr error

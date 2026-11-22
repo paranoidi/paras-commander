@@ -161,7 +161,7 @@ func (a *App) renderPanelAsyncResult(panelID int) {
 // window would lay the columns out against the previous directory's names and then visibly
 // re-lay them out one frame later, when the parent snapshot lands.
 func (a *App) carouselParentPaintPending(panelID int) bool {
-	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
+	if !ui.IsBrowserPanel(panelID) {
 		return false
 	}
 	pan := a.panelByID(panelID)

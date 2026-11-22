@@ -1,6 +1,8 @@
 package app
 
 import (
+	"slices"
+
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
@@ -22,27 +24,19 @@ func followTargetOf(path string, isDir, ok bool) followTarget {
 	return followTarget{dir: dir, name: name}
 }
 
-func (t followTarget) key() string { return t.dir + "\x00" + t.name }
-
 // panelFollow remembers the targets an embedded panel last followed, one per row source of the
 // view, so only a cursor move re-syncs the panel (switching panes does not) and manual navigation
 // inside it survives until then.
-type panelFollow struct{ prev []string }
+type panelFollow struct{ prev []followTarget }
 
 // next returns the target of the first source, trying prefer first, that changed since the last call
 // (ok false: none did). Every source's current target is remembered.
 func (f *panelFollow) next(prefer int, targets ...followTarget) (followTarget, bool) {
-	keys := make([]string, len(targets))
-	for i, t := range targets {
-		if t != (followTarget{}) {
-			keys[i] = t.key()
-		}
-	}
 	prev := f.prev
-	f.prev = keys
+	f.prev = slices.Clone(targets)
 	for n := range targets {
 		i := (prefer + n) % len(targets)
-		if keys[i] != "" && (i >= len(prev) || keys[i] != prev[i]) {
+		if targets[i] != (followTarget{}) && (i >= len(prev) || targets[i] != prev[i]) {
 			return targets[i], true
 		}
 	}

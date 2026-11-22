@@ -4,7 +4,7 @@ import "testing"
 
 func uniqueCacheState() *UniqueViewState {
 	return &UniqueViewState{
-		Root: "/scan/root", Cache: &UniqueCache{}, Marked: map[string]bool{},
+		Root: "/scan/root", Cache: &UniqueCache{}, MarkSet: MarkSet{Marked: map[string]bool{}},
 		Files: []UniqueFile{
 			{Path: "/scan/root/amber/birch/cedar.bin", Size: 10},
 			{Path: "/scan/root/amber/.dune/ember.bin", Size: 20, Unverified: true},

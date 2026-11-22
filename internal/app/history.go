@@ -18,7 +18,7 @@ import (
 )
 
 func (a *App) mergedPanelHistories() []string {
-	return panel.MergeNavigationHistories(a.destinationPanel().History, a.focusedPanel().History)
+	return panel.MergeNavigationHistories(a.otherBrowserPanel().History, a.focusedPanel().History)
 }
 
 func (a *App) openHistoryDialog(panelID int) {

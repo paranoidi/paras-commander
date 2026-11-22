@@ -537,7 +537,7 @@ func (h *Handler) ConfirmCopy() {
 	h.confirmTransfer()
 }
 
-// ActivePanelSources returns file paths from the active panel: selected entries
+// FocusedPanelSources returns file paths from the focused panel: selected entries
 // if any, otherwise the cursor entry. Returns nil if no valid sources exist.
 func (h *Handler) FocusedPanelSources() []string {
 	source, err := h.transferSource()

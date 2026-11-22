@@ -981,16 +981,44 @@ func (a *App) handleDedupBrowseMouse(layout ui.Layout, x, y int, buttons, presse
 	if !ok {
 		return false
 	}
-	p, rows := &a.model.DedupPanel, a.dedupBrowseRows(layout)
+	return a.handleEmbeddedPanelMouse(&a.model.DedupPanel, a.dedupBrowseRows(layout), row, buttons, pressed, a.dedupCtrl.FocusBrowsePanel)
+}
+
+// handleEmbeddedPanelMouse handles the pointer over the entry row of a results view's embedded
+// panel p (rows tall): a left click runs focus and moves the cursor to row, the wheel moves it.
+func (a *App) handleEmbeddedPanelMouse(p *panel.State, rows, row int, buttons, pressed tcell.ButtonMask, focus func()) (rendered bool) {
 	switch step := wheelDelta(buttons, config.MouseWheelRows); {
 	case step != 0:
 		a.doListNav(func() { p.Move(step, rows) })
 	case pressed&tcell.Button1 != 0:
-		a.dedupCtrl.FocusBrowsePanel()
+		focus()
 		a.doListNav(func() { p.Move(row-p.Cursor, rows) })
 	default:
 		return false
 	}
+	a.render()
+	return true
+}
+
+// listViewCtrl is the cursor surface of the flat or tree list of Find unique files and Other copies.
+type listViewCtrl interface {
+	MoveSelection(delta int)
+	SelectRow(row int)
+	EnsureSelectionVisible(visibleRows int)
+}
+
+// handleListViewMouse handles the pointer over row of such a list (visibleRows tall): a left click
+// focuses the list and selects the row, the wheel moves the cursor.
+func (a *App) handleListViewMouse(c listViewCtrl, row, visibleRows int, buttons, pressed tcell.ButtonMask) (rendered bool) {
+	switch step := wheelDelta(buttons, config.MouseWheelRows); {
+	case step != 0:
+		c.MoveSelection(step)
+	case pressed&tcell.Button1 != 0:
+		c.SelectRow(row)
+	default:
+		return false
+	}
+	c.EnsureSelectionVisible(visibleRows)
 	a.render()
 	return true
 }

@@ -5,12 +5,12 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/quickfilter"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
@@ -45,7 +45,7 @@ func (h uniqueHost) UniqueMenuDefinitions() []menu.Definition { return h.app.uni
 
 func (h uniqueHost) BrowserMenuDefinitions() []menu.Definition { return h.app.browserMenuDefinitions() }
 
-func (h uniqueHost) Config() config.Config { return h.app.config }
+func (h uniqueHost) FilterOptions() quickfilter.Options { return h.app.quickFilterOptions() }
 
 // closeUniqueView leaves the view; its results stay for the action that opened it.
 func (a *App) closeUniqueView() {
@@ -110,30 +110,28 @@ func (a *App) tryDispatchTreeViews(actionID string) bool {
 // source, and a delete needs the tree focused. Every other action falls through to the panel.
 func (a *App) tryDispatchEmbeddedPanelView(actionID string) bool {
 	view := a.model.ViewMode
+	var ctrl interface {
+		SwitchPane()
+		OpenInPanel(panelID int, path string, isDir bool)
+	}
+	switch view {
+	case ui.ViewUnique:
+		ctrl = a.uniqueCtrl
+	case ui.ViewCopies:
+		ctrl = a.copiesCtrl
+	default:
+		ctrl = a.dedupCtrl
+	}
 	switch {
 	case a.tryDispatchAuxiliaryScreens(actionID):
 	case actionID == keymap.ActionPanelSwitch:
-		switch view {
-		case ui.ViewUnique:
-			a.uniqueCtrl.SwitchPane()
-		case ui.ViewCopies:
-			a.copiesCtrl.SwitchPane()
-		default:
-			a.dedupCtrl.SwitchPane()
-		}
+		ctrl.SwitchPane()
 	case actionID == keymap.ActionOpenInPrimary, actionID == keymap.ActionOpenInSecondary:
 		if e, ok := a.focusedPanel().CurrentEntry(); ok {
-			id := a.openInPanelID(actionID)
-			switch view {
-			case ui.ViewUnique:
-				a.uniqueCtrl.OpenInPanel(id, e.Path, e.ResolvesToDir())
-			case ui.ViewCopies:
-				a.copiesCtrl.OpenInPanel(id, e.Path, e.ResolvesToDir())
-			default:
-				a.dedupCtrl.OpenInPanel(id, e.Path, e.ResolvesToDir())
-			}
+			ctrl.OpenInPanel(a.openInPanelID(actionID), e.Path, e.ResolvesToDir())
 		}
 	case actionID == keymap.ActionFileDelete && view == ui.ViewUnique:
+		// swallowed: a delete in Find unique files needs the tree focused, not the destination panel
 	case view == ui.ViewUnique && (strings.HasPrefix(actionID, "unique.") || actionID == keymap.ActionFileIndexFindUnique):
 		return a.tryDispatchUnique(actionID)
 	case view == ui.ViewCopies && strings.HasPrefix(actionID, "copies."):
@@ -272,14 +270,8 @@ func (a *App) handleUniqueViewKey(event *tcell.EventKey) bool {
 
 // activateUniqueHelpAction runs a row of the view's Help on the view's own dispatch.
 func (a *App) activateUniqueHelpAction(actionID string) bool {
-	switch actionID {
-	case keymap.ActionAppQuit:
-		return a.handleQuit()
-	case keymap.ActionAppQuitImmediate:
-		return a.handleQuitImmediate()
-	case keymap.ActionAppOpenMenu:
-		a.openMenu()
-		return false
+	if handled, quit := a.activateShellHelpAction(actionID); handled {
+		return quit
 	}
 	if !a.tryDispatchUnique(actionID) {
 		a.tryDispatchAuxiliaryScreens(actionID)
@@ -309,43 +301,15 @@ func uniqueViewFooterKeys(global, unique *keymap.Map) []menu.FunctionKey {
 }
 
 // handleUniqueMouse handles the view's tree: a left click focuses it and selects the row, the wheel
-// moves the cursor. Off the tree, it handles the destination panel.
+// moves the cursor. Off the tree, it handles the destination panel: a left click focuses it and
+// moves its cursor to the entry under the pointer, the wheel moves the cursor.
 func (a *App) handleUniqueMouse(layout ui.Layout, x, y int, buttons, pressed tcell.ButtonMask) (rendered bool) {
-	row, ok := ui.UniqueListEntryAt(layout, &a.model, x, y)
-	if !ok {
-		return a.handleUniqueDestMouse(layout, x, y, buttons, pressed)
+	if row, ok := ui.UniqueListEntryAt(layout, &a.model, x, y); ok {
+		return a.handleListViewMouse(a.uniqueCtrl, row, a.uniqueVisibleRows(), buttons, pressed)
 	}
-	switch step := wheelDelta(buttons, config.MouseWheelRows); {
-	case step != 0:
-		a.uniqueCtrl.MoveSelection(step)
-	case pressed&tcell.Button1 != 0:
-		a.uniqueCtrl.SelectRow(row)
-	default:
-		return false
+	if row, ok := ui.UniqueDestEntryAt(layout, &a.model, x, y); ok {
+		id := a.otherBrowserPanelID()
+		return a.handleEmbeddedPanelMouse(a.panelByID(id), a.panelViewportRows(id), row, buttons, pressed, a.uniqueCtrl.FocusPanel)
 	}
-	a.uniqueCtrl.EnsureSelectionVisible(a.uniqueVisibleRows())
-	a.render()
-	return true
-}
-
-// handleUniqueDestMouse handles the destination panel: a left click focuses it and moves its cursor
-// to the entry under the pointer, the wheel moves the cursor.
-func (a *App) handleUniqueDestMouse(layout ui.Layout, x, y int, buttons, pressed tcell.ButtonMask) (rendered bool) {
-	row, ok := ui.UniqueDestEntryAt(layout, &a.model, x, y)
-	if !ok {
-		return false
-	}
-	id := a.otherBrowserPanelID()
-	p, rows := a.panelByID(id), a.panelViewportRows(id)
-	switch step := wheelDelta(buttons, config.MouseWheelRows); {
-	case step != 0:
-		a.doListNav(func() { p.Move(step, rows) })
-	case pressed&tcell.Button1 != 0:
-		a.uniqueCtrl.FocusPanel()
-		a.doListNav(func() { p.Move(row-p.Cursor, rows) })
-	default:
-		return false
-	}
-	a.render()
-	return true
+	return false
 }

@@ -70,11 +70,11 @@ func drawUniqueView(screen tcell.Screen, layout Layout, model Model, styles them
 		Hover:    model.AuxListHover,
 	}, styles)
 	destID := model.inactivePanelID()
-	dest := model.Secondary
+	dest := &model.Secondary
 	if destID == PrimaryPanel {
-		dest = model.Primary
+		dest = &model.Primary
 	}
-	drawEmbeddedPanel(screen, destRect, dest, destID, view.FocusPanel, model, styles, chromeBlocked)
+	drawEmbeddedPanel(screen, destRect, dest, destID, view.FocusPanel, &model, styles, chromeBlocked)
 }
 
 func uniqueEmptyText(view *UniqueViewState, homeDir string) string {
@@ -151,23 +151,11 @@ func drawUniqueTree(screen tcell.Screen, rect Rect, view *UniqueViewState, rows 
 		rowSelected := idx == view.Pane.Selected
 		selected := marked || fullyMarked
 
-		// Cursor, hover, selection and info columns follow the main file list (panelRowStyle).
-		lineStyle := base
-		if selected {
-			lineStyle = styles.PanelListingSelectedStyle(p.ChromeBlocked).Background(bg)
-		}
-		var cursorRow theme.PanelListingCursorRow
-		switch {
-		case rowSelected:
-			cursorRow = styles.PanelListingCursor(base, base, theme.PanelListingCursorOpts{
-				ChromeBlocked: p.ChromeBlocked, FileListActive: p.Focused, Selected: selected,
+		lineStyle, cursorRow := treeListRowStyle(styles, base, bg, selected, rowSelected,
+			!p.ChromeBlocked && p.Hover.Active && p.Hover.Row == idx, theme.PanelListingCursorOpts{
+				ChromeBlocked: p.ChromeBlocked, FileListActive: p.Focused,
 				RangePending: p.Focused && view.RangeAnchor != "",
 			})
-			lineStyle = cursorRow.Line
-		case !p.ChromeBlocked && p.Hover.Active && p.Hover.Row == idx:
-			cursorRow = styles.PanelListingHover(base, lineStyle, selected)
-			lineStyle = cursorRow.Line
-		}
 		cursorStyleKey := cursorRow.IconKey
 		primitive.Text(screen, rect.X+1, lineY, 1, "", lineStyle)
 		drawUniquePathColumn(screen, styles, p, view, entry, markedUnder[d.Path], cols, lineY, lineStyle, cursorStyleKey, idx, rowSelected && p.Focused)

@@ -39,7 +39,7 @@ func (a *App) idleSortMaybeSchedule(s idleSortSpec, panelID int) {
 // directly (tests do, to force-arm without going through maybeSchedule's callers): it always
 // stops any existing timer first, then re-arms only if eligible and resolved.
 func (a *App) idleSortArm(s idleSortSpec, panelID int) {
-	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
+	if !ui.IsBrowserPanel(panelID) {
 		return
 	}
 	ps := s.slot(a.panelInst(panelID))
@@ -70,7 +70,7 @@ func (a *App) idleSortArm(s idleSortSpec, panelID int) {
 // dropping it when the epoch is stale (invalidated since the timer was armed) or the panel is no
 // longer eligible/resolved.
 func (a *App) idleSortApplyPayload(s idleSortSpec, panelID int, epoch uint64) {
-	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
+	if !ui.IsBrowserPanel(panelID) {
 		return
 	}
 	ps := s.slot(a.panelInst(panelID))
@@ -84,7 +84,7 @@ func (a *App) idleSortApplyPayload(s idleSortSpec, panelID int, epoch uint64) {
 }
 
 func (a *App) idleSortInvalidate(s idleSortSpec, panelID int) {
-	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
+	if !ui.IsBrowserPanel(panelID) {
 		return
 	}
 	ps := s.slot(a.panelInst(panelID))

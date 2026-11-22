@@ -179,7 +179,7 @@ func paintBrowserPanelsInScope(
 
 // browserNavPanelPaintable holds the guards shared by the single-panel list-nav paints.
 func browserNavPanelPaintable(layout Layout, model Model, panelID int) bool {
-	return model.ViewMode == ViewBrowser && !layout.TooSmall && (panelID == PrimaryPanel || panelID == SecondaryPanel)
+	return model.ViewMode == ViewBrowser && !layout.TooSmall && IsBrowserPanel(panelID)
 }
 
 // PaintBrowserListNavPanelOnly repaints one browser file-list column (and its selected strip

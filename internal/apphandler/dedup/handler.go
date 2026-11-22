@@ -998,8 +998,8 @@ func (h *Handler) SwitchPane() { h.cyclePane(1) }
 func (h *Handler) SwitchPanePrev() { h.cyclePane(-1) }
 
 // cyclePane moves focus dir steps through main tree (0), copies (1), browse panel (2) and the
-// Selected strip (3), skipping an empty copies pane, the browse panel when it is not shown and
-// the strip when nothing is marked.
+// Selected strip (3), skipping an empty copies pane and the browse panel when it is not shown. The
+// strip is never a stop here: it is reached only through panel.focus-selected.
 func (h *Handler) cyclePane(dir int) {
 	avail := [dedupPaneCount]bool{
 		true,

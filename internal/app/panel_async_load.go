@@ -324,7 +324,7 @@ func (a *App) applyOnePanelAsyncLoad(p panelAsyncLoadPayload) bool {
 		}
 		return false
 	}
-	isOverlay := p.panelID != ui.PrimaryPanel && p.panelID != ui.SecondaryPanel
+	isOverlay := !ui.IsBrowserPanel(p.panelID)
 	pan.ListingPending = false
 	pan.ListingPendingPath = ""
 	pan.ShowLoadingIcon = false
@@ -370,7 +370,7 @@ func (a *App) applyOnePanelAsyncLoad(p panelAsyncLoadPayload) bool {
 		}
 		return true
 	}
-	if reverted > 0 && (p.panelID == ui.PrimaryPanel || p.panelID == ui.SecondaryPanel) {
+	if reverted > 0 && ui.IsBrowserPanel(p.panelID) {
 		a.setTransientMessage(treeRestoreMessage, ui.MessageUrgencyWarn)
 	}
 	a.startPrefetchedTreeDiskScans(p.panelID, p.res.treeChildren)

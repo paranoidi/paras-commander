@@ -12,7 +12,6 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/apphandler/host"
-	"github.com/paranoidi/paras-commander/internal/config"
 	fi "github.com/paranoidi/paras-commander/internal/fileindex"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/jobs"
@@ -51,7 +50,7 @@ type Host interface {
 	EnqueueDeleteJob(paths []string, removeEmptyDirs bool, emptyDirStops []pathloc.Path)
 	UniqueMenuDefinitions() []menu.Definition
 	BrowserMenuDefinitions() []menu.Definition
-	Config() config.Config
+	FilterOptions() quickfilter.Options
 }
 
 // Deps wires the handler at app construction.
@@ -236,7 +235,7 @@ func (h *Handler) syncRows(cursorID string) {
 	}
 	st.Pane.Selected = min(st.Pane.Selected, max(len(rows)-1, 0))
 	if st.Pane.Filter.Query != "" {
-		st.Pane.Filter.Rebuild(rowNames(rows), h.filterOptions())
+		st.Pane.Filter.Rebuild(rowNames(rows), h.host.FilterOptions())
 	}
 }
 
@@ -311,19 +310,12 @@ func (h *Handler) EnsureSelectionVisible(visibleRows int) {
 
 // MoveSelection moves the cursor by delta rows (clamped).
 func (h *Handler) MoveSelection(delta int) {
-	st, n := &h.model.UniqueView, len(h.model.UniqueList)
-	if n > 0 {
-		st.Pane.Selected = min(max(st.Pane.Selected+delta, 0), n-1)
-	}
+	h.model.UniqueView.Pane.MoveBy(delta, len(h.model.UniqueList))
 }
 
 // SelectEdge moves the cursor to the first or last row.
 func (h *Handler) SelectEdge(last bool) {
-	st := &h.model.UniqueView
-	st.Pane.Selected = 0
-	if last {
-		st.Pane.Selected = max(len(h.model.UniqueList)-1, 0)
-	}
+	h.model.UniqueView.Pane.SelectEdge(last, len(h.model.UniqueList))
 }
 
 // SelectRow moves the cursor to row and gives the tree focus (a click).
@@ -672,45 +664,28 @@ func rowNames(rows []ui.UniqueRow) []string {
 	return names
 }
 
-func (h *Handler) filterOptions() quickfilter.Options {
-	f := h.host.Config().Filter
-	return quickfilter.OptionsFrom(f.CaseInsensitive, f.CycleMatches)
-}
-
-func (h *Handler) applyFilter(query string) {
-	st := &h.model.UniqueView
-	if cur, ok := st.Pane.Filter.Apply(query, rowNames(h.model.UniqueList), h.filterOptions()); ok {
-		st.Pane.Selected = cur
-	}
-}
-
 // Filter is the tree's quick filter.
 func (h *Handler) Filter() quickfilter.Filter { return h.model.UniqueView.Pane.Filter }
 
 // AppendFilterRune types r into the filter.
 func (h *Handler) AppendFilterRune(r rune) {
-	h.applyFilter(h.model.UniqueView.Pane.Filter.InsertRune(r))
+	h.model.UniqueView.Pane.AppendFilterRune(r, rowNames(h.model.UniqueList), h.host.FilterOptions())
 }
 
 // BackspaceFilter deletes the rune before the filter caret.
 func (h *Handler) BackspaceFilter() {
-	if next, changed := h.model.UniqueView.Pane.Filter.Backspace(); changed {
-		h.applyFilter(next)
-	}
+	h.model.UniqueView.Pane.BackspaceFilter(rowNames(h.model.UniqueList), h.host.FilterOptions())
 }
 
 // ClearFilter empties the query while the filter stays open.
-func (h *Handler) ClearFilter() { h.applyFilter("") }
+func (h *Handler) ClearFilter() {
+	h.model.UniqueView.Pane.ApplyFilter("", rowNames(h.model.UniqueList), h.host.FilterOptions())
+}
 
 // CancelFilter closes the filter.
 func (h *Handler) CancelFilter() { h.model.UniqueView.Pane.Filter = quickfilter.Filter{} }
 
 // CycleFilterMatch steps the cursor through the matches, or moves plainly when nothing matches.
 func (h *Handler) CycleFilterMatch(delta int) {
-	st := &h.model.UniqueView
-	if cur, ok := st.Pane.Filter.Cycle(st.Pane.Selected, delta, h.filterOptions()); ok {
-		st.Pane.Selected = cur
-		return
-	}
-	h.MoveSelection(delta)
+	h.model.UniqueView.Pane.CycleFilterMatch(delta, len(h.model.UniqueList), h.host.FilterOptions())
 }

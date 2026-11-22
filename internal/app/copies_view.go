@@ -2,12 +2,11 @@ package app
 
 import (
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/config"
 	fi "github.com/paranoidi/paras-commander/internal/fileindex"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/primitive"
+	"github.com/paranoidi/paras-commander/internal/quickfilter"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
@@ -25,7 +24,7 @@ func (h copiesHost) CopiesMenuDefinitions() []menu.Definition { return h.app.cop
 
 func (h copiesHost) BrowserMenuDefinitions() []menu.Definition { return h.app.browserMenuDefinitions() }
 
-func (h copiesHost) Config() config.Config { return h.app.config }
+func (h copiesHost) FilterOptions() quickfilter.Options { return h.app.quickFilterOptions() }
 
 func (a *App) copiesMenuDefinitions() []menu.Definition {
 	return menu.CopiesDefinitions(a.keys.Global, a.keys.Copies)
@@ -53,10 +52,7 @@ func (a *App) reconcileCopiesPanel() {
 	m := &a.model
 	if !m.CopiesView.Open {
 		if m.CopiesPanelID != 0 {
-			a.copiesFollow.reset()
-			m.CopiesPanel = panel.State{}
-			a.closePanel(m.CopiesPanelID)
-			m.CopiesPanelID = 0
+			a.closeEmbeddedPanel(&m.CopiesPanel, &m.CopiesPanelID, &a.copiesFollow)
 		}
 		return
 	}
@@ -198,14 +194,8 @@ func (a *App) handleCopiesViewKey(event *tcell.EventKey) bool {
 
 // activateCopiesHelpAction runs a row of the view's Help on the view's own dispatch.
 func (a *App) activateCopiesHelpAction(actionID string) bool {
-	switch actionID {
-	case keymap.ActionAppQuit:
-		return a.handleQuit()
-	case keymap.ActionAppQuitImmediate:
-		return a.handleQuitImmediate()
-	case keymap.ActionAppOpenMenu:
-		a.openMenu()
-		return false
+	if handled, quit := a.activateShellHelpAction(actionID); handled {
+		return quit
 	}
 	if !a.tryDispatchCopies(actionID) {
 		a.tryDispatchAuxiliaryScreens(actionID)
@@ -234,42 +224,14 @@ func copiesViewFooterKeys(global *keymap.Map) []menu.FunctionKey {
 }
 
 // handleCopiesMouse handles the view's list: a left click focuses it and selects the row, the wheel
-// moves the cursor. Off the list, it handles the panel.
+// moves the cursor. Off the list, it handles the panel: a left click focuses it and moves its cursor
+// to the entry under the pointer, the wheel moves the cursor.
 func (a *App) handleCopiesMouse(layout ui.Layout, x, y int, buttons, pressed tcell.ButtonMask) (rendered bool) {
-	row, ok := ui.CopiesListEntryAt(layout, &a.model, x, y)
-	if !ok {
-		return a.handleCopiesPanelMouse(layout, x, y, buttons, pressed)
+	if row, ok := ui.CopiesListEntryAt(layout, &a.model, x, y); ok {
+		return a.handleListViewMouse(a.copiesCtrl, row, a.copiesVisibleRows(), buttons, pressed)
 	}
-	switch step := wheelDelta(buttons, config.MouseWheelRows); {
-	case step != 0:
-		a.copiesCtrl.MoveSelection(step)
-	case pressed&tcell.Button1 != 0:
-		a.copiesCtrl.SelectRow(row)
-	default:
-		return false
+	if row, ok := ui.CopiesPanelEntryAt(layout, &a.model, x, y); ok {
+		return a.handleEmbeddedPanelMouse(&a.model.CopiesPanel, a.copiesPanelRows(layout), row, buttons, pressed, a.copiesCtrl.FocusPanel)
 	}
-	a.copiesCtrl.EnsureSelectionVisible(a.copiesVisibleRows())
-	a.render()
-	return true
-}
-
-// handleCopiesPanelMouse handles the view's panel: a left click focuses it and moves its cursor to
-// the entry under the pointer, the wheel moves the cursor.
-func (a *App) handleCopiesPanelMouse(layout ui.Layout, x, y int, buttons, pressed tcell.ButtonMask) (rendered bool) {
-	row, ok := ui.CopiesPanelEntryAt(layout, &a.model, x, y)
-	if !ok {
-		return false
-	}
-	p, rows := &a.model.CopiesPanel, a.copiesPanelRows(layout)
-	switch step := wheelDelta(buttons, config.MouseWheelRows); {
-	case step != 0:
-		a.doListNav(func() { p.Move(step, rows) })
-	case pressed&tcell.Button1 != 0:
-		a.copiesCtrl.FocusPanel()
-		a.doListNav(func() { p.Move(row-p.Cursor, rows) })
-	default:
-		return false
-	}
-	a.render()
-	return true
+	return false
 }

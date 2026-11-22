@@ -12,12 +12,13 @@ func TestDrawCopiesListShowsNameDirectoryAndSize(t *testing.T) {
 	styles := theme.Default()
 	rect := Rect{X: 0, Y: 0, Width: 70, Height: 10}
 	screen := newTreeTestScreen(t, 70, 10)
-	view := &CopiesViewState{Origin: "lantern.txt", Files: []UniqueFile{
+	view := &CopiesViewState{Origin: "lantern.txt"}
+	view.SetFiles([]UniqueFile{
 		{Path: "/srv/meadow/lantern.txt", Size: 2048},
 		{Path: "/srv/orchard/clover/lantern.txt", Size: 2048},
-	}}
+	})
 	view.SetMark(view.Files[1], true)
-	drawCopiesList(screen, rect, view, Model{AuxListHover: ListRowHover{}}, styles, false)
+	drawCopiesList(screen, rect, view, &Model{AuxListHover: ListRowHover{}}, styles, false)
 
 	var text []string
 	for y := range rect.Height {

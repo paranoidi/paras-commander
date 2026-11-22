@@ -22,9 +22,9 @@ func (h dialogHost) NavigatePanelToPath(panelID int, path, selectName string) er
 
 func (h dialogHost) CloseJobsView() { h.app.jobsCtrl.TryDispatch(keymap.ActionJobsClose) }
 
-func (h dialogHost) DestinationPanel() *panel.State { return h.app.destinationPanel() }
+func (h dialogHost) DestinationPanel() *panel.State { return h.app.otherBrowserPanel() }
 
-func (h dialogHost) DestinationPanelID() int { return h.app.destinationPanelID() }
+func (h dialogHost) DestinationPanelID() int { return h.app.otherBrowserPanelID() }
 
 func (h dialogHost) PanelByID(panelID int) *panel.State { return h.app.panelByID(panelID) }
 

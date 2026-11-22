@@ -12,7 +12,7 @@ import (
 // collapsed but the first top-level one (the state after opening one directory).
 func uniqueBenchState(files int) (*UniqueViewState, []string) {
 	words := []string{"amber", "birch", "cedar", "dune", "ember", "fjord", "grove", "harbor", "iris", "juniper", "kettle", "lantern"}
-	st := &UniqueViewState{Root: "/scan/root", Scope: []string{"/scan/root"}, Marked: map[string]bool{}, Cache: &UniqueCache{}}
+	st := &UniqueViewState{Root: "/scan/root", Scope: []string{"/scan/root"}, MarkSet: MarkSet{Marked: map[string]bool{}}, Cache: &UniqueCache{}}
 	for i := range files {
 		rel := fmt.Sprintf("%s/%s/%s/%s/%s-%d.bin", words[i%12], words[(i/12)%12], words[(i/144)%12], words[(i/7)%12], words[(i/3)%12], i)
 		st.Files = append(st.Files, UniqueFile{Path: "/scan/root/" + rel, Size: int64(4096 + i), Unverified: i%5 == 0})

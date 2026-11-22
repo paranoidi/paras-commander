@@ -29,7 +29,7 @@ func (h jobsHost) RequestBothPanelsVolumeSpaceRefreshAsync() {
 
 func (h jobsHost) FocusedPanelSources() []string { return h.app.dialogCtrl.FocusedPanelSources() }
 
-func (h jobsHost) DestinationPanel() *panel.State { return h.app.destinationPanel() }
+func (h jobsHost) DestinationPanel() *panel.State { return h.app.otherBrowserPanel() }
 
 func (h jobsHost) PrimaryPanel() *panel.State { return &h.app.model.Primary }
 

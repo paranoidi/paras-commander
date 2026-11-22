@@ -100,17 +100,17 @@ func drawDedupBrowsePanel(screen tcell.Screen, layout Layout, model Model, style
 		return
 	}
 	_, rect := DedupSecondaryRects(layout.Secondary)
-	drawEmbeddedPanel(screen, rect, model.DedupPanel, model.DedupPanelID, model.DedupView.FocusPanel, model, styles, chromeBlocked)
+	drawEmbeddedPanel(screen, rect, &model.DedupPanel, model.DedupPanelID, model.DedupView.FocusPanel, &model, styles, chromeBlocked)
 }
 
 // drawEmbeddedPanel paints a view's embedded file-list panel p (registry ID id) in rect; focus
 // gives it the active chrome and cursor row.
-func drawEmbeddedPanel(screen tcell.Screen, rect Rect, p panel.State, id int, focus bool, model Model, styles theme.Theme, chromeBlocked bool) {
+func drawEmbeddedPanel(screen tcell.Screen, rect Rect, p *panel.State, id int, focus bool, model *Model, styles theme.Theme, chromeBlocked bool) {
 	if rect.Width <= 0 || rect.Height <= 0 {
 		return
 	}
 	rowHover, rowHoverEntry := model.PanelRowHover.at(id)
-	drawPanel(screen, rect, p,
+	drawPanel(screen, rect, *p,
 		PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
 		PanelContext{
 			PanelID: id, FileListActive: focus, CursorRowActive: focus,
@@ -673,6 +673,27 @@ func treeDetailStyle(styles theme.Theme, lineStyle, dim tcell.Style, cursorRow t
 		return lineStyle
 	}
 	return dim
+}
+
+// treeListRowStyle is the line style of one row of the Find unique files / Other copies lists and the
+// cursor row behind it (zero off the cursor and hover rows). Cursor, hover and selection follow the
+// main file list (panelRowStyle).
+func treeListRowStyle(styles theme.Theme, base tcell.Style, bg tcell.Color, selected, isCursor, hovered bool, opts theme.PanelListingCursorOpts) (tcell.Style, theme.PanelListingCursorRow) {
+	lineStyle := base
+	if selected {
+		lineStyle = styles.PanelListingSelectedStyle(opts.ChromeBlocked).Background(bg)
+	}
+	var cursorRow theme.PanelListingCursorRow
+	switch {
+	case isCursor:
+		opts.Selected = selected
+		cursorRow = styles.PanelListingCursor(base, base, opts)
+		lineStyle = cursorRow.Line
+	case hovered:
+		cursorRow = styles.PanelListingHover(base, lineStyle, selected)
+		lineStyle = cursorRow.Line
+	}
+	return lineStyle, cursorRow
 }
 
 // treeRowGutter is the expander of one tree row of the aux tree views (Dedup, Unique files).
