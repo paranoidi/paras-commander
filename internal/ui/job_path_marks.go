@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"strings"
+
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
@@ -164,12 +166,13 @@ type JobRowMark struct {
 // over move over copy; among jobs of the same type, the match with the longest
 // source/destination root wins; further ties keep the earliest job in jobMarks. Write is true
 // when the matched role is a write (destination, or any delete-type job — deletes mutate their
-// sources and have no destination).
+// sources and have no destination). A fileindex:// path is matched by its host path against task
+// jobs (fileindex scans and prunes, always queued with host paths) and as is against every other type.
 func EntryPathJobMark(absPath string, jobMarks []JobPathMark) (JobRowMark, bool) {
 	if absPath == "" || len(jobMarks) == 0 {
 		return JobRowMark{}, false
 	}
-	p := absPath
+	hostPath, isIndex := strings.CutPrefix(absPath, pathloc.FileIndexPrefix)
 	bestPri := -1
 	bestLen := -1
 	bestIdx := -1
@@ -177,6 +180,10 @@ func EntryPathJobMark(absPath string, jobMarks []JobPathMark) (JobRowMark, bool)
 	for i, j := range jobMarks {
 		if jobs.Status(j.Status).IsFinished() {
 			continue
+		}
+		p := absPath
+		if isIndex && jobs.Type(j.Type) == jobs.TypeTask {
+			p = hostPath
 		}
 		rootLen, isDest, pending := longestMatchingRootLen(j, p)
 		if rootLen == 0 {

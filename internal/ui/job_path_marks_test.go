@@ -609,3 +609,34 @@ func TestPanelListsJobRemovedSources(t *testing.T) {
 		}
 	}
 }
+
+func TestEntryPathJobMark_fileIndexRowMatching(t *testing.T) {
+	t.Parallel()
+	dir := "/" + filepath.Join("harbor", "lantern", "meadow")
+	file := filepath.Join(dir, "pebble")
+	idxDir := pathloc.FileIndexPrefix + dir
+	idxFile := pathloc.FileIndexPrefix + file
+	mark := func(typ jobs.Type, src string) []JobPathMark {
+		return JobPathMarksFromEntries([]JobEntry{{
+			Type:    string(typ),
+			Status:  string(jobs.StatusRunning),
+			Sources: []string{src},
+		}})
+	}
+
+	task := mark(jobs.TypeTask, dir)
+	for _, row := range []string{idxFile, idxDir} {
+		if _, ok := EntryPathJobMark(row, task); !ok {
+			t.Fatalf("task job with host source should mark %q", row)
+		}
+	}
+	if _, ok := EntryPathJobMark(file, task); !ok {
+		t.Fatal("task job should still mark the local row")
+	}
+	if _, ok := EntryPathJobMark(idxFile, mark(jobs.TypeDelete, dir)); ok {
+		t.Fatal("local delete job must not mark a fileindex:// row")
+	}
+	if _, ok := EntryPathJobMark(idxFile, mark(jobs.TypeDelete, idxDir)); !ok {
+		t.Fatal("fileindex:// delete job should mark the fileindex:// row")
+	}
+}
