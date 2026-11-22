@@ -11,7 +11,7 @@ func DefaultDedupOverlayKeys() map[string][]string {
 		ActionDedupFilterDialog:   {"M-f"},
 		ActionDedupToggleNode:     {"right", "C-right"},
 		ActionDedupCollapse:       {"left", "C-left"}, // collapse node, or jump to parent
-		ActionDedupToggleTree:     {"C-t"},            // groups tree ↔ directory tree
+		ActionDedupToggleTree:     {"M-t"},            // groups tree ↔ directory tree
 		ActionDedupCollapseAll:    {"M-S-left"},
 		ActionDedupExpandAll:      {"M-S-right"},
 		ActionDedupExpandCopies:   {"M-right"}, // shadows global nav.forward in-view

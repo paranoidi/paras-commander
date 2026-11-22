@@ -1213,9 +1213,9 @@ func TestDedupViewFooterSortHintInGroupsMode(t *testing.T) {
 	}
 	assertDedupFooterGroupOnlyHints(t, app.activeFooterKeys(), false)
 
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyCtrlT, 0, tcell.ModCtrl))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModAlt))
 	if app.model.DedupView.TreeDirs {
-		t.Fatal("Ctrl+T did not switch to groups tree mode")
+		t.Fatal("M-t did not switch to groups tree mode")
 	}
 	assertDedupFooterGroupOnlyHints(t, app.activeFooterKeys(), true)
 }
