@@ -223,8 +223,11 @@ func (a *App) panelViewportRows(panelID int) int {
 	if layout.TooSmall {
 		return 0
 	}
-	if a.model.DedupPanelID != 0 && panelID == a.model.DedupPanelID {
+	switch {
+	case a.model.DedupPanelID != 0 && panelID == a.model.DedupPanelID:
 		return a.dedupBrowseRows(layout)
+	case a.model.CopiesPanelID != 0 && panelID == a.model.CopiesPanelID:
+		return a.copiesPanelRows(layout)
 	}
 	col := layout.Primary
 	p := &a.model.Primary
@@ -574,6 +577,7 @@ func (a *App) reconcileAfterEvent() {
 	}
 	a.previewCtrl.SchedulePrefetchFromActivePanel()
 	a.reconcileDedupPanel()
+	a.reconcileCopiesPanel()
 	a.dedupCtrl.ReconcileStripFocus()
 	a.previewCtrl.ReconcileQuickViewPreview()
 	a.previewCtrl.ReconcileCarouselFilePreview()

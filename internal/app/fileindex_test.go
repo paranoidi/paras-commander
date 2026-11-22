@@ -1247,15 +1247,25 @@ func TestFileIndexMenuSetsLegendOtherMenusDoNot(t *testing.T) {
 // of the first, all fully hashed in the index.
 func copiesApp(t *testing.T) (*App, tcell.SimulationScreen, string) {
 	t.Helper()
+	return copiesAppWith(t, "meadow/harbor.txt")
+}
+
+// copiesAppWith is copiesApp with harbor.txt copied to each of copies (paths below the cwd).
+func copiesAppWith(t *testing.T, copies ...string) (*App, tcell.SimulationScreen, string) {
+	t.Helper()
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Mkdir(filepath.Join(dir, "meadow"), 0o755); err != nil {
-		t.Fatal(err)
-	}
 	var batch []db.ScannedFile
-	for name, letter := range map[string]string{"harbor.txt": "a", "thistle.txt": "b", "meadow/harbor.txt": "a"} {
+	names := map[string]string{"harbor.txt": "a", "thistle.txt": "b"}
+	for _, c := range copies {
+		names[c] = "a"
+	}
+	for name, letter := range names {
+		if err := os.MkdirAll(filepath.Join(dir, filepath.Dir(name)), 0o755); err != nil {
+			t.Fatal(err)
+		}
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(name), 0o644); err != nil {
 			t.Fatal(err)
 		}
@@ -1289,50 +1299,19 @@ func copiesApp(t *testing.T) (*App, tcell.SimulationScreen, string) {
 	return a, screen, dir
 }
 
-func TestFileIndexCopiesJumpsToChosenCopy(t *testing.T) {
-	for _, onIndex := range []bool{false, true} {
-		a, screen, dir := copiesApp(t)
-		wantDir := filepath.Join(dir, "meadow")
-		if onIndex {
-			a.dispatch(keymap.ActionFileIndexBrowse)
-			drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
-				return a.focusedPanel().PathString() == "fileindex://"+dir && !a.focusedPanel().ListingPending
-			})
-			wantDir = "fileindex://" + wantDir
-		}
-		cursorTo(t, a, "harbor.txt")
-		a.dispatch(keymap.ActionFileIndexCopies)
-		drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.PathPicker.Open })
-		st := a.model.PathPicker
-		if st.Purpose != dialog.PathPickerPurposeNavigateFile || st.IndexPanel != onIndex || st.Title != "Other copies of harbor.txt (1)" ||
-			len(st.Items) != 1 || st.Items[0].Path != filepath.Join(dir, "meadow", "harbor.txt") {
-			t.Fatalf("onIndex=%v picker = %+v", onIndex, st)
-		}
-		a.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
-		drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
-			p := a.focusedPanel()
-			e, ok := p.CurrentEntry()
-			return p.PathString() == wantDir && !p.ListingPending && ok && e.Name == "harbor.txt"
-		})
-		if a.model.PathPicker.Open {
-			t.Fatalf("onIndex=%v: picker still open after choosing", onIndex)
-		}
-	}
-}
-
 func TestFileIndexCopiesMessages(t *testing.T) {
 	a, screen, _ := copiesApp(t)
 	cursorTo(t, a, "thistle.txt")
 	a.dispatch(keymap.ActionFileIndexCopies)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.Message == "No other copies of thistle.txt" })
-	if a.model.PathPicker.Open {
-		t.Fatal("no copies must not open the picker")
+	if a.model.ViewMode != ui.ViewBrowser {
+		t.Fatal("no copies must not open the view")
 	}
 	cursorTo(t, a, "tundra.txt")
 	a.dispatch(keymap.ActionFileIndexCopies)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.Message == "Empty file, copies not tracked: tundra.txt" })
-	if a.model.PathPicker.Open {
-		t.Fatal("an empty file must not open the picker")
+	if a.model.ViewMode != ui.ViewBrowser {
+		t.Fatal("an empty file must not open the view")
 	}
 	cursorTo(t, a, "meadow")
 	a.dispatch(keymap.ActionFileIndexCopies)
@@ -1858,15 +1837,46 @@ func TestFileIndexReportDifferencesCanceledShowsNothing(t *testing.T) {
 	}
 }
 
-// openCopiesPicker opens the other-copies picker for harbor.txt (one copy, in meadow/).
-func openCopiesPicker(t *testing.T, a *App, screen tcell.SimulationScreen) {
+// openCopiesPicker opens the file picker over harbor.txt's one copy (in meadow/), as the differences
+// report opens it, on the focused panel's kind of path.
+func openCopiesPicker(t *testing.T, a *App, _ tcell.SimulationScreen) {
 	t.Helper()
 	cursorTo(t, a, "harbor.txt")
-	a.dispatch(keymap.ActionFileIndexCopies)
-	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.PathPicker.Open })
+	p := a.focusedPanel()
+	indexPanel := p.Path.Scheme() == pathloc.SchemeFileIndex
+	dir := strings.TrimPrefix(p.PathString(), "fileindex://")
+	a.dialogCtrl.OpenFilePicker("Other copies of harbor.txt (1)", []dialog.PathPickerItem{{Path: filepath.Join(dir, "meadow", "harbor.txt")}}, indexPanel)
+	if !a.model.PathPicker.Open {
+		t.Fatal("the file picker did not open")
+	}
 }
 
-func TestFileIndexCopiesPickerMarksAddToSelection(t *testing.T) {
+func TestFilePickerEnterShowsChosenFile(t *testing.T) {
+	for _, onIndex := range []bool{false, true} {
+		a, screen, dir := copiesApp(t)
+		wantDir := filepath.Join(dir, "meadow")
+		if onIndex {
+			openIndexPanel(t, a, screen, dir)
+			wantDir = "fileindex://" + wantDir
+		}
+		openCopiesPicker(t, a, screen)
+		st := a.model.PathPicker
+		if st.Purpose != dialog.PathPickerPurposeNavigateFile || st.IndexPanel != onIndex || len(st.Items) != 1 {
+			t.Fatalf("onIndex=%v picker = %+v", onIndex, st)
+		}
+		a.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+		drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+			p := a.focusedPanel()
+			e, ok := p.CurrentEntry()
+			return p.PathString() == wantDir && !p.ListingPending && ok && e.Name == "harbor.txt"
+		})
+		if a.model.PathPicker.Open {
+			t.Fatalf("onIndex=%v: picker still open after choosing", onIndex)
+		}
+	}
+}
+
+func TestFilePickerMarksAddToSelection(t *testing.T) {
 	for _, onIndex := range []bool{false, true} {
 		a, screen, dir := copiesApp(t)
 		copyPath := filepath.Join(dir, "meadow", "harbor.txt")
@@ -1892,7 +1902,7 @@ func TestFileIndexCopiesPickerMarksAddToSelection(t *testing.T) {
 
 // ui.open-primary / ui.open-secondary target the visual slot, so a swapped layout must send
 // Shift+Right to Primary (drawn second) and Shift+Left to Secondary (drawn first).
-func TestFileIndexCopiesPickerOpenInSlotFollowsSwap(t *testing.T) {
+func TestFilePickerOpenInSlotFollowsSwap(t *testing.T) {
 	for _, swap := range []bool{false, true} {
 		for _, right := range []bool{false, true} {
 			a, screen, dir := copiesApp(t)
@@ -1919,7 +1929,7 @@ func TestFileIndexCopiesPickerOpenInSlotFollowsSwap(t *testing.T) {
 	}
 }
 
-func TestFileIndexCopiesPickerSpaceIsFilterText(t *testing.T) {
+func TestFilePickerSpaceIsFilterText(t *testing.T) {
 	a, screen, _ := copiesApp(t)
 	openCopiesPicker(t, a, screen)
 	a.handleKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
@@ -1928,7 +1938,7 @@ func TestFileIndexCopiesPickerSpaceIsFilterText(t *testing.T) {
 	}
 }
 
-func TestFileIndexCopiesPickerPins(t *testing.T) {
+func TestFilePickerPins(t *testing.T) {
 	for _, onIndex := range []bool{false, true} {
 		a, screen, dir := copiesApp(t)
 		want := filepath.Join(dir, "meadow", "harbor.txt")
@@ -1960,7 +1970,7 @@ func TestFileIndexCopiesPickerPins(t *testing.T) {
 	}
 }
 
-func TestFileIndexCopiesPickerOpensInEitherPanel(t *testing.T) {
+func TestFilePickerOpensInEitherPanel(t *testing.T) {
 	a, screen, dir := copiesApp(t)
 	wantDir := filepath.Join(dir, "meadow")
 	openCopiesPicker(t, a, screen)
@@ -1985,7 +1995,7 @@ func TestFileIndexCopiesPickerOpensInEitherPanel(t *testing.T) {
 	}
 }
 
-func TestFileIndexCopiesPickerViewReturnsToPicker(t *testing.T) {
+func TestFilePickerViewReturnsToPicker(t *testing.T) {
 	a, screen, _ := copiesApp(t)
 	openCopiesPicker(t, a, screen)
 	a.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
@@ -1999,7 +2009,7 @@ func TestFileIndexCopiesPickerViewReturnsToPicker(t *testing.T) {
 	}
 }
 
-func TestFileIndexCopiesPickerEditOpensEditor(t *testing.T) {
+func TestFilePickerEditOpensEditor(t *testing.T) {
 	a, screen, dir := copiesApp(t)
 	var edited string
 	a.runExternalEditor = func(_ context.Context, path string, _ bool) error {

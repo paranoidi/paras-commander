@@ -19,6 +19,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	commandsctrl "github.com/paranoidi/paras-commander/internal/apphandler/commands"
 	comparectrl "github.com/paranoidi/paras-commander/internal/apphandler/compare"
+	copiesviewctrl "github.com/paranoidi/paras-commander/internal/apphandler/copiesview"
 	dedupctrl "github.com/paranoidi/paras-commander/internal/apphandler/dedup"
 	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
 	fileindexctrl "github.com/paranoidi/paras-commander/internal/apphandler/fileindex"
@@ -224,6 +225,7 @@ type App struct {
 	compareCtrl    *comparectrl.Handler
 	dedupCtrl      *dedupctrl.Handler
 	uniqueCtrl     *uniquefilesctrl.Handler
+	copiesCtrl     *copiesviewctrl.Handler
 	previewCtrl    *previewctrl.Handler
 	dialogCtrl     *dialogctrl.Handler
 	pinCtrl        *pinctrl.Handler
@@ -346,9 +348,11 @@ type App struct {
 
 	// panels is the registry of live file-list panels (panel_registry.go).
 	panels panelRegistry
-	// dedupBrowseOn / dedupBrowseFP track the dedup Dirs-view browse panel (dedup_browse.go).
+	// dedupBrowseOn / dedupFollow track the dedup Dirs-view browse panel (dedup_browse.go);
+	// copiesFollow the Other copies view's panel (copies_view.go).
 	dedupBrowseOn bool
-	dedupBrowseFP [2]string
+	dedupFollow   panelFollow
+	copiesFollow  panelFollow
 
 	// lastScreenContentHash is the FNV hash of the logical buffer after the last full-render Show
 	// when ScreenRenderHashCache is enabled (see emitScreenAfterFullRender); zero after a partial
@@ -779,6 +783,10 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Model:  &app.model,
 		Index:  app.fileIndex,
 	})
+	app.copiesCtrl = copiesviewctrl.New(copiesviewctrl.Deps{
+		Host:  copiesHost{appShellHost: appShellHost{app: app}},
+		Model: &app.model,
+	})
 	app.previewCtrl = previewctrl.New(previewctrl.Deps{
 		Host:                  previewHost{appShellHost: appShellHost{app: app}},
 		Screen:                screen,
@@ -811,6 +819,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Preview:              app.previewCtrl,
 		Dedup:                app.dedupCtrl,
 		Unique:               app.uniqueCtrl,
+		Copies:               app.copiesCtrl,
 		DiskUsage:            app.disk.engine,
 		DiskUsageIgnore:      duIgnorer,
 		FSSink:               fsSink,
@@ -969,6 +978,7 @@ func resolveKeymapBundle(opts Options) (*keymap.Bundle, error) {
 		{&rk.Compare, keymap.DefaultCompareOverlayKeys, "compare overlay"},
 		{&rk.Dedup, keymap.DefaultDedupOverlayKeys, "dedup overlay"},
 		{&rk.Unique, keymap.DefaultUniqueOverlayKeys, "unique files overlay"},
+		{&rk.Copies, keymap.DefaultCopiesOverlayKeys, "other copies overlay"},
 		{&rk.SelectedStrip, keymap.DefaultSelectedStripOverlayKeys, "selected strip overlay"},
 		{&rk.Terminal, keymap.DefaultTerminalOverlayKeys, "terminal overlay"},
 	} {

@@ -13,6 +13,7 @@ const (
 	HelpCompare
 	HelpDedup
 	HelpUnique
+	HelpCopies
 	HelpFilePreview
 	// HelpSelectedStrip is only a leader-menu scope (leaderMenuViewSpecs): no ActionSpec.Views
 	// is tagged with it and it is not in helpAllViews.
@@ -23,7 +24,7 @@ const (
 
 // Tagging shorthands for DefaultActionSpecs.
 const (
-	helpAllViews      = HelpBrowser | HelpJobs | HelpCommands | HelpMessages | HelpCompare | HelpDedup | HelpUnique | HelpFilePreview
+	helpAllViews      = HelpBrowser | HelpJobs | HelpCommands | HelpMessages | HelpCompare | HelpDedup | HelpUnique | HelpCopies | HelpFilePreview
 	helpAllButPreview = helpAllViews &^ HelpFilePreview // menu bar and list nav are absent in file preview
 )
 
@@ -310,7 +311,7 @@ func DefaultActionSpecs() []ActionSpec {
 		// ── Panel navigation ──
 		{
 			ID:          ActionPanelSwitch,
-			Views:       HelpBrowser | HelpDedup | HelpCompare | HelpUnique,
+			Views:       HelpBrowser | HelpDedup | HelpCompare | HelpUnique | HelpCopies,
 			Title:       "Switch panel",
 			Section:     "Navigation",
 			DefaultKeys: []string{"tab"},
@@ -1054,6 +1055,25 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:   "h",
 		},
 
+		// ── Other copies ──
+		{
+			ID:          ActionCopiesClose,
+			Views:       HelpCopies,
+			Title:       "Close view",
+			Section:     "Other copies",
+			DefaultKeys: nil, // overlay: DefaultCopiesOverlayKeys
+			Keywords:    []string{"back", "browser"},
+			LeaderKey:   "x",
+		},
+		{
+			ID:          ActionCopiesPrevPane,
+			Views:       HelpCopies,
+			Title:       "Previous pane",
+			Section:     "Other copies",
+			DefaultKeys: nil, // overlay: DefaultCopiesOverlayKeys
+			Keywords:    []string{"pane", "focus", "switch"},
+		},
+
 		// ── Disk usage ──
 		{
 			ID:          ActionPanelDiskUsageScan,
@@ -1084,7 +1104,7 @@ func DefaultActionSpecs() []ActionSpec {
 		// ── Selection ──
 		{
 			ID:          ActionPanelSelectToggle,
-			Views:       HelpBrowser | HelpCompare | HelpDedup | HelpUnique,
+			Views:       HelpBrowser | HelpCompare | HelpDedup | HelpUnique | HelpCopies,
 			Title:       "Toggle selection",
 			Section:     "Selection",
 			DefaultKeys: []string{"insert", "space"},
@@ -1129,7 +1149,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelClearSelection,
-			Views:       HelpBrowser | HelpDedup | HelpCompare | HelpUnique,
+			Views:       HelpBrowser | HelpDedup | HelpCompare | HelpUnique | HelpCopies,
 			Title:       "Unselect all",
 			Section:     "Selection",
 			DefaultKeys: []string{"C-u"},
@@ -1569,7 +1589,7 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:    "l",
 			Title:        "Open in left/top panel",
 			Section:      "Panels",
-			Views:        HelpDedup | HelpUnique,
+			Views:        HelpDedup | HelpUnique | HelpCopies,
 			DefaultKeys:  nil, // overlays: DefaultOpenInPanelKeys
 			PreferredKey: "S-left",
 			Keywords:     []string{"find dialog", "pin dialog", "dedup", "left panel", "reveal", "cd"},
@@ -1579,7 +1599,7 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:    "o",
 			Title:        "Open in right/bottom panel",
 			Section:      "Panels",
-			Views:        HelpDedup | HelpUnique,
+			Views:        HelpDedup | HelpUnique | HelpCopies,
 			DefaultKeys:  nil, // overlays: DefaultOpenInPanelKeys
 			PreferredKey: "S-right",
 			Keywords:     []string{"find dialog", "pin dialog", "dedup", "right panel", "reveal", "cd"},
@@ -1800,7 +1820,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:             ActionFileDelete,
-			Views:          HelpBrowser | HelpDedup | HelpCompare | HelpUnique,
+			Views:          HelpBrowser | HelpDedup | HelpCompare | HelpUnique | HelpCopies,
 			Title:          "Delete",
 			Section:        "File",
 			DefaultKeys:    []string{"F8", "delete", "C-d"},
@@ -1845,7 +1865,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionFileView,
-			Views:        HelpBrowser | HelpDedup | HelpUnique,
+			Views:        HelpBrowser | HelpDedup | HelpUnique | HelpCopies,
 			Title:        "Full screen preview",
 			Section:      "File",
 			DefaultKeys:  []string{"F3", "C-v"},
@@ -2033,7 +2053,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:             ActionFileEdit,
-			Views:          HelpBrowser | HelpFilePreview | HelpUnique,
+			Views:          HelpBrowser | HelpFilePreview | HelpUnique | HelpCopies,
 			Title:          "Edit file",
 			Section:        "File",
 			DefaultKeys:    []string{"F4", "M-e"},
@@ -2052,7 +2072,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionCopy,
-			Views:        HelpBrowser | HelpUnique,
+			Views:        HelpBrowser | HelpUnique | HelpCopies,
 			Title:        "Copy",
 			Section:      "File",
 			DefaultKeys:  []string{"F5", "C-c"},
@@ -2090,7 +2110,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionMove,
-			Views:        HelpBrowser | HelpUnique,
+			Views:        HelpBrowser | HelpUnique | HelpCopies,
 			Title:        "Move",
 			Section:      "File",
 			DefaultKeys:  []string{"F6", "C-m", "C-t"},

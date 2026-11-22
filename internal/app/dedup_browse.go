@@ -3,7 +3,6 @@ package app
 import (
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/panel"
-	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -19,26 +18,28 @@ func (a *App) dedupBrowseRows(layout ui.Layout) int {
 	return ui.PanelListRows(browse)
 }
 
-func (a *App) initDedupPanel() {
+// initEmbeddedPanel registers *dst as a new file-list panel instance listing what the active browser
+// panel lists, and returns its ID. It is registered before its first target, so focusing it always
+// finds it.
+func (a *App) initEmbeddedPanel(dst *panel.State) int {
 	act := a.activeBrowserPanel()
 	st := panel.NewSideListing(act, act)
-	id := a.openPanel(&a.model.DedupPanel)
+	id := a.openPanel(dst)
 	st.ScheduleAsyncLoad = a.asyncLoadScheduler(id)
 	st.ScheduleGitStatus = a.gitStatusScheduler(id)
 	st.FileListViewportRows = func() int { return a.panelViewportRows(id) }
-	a.model.DedupPanel = st
-	a.model.DedupPanelID = id
+	*dst = st
+	return id
 }
 
-// reconcileDedupPanel keeps the browse panel on the row of the pane whose cursor last moved: the
-// directory itself for a dir row, else the file's parent with the cursor on the file. Only a
-// cursor move re-syncs it (switching panes does not); manual navigation inside the panel
-// survives until then.
+// reconcileDedupPanel keeps the browse panel on the row of the pane whose cursor last moved
+// (panelFollow): the directory itself for a dir row, else the file's parent with the cursor on the
+// file.
 func (a *App) reconcileDedupPanel() {
 	if !a.dedupBrowseWanted() {
 		if a.dedupBrowseOn {
 			a.dedupBrowseOn = false
-			a.dedupBrowseFP = [2]string{}
+			a.dedupFollow.reset()
 			a.model.DedupPanel = panel.State{}
 			a.closePanel(a.model.DedupPanelID)
 			a.model.DedupPanelID = 0
@@ -54,44 +55,26 @@ func (a *App) reconcileDedupPanel() {
 		return // hidden: keep the panel as-is for the return trip
 	}
 	if a.model.DedupPanelID == 0 {
-		a.initDedupPanel() // registered before its first target, so focusing it always finds it
+		a.model.DedupPanelID = a.initEmbeddedPanel(&a.model.DedupPanel)
 	}
 	if a.dedupCtrl.NavHeld() {
 		return // fingerprint stays stale so the flush sees the final cursor move
 	}
-	// Per-pane fingerprints (0 main, 1 copies). Only a cursor move changes one, so switching
-	// panes never reloads the panel; the focused pane wins when both moved.
-	var fp [2]string
-	var dirs, names [2]string
-	for i := range fp {
-		path, isDir, ok := a.dedupCtrl.PaneTarget(i == 1)
-		if !ok || path == "" {
-			continue
-		}
-		dirs[i], names[i] = path, ""
-		if !isDir {
-			dirs[i], names[i] = pathloc.SplitDirBase(path)
-		}
-		fp[i] = dirs[i] + "\x00" + names[i]
-	}
-	prev := a.dedupBrowseFP
-	a.dedupBrowseFP = fp
+	// Per-pane targets (0 main, 1 copies); the focused pane wins when both moved.
 	src := 0
 	if a.model.DedupView.FocusCopies {
 		src = 1
 	}
-	pick := -1
-	for _, i := range [2]int{src, 1 - src} {
-		if fp[i] != "" && fp[i] != prev[i] {
-			pick = i
-			break
-		}
+	var targets [2]followTarget
+	for i := range targets {
+		path, isDir, ok := a.dedupCtrl.PaneTarget(i == 1)
+		targets[i] = followTargetOf(path, isDir, ok)
 	}
-	if pick < 0 {
+	t, ok := a.dedupFollow.next(src, targets[:]...)
+	if !ok {
 		return
 	}
-	dir, name := dirs[pick], names[pick]
-	if err := a.model.DedupPanel.LoadWithViewport(dir, name, a.panelViewportRows(a.model.DedupPanelID), 0); err != nil {
+	if err := a.followLoad(&a.model.DedupPanel, a.model.DedupPanelID, t); err != nil {
 		a.setErrorMessage("Browse", err)
 	}
 }

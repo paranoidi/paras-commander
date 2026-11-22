@@ -456,7 +456,7 @@ func TestLeaderMenuFullScreenPreviewIsV(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, vm := range []HelpViews{HelpDedup, HelpUnique, HelpSelectedStrip} {
+	for _, vm := range []HelpViews{HelpDedup, HelpUnique, HelpCopies, HelpSelectedStrip} {
 		if id, ok := b.ActionForLeaderKeyInView('v', vm); !ok || id != ActionFileView {
 			t.Fatalf("view %v 'v' = %q %v, want %s", vm, id, ok, ActionFileView)
 		}

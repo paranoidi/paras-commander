@@ -1076,9 +1076,16 @@ func TestOtherCopies(t *testing.T) {
 
 	check := func(name string, wantState CopiesState, want ...string) {
 		t.Helper()
-		got, state, err := x.OtherCopies(at(name))
+		copies, state, err := x.OtherCopies(at(name))
 		if err != nil || state != wantState {
-			t.Fatalf("OtherCopies(%s) = %v %v %v, want state %v", name, got, state, err, wantState)
+			t.Fatalf("OtherCopies(%s) = %v %v %v, want state %v", name, copies, state, err, wantState)
+		}
+		var got []string
+		for _, c := range copies {
+			got = append(got, c.Path)
+			if want := int64(len(files[strings.TrimPrefix(c.Path, root+"/")])); c.Size != want {
+				t.Fatalf("OtherCopies(%s): %s size = %d, want %d", name, c.Path, c.Size, want)
+			}
 		}
 		for i := range want {
 			want[i] = at(want[i])

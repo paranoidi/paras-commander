@@ -39,6 +39,7 @@ const (
 	InputModeDedupReturnDialog
 	InputModeDedupView
 	InputModeUniqueView
+	InputModeCopiesView
 	InputModeFilePreviewView
 	InputModePathPicker
 	InputModeHistoryDialog
@@ -136,6 +137,8 @@ func (a *App) inputMode() InputMode {
 		return InputModeDedupView
 	case a.viewActiveForInput(ui.ViewUnique):
 		return InputModeUniqueView
+	case a.viewActiveForInput(ui.ViewCopies):
+		return InputModeCopiesView
 	case a.viewActiveForInput(ui.ViewFilePreview):
 		return InputModeFilePreviewView
 	case a.viewActiveForInput(ui.ViewCommands):
@@ -516,6 +519,17 @@ func (a *App) auxiliaryViewFooterKeys() ([]menu.FunctionKey, bool) {
 	}
 	if a.model.ViewMode == ui.ViewUnique && !a.inQuickFilterUI() {
 		rest := uniqueViewFooterKeys(a.keys.Global, a.keys.Unique)
+		rest = append(rest,
+			menu.FunctionKey{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu", ActionID: keymap.ActionAppOpenMenu},
+			menu.FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit", ActionID: keymap.ActionAppQuit},
+		)
+		out := footerWithEscClose(rest)
+		f1 := menu.FunctionKey{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help", ActionID: keymap.ActionAppShowHelp}
+		out = append(out[:1], append([]menu.FunctionKey{f1}, out[1:]...)...)
+		return a.viMotionAuxiliaryFooterKeys(out), true
+	}
+	if a.model.ViewMode == ui.ViewCopies && !a.inQuickFilterUI() {
+		rest := copiesViewFooterKeys(a.keys.Global)
 		rest = append(rest,
 			menu.FunctionKey{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu", ActionID: keymap.ActionAppOpenMenu},
 			menu.FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit", ActionID: keymap.ActionAppQuit},
@@ -917,6 +931,9 @@ var inputModeKeyHandlers = map[InputMode]func(*App, *tcell.EventKey) bool{
 	InputModeUniqueView: func(a *App, ev *tcell.EventKey) bool {
 		return a.handleUniqueViewKey(ev)
 	},
+	InputModeCopiesView: func(a *App, ev *tcell.EventKey) bool {
+		return a.handleCopiesViewKey(ev)
+	},
 	InputModeMessagesView: func(a *App, ev *tcell.EventKey) bool {
 		return a.handleMessagesViewKey(ev)
 	},
@@ -953,7 +970,7 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	}
 
 	mode := a.inputMode()
-	if (mode == InputModeDedupView || mode == InputModeUniqueView) && a.model.EmbeddedPanelFocused() {
+	if (mode == InputModeDedupView || mode == InputModeUniqueView || mode == InputModeCopiesView) && a.model.EmbeddedPanelFocused() {
 		// The view's embedded panel takes the browser's key path; the view's own actions still
 		// reach the view first (actionFromKeyEvent, tryDispatchTreeViews).
 		mode = InputModeNormal

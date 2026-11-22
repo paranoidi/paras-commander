@@ -258,7 +258,7 @@ func (a *App) mouseGoesToDialog() bool {
 		return a.model.JobsResultFilterDialog.Open
 	case InputModeCompareView:
 		return a.model.CompareFilterDialog.Open || a.model.CompareMergeDialog.Open
-	case InputModeNormal, InputModeDedupView, InputModeUniqueView:
+	case InputModeNormal, InputModeDedupView, InputModeUniqueView, InputModeCopiesView:
 		return false
 	}
 	return true
@@ -352,8 +352,13 @@ func (a *App) auxListHover(layout ui.Layout) ui.ListRowHover {
 	hit, ok := a.auxListHit()
 	dedup := a.inputMode() == InputModeDedupView
 	unique := a.inputMode() == InputModeUniqueView
-	if (!ok && !dedup && !unique) || !a.mouse.hovers() || a.mouseGoesToDialog() {
+	copies := a.inputMode() == InputModeCopiesView
+	if (!ok && !dedup && !unique && !copies) || !a.mouse.hovers() || a.mouseGoesToDialog() {
 		return ui.ListRowHover{}
+	}
+	if copies {
+		row, ok := ui.CopiesListEntryAt(layout, &a.model, a.mouse.x, a.mouse.y)
+		return ui.ListRowHover{Active: ok, Row: row}
 	}
 	if unique {
 		row, ok := ui.UniqueListEntryAt(layout, &a.model, a.mouse.x, a.mouse.y)
@@ -392,6 +397,10 @@ func (a *App) panelRowHover(layout ui.Layout) ui.PanelRowHover {
 	if a.inputMode() == InputModeUniqueView {
 		row, ok := ui.UniqueDestEntryAt(layout, &a.model, a.mouse.x, a.mouse.y)
 		return ui.PanelRowHover{Active: ok, Panel: a.otherBrowserPanelID(), Entry: row}
+	}
+	if a.inputMode() == InputModeCopiesView {
+		row, ok := ui.CopiesPanelEntryAt(layout, &a.model, a.mouse.x, a.mouse.y)
+		return ui.PanelRowHover{Active: ok, Panel: a.model.CopiesPanelID, Entry: row}
 	}
 	if a.inputMode() != InputModeNormal || a.model.ViewMode != ui.ViewBrowser {
 		return ui.PanelRowHover{}
@@ -630,6 +639,8 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 		return false, a.handleDedupMouse(layout, x, y, buttons, pressed)
 	case InputModeUniqueView:
 		return false, a.handleUniqueMouse(layout, x, y, buttons, pressed)
+	case InputModeCopiesView:
+		return false, a.handleCopiesMouse(layout, x, y, buttons, pressed)
 	case InputModeNormal, InputModeFilter: // a filter on a view's embedded panel is no browser click
 		if a.model.ViewMode != ui.ViewBrowser {
 			return false, false
@@ -867,7 +878,7 @@ func (a *App) handleChromeMouse(layout ui.Layout, x, y int, buttons, pressed tce
 // whose menu bar F9 opens, but not while a dialog or confirmation has the keyboard.
 func (a *App) menuBarAcceptsMouse() bool {
 	switch a.inputMode() {
-	case InputModeNormal, InputModeMenu, InputModeFilter, InputModeJobsView, InputModeCommandsView, InputModeMessagesView, InputModeCompareView, InputModeDedupView, InputModeUniqueView:
+	case InputModeNormal, InputModeMenu, InputModeFilter, InputModeJobsView, InputModeCommandsView, InputModeMessagesView, InputModeCompareView, InputModeDedupView, InputModeUniqueView, InputModeCopiesView:
 		return true
 	}
 	return false

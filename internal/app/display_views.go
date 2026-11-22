@@ -23,6 +23,8 @@ func (a *App) tryDispatchAuxiliaryScreens(actionID string) bool {
 			a.closeDedupView()
 		case ui.ViewUnique:
 			a.closeUniqueView()
+		case ui.ViewCopies:
+			a.closeCopiesView()
 		}
 		a.dispatch(actionID)
 		return true

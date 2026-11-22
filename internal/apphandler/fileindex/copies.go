@@ -1,12 +1,9 @@
 package fileindex
 
 import (
-	"fmt"
-
 	fi "github.com/paranoidi/paras-commander/internal/fileindex"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 const (
@@ -22,12 +19,12 @@ type CopiesPayload struct {
 	Path       string
 	Name       string
 	IndexPanel bool
-	Files      []string
+	Files      []fi.CopyFile
 	State      fi.CopiesState
 	Err        error
 }
 
-// Copies lists where else the cursor file exists according to the index and offers to jump to one.
+// Copies lists where else the cursor file exists according to the index, in the Other copies view.
 func (h *Handler) Copies() {
 	if !h.localOrIndex() {
 		return
@@ -110,10 +107,6 @@ func (h *Handler) HandleCopies(p CopiesPayload) {
 	case len(p.Files) == 0:
 		h.host.SetTransientMessage("No other copies of "+p.Name, ui.MessageUrgencyInfo)
 	default:
-		items := make([]dialog.PathPickerItem, len(p.Files))
-		for i, f := range p.Files {
-			items[i] = dialog.PathPickerItem{Path: f}
-		}
-		h.host.OpenFilePicker(fmt.Sprintf("Other copies of %s (%d)", p.Name, len(p.Files)), items, p.IndexPanel)
+		h.host.OpenCopiesView(p.Name, p.IndexPanel, p.Files)
 	}
 }

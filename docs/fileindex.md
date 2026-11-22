@@ -236,27 +236,35 @@ or modes to filter on.
 
 ## Other copies
 
-`M-O` lists where else the file under the cursor exists according
-to the index, and jumps to the one you choose: a picker titled "Other copies of
-name (N)" lists the full paths of the other copies, filtered as you type; Enter
-or OK shows the copy in the active panel, in its directory with the file
-highlighted. Pick from a local panel and the real directory opens (the index view of it when
-the directory is gone from disk); from an index view the copy opens in the index
+`M-O` shows where else the file under the cursor exists according to the index, in a full-screen
 view. It works on local and index panels, on files only.
 
-The picker's list works like Find's, with the same keys (`keybindings.toml`,
-`[dialog.find]` and `[main]`):
+**The view.** A list titled "Other copies of name (N)" takes the active panel's place: one row
+per other copy with its name, its directory and its indexed size. The other panel's place shows a
+real file panel on the directory of the copy under the cursor, with the file highlighted, so you can see
+what else is there. Moving the cursor in the list takes the panel to that copy's directory; what you
+do inside the panel (browse into a folder, move its cursor) stays until the list cursor moves again.
+Started from an index view, the panel shows the index view of the directory, otherwise the real
+directory (the index view of it when it is gone from disk).
 
-| Key | Effect |
+`Tab` switches between the list and the panel; `Shift+Tab` switches back. With the panel
+focused it works like a normal file panel (select, rename, create folders, sort, quick filter, view,
+edit). `Esc` closes the view and its panel and returns to the file panels, which are as they were.
+
+**Keys in the list.** Typing jumps to matching names. `Insert` or `Space` marks a copy and moves down;
+`C-u` unmarks all. Enter opens the copy with the default application.
+
+| Key | Action |
 |---|---|
-| `Insert` | Mark the file and move down; OK then adds the marked files to the active panel's selection instead of jumping |
-| `Alt+Insert` | Pin or unpin the file |
-| `Shift+Left` / `Shift+Right` | Show the file in the left/top / right/bottom panel, keeping the picker open |
-| `F3` | View the file; closing the viewer returns to the picker |
-| `F4` | Edit the file, keeping the picker open |
+| `F5` | Copy to the other panel, through the usual copy dialog. It acts on the marked copies, else the copy under the cursor; the destination is the file panel that is not active |
+| `F6` | Move to the other panel; the copies leave the list |
+| `F8` | Delete the marked copies, else the copy under the cursor, after the usual confirmation; they leave the list |
+| `F3` / `F4` | View or edit the copy |
+| `S-Left` / `S-Right` | Show the copy in the left or right file panel, with the file highlighted; from the panel, its cursor entry |
+| `F9` / `F1` | The view's menu and its Help |
 
-[Report differences](#report-differences) uses the same picker and keys; view and
-edit refuse a file that is missing from disk.
+The mouse works as well: a click selects a row of the list or an entry of the panel and gives it
+focus, and the wheel scrolls.
 
 - Copies are files with the same content hash. JPEGs differing only in metadata
   count as copies, as in the Copies column below.
@@ -539,4 +547,17 @@ or in a directory pc cannot read) is not a difference. "No differences"
 and "NAME is not in the index" are shown as messages instead of a picker, and
 always show, whatever you are doing when the report ends. A picker opened from
 the jobs view returns there on Esc; choosing a path switches to the file list.
+
+The picker's list works like Find's, with the same keys (`keybindings.toml`,
+`[dialog.find]` and `[main]`):
+
+| Key | Effect |
+|---|---|
+| `Insert` | Mark the path and move down; OK then adds the marked paths to the active panel's selection instead of showing the cursor path |
+| `Alt+Insert` | Pin or unpin the path |
+| `Shift+Left` / `Shift+Right` | Show the path in the left/top / right/bottom panel, keeping the picker open |
+| `F3` | View the file; closing the viewer returns to the picker |
+| `F4` | Edit the file, keeping the picker open |
+
+View and edit refuse a file that is missing from disk.
 

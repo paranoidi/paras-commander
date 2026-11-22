@@ -69,29 +69,12 @@ func drawUniqueView(screen tcell.Screen, layout Layout, model Model, styles them
 		RowMarks: withRangeAnchor(rowMarksResolver(model.PinnedItems, model.JobPathMarks), view.RangeAnchor),
 		Hover:    model.AuxListHover,
 	}, styles)
-	if destRect.Width <= 0 || destRect.Height <= 0 {
-		return
-	}
 	destID := model.inactivePanelID()
 	dest := model.Secondary
 	if destID == PrimaryPanel {
 		dest = model.Primary
 	}
-	rowHover, rowHoverEntry := model.PanelRowHover.at(destID)
-	drawPanel(screen, destRect, dest,
-		PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
-		PanelContext{
-			PanelID: destID, FileListActive: view.FocusPanel, CursorRowActive: view.FocusPanel,
-			ChromeBlocked: chromeBlocked, ActivePanel: model.ActivePanel,
-			RowHover: rowHover, RowHoverEntry: rowHoverEntry,
-			SyncDriverPanelID: -1, QuickViewDriverPanelID: -1, SplitOrientation: model.SplitOrientation,
-		},
-		PanelDisplayConfig{
-			ShowIcons: model.UseNerdfontIcons, UserHomeDir: model.UserHomeDir, VolumeInfo: model.PanelVolumeInfo,
-			Painter: model.DiskUsage, DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints,
-			DiskUsageGoduIgnore: model.DiskUsageGoduIgnore, JobMarks: model.JobPathMarks,
-			NarrowPanelsNameOnly: model.NarrowPanelsNameOnly, ScrollbarShowInactive: model.PanelScrollbarInactive,
-		})
+	drawEmbeddedPanel(screen, destRect, dest, destID, view.FocusPanel, model, styles, chromeBlocked)
 }
 
 func uniqueEmptyText(view *UniqueViewState, homeDir string) string {

@@ -185,6 +185,7 @@ type Model struct {
 	DedupCopiesList     []DedupRow
 	UniqueView          UniqueViewState
 	UniqueList          []UniqueRow
+	CopiesView          CopiesViewState
 	// HideMenuBar mirrors !ui.show_menu_bar: when true, the top menu row is omitted and panels extend upward.
 	HideMenuBar bool
 	// UseNerdfontIcons mirrors ui.use_nerdfont_icons (when false, forces ASCII markers in dialogs and hides file icons).
@@ -317,6 +318,10 @@ type Model struct {
 	// DedupPanelID is DedupPanel's panel registry ID (internal/app), or 0 while it is not open.
 	// 0 is never an overlay's ID: it is PrimaryPanel, which is never closed.
 	DedupPanelID int
+	// CopiesPanel is the file-list panel beside the Other copies view's list.
+	CopiesPanel panel.State
+	// CopiesPanelID is CopiesPanel's panel registry ID (internal/app), or 0 while it is not open.
+	CopiesPanelID int
 	// QuickViewDirOverlayActive is true when QuickViewDirOverlay should replace the inactive file list.
 	QuickViewDirOverlayActive bool
 	// QuickViewDirOverlayPanelID is PrimaryPanel or SecondaryPanel for the inactive column, or -1 when inactive.
@@ -558,14 +563,17 @@ func IsBrowserPanel(id int) bool {
 }
 
 // FocusedPanelID is the file-list panel keys and file operations act on: a view's embedded panel
-// while that view gives it focus (the dedup browse panel, the Find unique files destination),
-// else the active browser column. Derived from view state, so it has no setter of its own.
+// while that view gives it focus (the dedup browse panel, the Find unique files destination, the
+// Other copies panel), else the active browser column. Derived from view state, so it has no
+// setter of its own.
 func (m *Model) FocusedPanelID() int {
 	switch {
 	case m.ViewMode == ViewDedup && m.DedupView.FocusPanel && m.DedupPanelID != 0:
 		return m.DedupPanelID
 	case m.ViewMode == ViewUnique && m.UniqueView.FocusPanel:
 		return m.inactivePanelID()
+	case m.ViewMode == ViewCopies && m.CopiesView.FocusPanel && m.CopiesPanelID != 0:
+		return m.CopiesPanelID
 	}
 	return m.ActivePanel
 }
@@ -590,6 +598,12 @@ func (m *Model) PanelMetaResults(panelID int) []MetaColumnState {
 		return nil
 	}
 	return m.MetaResults[panelID]
+}
+
+// ViewListsOwnFiles reports whether the open view lists its own files (Duplicates, Find unique
+// files, Other copies), so the delete dialog writes its summary itself instead of reading a panel.
+func (m *Model) ViewListsOwnFiles() bool {
+	return m.ViewMode == ViewDedup || m.ViewMode == ViewUnique || m.ViewMode == ViewCopies
 }
 
 // FileListFocused reports whether a file-list panel has focus: the browser, or a view's embedded
@@ -940,6 +954,8 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) (out RenderedO
 		drawDedupBrowsePanel(screen, layout, model, styles, chromeBlocked)
 	case ViewUnique:
 		drawUniqueView(screen, layout, model, styles, chromeBlocked)
+	case ViewCopies:
+		drawCopiesView(screen, layout, model, styles, chromeBlocked)
 	case ViewMessages:
 		drawMessagesView(screen, layout, model.MessagesView, model.MessageLog, styles, chromeBlocked, model.SplitOrientation, model.AuxListHover)
 	default:

@@ -175,6 +175,10 @@ const (
 	ActionUniquePrevPane       = "unique.prev-pane"
 	ActionUniqueHashUnverified = "unique.hash-unverified"
 
+	// Other copies view
+	ActionCopiesClose    = "copies.close"
+	ActionCopiesPrevPane = "copies.prev-pane"
+
 	// Dedup (find-duplicates) view
 	ActionDedupClose          = "dedup.close"
 	ActionDedupToggleSort     = "dedup.toggle-sort"
@@ -657,6 +661,8 @@ var KnownActions = map[string]struct{}{
 	ActionUniqueNextDir:              {},
 	ActionUniquePrevPane:             {},
 	ActionUniqueHashUnverified:       {},
+	ActionCopiesClose:                {},
+	ActionCopiesPrevPane:             {},
 
 	ActionMenuFileChattr: {},
 

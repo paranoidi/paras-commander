@@ -65,7 +65,13 @@ func (a *App) uniqueVisibleRows() int {
 // openUniqueDeleteDialog opens the standard delete confirmation for the view's files, with what
 // makes this delete different stated in its note.
 func (a *App) openUniqueDeleteDialog() {
-	files := a.uniqueCtrl.Sources()
+	a.openListedDeleteDialog(a.uniqueCtrl.Sources(), a.model.UniqueView.RelPath, uniqueDeleteNote)
+}
+
+// openListedDeleteDialog opens the standard delete confirmation for the files of a view that lists
+// its own (Find unique files, Other copies): name is how a path reads in the dialog's list and note
+// the warning under it ("" for none).
+func (a *App) openListedDeleteDialog(files []ui.UniqueFile, name func(path string) string, note string) {
 	if len(files) == 0 {
 		a.setTransientMessage("No files to delete", ui.MessageUrgencyInfo)
 		return
@@ -74,52 +80,65 @@ func (a *App) openUniqueDeleteDialog() {
 	var bytes int64
 	for i, f := range files {
 		bytes += f.Size
-		entries[i] = dialog.DeleteListEntry{Name: a.model.UniqueView.RelPath(f.Path), Path: f.Path, Type: localfs.EntryFile}
+		entries[i] = dialog.DeleteListEntry{Name: name(f.Path), Path: f.Path, Type: localfs.EntryFile}
 	}
 	fd := dialog.FileDialogState{
 		Open:          true,
 		DialogType:    dialog.FileDialogDelete,
 		DeleteSummary: ui.FormatDeleteImpactSummary(int64(len(files)), bytes, false, a.styles.IconWorking()),
 		DeleteEntries: entries,
-		Note:          uniqueDeleteNote,
+		Note:          note,
 		Focus:         dlg.Cancel, // No is the safe default
 	}
 	fd.DeleteLayoutMinWidth = dialog.ComputeDeleteDialogLayoutMinWidth(fd, ui.DialogListIconLeadingWidth(a.model.UseNerdfontIcons))
 	a.model.FileDialog = fd
 }
 
-// tryDispatchTreeViews routes an action to whichever results-tree view is open. While the view's
+// tryDispatchTreeViews routes an action to whichever results view is open. While the view's
 // embedded panel has focus only the view-level actions reach the view (tryDispatchEmbeddedPanelView).
 func (a *App) tryDispatchTreeViews(actionID string) bool {
 	if a.model.EmbeddedPanelFocused() {
 		return a.tryDispatchEmbeddedPanelView(actionID)
 	}
-	return a.tryDispatchUnique(actionID) || a.tryDispatchDedup(actionID)
+	return a.tryDispatchUnique(actionID) || a.tryDispatchDedup(actionID) || a.tryDispatchCopies(actionID)
 }
 
-// tryDispatchEmbeddedPanelView runs the actions a results-tree view keeps while its embedded panel
+// tryDispatchEmbeddedPanelView runs the actions a results view keeps while its embedded panel
 // has focus: leaving for another screen, switching panes, opening the panel's entry in a browser
-// panel, and the view's own dedup.* / unique.* actions (its overlay, menus and Help). In Find unique
-// files, copy and move act on the tree's files through the transfer dialog's view source, and a
-// delete needs the tree focused. Every other action falls through to the panel.
+// panel, and the view's own dedup.* / unique.* / copies.* actions (its overlay, menus and Help). In
+// Find unique files, copy and move act on the tree's files through the transfer dialog's view
+// source, and a delete needs the tree focused. Every other action falls through to the panel.
 func (a *App) tryDispatchEmbeddedPanelView(actionID string) bool {
-	unique := a.model.ViewMode == ui.ViewUnique
+	view := a.model.ViewMode
 	switch {
 	case a.tryDispatchAuxiliaryScreens(actionID):
-	case actionID == keymap.ActionPanelSwitch && unique:
-		a.uniqueCtrl.SwitchPane()
 	case actionID == keymap.ActionPanelSwitch:
-		a.dedupCtrl.SwitchPane()
-	case actionID == keymap.ActionOpenInPrimary, actionID == keymap.ActionOpenInSecondary:
-		if e, ok := a.focusedPanel().CurrentEntry(); ok && unique {
-			a.uniqueCtrl.OpenInPanel(a.openInPanelID(actionID), e.Path, e.ResolvesToDir())
-		} else if ok {
-			a.dedupCtrl.OpenInPanel(a.openInPanelID(actionID), e.Path, e.ResolvesToDir())
+		switch view {
+		case ui.ViewUnique:
+			a.uniqueCtrl.SwitchPane()
+		case ui.ViewCopies:
+			a.copiesCtrl.SwitchPane()
+		default:
+			a.dedupCtrl.SwitchPane()
 		}
-	case actionID == keymap.ActionFileDelete && unique:
-	case unique && (strings.HasPrefix(actionID, "unique.") || actionID == keymap.ActionFileIndexFindUnique):
+	case actionID == keymap.ActionOpenInPrimary, actionID == keymap.ActionOpenInSecondary:
+		if e, ok := a.focusedPanel().CurrentEntry(); ok {
+			id := a.openInPanelID(actionID)
+			switch view {
+			case ui.ViewUnique:
+				a.uniqueCtrl.OpenInPanel(id, e.Path, e.ResolvesToDir())
+			case ui.ViewCopies:
+				a.copiesCtrl.OpenInPanel(id, e.Path, e.ResolvesToDir())
+			default:
+				a.dedupCtrl.OpenInPanel(id, e.Path, e.ResolvesToDir())
+			}
+		}
+	case actionID == keymap.ActionFileDelete && view == ui.ViewUnique:
+	case view == ui.ViewUnique && (strings.HasPrefix(actionID, "unique.") || actionID == keymap.ActionFileIndexFindUnique):
 		return a.tryDispatchUnique(actionID)
-	case !unique && strings.HasPrefix(actionID, "dedup."):
+	case view == ui.ViewCopies && strings.HasPrefix(actionID, "copies."):
+		return a.tryDispatchCopies(actionID)
+	case view == ui.ViewDedup && strings.HasPrefix(actionID, "dedup."):
 		return a.tryDispatchDedup(actionID)
 	default:
 		return false

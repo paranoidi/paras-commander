@@ -126,11 +126,17 @@ const (
 	CopiesEmpty
 )
 
+// CopyFile is one indexed copy of a file: its host path and size.
+type CopyFile struct {
+	Path string
+	Size int64
+}
+
 // OtherCopies lists the indexed files with the same content as the file at path (a host path,
-// resolved like the index records it), sorted, without path itself. A JPEG also matches the
+// resolved like the index records it), sorted by path, without path itself. A JPEG also matches the
 // files that differ from it only in metadata, as the Copies column counts them. The list is
 // only meaningful for CopiesHashed.
-func (x *Index) OtherCopies(path string) ([]string, CopiesState, error) {
+func (x *Index) OtherCopies(path string) ([]CopyFile, CopiesState, error) {
 	d, err := x.DB()
 	if err != nil {
 		return nil, CopiesNotIndexed, err
@@ -167,13 +173,13 @@ func (x *Index) OtherCopies(path string) ([]string, CopiesState, error) {
 		}
 	}
 	seen := map[string]bool{host: true}
-	var out []string
+	var out []CopyFile
 	for _, m := range matches {
 		if !seen[m.Path] {
 			seen[m.Path] = true
-			out = append(out, m.Path)
+			out = append(out, CopyFile{Path: m.Path, Size: m.Size})
 		}
 	}
-	slices.Sort(out)
+	slices.SortFunc(out, func(a, b CopyFile) int { return strings.Compare(a.Path, b.Path) })
 	return out, CopiesHashed, nil
 }

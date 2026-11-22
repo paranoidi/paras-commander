@@ -2,6 +2,7 @@ package app
 
 import (
 	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
+	fi "github.com/paranoidi/paras-commander/internal/fileindex"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -53,6 +54,10 @@ func (h fileindexHost) OpenFilePicker(title string, items []dialog.PathPickerIte
 }
 
 func (h fileindexHost) SyncJobsList() { h.app.jobsCtrl.SyncJobsList() }
+
+func (h fileindexHost) OpenCopiesView(origin string, indexPanel bool, copies []fi.CopyFile) {
+	h.app.openCopiesView(origin, indexPanel, copies)
+}
 
 func (h fileindexHost) OpenDedupOutside(dir string) { h.app.dedupCtrl.OpenOutside(dir) }
 

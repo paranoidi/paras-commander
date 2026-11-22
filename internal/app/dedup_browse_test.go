@@ -193,17 +193,17 @@ func TestDedupBrowsePanelHeldNavDefersReload(t *testing.T) {
 	dedupBrowseSettle(t, app, screen)
 
 	app.config.UI.KeyRepeatDebounceMS = 200
-	fpBefore := app.dedupBrowseFP
+	fpBefore := slices.Clone(app.dedupFollow.prev)
 	dedupBrowseKey(app, tcell.KeyUp) // meadow dir row, first press: applies at once (no hint flicker)
 	if app.model.DedupView.SourceStale || app.model.DedupView.SourceRow != app.model.DedupView.Main.Selected {
 		t.Fatalf("first press deferred: stale=%v src=%d sel=%d",
 			app.model.DedupView.SourceStale, app.model.DedupView.SourceRow, app.model.DedupView.Main.Selected)
 	}
-	if app.dedupBrowseFP == fpBefore {
+	if slices.Equal(app.dedupFollow.prev, fpBefore) {
 		t.Fatal("first press did not retarget the browse panel")
 	}
 	srcBefore := app.model.DedupView.SourceRow
-	fpHeld := app.dedupBrowseFP
+	fpHeld := slices.Clone(app.dedupFollow.prev)
 	dedupBrowseKey(app, tcell.KeyDown) // repeat inside the window: back to root file row, deferred
 	if app.model.DedupView.SourceRow != srcBefore {
 		t.Fatalf("copies source changed on repeat: %d->%d", srcBefore, app.model.DedupView.SourceRow)
@@ -211,7 +211,7 @@ func TestDedupBrowsePanelHeldNavDefersReload(t *testing.T) {
 	if !app.model.DedupView.SourceStale {
 		t.Fatal("SourceStale = false on repeat; stale group hints would stay painted")
 	}
-	if app.dedupBrowseFP != fpHeld {
+	if !slices.Equal(app.dedupFollow.prev, fpHeld) {
 		t.Fatal("browse panel retargeted on repeat")
 	}
 	deadline := time.Now().Add(5 * time.Second)

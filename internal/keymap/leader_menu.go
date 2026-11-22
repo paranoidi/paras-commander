@@ -301,6 +301,27 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 			LeaderMenuGroupApp:       2,
 		},
 	},
+	HelpCopies: {
+		order: []string{LeaderMenuGroupSelection, LeaderMenuGroupFile, LeaderMenuGroupDisplay, LeaderMenuGroupApp},
+		actions: map[string][]string{
+			LeaderMenuGroupSelection: {ActionPanelClearSelection},
+			LeaderMenuGroupFile: {
+				ActionFileView,
+				ActionCopy,
+				ActionMove,
+				ActionFileDelete,
+				ActionCopiesClose,
+			},
+			LeaderMenuGroupDisplay: {ActionJobsOpen, ActionMessagesOpen, ActionCommandsOpen},
+			LeaderMenuGroupApp:     {ActionAppQuit},
+		},
+		column: map[string]int{
+			LeaderMenuGroupSelection: 0,
+			LeaderMenuGroupFile:      0,
+			LeaderMenuGroupDisplay:   1,
+			LeaderMenuGroupApp:       1,
+		},
+	},
 	HelpJobs: {
 		order: []string{LeaderMenuGroupQueue, LeaderMenuGroupDisplay, LeaderMenuGroupApp},
 		actions: map[string][]string{

@@ -195,7 +195,7 @@ func (h *Handler) deleteDialogPanel() (*panel.State, bool) {
 	}
 	// These views list their own files and write the summary themselves: a panel has no part in it,
 	// unless the view's embedded panel has focus and the delete is of its files.
-	if (h.model.ViewMode == ui.ViewDedup || h.model.ViewMode == ui.ViewUnique) && !h.model.EmbeddedPanelFocused() {
+	if h.model.ViewListsOwnFiles() && !h.model.EmbeddedPanelFocused() {
 		return nil, false
 	}
 	return h.host.PanelByID(h.deleteDialogPanelID), true

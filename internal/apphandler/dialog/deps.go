@@ -19,6 +19,7 @@ package dialog
 import (
 	"github.com/gdamore/tcell/v2"
 	commandsctrl "github.com/paranoidi/paras-commander/internal/apphandler/commands"
+	copiesviewctrl "github.com/paranoidi/paras-commander/internal/apphandler/copiesview"
 	dedupctrl "github.com/paranoidi/paras-commander/internal/apphandler/dedup"
 	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	previewctrl "github.com/paranoidi/paras-commander/internal/apphandler/preview"
@@ -117,6 +118,8 @@ type Deps struct {
 	Dedup *dedupctrl.Handler
 	// Unique is the Find unique files view while it runs a transfer or delete on its files.
 	Unique *uniquefilesctrl.Handler
+	// Copies is the Other copies view while it runs a transfer or delete on its files.
+	Copies *copiesviewctrl.Handler
 
 	// DiskUsage / DiskUsageIgnore back the delete confirmation dialog's live size estimate;
 	// both are constructed once at startup and never reassigned, so passing them as plain Deps
@@ -182,6 +185,7 @@ type Handler struct {
 	preview              *previewctrl.Handler
 	dedup                *dedupctrl.Handler
 	unique               *uniquefilesctrl.Handler
+	copies               *copiesviewctrl.Handler
 	diskUsage            *diskusage.Engine
 	diskUsageIgnore      diskusage.ShouldIgnoreFolder
 	fsSink               fschange.Sink
@@ -305,6 +309,7 @@ func New(d Deps) *Handler {
 		preview:              d.Preview,
 		dedup:                d.Dedup,
 		unique:               d.Unique,
+		copies:               d.Copies,
 		diskUsage:            d.DiskUsage,
 		diskUsageIgnore:      d.DiskUsageIgnore,
 		fsSink:               d.FSSink,

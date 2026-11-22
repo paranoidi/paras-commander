@@ -24,6 +24,8 @@ func ViewMask(vm ui.ViewMode) keymap.HelpViews {
 		return keymap.HelpDedup
 	case ui.ViewUnique:
 		return keymap.HelpUnique
+	case ui.ViewCopies:
+		return keymap.HelpCopies
 	case ui.ViewFilePreview:
 		return keymap.HelpFilePreview
 	default:

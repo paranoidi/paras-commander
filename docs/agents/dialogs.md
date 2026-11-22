@@ -107,7 +107,7 @@ Each dialog's key handler is `dlg.HandleKey` followed by one event function (`ap
 
 ## Shared dialog sizes
 
-Find (`FindDialogView`) and the file picker (`PathPickerPurposeNavigateFile`: other copies, the differences report) share one frame size. **A size change to either dialog must be mirrored in the other.**
+Find (`FindDialogView`) and the file picker (`PathPickerPurposeNavigateFile`: the differences report) share one frame size. **A size change to either dialog must be mirrored in the other.**
 
 - Width: both use `findDialogPreferredWidth`, so changing the const moves both.
 - Height: the file picker's list is `findListHeight` plus `pathPickerFindExtraRows`, the rows Find spends above its list that the picker lacks. Changing `findListHeight` moves both; adding or removing a permanent row in either dialog means updating `pathPickerFindExtraRows`.

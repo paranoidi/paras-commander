@@ -60,9 +60,12 @@ type Host interface {
 	ToggleFileIndexMenu()
 	// ReloadPanel re-reads the panel's listing (the overlay is applied or dropped by it).
 	ReloadPanel(panelID int)
-	// OpenFilePicker opens the path picker over items, host file paths; confirming one shows it
-	// in the active panel (a fileindex:// path when indexPanel).
+	// OpenFilePicker opens the path picker over items, host file paths (the differences report);
+	// confirming one shows it in the active panel (a fileindex:// path when indexPanel).
 	OpenFilePicker(title string, items []dialog.PathPickerItem, indexPanel bool)
+	// OpenCopiesView opens the Other copies view over the copies of the file called origin;
+	// indexPanel: the lookup started from a fileindex:// panel.
+	OpenCopiesView(origin string, indexPanel bool, copies []fi.CopyFile)
 	// OpenDedupOutside opens the find-duplicates view over the files under the host dir dir that
 	// have a copy elsewhere in the index.
 	OpenDedupOutside(dir string)

@@ -16,6 +16,7 @@ const (
 	TopCompare    TopID = "top.compare"
 	TopDedup      TopID = "top.dedup"
 	TopUnique     TopID = "top.unique"
+	TopCopies     TopID = "top.copies"
 	TopDev        TopID = "top.dev"
 )
 

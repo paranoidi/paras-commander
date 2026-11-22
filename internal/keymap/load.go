@@ -119,6 +119,7 @@ func buildBundle(global map[string][]string, overlayLayers []map[string][]string
 		JumpDialog:          overlayMaps[26],
 		ConfigDialog:        overlayMaps[27],
 		SelectedStrip:       overlayMaps[28],
+		Copies:              overlayMaps[29],
 		LeaderKey:           menus[LeaderKeyShortcutsTable],
 		CopyMenuKey:         menus[CopyMenuShortcutsTable],
 		PreviewMenuKey:      menus[PreviewMenuShortcutsTable],
@@ -203,7 +204,7 @@ func validateKeybindingsTopLevel(top map[string]interface{}, label string) error
 			continue
 		}
 		switch k {
-		case MainShortcutsTable, JobsShortcutsTable, CommandsShortcutsTable, MessagesShortcutsTable, FilePreviewShortcutsTable, FilePreviewSearchShortcutsTable, CompareShortcutsTable, DedupShortcutsTable, UniqueShortcutsTable, SelectedStripShortcutsTable, TerminalShortcutsTable:
+		case MainShortcutsTable, JobsShortcutsTable, CommandsShortcutsTable, MessagesShortcutsTable, FilePreviewShortcutsTable, FilePreviewSearchShortcutsTable, CompareShortcutsTable, DedupShortcutsTable, UniqueShortcutsTable, CopiesShortcutsTable, SelectedStripShortcutsTable, TerminalShortcutsTable:
 			if _, ok := v.(map[string]interface{}); !ok {
 				return fmt.Errorf("parse keybindings %q: [%s] must be a table", label, k)
 			}
@@ -368,6 +369,7 @@ func EncodeDefaultStub(w io.Writer) error {
 		Compare       map[string][]string `toml:"compare"`
 		Dedup         map[string][]string `toml:"dedup"`
 		Unique        map[string][]string `toml:"unique"`
+		Copies        map[string][]string `toml:"copies"`
 		Selected      map[string][]string `toml:"selected"`
 		Terminal      map[string][]string `toml:"terminal"`
 		Dialog        dialogShortcuts     `toml:"dialog"`
@@ -385,6 +387,7 @@ func EncodeDefaultStub(w io.Writer) error {
 		Compare:       DefaultCompareOverlayKeys(),
 		Dedup:         DefaultDedupOverlayKeys(),
 		Unique:        DefaultUniqueOverlayKeys(),
+		Copies:        DefaultCopiesOverlayKeys(),
 		Selected:      DefaultSelectedStripOverlayKeys(),
 		Terminal:      DefaultTerminalOverlayKeys(),
 		Dialog: dialogShortcuts{

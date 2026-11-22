@@ -252,7 +252,7 @@ func (a *App) activateMenuSelection(def menu.Definition, item menu.Item) bool {
 		if !a.runOptionsAction(item.Action) {
 			a.setUnsupportedMessage(item.Label)
 		}
-	case menu.TopJobs, menu.TopCommands, menu.TopMessages, menu.TopCompare, menu.TopDedup, menu.TopUnique:
+	case menu.TopJobs, menu.TopCommands, menu.TopMessages, menu.TopCompare, menu.TopDedup, menu.TopUnique, menu.TopCopies:
 		a.dispatch(item.Action)
 	default:
 		a.setUnsupportedMessage(item.Label)

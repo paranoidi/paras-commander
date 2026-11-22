@@ -85,8 +85,8 @@ func (h *Handler) TryDispatchFileOps(actionID string) bool {
 	return true
 }
 
-// RefreshBothPanels re-lists both panels (and the dedup browse panel while it is open, see
-// refreshDedupPanel), walking up when their directory vanished (e.g. a completed job removed the
+// RefreshBothPanels re-lists both panels (and the views' embedded panels while open, see
+// refreshViewPanels), walking up when their directory vanished (e.g. a completed job removed the
 // active panel's cwd), then applies any pending post-transfer focus
 // (see ReconcilePendingPanelFocus) and refreshes the quick-view preview.
 // When reloads are async, ApplyQuickViewPreviewImmediately also runs from each panel's OnApplied
@@ -99,7 +99,7 @@ func (h *Handler) RefreshBothPanels() {
 	}
 	_ = h.model.Primary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, onApplied)
 	_ = h.model.Secondary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, onApplied)
-	h.refreshDedupPanel(nil)
+	h.refreshViewPanels(nil, nil)
 	// Immediate attempt for the (still common) case where nothing is actually async — e.g. no
 	// scheduler wired. When the reload above is async, this attempt is a harmless no-op (entries
 	// are still stale) and OnApplied / ReconcilePendingPanelFocus retries once the reload lands.
@@ -123,24 +123,30 @@ func (h *Handler) RefreshBothPanelsWithFocus(panelID int, onApplied func()) {
 		h.preview.ApplyQuickViewPreviewImmediately()
 	}
 	plain := func() { h.preview.ApplyQuickViewPreviewImmediately() }
-	primaryHook, secondaryHook, dedupHook := plain, wrap, func() {}
+	primaryHook, secondaryHook, dedupHook, copiesHook := plain, wrap, func() {}, func() {}
 	switch panelID {
 	case ui.PrimaryPanel:
 		primaryHook, secondaryHook = wrap, plain
 	case h.model.DedupPanelID:
 		secondaryHook, dedupHook = plain, wrap
+	case h.model.CopiesPanelID:
+		secondaryHook, copiesHook = plain, wrap
 	}
 	_ = h.model.Primary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, primaryHook)
 	_ = h.model.Secondary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, secondaryHook)
-	h.refreshDedupPanel(dedupHook)
+	h.refreshViewPanels(dedupHook, copiesHook)
 	h.preview.ApplyQuickViewPreviewImmediately()
 }
 
-// refreshDedupPanel re-lists the dedup browse panel while it is open: file operations run from it
-// (and jobs from anywhere) change what it lists, as they do for the browser panels.
-func (h *Handler) refreshDedupPanel(onApplied func()) {
+// refreshViewPanels re-lists the dedup browse panel and the Other copies panel while open: file
+// operations run from them (and jobs from anywhere) change what they list, as they do for the
+// browser panels.
+func (h *Handler) refreshViewPanels(dedupApplied, copiesApplied func()) {
 	if id := h.model.DedupPanelID; id != 0 {
-		_ = h.model.DedupPanel.RefreshOrNavigateToExistingAncestorWithHook(h.host.PanelViewportRows(id), onApplied)
+		_ = h.model.DedupPanel.RefreshOrNavigateToExistingAncestorWithHook(h.host.PanelViewportRows(id), dedupApplied)
+	}
+	if id := h.model.CopiesPanelID; id != 0 {
+		_ = h.model.CopiesPanel.RefreshOrNavigateToExistingAncestorWithHook(h.host.PanelViewportRows(id), copiesApplied)
 	}
 }
 
@@ -759,6 +765,15 @@ func (h *Handler) applyMkdirSuccess(st mkdirApply) {
 	}
 }
 
+// deleteEntryPaths are the paths the open delete dialog lists.
+func (h *Handler) deleteEntryPaths() []string {
+	paths := make([]string, len(h.model.FileDialog.DeleteEntries))
+	for i, e := range h.model.FileDialog.DeleteEntries {
+		paths[i] = e.Path
+	}
+	return paths
+}
+
 // ExecuteDelete runs the delete confirmation dialog's Yes action: dangling-dirs cleanup,
 // dedup-view delete, fullscreen-preview delete, or the standard panel-selection delete,
 // depending on which context the dialog was opened from.
@@ -767,10 +782,7 @@ func (h *Handler) ExecuteDelete() {
 	// job left empty, not a fresh panel/preview selection. Must run before the
 	// ViewMode branches below, which re-resolve sources from panel state.
 	if h.model.FileDialog.DeleteDanglingDirs {
-		paths := make([]string, len(h.model.FileDialog.DeleteEntries))
-		for i, e := range h.model.FileDialog.DeleteEntries {
-			paths[i] = e.Path
-		}
+		paths := h.deleteEntryPaths()
 		h.CloseFileDialog()
 		h.jobs.EnqueueEmptyDirsDeleteJob(paths)
 		h.host.SetTransientMessage(fmt.Sprintf("Delete queued (%d %s)", len(paths), jobbridge.Plural(len(paths), "directory", "directories")), ui.MessageUrgencyInfo)
@@ -784,14 +796,20 @@ func (h *Handler) ExecuteDelete() {
 		return
 	}
 	if h.model.ViewMode == ui.ViewUnique && !h.model.EmbeddedPanelFocused() {
-		paths := make([]string, len(h.model.FileDialog.DeleteEntries))
-		for i, e := range h.model.FileDialog.DeleteEntries {
-			paths[i] = e.Path
-		}
+		paths := h.deleteEntryPaths()
 		h.CloseFileDialog()
 		if dirs := h.unique.BeginDelete(paths); len(dirs) > 0 {
 			h.model.DedupEmptyDirsConfirm = dialog.DedupEmptyDirsConfirmState{Open: true, Focus: dialog.DedupEmptyDirsYes, Dirs: dirs}
 		}
+		return
+	}
+	// Other copies delete: the standard delete job, then the copies leave the list.
+	if v, ok := h.viewSource(); ok && h.model.ViewMode == ui.ViewCopies {
+		paths := h.deleteEntryPaths()
+		h.CloseFileDialog()
+		h.jobs.EnqueueDeleteJob(paths, false, true)
+		v.FilesQueued(paths, true)
+		h.host.SetTransientMessage(fmt.Sprintf("Delete queued (%d %s)", len(paths), jobbridge.Plural(len(paths), "file", "files")), ui.MessageUrgencyInfo)
 		return
 	}
 	if h.model.ViewMode == ui.ViewFilePreview {

@@ -9,6 +9,7 @@ import (
 	"github.com/mattn/go-runewidth"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
@@ -99,15 +100,20 @@ func drawDedupBrowsePanel(screen tcell.Screen, layout Layout, model Model, style
 		return
 	}
 	_, rect := DedupSecondaryRects(layout.Secondary)
+	drawEmbeddedPanel(screen, rect, model.DedupPanel, model.DedupPanelID, model.DedupView.FocusPanel, model, styles, chromeBlocked)
+}
+
+// drawEmbeddedPanel paints a view's embedded file-list panel p (registry ID id) in rect; focus
+// gives it the active chrome and cursor row.
+func drawEmbeddedPanel(screen tcell.Screen, rect Rect, p panel.State, id int, focus bool, model Model, styles theme.Theme, chromeBlocked bool) {
 	if rect.Width <= 0 || rect.Height <= 0 {
 		return
 	}
-	focus := model.DedupView.FocusPanel
-	rowHover, rowHoverEntry := model.PanelRowHover.at(model.DedupPanelID)
-	drawPanel(screen, rect, model.DedupPanel,
+	rowHover, rowHoverEntry := model.PanelRowHover.at(id)
+	drawPanel(screen, rect, p,
 		PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
 		PanelContext{
-			PanelID: model.DedupPanelID, FileListActive: focus, CursorRowActive: focus,
+			PanelID: id, FileListActive: focus, CursorRowActive: focus,
 			ChromeBlocked: chromeBlocked, ActivePanel: model.ActivePanel,
 			RowHover: rowHover, RowHoverEntry: rowHoverEntry,
 			SyncDriverPanelID: -1, QuickViewDriverPanelID: -1, SplitOrientation: model.SplitOrientation,

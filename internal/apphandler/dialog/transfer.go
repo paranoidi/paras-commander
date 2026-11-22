@@ -71,12 +71,13 @@ func TransferPrefilledDestination(path string) dialog.FileDialogField {
 
 func (h *Handler) openTransferDialog(kind dialog.TransferKind) {
 	passive := h.host.DestinationPanel()
+	_, inView := h.viewSource()
 	if source, err := h.transferSource(); err != nil {
-		if h.model.ViewMode == ui.ViewUnique {
+		if inView {
 			h.host.SetTransientMessage(err.Error(), ui.MessageUrgencyWarn)
 			return
 		}
-	} else if h.model.ViewMode != ui.ViewUnique {
+	} else if !inView {
 		if msg := panel.GhostRefusal(h.host.FocusedPanel().GhostSources(ops.SourcePaths(source)...)); msg != "" {
 			h.host.SetTransientMessage(msg, ui.MessageUrgencyWarn)
 			return
@@ -129,8 +130,8 @@ func (h *Handler) transferPreviewEntries(root string) []dialog.DeleteListEntry {
 // current path. The transfer dialog always shows the multi-location Source/Result preview
 // in that case.
 func (h *Handler) multiDirSelectionCommonRoot() (string, bool) {
-	if h.model.ViewMode == ui.ViewUnique {
-		return h.uniqueCommonRoot()
+	if v, ok := h.viewSource(); ok {
+		return viewCommonRoot(v.Sources())
 	}
 	root, multiDir, ok := h.host.FocusedPanel().SelectedCommonRoot()
 	if !ok || !multiDir {
@@ -446,13 +447,36 @@ func (h *Handler) confirmTransferSelfCopyRename(sources []string, startPaused bo
 	h.setTransferQueuedMessage(jobType, startPaused)
 }
 
-// transferSource is what the transfer dialog acts on: the Find unique files view's files while
-// that view is open, else the active panel's selection or cursor entry.
+// viewFiles is a view that lists files of its own for the transfer and delete dialogs to act on
+// (Find unique files, Other copies): the files an operation takes, and the report back that it was
+// queued.
+type viewFiles interface {
+	Sources() []ui.UniqueFile
+	// FilesQueued: marks go, and with gone (a move, a delete) the files leave the list.
+	FilesQueued(paths []string, gone bool)
+}
+
+// viewSource is the open view whose files the transfer and delete dialogs act on: Find unique files
+// whatever has focus there, Other copies while its list has focus (its embedded panel is a file
+// list of its own).
+func (h *Handler) viewSource() (viewFiles, bool) {
+	switch {
+	case h.model.ViewMode == ui.ViewUnique:
+		return h.unique, true
+	case h.model.ViewMode == ui.ViewCopies && !h.model.EmbeddedPanelFocused():
+		return h.copies, true
+	}
+	return nil, false
+}
+
+// transferSource is what the transfer dialog acts on: the open view's files (viewSource), else the
+// focused panel's selection or cursor entry.
 func (h *Handler) transferSource() (ops.Source, error) {
-	if h.model.ViewMode != ui.ViewUnique {
+	v, ok := h.viewSource()
+	if !ok {
 		return ops.ResolveSource(h.host.FocusedPanel())
 	}
-	files := h.unique.Sources()
+	files := v.Sources()
 	if len(files) == 0 {
 		return ops.Source{}, ops.SourceError("no files to act on")
 	}
@@ -463,10 +487,9 @@ func (h *Handler) transferSource() (ops.Source, error) {
 	return ops.Source{Kind: ops.SourceSelected, Entries: entries}, nil
 }
 
-// uniqueCommonRoot is the deepest common ancestor of the view's files when they span several
+// viewCommonRoot is the deepest common ancestor of a view's files when they span several
 // directories (multiDirSelectionCommonRoot's answer for that view).
-func (h *Handler) uniqueCommonRoot() (string, bool) {
-	files := h.unique.Sources()
+func viewCommonRoot(files []ui.UniqueFile) (string, bool) {
 	if len(files) < 2 {
 		return "", false
 	}
@@ -483,11 +506,11 @@ func (h *Handler) uniqueCommonRoot() (string, bool) {
 	return root, multi
 }
 
-// transferQueued finishes a queued transfer on its source: the view's list while the Find unique
-// files view is open, else the panel selection.
+// transferQueued finishes a queued transfer on its source: the view's list while a view's files
+// are the source, else the panel selection.
 func (h *Handler) transferQueued(jobType jobs.Type, sources []string) {
-	if h.model.ViewMode == ui.ViewUnique {
-		h.unique.FilesQueued(sources, jobType == jobs.TypeMove)
+	if v, ok := h.viewSource(); ok {
+		v.FilesQueued(sources, jobType == jobs.TypeMove)
 		return
 	}
 	h.host.FocusedPanel().ClearSelection()
