@@ -205,6 +205,10 @@ type Theme struct {
 	PanelTabActive   tcell.Style
 	PanelTabInactive tcell.Style
 	PanelTabBlocked  tcell.Style
+	// PanelTabActiveNumber / PanelTabInactiveNumber give the slot digit its foreground and
+	// attributes; PanelTabNumberOn lays them over a tab's own style.
+	PanelTabActiveNumber   tcell.Style
+	PanelTabInactiveNumber tcell.Style
 
 	// StatusScanning ([status] scanning) is the one "work in progress" style: disk-scan-pending
 	// folder icons, slow-load and preview-loading icons, spinners, the fileindex scanning state,
@@ -616,6 +620,15 @@ func mergeForegroundIfSet(src, lineStyle tcell.Style) tcell.Style {
 		return lineStyle
 	}
 	return mergeForegroundOnSurface(src, lineStyle)
+}
+
+// PanelTabNumberOn returns the slot-digit style of an active or inactive tab painted in tab:
+// the number style's foreground and attributes over tab's background.
+func (t Theme) PanelTabNumberOn(active bool, tab tcell.Style) tcell.Style {
+	if active {
+		return mergeForegroundOnSurface(t.PanelTabActiveNumber, tab)
+	}
+	return mergeForegroundOnSurface(t.PanelTabInactiveNumber, tab)
 }
 
 func mergeForegroundOnBar(labelSrc, bar tcell.Style) tcell.Style {
@@ -1224,6 +1237,8 @@ var styleKeys = append([]string{
 	"panel.tab.active",
 	"panel.tab.inactive",
 	"panel.tab.blocked",
+	"panel.tab.active.number",
+	"panel.tab.inactive.number",
 	"status.scanning",
 	"status.queued",
 	"status.running",
@@ -1963,6 +1978,8 @@ func build(src source) (Theme, error) {
 		PanelTabActive:                styles["panel.tab.active"],
 		PanelTabInactive:              styles["panel.tab.inactive"],
 		PanelTabBlocked:               styles["panel.tab.blocked"],
+		PanelTabActiveNumber:          styles["panel.tab.active.number"],
+		PanelTabInactiveNumber:        styles["panel.tab.inactive.number"],
 
 		StatusScanning:                   styles["status.scanning"],
 		StatusQueued:                     styles["status.queued"],

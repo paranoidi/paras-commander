@@ -291,8 +291,10 @@ usage.cursor.selected = { fg = "selected", bg = "highlight_bg", bold = true }
 
 [panel.tab]                   # a panel's tab bar (more than one tab)
 active = { fg = "focus_fg", bg = "focus_bg", bold = true }
+active.number = { fg = "primary", bold = true }  # the slot digit; fg and attributes only, on the tab's own bg
 inactive = { fg = "fg", bg = "surface" }
-blocked = { fg = "muted", bg = "surface" }  # every tab while a dialog or menu has focus
+inactive.number = { fg = "attention", bold = true }
+blocked = { fg = "muted", bg = "surface" }  # every tab while a dialog or menu has focus; the digit keeps this colour
 
 [panel.blocked]
 disk_usage_overview = { fg = "muted" }

@@ -203,9 +203,31 @@ func TestRenderDrawsTabBarAndPartialPaintUpdatesLabel(t *testing.T) {
 	if !strings.HasPrefix(row, " 1 orchard   3 willow ") {
 		t.Fatalf("tab row = %q", row)
 	}
-	_, st, _ := screen.Get(layout.PrimaryTabs.X+1, layout.PrimaryTabs.Y)
+	_, st, _ := screen.Get(layout.PrimaryTabs.X, layout.PrimaryTabs.Y)
 	if st != styles.PanelTabActive {
 		t.Fatal("the active tab must use the active style")
+	}
+	_, st, _ = screen.Get(layout.PrimaryTabs.X+2, layout.PrimaryTabs.Y)
+	if st != styles.PanelTabActive {
+		t.Fatal("the active tab's label must keep the tab style")
+	}
+	r, st, _ := screen.Get(layout.PrimaryTabs.X+1, layout.PrimaryTabs.Y)
+	wantFG, _, wantAttrs := styles.PanelTabActiveNumber.Decompose()
+	gotFG, gotBG, gotAttrs := st.Decompose()
+	_, tabBG, _ := styles.PanelTabActive.Decompose()
+	if r != "1" || gotFG != wantFG || gotAttrs != wantAttrs || gotBG != tabBG {
+		t.Fatalf("active digit %q = %v, want number fg/attrs on the tab bg", r, st)
+	}
+	inactiveX := layout.PrimaryTabs.X + len(" 1 orchard ") + 1
+	r, st, _ = screen.Get(inactiveX+1, layout.PrimaryTabs.Y)
+	wantFG, _, wantAttrs = styles.PanelTabInactiveNumber.Decompose()
+	gotFG, gotBG, gotAttrs = st.Decompose()
+	_, tabBG, _ = styles.PanelTabInactive.Decompose()
+	if r != "3" || gotFG != wantFG || gotAttrs != wantAttrs || gotBG != tabBG {
+		t.Fatalf("inactive digit %q = %v, want number fg/attrs on the tab bg", r, st)
+	}
+	if _, st, _ = screen.Get(inactiveX+3, layout.PrimaryTabs.Y); st != styles.PanelTabInactive {
+		t.Fatal("the inactive tab's label must keep the tab style")
 	}
 	_, st, _ = screen.Get(layout.PrimaryTabs.X+len(" 1 orchard "), layout.PrimaryTabs.Y)
 	_, gapBG, _ := st.Decompose()
@@ -231,5 +253,9 @@ func TestRenderDrawsTabBarAndPartialPaintUpdatesLabel(t *testing.T) {
 	_, st, _ = screen.Get(layout.PrimaryTabs.X+1, layout.PrimaryTabs.Y)
 	if st != styles.PanelTabBlocked {
 		t.Fatal("tabs must use the blocked style while a menu has focus")
+	}
+	_, st, _ = screen.Get(inactiveX+1, layout.PrimaryTabs.Y)
+	if st != styles.PanelTabBlocked {
+		t.Fatal("a blocked tab's digit must stay in the blocked style")
 	}
 }

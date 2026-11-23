@@ -170,6 +170,12 @@ frame = { fg = "inactive_frame" }  # keep the dim frame: repair would brighten i
 row.cursor.selected = { fg = "selected", bg = "file_cursor_dim", bold = true }  # tuned
 usage.cursor.selected = { fg = "ink", bg = "highlight_bg", bold = true }
 
+[panel.tab]
+active = { fg = "focus_fg", bg = "focus_bg", bold = true }  # keep the default backgrounds; the digit gets its own colours below  # tuned
+active.number = { fg = "fg_strong", bold = true }  # black slot digit on the surface2 tab  # tuned
+inactive = { fg = "fg", bg = "surface" }  # tuned
+inactive.number = { fg = "accent", bold = true }  # mauve slot digit  # tuned
+
 [panel.blocked]
 disk_usage_overview = { fg = "faint" }  # tuned
 frame = { fg = "faint" }  # tuned

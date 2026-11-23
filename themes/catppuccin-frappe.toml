@@ -96,6 +96,13 @@ usage.cursor.selected = { fg = "ink", bg = "highlight_bg", bold = true }
 frame = { fg = "inactive_frame" }  # keep the dim frame: repair would brighten it  # tuned
 usage.cursor.selected = { fg = "ink", bg = "highlight_bg", bold = true }
 
+[panel.tab]
+active = { fg = "fg", bg = "file_cursor_dim", bold = true }  # surface0: the active tab  # tuned
+active.number = { fg = "accent", bold = true }  # mauve slot digit  # tuned
+inactive = { fg = "muted", bg = "menu_bg" }  # crust: the other tabs, darker than the panel  # tuned
+inactive.number = { fg = "accent", bold = true }  # mauve slot digit  # tuned
+blocked = { fg = "faint", bg = "menu_bg" }  # every tab while a dialog or menu has focus, crust like the inactive tabs  # tuned
+
 [panel.blocked]
 disk_usage_overview = { fg = "faint" }  # tuned
 frame = { fg = "faint" }  # tuned

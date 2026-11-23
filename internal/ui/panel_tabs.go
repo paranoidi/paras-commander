@@ -192,9 +192,13 @@ func drawPanelTabs(screen tcell.Screen, layout Layout, model Model, styles theme
 			if sp.Slot == model.Tabs[id].Active {
 				st = active
 			}
+			// The slot digit is rune 1 of " N " / " N label "; a blocked bar stays one colour.
 			var spans []primitive.Span
+			if !chromeBlocked {
+				spans = []primitive.Span{{Start: 1, End: 2, Style: styles.PanelTabNumberOn(sp.Slot == model.Tabs[id].Active, st)}}
+			}
 			if sp.Cut >= 0 {
-				spans = []primitive.Span{{Start: sp.Cut, End: sp.Cut + 1, Style: theme.CutMarkStyle(st)}}
+				spans = append(spans, primitive.Span{Start: sp.Cut, End: sp.Cut + 1, Style: theme.CutMarkStyle(st)})
 			}
 			primitive.StyledText(screen, rect.X+sp.X, rect.Y, min(sp.W, rect.Width-sp.X), sp.Text, st, spans)
 		}
