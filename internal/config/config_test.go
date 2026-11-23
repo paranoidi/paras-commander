@@ -231,6 +231,9 @@ func TestDefaultPathPickerValidateDelayMS(t *testing.T) {
 	if got := Default().UI.NarrowPanelsNameOnly; got != DefaultNarrowPanelsNameOnly {
 		t.Fatalf("NarrowPanelsNameOnly = %v, want %v", got, DefaultNarrowPanelsNameOnly)
 	}
+	if got := Default().UI.TabLabels; got != DefaultTabLabels {
+		t.Fatalf("TabLabels = %v, want %v", got, DefaultTabLabels)
+	}
 	if got := Default().UI.LeaderMenuShowDirectKeys; got != DefaultLeaderMenuShowDirectKeys {
 		t.Fatalf("LeaderMenuShowDirectKeys = %v, want %v", got, DefaultLeaderMenuShowDirectKeys)
 	}

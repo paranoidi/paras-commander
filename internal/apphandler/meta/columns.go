@@ -174,3 +174,38 @@ func (h *Handler) matchingProfile(set panel.ColumnSet, metaNames []string) strin
 	}
 	return ""
 }
+
+// TabColumns is the meta part of a panel's tab: the active meta column names and the index-view
+// bookkeeping that decides how default columns switch. The file columns, profile name and sort
+// live in panel.State and travel with the tab on their own.
+type TabColumns struct {
+	names       []string
+	inIndexView bool
+	autoColumns *columnSnapshot
+}
+
+// TabColumns snapshots panelID's meta columns for the tab being left.
+func (h *Handler) TabColumns(panelID int) TabColumns {
+	return TabColumns{
+		names:       slices.Clone(h.activeEntries[panelID]),
+		inIndexView: h.inIndexView[panelID],
+		autoColumns: h.autoColumns[panelID],
+	}
+}
+
+// RestoreTabColumns makes t the panel's meta columns on entering a tab. Equal names are left
+// running; otherwise the columns are switched like switchMeta does, but without arming
+// sort_on_activation: a tab switch restores what the tab showed, it is no new activation.
+func (h *Handler) RestoreTabColumns(panelID int, t TabColumns) {
+	h.inIndexView[panelID] = t.inIndexView
+	h.autoColumns[panelID] = t.autoColumns
+	h.sortCheck[panelID] = nil
+	if slices.Equal(h.activeEntries[panelID], t.names) {
+		return
+	}
+	if len(t.names) == 0 {
+		h.deactivate(panelID)
+		return
+	}
+	h.activate(panelID, t.names)
+}

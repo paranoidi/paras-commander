@@ -20,6 +20,8 @@ All are rebindable in `keybindings.toml` ([Keybindings](keybindings.md)). Split 
 - **Hide inactive panel** shows only the active panel at full width. In carousel view the inactive panel can hide automatically (`[carousel] autohide_inactive_panel`, default on).
 - **Narrow panels** keep file names readable. As a panel loses width it first drops meta columns, rightmost first, then its [file columns](columns.md), rightmost first, then shows names only, and an inactive panel too narrow even for that is hidden until there is room again. While it is hidden, the hide inactive panel key only shows a message. Side-by-side only; sync follow, quick view and file preview keep both columns on screen.
 
+Each panel can hold several tabs; with more than one, a tab bar appears above the panel ([Panel tabs](tabs.md)).
+
 ## Carousel view
 
 The carousel shows the parent directory, the current directory and a child column (a listing of the highlighted directory or a preview of the highlighted file) in one panel. Column widths, size columns and autohide are set in [`[carousel]`](config.md#carousel). Start in it with `--carousel`. Preview behaviour is in [Quick view](quick-view-preview.md).

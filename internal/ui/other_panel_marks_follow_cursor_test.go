@@ -78,7 +78,7 @@ func TestPaintBrowserCursorMovePanelOnlyScope(t *testing.T) {
 	const w, h = 80, 24
 	layout := CalculateLayoutWithOrientation(w, h, true, PanelPaneSplit{
 		ActivePanel: PrimaryPanel, ActivePercent: 50, InactivePercent: 50,
-	}, SplitHorizontal, 0, 0)
+	}, SplitHorizontal, 0, 0, false, false)
 	styles := theme.Default()
 	sentinelX, sentinelY := layout.Secondary.X+3, layout.Secondary.Y+layout.Secondary.Height-3
 

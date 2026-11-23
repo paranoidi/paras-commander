@@ -6,6 +6,7 @@ import (
 	"maps"
 	"path/filepath"
 	"sort"
+	"sync/atomic"
 	"time"
 
 	"github.com/paranoidi/paras-commander/internal/quickfilter"
@@ -28,6 +29,10 @@ import (
 const LoadingIndicatorDelay = 500 * time.Millisecond
 
 const maxNavHistory = 200
+
+// historyVisitSeq hands out recordVisit tokens. It is global, not per State, so a superseded
+// navigation's revert can never match a visit recorded in another panel tab.
+var historyVisitSeq atomic.Uint64
 
 // noIndexCursorFallback is passed to load as indexFallback to keep cursor at 0 when the
 // preserve-by-name step cannot resolve (directory changes, initial load).
@@ -67,9 +72,8 @@ type State struct {
 	// 0 = newest/current slot in the list (matches Path after navigation).
 	History      []string
 	HistoryIndex int
-	// historyVisitSeq / historyVisitToken identify each recordVisit so a superseded async
-	// navigation can remove that visit even when it is no longer History[0].
-	historyVisitSeq   uint64
+	// historyVisitToken identifies each recordVisit (tokens come from historyVisitSeq) so a
+	// superseded async navigation can remove that visit even when it is no longer History[0].
 	historyVisitToken map[string]uint64
 	// HistoryCursorByPath maps canonical directory paths to the last highlighted entry when leaving.
 	HistoryCursorByPath map[string]historyCursorSnapshot
@@ -266,9 +270,8 @@ type State struct {
 	// listing and the explicit one from RequestIndexDrift.
 	ScheduleIndexDrift IndexDriftScheduler
 	// indexDriftPending maps the path of a directory awaiting a drift pass to that pass's Seq, the
-	// newest asked for it; FinishIndexDrift removes it. indexDriftSeq numbers the passes.
+	// newest asked for it (numbered by indexDriftSeq); FinishIndexDrift removes it.
 	indexDriftPending map[string]uint64
-	indexDriftSeq     uint64
 	// indexListed holds each drift-candidate directory of the listing by name, as the overlay
 	// listed it (before any drift pass): carryIndexDrift compares the next same-directory listing
 	// with it. ForgetIndexDrift drops it.
@@ -1001,13 +1004,13 @@ func (s *State) recordVisit(target string) uint64 {
 	}
 	s.History = hist
 	s.HistoryIndex = 0
-	s.historyVisitSeq++
+	token := historyVisitSeq.Add(1)
 	if s.historyVisitToken == nil {
 		s.historyVisitToken = make(map[string]uint64)
 	}
-	s.historyVisitToken[target] = s.historyVisitSeq
+	s.historyVisitToken[target] = token
 	s.pruneHistoryCursors()
-	return s.historyVisitSeq
+	return token
 }
 
 func (s *State) rememberCursorForPath(dir string) {

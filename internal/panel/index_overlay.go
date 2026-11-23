@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
@@ -38,6 +39,10 @@ func driftCandidate(e localfs.Entry) bool {
 	return e.Type == localfs.EntryDirectory && slices.Contains([]string{localfs.IndexStatusIndexed, localfs.IndexStatusTagged, localfs.IndexStatusUnchecked}, e.IndexStatus)
 }
 
+// indexDriftSeq numbers the drift passes. It is global, not per State, so a result still on its
+// way for one panel tab cannot end the wait of another tab's pass.
+var indexDriftSeq atomic.Uint64
+
 // requestIndexDrift dispatches one drift pass at maxDepth for the candidate entries that want
 // accepts. Only the flat layout shows the result.
 func (s *State) requestIndexDrift(maxDepth int, explicit bool, want func(name string) bool) {
@@ -54,15 +59,15 @@ func (s *State) requestIndexDrift(maxDepth int, explicit bool, want func(name st
 	if len(subdirs) == 0 {
 		return
 	}
-	s.indexDriftSeq++
-	if !s.ScheduleIndexDrift(IndexDriftRequest{Dir: s.Path, Subdirs: subdirs, MaxDepth: maxDepth, Explicit: explicit, Seq: s.indexDriftSeq}) {
+	seq := indexDriftSeq.Add(1)
+	if !s.ScheduleIndexDrift(IndexDriftRequest{Dir: s.Path, Subdirs: subdirs, MaxDepth: maxDepth, Explicit: explicit, Seq: seq}) {
 		return
 	}
 	if s.indexDriftPending == nil {
 		s.indexDriftPending = make(map[string]uint64, len(paths))
 	}
 	for _, p := range paths {
-		s.indexDriftPending[p] = s.indexDriftSeq
+		s.indexDriftPending[p] = seq
 	}
 }
 

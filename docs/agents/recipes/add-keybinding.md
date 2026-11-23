@@ -22,6 +22,7 @@ Every user-requested shortcut must be configurable in `keybindings.toml` — nev
 Many combinations don't reach the app. Known traps:
 
 - **C-h** arrives as Backspace in many terminals (bound to `nav.parent`).
+- **C-<digit>** (the panel tab slots) is not a control character: it arrives only from terminals with extended keys (xterm modifyOtherKeys, CSI-u, WezTerm, tmux with `extended-keys on`). Legacy terminals send other keys for it (`C-2` as `C-Space`, `C-3` as `Esc`, `C-8` as Backspace); ADR 0018 rules out Ctrl+Alt fallbacks, so the limitation is documented in `docs/tabs.md`, not worked around. **C-w** is free in `[main]` but a terminal that maps Ctrl+Backspace to it closes a panel tab.
 - **C-Enter** is indistinguishable from Enter; **S-Enter** needs kitty-protocol terminals (works via tcell CSI-u).
 - **M-S-,** may arrive as **M-;** — provide both when relevant (see `panel.meta-edit`).
 - **C-c / C-Space / C-o** may be intercepted by terminal or shell settings.

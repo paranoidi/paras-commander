@@ -1126,6 +1126,9 @@ func (a *App) handleFilterLeaderKey(event *tcell.EventKey, resolvedAction string
 // quickFilterRetainsKey reports keys that stay on the quick-filter input path even when
 // the same chord is bound to a panel action (match cycling, Insert, query editing).
 func (a *App) quickFilterRetainsKey(event *tcell.EventKey, resolvedAction string) bool {
+	if resolvedAction == keymap.ActionPanelCloseTab {
+		return true // closing a tab is ignored while typing a filter, which tab-N would cancel
+	}
 	switch event.Key() {
 	case tcell.KeyUp, tcell.KeyDown, tcell.KeyInsert, tcell.KeyHome, tcell.KeyEnd:
 		return true

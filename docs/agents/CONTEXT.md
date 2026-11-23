@@ -14,6 +14,10 @@ _Avoid_: left panel, right panel (those name the visual slot only)
 The panel holding keyboard focus, and the other one.
 _Avoid_: current panel, other panel
 
+**Tab**:
+One of up to nine (`config.TabSlots`) listings a file panel holds; the panel's whole `panel.State` is per tab, the panel (ID 0 or 1) is not. Slots are numbered 1 to 9 and never renumbered; the shown tab's state is the panel's live state and the others are stored beside it. Session only. See `panels.md` (Panel tabs).
+_Avoid_: window, workspace
+
 **Selection**:
 The set of entries a panel has marked, kept by full path so it survives leaving the directory.
 _Avoid_: marks, tags
@@ -23,7 +27,7 @@ The sub-pane listing selected entries that lie outside the panel's current direc
 _Avoid_: selection panel, basket
 
 **Stash**:
-A single per-panel slot where a selection can be parked and later restored.
+A single per-panel slot where a selection can be parked and later restored. It belongs to the panel, not to one of its tabs.
 _Avoid_: clipboard, saved selection
 
 **File column**:
@@ -76,7 +80,7 @@ _Avoid_: fs event, notification (those suggest a filesystem watcher, which this 
 ### Navigation
 
 **History**:
-Each panel's own record of visited directories.
+Each panel tab's own record of visited directories; a new tab starts with a copy of its source's.
 
 **Bookmark**:
 A saved, named directory shared with fzf-marks and GTK bookmarks.

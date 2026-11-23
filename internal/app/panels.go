@@ -1095,8 +1095,17 @@ func (a *App) tryDispatchPanelLayout(actionID string) bool {
 		if err := a.toggleHiddenGlobal(); err != nil {
 			a.setErrorMessage("Toggle hidden failed", err)
 		}
+	case keymap.ActionPanelCloseTab:
+		// While a quick filter is open the key stays with it (see quickFilterRetainsKey).
+		if !a.inQuickFilterUI() {
+			a.closeTab(a.model.ActivePanel)
+		}
 	default:
-		return false
+		slot, ok := tabSlotOfAction(actionID)
+		if !ok {
+			return false
+		}
+		a.selectTab(a.model.ActivePanel, slot)
 	}
 	return true
 }

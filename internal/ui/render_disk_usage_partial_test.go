@@ -78,7 +78,7 @@ func TestPaintDiskUsageBrowserPanelsOnlyScopedPanel(t *testing.T) {
 		ActivePanel:     PrimaryPanel,
 		ActivePercent:   50,
 		InactivePercent: 50,
-	}, SplitHorizontal, 0, 0)
+	}, SplitHorizontal, 0, 0, false, false)
 
 	Render(screen, model, styles)
 	secondaryBefore := hashScreenRegion(screen, layout.Secondary)
@@ -135,7 +135,7 @@ func TestPaintBrowserListNavPanelOnlySkipsOtherColumn(t *testing.T) {
 		ActivePanel:     SecondaryPanel,
 		ActivePercent:   50,
 		InactivePercent: 50,
-	}, SplitHorizontal, 0, 0)
+	}, SplitHorizontal, 0, 0, false, false)
 
 	Render(screen, model, styles)
 	primaryBefore := hashScreenRegion(screen, layout.Primary)
@@ -183,7 +183,7 @@ func TestPaintBrowserListNavPanelOnlyViMotionBorderColor(t *testing.T) {
 		ActivePanel:     PrimaryPanel,
 		ActivePercent:   50,
 		InactivePercent: 50,
-	}, SplitHorizontal, 0, 0)
+	}, SplitHorizontal, 0, 0, false, false)
 
 	Render(screen, model, styles)
 	model.Primary.Cursor = 0
@@ -238,7 +238,7 @@ func TestPaintBrowserListNavPanelOnlyTransferTargetBorderColor(t *testing.T) {
 		ActivePanel:     PrimaryPanel,
 		ActivePercent:   50,
 		InactivePercent: 50,
-	}, SplitHorizontal, 0, 0)
+	}, SplitHorizontal, 0, 0, false, false)
 
 	Render(screen, model, styles)
 	model.Primary.Cursor = 0
@@ -302,7 +302,7 @@ func TestPaintBrowserListNavPanelOnlyShowsQuickViewIndicator(t *testing.T) {
 		ActivePanel:     PrimaryPanel,
 		ActivePercent:   50,
 		InactivePercent: 50,
-	}, SplitHorizontal, 0, 0)
+	}, SplitHorizontal, 0, 0, false, false)
 
 	Render(screen, model, styles)
 	model.Primary.Cursor = 1
@@ -326,7 +326,7 @@ func TestPaintDiskUsageBrowserPanelsOnlyRejectsNonBrowser(t *testing.T) {
 	}
 	t.Cleanup(screen.Fini)
 	screen.SetSize(80, 24)
-	layout := CalculateLayoutWithOrientation(80, 24, true, PanelPaneSplit{}, SplitHorizontal, 0, 0)
+	layout := CalculateLayoutWithOrientation(80, 24, true, PanelPaneSplit{}, SplitHorizontal, 0, 0, false, false)
 	model := Model{ViewMode: ViewJobs}
 	if PaintDiskUsageBrowserPanelsOnly(screen, layout, model, theme.Default()) {
 		t.Fatal("expected false for non-browser view")
@@ -344,7 +344,7 @@ func TestPaintDiskUsageBrowserPanelsOnlyDeclinesWithoutPanelInScope(t *testing.T
 	}
 	t.Cleanup(screen.Fini)
 	screen.SetSize(80, 24)
-	layout := CalculateLayoutWithOrientation(80, 24, true, PanelPaneSplit{}, SplitHorizontal, 0, 0)
+	layout := CalculateLayoutWithOrientation(80, 24, true, PanelPaneSplit{}, SplitHorizontal, 0, 0, false, false)
 	model := Model{
 		ViewMode:               ViewBrowser,
 		Primary:                panel.State{Path: pathloc.MustParse("/scan/root")},

@@ -10,7 +10,7 @@ func TestCalculateLayoutWithOrientationMenuRowInvariant(t *testing.T) {
 	split := PanelPaneSplit{ActivePercent: 50, InactivePercent: 50}
 
 	preview := Model{ViewMode: ViewFilePreview, HideMenuBar: false}
-	layout := CalculateLayoutWithOrientation(80, 24, preview.MenuBarLayoutReserved(), split, SplitHorizontal, 0, 0)
+	layout := CalculateLayoutWithOrientation(80, 24, preview.MenuBarLayoutReserved(), split, SplitHorizontal, 0, 0, false, false)
 	if layout.Menu.Height != 0 {
 		t.Fatalf("fullscreen preview: Menu.Height = %d, want 0", layout.Menu.Height)
 	}
@@ -19,7 +19,7 @@ func TestCalculateLayoutWithOrientationMenuRowInvariant(t *testing.T) {
 	}
 
 	browser := Model{ViewMode: ViewBrowser, HideMenuBar: false}
-	layout = CalculateLayoutWithOrientation(80, 24, browser.MenuBarLayoutReserved(), split, SplitHorizontal, 0, 0)
+	layout = CalculateLayoutWithOrientation(80, 24, browser.MenuBarLayoutReserved(), split, SplitHorizontal, 0, 0, false, false)
 	if layout.Menu.Height != 1 {
 		t.Fatalf("browser: Menu.Height = %d, want 1", layout.Menu.Height)
 	}

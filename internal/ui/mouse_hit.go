@@ -25,6 +25,25 @@ func MenuBarMenuAt(layout Layout, model *Model, x, y int) (int, bool) {
 	return 0, false
 }
 
+// PanelTabAt returns the panel and slot (1-based) of the tab drawn at (x, y).
+func PanelTabAt(layout Layout, model *Model, x, y int) (panelID, slot int, ok bool) {
+	for _, id := range [...]int{PrimaryPanel, SecondaryPanel} {
+		rect := layout.PrimaryTabs
+		if id == SecondaryPanel {
+			rect = layout.SecondaryTabs
+		}
+		if !rect.Contains(x, y) || model.Tabs[id].Count() < 2 {
+			continue
+		}
+		for _, sp := range tabSpans(rect.Width, model.Tabs[id], model.TabLabels, func(slot int) string { return model.tabLabel(id, slot) }) {
+			if x >= rect.X+sp.X && x < rect.X+sp.X+sp.W {
+				return id, sp.Slot, true
+			}
+		}
+	}
+	return 0, 0, false
+}
+
 // StatusCommandsAt reports whether (x, y) lies in the top-left status-command area
 // (layout.StatusCmd), which is only reserved while at least one status command is drawn.
 func StatusCommandsAt(layout Layout, model *Model, x, y int) bool {

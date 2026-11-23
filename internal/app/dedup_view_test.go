@@ -1547,7 +1547,7 @@ func TestDedupViewCursorMotionFollowsNavRebind(t *testing.T) {
 	waitDedupDone(t, app)
 
 	keys := keymap.DefaultActionKeys()
-	keys[keymap.ActionNavDown] = []string{"C-w"}
+	keys[keymap.ActionNavDown] = []string{"M-9"}
 	m, err := keymap.Build(keys)
 	if err != nil {
 		t.Fatal(err)
@@ -1559,7 +1559,7 @@ func TestDedupViewCursorMotionFollowsNavRebind(t *testing.T) {
 	if got := app.model.DedupView.Main.Selected; got != 0 {
 		t.Fatalf("Down moved cursor to %d after nav.down was rebound, want 0", got)
 	}
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyCtrlW, 0, tcell.ModCtrl))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRune, '9', tcell.ModAlt))
 	if got := app.model.DedupView.Main.Selected; got != 1 {
 		t.Fatalf("rebound key moved cursor to %d, want 1", got)
 	}

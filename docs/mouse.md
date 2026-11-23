@@ -18,6 +18,7 @@ In the file browser:
 | Wheel over quick view | Scrolls the file preview, or moves through the directory listing, by a few rows. Focus and the highlighted entry in the other panel do not change. |
 | Pointer over a row | Highlights the row in the inactive panel's cursor colors. The cursor does not move. A key press hides the highlight until the mouse moves again. |
 | Pointer over the path in a panel's top border | Inverts the colors of the path element under it (`~`, `/`, a directory name). |
+| Left click on a panel tab | Focuses that panel and switches to the tab ([Panel tabs](tabs.md)). |
 | Left click on a path element | Focuses the panel and opens that directory, with the cursor on the directory you came from. |
 | Left click on the last path element | Focuses the panel and refreshes its directory (the panel's own directory). |
 | Left click on a column title (Name, Size, Modified, a meta column) | Focuses the panel and sorts by that column. Clicking the column already sorted on reverses the order. Name also counts as sorted while sorting by extension. |

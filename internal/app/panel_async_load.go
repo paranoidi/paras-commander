@@ -264,6 +264,7 @@ func (a *App) asyncLoadScheduler(panelID int) panel.AsyncLoadScheduler {
 			return false
 		}
 		gen := inst.panelAsyncLoadGen.Add(1)
+		inst.pendingReq = &req
 		timeout := time.Duration(a.config.SFTP.ListTimeoutSecs) * time.Second
 		pan := a.panelByID(panelID)
 		snap := pan.ListingRefreshSnapshot(req.Loc, timeout)
@@ -325,6 +326,7 @@ func (a *App) applyOnePanelAsyncLoad(p panelAsyncLoadPayload) bool {
 		return false
 	}
 	isOverlay := !ui.IsBrowserPanel(p.panelID)
+	inst.pendingReq = nil
 	pan.ListingPending = false
 	pan.ListingPendingPath = ""
 	pan.ShowLoadingIcon = false

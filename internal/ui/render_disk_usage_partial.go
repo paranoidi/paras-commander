@@ -41,6 +41,7 @@ func paintBrowserPanelsInScope(
 	}
 
 	chromeBlocked := model.PanelsChromeBlocked()
+	drawPanelTabs(screen, layout, model, styles, chromeBlocked, inScope)
 	primaryFileListFocus := model.ActivePanel == PrimaryPanel && model.renderSubFocus() == SubFocusFileList
 	secondaryFileListFocus := model.ActivePanel == SecondaryPanel && model.renderSubFocus() == SubFocusFileList
 

@@ -44,6 +44,15 @@ Readline-style editing in every dialog text field. Kills go to one shared kill b
 
 Inside Help (`F1`), `F2` lists these too.
 
+## Panel tabs
+
+| Key | Action |
+|---|---|
+| `C-1` to `C-9` | Switch to that tab of the active panel, or open the slot as a copy of the current tab |
+| `C-w` | Close the active tab |
+
+`C-1` to `C-9` need a terminal with extended keys (tmux: `set -g extended-keys on`). See [Panel tabs](tabs.md).
+
 ## Changing keys
 
 See [Keybindings](keybindings.md) for `keybindings.toml`, chord syntax, per-view tables and `pc --config-stub`.

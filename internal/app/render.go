@@ -551,7 +551,8 @@ func (a *App) menuBarPermissionText() string {
 // twin-column split treats panel zoom as off (same rule as when preview is actually open) so
 // callers can size subprocess output (e.g. bat --terminal-width) before preview state is toggled.
 func (a *App) layoutForTerminalSizePreview(width, height int, filePreviewOpen bool) ui.Layout {
-	return ui.CalculateLayoutWithOrientation(width, height, a.model.MenuBarLayoutReserved(), a.panelPaneSplit(width, filePreviewOpen), a.effectivePaneSplitOrientation(), a.terminalLayoutRows(), a.statusCommandWidth())
+	primaryTabs, secondaryTabs := a.model.TabRows()
+	return ui.CalculateLayoutWithOrientation(width, height, a.model.MenuBarLayoutReserved(), a.panelPaneSplit(width, filePreviewOpen), a.effectivePaneSplitOrientation(), a.terminalLayoutRows(), a.statusCommandWidth(), primaryTabs, secondaryTabs)
 }
 
 // applyCarouselPanelZoomPercents widens the active column when carousel view is on so three panes fit.

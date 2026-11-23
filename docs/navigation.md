@@ -14,7 +14,7 @@ Besides typing paths and pressing Enter, Paras Commander has several ways to get
 | History dialog | `M-h` or `C-h`; Left/Right -> History...; Esc, `h` |
 | Both panels | `F5` inside the dialog |
 
-Each panel remembers every directory it visited (most recent first, up to 200). Back and forward move through that list without adding entries. A directory that no longer exists is skipped and a warning toast says so. Returning to a directory restores the previously highlighted entry.
+Each panel tab remembers every directory it visited (most recent first, up to 200); a new [tab](tabs.md) starts with a copy of the history of the tab it was opened from. Back and forward move through that list without adding entries. A directory that no longer exists is skipped and a warning toast says so. Returning to a directory restores the previously highlighted entry.
 
 The dialog lists the target panel's history, without its current directory. `F5` merges both panels (other panel first). Every row has a source prefix (history or zoxide) and rows whose directory has disappeared are shown in the invalid colour with a missing icon. Enter opens the highlighted directory in the panel; `S-←` / `S-→` open it in the left or right panel and keep the dialog open.
 

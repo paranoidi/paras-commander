@@ -36,6 +36,11 @@ type Layout struct {
 	Primary   Rect
 	Secondary Rect
 	Footer    Rect
+	// PrimaryTabs / SecondaryTabs are the tab-bar rows of the browser panes (one row, the pane's
+	// width, directly above its frame). A zero Rect means the pane has no tab row; Primary and
+	// Secondary already exclude it.
+	PrimaryTabs   Rect
+	SecondaryTabs Rect
 	// Terminal is the embedded terminal panel strip, directly above Footer. Height is the
 	// content row count. Zero Rect means the panel is omitted (not requested, or the
 	// terminal was too small to fit alongside the minimum panel area).
@@ -99,6 +104,11 @@ type LayoutInput struct {
 	// text, shrinking Menu from the left. Zero reserves nothing. Caller clamps this to the
 	// configured max width; CalculateLayoutWithOrientation only clamps it to the terminal width.
 	StatusCmdWidth int
+	// PrimaryTabs / SecondaryTabs ask for a tab-bar row for that pane. Side by side, a request
+	// from either visible pane puts a row above both visible panes so their frames stay aligned;
+	// stacked, each pane takes its own row. A pane with no area (hidden) never gets a row.
+	PrimaryTabs   bool
+	SecondaryTabs bool
 }
 
 func mainPanelAxisSplit(total int, split PanelPaneSplit) (primaryShare, secondaryShare int) {
@@ -242,22 +252,45 @@ func CalculateLayoutWithOrientation(in LayoutInput) Layout {
 		if split.SwapPanes {
 			layout.Secondary = Rect{X: 0, Y: menuY, Width: width, Height: secondaryH}
 			layout.Primary = Rect{X: 0, Y: menuY + secondaryH, Width: width, Height: primaryH}
-			return layout
+			return withTabRows(layout, in)
 		}
 		layout.Primary = Rect{X: 0, Y: menuY, Width: width, Height: primaryH}
 		layout.Secondary = Rect{X: 0, Y: menuY + primaryH, Width: width, Height: secondaryH}
-		return layout
+		return withTabRows(layout, in)
 	}
 
 	primaryW, secondaryW := mainPanelColumnWidths(width, split)
 	if split.SwapPanes {
 		layout.Secondary = Rect{X: 0, Y: menuY, Width: secondaryW, Height: panelAreaH}
 		layout.Primary = Rect{X: secondaryW, Y: menuY, Width: primaryW, Height: panelAreaH}
-		return layout
+		return withTabRows(layout, in)
 	}
 	layout.Primary = Rect{X: 0, Y: menuY, Width: primaryW, Height: panelAreaH}
 	layout.Secondary = Rect{X: primaryW, Y: menuY, Width: secondaryW, Height: panelAreaH}
-	return layout
+	return withTabRows(layout, in)
+}
+
+// withTabRows takes the tab-bar rows off the top of the panes (see LayoutInput.PrimaryTabs). It
+// runs after the split, so zoom and hide-inactive shares are unaffected.
+func withTabRows(l Layout, in LayoutInput) Layout {
+	primary, secondary := in.PrimaryTabs, in.SecondaryTabs
+	if in.Orientation != SplitVertical {
+		visible := func(r Rect, want bool) bool { return want && r.Width > 0 && r.Height > 0 }
+		anyRow := visible(l.Primary, primary) || visible(l.Secondary, secondary)
+		primary, secondary = anyRow, anyRow
+	}
+	l.PrimaryTabs, l.Primary = takeTabRow(l.Primary, primary)
+	l.SecondaryTabs, l.Secondary = takeTabRow(l.Secondary, secondary)
+	return l
+}
+
+// takeTabRow splits a one-row tab bar off the top of pane when want is set and pane has area.
+func takeTabRow(pane Rect, want bool) (tabs, rest Rect) {
+	if !want || pane.Width <= 0 || pane.Height <= 0 {
+		return Rect{}, pane
+	}
+	return Rect{X: pane.X, Y: pane.Y, Width: pane.Width, Height: 1},
+		Rect{X: pane.X, Y: pane.Y + 1, Width: pane.Width, Height: pane.Height - 1}
 }
 
 // PanelListTop returns the screen row of the first entry row inside a file panel frame.

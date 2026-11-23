@@ -4,6 +4,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/sched"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -70,6 +71,14 @@ type panelInstance struct {
 	// dirWatchSig is the signature the current directory watch set was computed from.
 	dirWatchSig dirWatchSig
 
+	// activeTab is the slot (1..config.TabSlots) whose tab is live in state; tabs holds the other
+	// used slots (panel_tabs.go). The active slot's entry is always nil.
+	activeTab int
+	tabs      [config.TabSlots]*panelTab
+	// pendingReq is the newest listing request in flight (set by asyncLoadScheduler, cleared when
+	// its result applies), so leaving a tab can roll it back while its state is still live.
+	pendingReq *panel.AsyncLoadRequest
+
 	// dirLoadIndicatorTimer/Epoch arm the row working-indicator icon (dir_loading_indicator.go).
 	dirLoadIndicatorTimer *time.Timer
 	dirLoadIndicatorEpoch uint64
@@ -90,7 +99,7 @@ func (a *App) openPanel(state *panel.State) int {
 	}
 	id := a.panels.next
 	a.panels.next++
-	a.panels.byID[id] = &panelInstance{state: state}
+	a.panels.byID[id] = &panelInstance{state: state, activeTab: 1}
 	return id
 }
 
@@ -102,14 +111,22 @@ func (a *App) closePanel(id int) {
 	if inst == nil || ui.IsBrowserPanel(id) {
 		return
 	}
+	inst.supersede()
+	delete(a.panels.byID, id)
+}
+
+// supersede drops every listing and git result still on its way for this panel (generations
+// bumped) and cancels its drift passes. The drift context is reset too: a later request for the
+// same directory must not reuse the cancelled one.
+func (inst *panelInstance) supersede() {
 	inst.panelAsyncLoadGen.Add(1)
 	inst.gitStatusLoadGen.Add(1)
 	inst.drift.mu.Lock()
 	if inst.drift.cancel != nil {
 		inst.drift.cancel()
+		inst.drift.cancel = nil
 	}
 	inst.drift.mu.Unlock()
-	delete(a.panels.byID, id)
 }
 
 // panelInst returns the live instance for id, or nil once it is closed or if it never existed.

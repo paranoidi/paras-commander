@@ -281,3 +281,41 @@ func TestColumnsDialog_cancelReturnsThroughPhases(t *testing.T) {
 		t.Fatal("Cancel on main must close the dialog")
 	}
 }
+
+func TestTabColumns_restoreSwitchesNamesWithoutSortOnActivation(t *testing.T) {
+	h, _ := columnsHandler(t)
+	h.ApplyProfile(0, columnprofile.Profile{Name: "orchard", Meta: []string{"meadow"}})
+	first := h.TabColumns(0)
+	h.ApplyProfile(0, columnprofile.Profile{Name: config.ColumnProfileBrief, Columns: []string{"size"}})
+	if len(h.activeEntries[0]) != 0 {
+		t.Fatalf("meta = %v, want none in the second tab", h.activeEntries[0])
+	}
+	second := h.TabColumns(0)
+
+	h.RestoreTabColumns(0, first)
+	if !slices.Equal(h.activeEntries[0], []string{"meadow"}) {
+		t.Fatalf("meta = %v after restoring the first tab", h.activeEntries[0])
+	}
+	if h.sortCheck[0] != nil {
+		t.Fatal("restoring a tab must not arm sort_on_activation")
+	}
+	gen := h.runGen[0]
+	h.RestoreTabColumns(0, first)
+	if h.runGen[0] != gen {
+		t.Fatal("equal names must not restart the run")
+	}
+	h.RestoreTabColumns(0, second)
+	if len(h.activeEntries[0]) != 0 || h.model.MetaResults[0] != nil {
+		t.Fatalf("meta = %v after restoring the second tab", h.activeEntries[0])
+	}
+}
+
+func TestTabColumns_snapshotIsACopy(t *testing.T) {
+	h, _ := columnsHandler(t)
+	h.activate(0, []string{"meadow", "lantern"})
+	snap := h.TabColumns(0)
+	h.activeEntries[0][0] = "changed"
+	if snap.names[0] != "meadow" {
+		t.Fatalf("snapshot names = %v, want a copy", snap.names)
+	}
+}

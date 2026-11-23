@@ -646,6 +646,12 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 			return false, false
 		}
 	}
+	if id, slot, ok := ui.PanelTabAt(layout, &a.model, x, y); ok && pressed&tcell.Button1 != 0 {
+		a.focusPanelByMouse(id)
+		a.selectTab(id, slot)
+		a.render()
+		return false, true
+	}
 	if a.handlePanelHeadingRightClick(layout, x, y, pressed) {
 		return false, true
 	}

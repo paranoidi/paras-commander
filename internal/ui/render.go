@@ -127,6 +127,9 @@ type Model struct {
 	SplitOrientation SplitOrientation
 	// HideInactivePanel gives the active column full width and hides the inactive twin panel.
 	HideInactivePanel bool
+	// Tabs is each file panel's tab bar (App.syncTabBar); TabLabels mirrors ui.tab_labels.
+	Tabs      [2]TabBar
+	TabLabels bool
 	// SwapPanes is the user's preference (panel.swap-panes): Secondary in the first visual slot
 	// (left/top), Primary in the second. It is not the drawn order while a carousel quick view
 	// forces its own; read EffectiveSwapPanes for what is drawn.
@@ -853,6 +856,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) (out RenderedO
 	if model.TerminalPanel.Visible && model.ViewMode == ViewBrowser {
 		terminalRows = model.TerminalPanel.Rows
 	}
+	primaryTabs, secondaryTabs := model.TabRows()
 	layout := geom.CalculateLayoutWithOrientation(geom.LayoutInput{
 		Width:       width,
 		Height:      height,
@@ -868,6 +872,8 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) (out RenderedO
 		Orientation:    model.SplitOrientation,
 		TerminalRows:   terminalRows,
 		StatusCmdWidth: statusCmdWidth(model, reserveMenu),
+		PrimaryTabs:    primaryTabs,
+		SecondaryTabs:  secondaryTabs,
 	})
 	_, backgroundBG, _ := styles.PanelInactiveSurface.Decompose()
 	primitive.Fill(screen, primitive.Rect{Width: width, Height: height}, ' ', tcell.StyleDefault.Background(backgroundBG))
@@ -1094,6 +1100,8 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 func drawBrowserView(screen tcell.Screen, layout geom.Layout, model Model, styles theme.Theme, chromeBlocked bool) {
 	primaryFileListFocus := model.ActivePanel == PrimaryPanel && model.renderSubFocus() == SubFocusFileList
 	secondaryFileListFocus := model.ActivePanel == SecondaryPanel && model.renderSubFocus() == SubFocusFileList
+
+	drawPanelTabs(screen, layout, model, styles, chromeBlocked, func(int) bool { return true })
 
 	leftStripCount := model.Primary.SelectedStripCount()
 	rightStripCount := model.Secondary.SelectedStripCount()

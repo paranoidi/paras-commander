@@ -1,5 +1,7 @@
 package keymap
 
+import "github.com/paranoidi/paras-commander/internal/config"
+
 // Action identifiers are the keybindings.toml keys (single-stroke bindings only in v1).
 const (
 	ActionAppQuit          = "app.quit"
@@ -102,6 +104,7 @@ const (
 	ActionPanelReverseSort            = "panel.reverse-sort"
 	ActionPanelFilterOpen             = "panel.filter-open"
 	ActionPanelToggleHidden           = "panel.toggle-hidden"
+	ActionPanelCloseTab               = "panel.close-tab"
 	ActionGitStage                    = "git.stage"
 	ActionGitUnstage                  = "git.unstage"
 	ActionGitUntrack                  = "git.untrack"
@@ -415,6 +418,13 @@ const (
 	ActionDevDemoMoveBar     = "dev.demo-move-bar"
 )
 
+// PanelTabActions are the actions that switch to a panel tab slot (index 0 = slot 1), or open it
+// as a copy of the current tab when empty.
+var PanelTabActions = [config.TabSlots]string{
+	"panel.tab-1", "panel.tab-2", "panel.tab-3", "panel.tab-4", "panel.tab-5",
+	"panel.tab-6", "panel.tab-7", "panel.tab-8", "panel.tab-9",
+}
+
 // KnownActions lists action IDs accepted in keybindings.toml for the current app.
 var KnownActions = map[string]struct{}{
 	ActionAppQuit:             {},
@@ -504,6 +514,7 @@ var KnownActions = map[string]struct{}{
 	ActionPanelReverseSort:            {},
 	ActionPanelFilterOpen:             {},
 	ActionPanelToggleHidden:           {},
+	ActionPanelCloseTab:               {},
 	ActionGitStage:                    {},
 	ActionGitUnstage:                  {},
 	ActionGitUntrack:                  {},
@@ -731,4 +742,10 @@ var KnownActions = map[string]struct{}{
 
 	ActionDestinationActivePanel:   {},
 	ActionDestinationInactivePanel: {},
+}
+
+func init() {
+	for _, id := range PanelTabActions {
+		KnownActions[id] = struct{}{}
+	}
 }

@@ -51,7 +51,7 @@ Copying or moving a multi-location selection shows every source in the transfer 
 
 ## Stash
 
-Each panel has one stash slot. `C-M-Insert`:
+Each panel has one stash slot, shared by all its [tabs](tabs.md). `C-M-Insert`:
 
 - selection and empty stash: save the selection and clear it;
 - no selection and a stash: restore it;

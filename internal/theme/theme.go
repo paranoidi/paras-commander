@@ -200,6 +200,12 @@ type Theme struct {
 	PanelBlockedCursor            tcell.Style
 	PanelBlockedCursorSelected    tcell.Style
 
+	// PanelTab* style a panel's tab bar: the active tab, the other tabs, and every tab
+	// while a modal or pulldown menu has focus.
+	PanelTabActive   tcell.Style
+	PanelTabInactive tcell.Style
+	PanelTabBlocked  tcell.Style
+
 	// StatusScanning ([status] scanning) is the one "work in progress" style: disk-scan-pending
 	// folder icons, slow-load and preview-loading icons, spinners, the fileindex scanning state,
 	// and scanning jobs in the menu bar and the Jobs view.
@@ -1215,6 +1221,9 @@ var styleKeys = append([]string{
 	"panel.blocked.row.cursor",
 	"panel.blocked.row.cursor.selected",
 	"panel.blocked.text",
+	"panel.tab.active",
+	"panel.tab.inactive",
+	"panel.tab.blocked",
 	"status.scanning",
 	"status.queued",
 	"status.running",
@@ -1951,6 +1960,9 @@ func build(src source) (Theme, error) {
 		PanelBlockedText:              styles["panel.blocked.text"],
 		PanelBlockedCursor:            styles["panel.blocked.row.cursor"],
 		PanelBlockedCursorSelected:    styles["panel.blocked.row.cursor.selected"],
+		PanelTabActive:                styles["panel.tab.active"],
+		PanelTabInactive:              styles["panel.tab.inactive"],
+		PanelTabBlocked:               styles["panel.tab.blocked"],
 
 		StatusScanning:                   styles["status.scanning"],
 		StatusQueued:                     styles["status.queued"],

@@ -91,7 +91,7 @@ Main sections:
 |---|---|
 | `[palette]`, `[roles]` | The two color layers described above |
 | `[status]` | One color per job state (scanning, queued, running, paused, decision, failed, canceling, canceled, completed), used by the menu bar, Jobs and Commands views and file-list marks; `scanning` also colors disk usage scans, fileindex scans and spinners |
-| `[panel.*]` | Active, inactive and blocked (dimmed under dialogs) panel chrome; rows, marks, folder icons, git status, fileindex states (`[panel.fileindex]`, glyphs in `[icons.fileindex_state]`), [meta column alerts](meta-columns.md#alert-colors) (`[panel.meta]`), scrollbar, disk usage (`[panel.usage]`; an optional `icon` table recolors chosen icon groups where the bar is behind them, see [Icons on the disk usage bar](#icons-on-the-disk-usage-bar)) |
+| `[panel.*]` | Active, inactive and blocked (dimmed under dialogs) panel chrome; tab bar (`[panel.tab]`: `active`, `inactive`, `blocked`); rows, marks, folder icons, git status, fileindex states (`[panel.fileindex]`, glyphs in `[icons.fileindex_state]`), [meta column alerts](meta-columns.md#alert-colors) (`[panel.meta]`), scrollbar, disk usage (`[panel.usage]`; an optional `icon` table recolors chosen icon groups where the bar is behind them, see [Icons on the disk usage bar](#icons-on-the-disk-usage-bar)) |
 | `[menu.*]` | Menu bar, pulldowns, status commands (`menu.status`, `menu.status.separator`), job strip, progress bar, speed pill |
 | `[dialog.*]` | Dialog frame, buttons, inputs, options, progress |
 | `[preview]` | F3 fullscreen preview: `search_icon` (foreground only), the search bar's leading icon |

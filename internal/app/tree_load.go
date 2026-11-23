@@ -22,6 +22,10 @@ type treeChildLoadPayload struct {
 	dirID   string
 	entries []localfs.Entry
 	err     error
+	// ctx is the fetch's context: cancelling it (cancelAll, which every tab switch and re-root
+	// runs) retires a result already queued, which the Loading flag alone cannot do once another
+	// tab's tree holds the same directory in flight.
+	ctx context.Context
 }
 
 // treeChildResultsReadyPayload is the tcell interrupt payload posted to wake the main loop into
@@ -117,6 +121,7 @@ func (a *App) treeChildLoader(panelID int) (schedule panel.TreeChildLoadSchedule
 				dirID:   req.DirID,
 				entries: entries,
 				err:     err,
+				ctx:     fetchCtx,
 			}) {
 				a.screen.PostEventWait(tcell.NewEventInterrupt(treeChildResultsReadyPayload{})) //nolint:staticcheck // SA1019: guaranteed delivery required, see comment above
 			}
@@ -154,6 +159,9 @@ func (a *App) applyTreeChildResults() bool {
 	touchedPanel := -1
 	var need []string
 	for _, p := range items {
+		if p.ctx.Err() != nil {
+			continue // cancelled after it was queued
+		}
 		touchedPanel = p.panelID
 		pan := a.panelByID(p.panelID)
 		if pan.ApplyTreeChildLoad(p.dirID, p.entries, p.err, a.panelViewportRows(p.panelID)) {

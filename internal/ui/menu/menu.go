@@ -146,6 +146,7 @@ func Definitions() []Definition {
 				{Action: keymap.ActionFileRunForEach, Label: "Run for each...", Shortcut: 'f'},
 				{Action: keymap.ActionPanelToggleSplitOrientation, Label: "Toggle split orientation", Shortcut: 'O'},
 				{Action: keymap.ActionPanelSwapPanes, Label: "Swap panels", Shortcut: 's'},
+				{Action: keymap.ActionPanelCloseTab, Label: "Close tab", Shortcut: 'C'},
 				{Action: keymap.ActionPanelComparePanels, Label: "Compare panels", Shortcut: 'p'},
 				{Action: keymap.ActionPanelFindDuplicates, Label: "Find duplicates", Shortcut: 'd'},
 				{Action: keymap.ActionBookmarkOpen, Label: "Bookmarks", Shortcut: 'b'},

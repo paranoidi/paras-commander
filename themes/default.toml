@@ -289,6 +289,11 @@ title = { fg = "fg" }
 usage.cursor = { fg = "fg", bg = "file_cursor_dim" }
 usage.cursor.selected = { fg = "selected", bg = "highlight_bg", bold = true }
 
+[panel.tab]                   # a panel's tab bar (more than one tab)
+active = { fg = "focus_fg", bg = "focus_bg", bold = true }
+inactive = { fg = "fg", bg = "surface" }
+blocked = { fg = "muted", bg = "surface" }  # every tab while a dialog or menu has focus
+
 [panel.blocked]
 disk_usage_overview = { fg = "muted" }
 frame = { fg = "muted" }

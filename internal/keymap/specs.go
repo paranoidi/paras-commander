@@ -105,7 +105,7 @@ var HelpSectionPriority = func() map[string]int {
 
 // DefaultActionSpecs returns all known configurable actions in display order.
 func DefaultActionSpecs() []ActionSpec {
-	return []ActionSpec{
+	specs := []ActionSpec{
 		// ── App ──
 		{
 			ID:             ActionAppQuit,
@@ -2638,6 +2638,32 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"search", "find", "fuzzy"},
 		},
 	}
+	return append(specs, panelTabSpecs()...)
+}
+
+// panelTabSpecs are the tab slot actions and the close action. C-<digit> needs a terminal that
+// reports extended keys (see docs/agents/recipes/add-keybinding.md).
+func panelTabSpecs() []ActionSpec {
+	specs := make([]ActionSpec, 0, len(PanelTabActions)+1)
+	for i, id := range PanelTabActions {
+		n := string(rune('1' + i))
+		specs = append(specs, ActionSpec{
+			ID:          id,
+			Views:       HelpBrowser,
+			Title:       "Panel tab " + n,
+			Section:     "Navigation",
+			DefaultKeys: []string{"C-" + n},
+			Keywords:    []string{"tab", "slot", "switch", "new tab", "duplicate", "panel"},
+		})
+	}
+	return append(specs, ActionSpec{
+		ID:          ActionPanelCloseTab,
+		Views:       HelpBrowser,
+		Title:       "Close panel tab",
+		Section:     "Navigation",
+		DefaultKeys: []string{"C-w"},
+		Keywords:    []string{"tab", "close", "panel"},
+	})
 }
 
 var specByActionID map[string]ActionSpec
