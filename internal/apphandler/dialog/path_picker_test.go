@@ -3,10 +3,12 @@ package dialog
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -171,5 +173,49 @@ func TestPathPickerKeepsRemotePath(t *testing.T) {
 	h.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if got := h.model.TransferDialog.Destination.Value; got != remote {
 		t.Fatalf("destination = %q, want %q", got, remote)
+	}
+}
+
+func TestPathPickerAllListsTabs(t *testing.T) {
+	h, host := newBookmarkTestHandler(t)
+	root := host.active.PathString()
+	orchard, lantern, willow := filepath.Join(root, "orchard"), filepath.Join(root, "lantern"), filepath.Join(root, "willow")
+	const remote = "sftp://meadow/srv/ember"
+	h.host = allPickerHost{bookmarkTestHost: host, inactive: &panel.State{Path: pathloc.FileMust(root)}}
+	remoteLoc, err := pathloc.Parse(remote)
+	if err != nil {
+		t.Fatal(err)
+	}
+	loc := pathloc.FileMust
+	// The destination panel is the secondary one; the shown tab of each panel is its live path.
+	h.model.Tabs[ui.SecondaryPanel] = ui.TabBar{Active: 1, Paths: [config.TabSlots]pathloc.Path{2: loc(lantern), 3: loc(orchard)}}
+	h.model.Tabs[ui.PrimaryPanel] = ui.TabBar{Active: 2, Paths: [config.TabSlots]pathloc.Path{0: loc(orchard), 4: remoteLoc}}
+	h.model.Secondary.Path = loc(root)
+	h.model.Primary.Path = loc(willow)
+	h.model.PinnedItems = []ui.PinnedItem{{Path: orchard, IsDir: true}}
+	host.active.History = []string{lantern}
+
+	h.openAllPathPicker(uidialog.PathPickerPurposeApplyTransferDestination, 0)
+	var tabs []string
+	count := map[string]int{}
+	for _, it := range h.model.PathPicker.Items {
+		count[it.Path]++
+		if it.Source == "tab" {
+			tabs = append(tabs, it.Path)
+		}
+	}
+	want := []string{root, lantern, orchard, willow, remote}
+	if !slices.Equal(tabs, want) {
+		t.Fatalf("tab rows %v, want %v", tabs, want)
+	}
+	for _, p := range want {
+		if count[p] != 1 {
+			t.Errorf("%q listed %d times, want 1", p, count[p])
+		}
+	}
+
+	h.model.Tabs[ui.PrimaryPanel] = ui.TabBar{Active: 1} // a single tab contributes none
+	if got := h.PathPickerItemsTabs(); len(got) != 3 {
+		t.Fatalf("items %+v, want the destination panel's three tabs only", got)
 	}
 }

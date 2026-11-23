@@ -38,7 +38,7 @@ Sync turns itself off when you use "open directory in other panel" (`M-o`), "ope
 
 Bookmarks are compatible with [fzf-marks](https://github.com/urbainvaes/fzf-marks): marks are read from `[bookmarks].file`, else `$FZF_MARKS_FILE`, else `~/.fzf-marks`, as `name : path` lines, and new marks are appended there. GTK 3 bookmarks (`~/.config/gtk-3.0/bookmarks`) are listed after them, read-only. The Source column shows which one each row came from. `F8` deletes a mark (fzf-marks only). Enter opens in the active panel; `S-←` / `S-→` open in a panel and keep the dialog open.
 
-The same list serves as a **path picker** in path fields (copy and move destinations, flatten, extract, symlink): while such a field is focused, the footer offers All, Bookmarks, History and Pinned. `*` or `|` opens the combined list; `C-b`, `M-h` and `M-n` open the single-source ones. Typing a path in these fields has its own [autocomplete](path-completion.md).
+The same list serves as a **path picker** in path fields (copy and move destinations, flatten, extract, symlink): while such a field is focused, the footer offers All, Bookmarks, History and Pinned. `*` or `|` opens the combined list (bookmarks, the [tabs](tabs.md) of both panels when they have more than one, history and pins; a path that is also a bookmark is listed once, as the bookmark); `C-b`, `M-h` and `M-n` open the single-source ones. Typing a path in these fields has its own [autocomplete](path-completion.md).
 
 ## Jump to directory
 

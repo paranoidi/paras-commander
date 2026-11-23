@@ -2519,11 +2519,11 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionDialogInputPathPickerAll,
-			Title:        "All paths picker (bookmarks, history, pinned)",
+			Title:        "All paths picker (bookmarks, tabs, history, pinned)",
 			Section:      "UI",
 			DefaultKeys:  nil, // bound only via [dialog.input] (defaults * and |)
 			PreferredKey: "*",
-			Keywords:     []string{"bookmarks", "history", "pinned", "path", "picker", "all"},
+			Keywords:     []string{"bookmarks", "tabs", "history", "pinned", "path", "picker", "all"},
 		},
 		{
 			ID:           ActionDialogInputKillWordBackward,

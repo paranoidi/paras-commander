@@ -9,6 +9,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/apphandler/host"
 	"github.com/paranoidi/paras-commander/internal/bookmarks"
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/pathpick"
@@ -314,6 +315,24 @@ func (h *Handler) PathPickerItemsPinned() ([]dialog.PathPickerItem, error) {
 	return items, nil
 }
 
+// PathPickerItemsTabs returns the tab directories of the destination panel, then of the other
+// browser panel, for openAllPathPicker, which dedupes. A panel with a single tab contributes none.
+func (h *Handler) PathPickerItemsTabs() []dialog.PathPickerItem {
+	dst := h.host.DestinationPanelID()
+	var items []dialog.PathPickerItem
+	for _, id := range []int{dst, ui.PrimaryPanel + ui.SecondaryPanel - dst} {
+		if h.model.Tabs[id].Count() < 2 {
+			continue
+		}
+		for slot := 1; slot <= config.TabSlots; slot++ {
+			if loc := h.model.TabPath(id, slot); !loc.IsZero() {
+				items = append(items, dialog.PathPickerItem{Path: loc.String()})
+			}
+		}
+	}
+	return items
+}
+
 // startPathPickerMissingScan bumps the path picker's missing-scan generation and starts a
 // background scan of every open item's path, so ApplyPathPickerMissing can later fill in
 // PathMissing without blocking dialog open on stats (see StartPathsMissingScan).
@@ -404,24 +423,26 @@ func (h *Handler) openPathPickerApply(purpose dialog.PathPickerPurpose, kind pat
 	h.startPathPickerMissingScan()
 }
 
-// openAllPathPicker opens the combined picker: pinned and history items synchronously, then
-// bookmarks merged in by applyBookmarkLoad once the worker read completes.
+// openAllPathPicker opens the combined picker: the tabs of both panels, pinned and history items
+// synchronously (a path keeps its first source), then bookmarks merged in by applyBookmarkLoad
+// once the worker read completes.
 func (h *Handler) openAllPathPicker(purpose dialog.PathPickerPurpose, fileFieldIndex int) {
 	pinned, _ := h.PathPickerItemsPinned()
 	history, _ := h.PathPickerItemsHistory()
-	seen := make(map[string]struct{}, len(pinned)+len(history))
+	seen := make(map[string]struct{})
 	var items []dialog.PathPickerItem
-	for _, it := range pinned {
-		seen[it.Path] = struct{}{}
-		it.Source = "pinned"
-		items = append(items, it)
-	}
-	for _, it := range history {
-		if _, ok := seen[it.Path]; ok {
-			continue
+	for _, g := range []struct {
+		source string
+		items  []dialog.PathPickerItem
+	}{{"tab", h.PathPickerItemsTabs()}, {"pinned", pinned}, {"history", history}} {
+		for _, it := range g.items {
+			if _, ok := seen[it.Path]; ok {
+				continue
+			}
+			seen[it.Path] = struct{}{}
+			it.Source = g.source
+			items = append(items, it)
 		}
-		it.Source = "history"
-		items = append(items, it)
 	}
 	h.pathPickerMissingGen++
 	gen := h.pathPickerMissingGen

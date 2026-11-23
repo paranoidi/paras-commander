@@ -8,8 +8,10 @@ completion dropdown.
 ## Path pickers
 
 Typing `*` (or `|`) in a path input opens a combined picker of bookmarks,
-history and pinned directories, each row tagged with its source; Enter fills
-the field. The single-source pickers (bookmarks, history, pinned) have their
+the [tabs](tabs.md) of both panels, history and pinned directories, each row
+tagged with its source; Enter fills the field. A panel with a single tab adds
+no tab rows, and a path that is also a bookmark is listed once, as the
+bookmark. The single-source pickers (bookmarks, history, pinned) have their
 own shortcuts. Both keys are configurable under `[dialog.input]`; `|` is a legal filename character, so unbind it
 there if you need to type it.
 

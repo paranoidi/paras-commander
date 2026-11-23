@@ -40,7 +40,7 @@ Readline-style editing in every dialog text field. Kills go to one shared kill b
 | `M-u` / `M-l` | Upper- / lowercase to end of word |
 | `M-t` | Capitalize word (`M-c` is Cancel) |
 | `C-r`, `C-d` | Restore the field's default value |
-| `*`, `\|` | In path fields: pick from bookmarks, history and pins |
+| `*`, `\|` | In path fields: pick from bookmarks, tabs, history and pins |
 
 Inside Help (`F1`), `F2` lists these too.
 

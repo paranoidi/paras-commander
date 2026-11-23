@@ -30,7 +30,7 @@ const (
 // PathPickerItem is one fuzzy-listed row with source, optional name, and filesystem path.
 type PathPickerItem struct {
 	ID     string // letter shortcut for jump-to-row (aa, ab, …)
-	Source string // "history", "fzf-marks", or "gnome"
+	Source string // "history", "pinned", "tab", "fzf-marks", or "gnome"
 	Name   string
 	Path   string
 	// PathMissing is true when the path does not exist on disk (or remote VFS).
