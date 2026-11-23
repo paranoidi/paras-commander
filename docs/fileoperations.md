@@ -150,7 +150,8 @@ Rsync has its own page: [Rsync](rsync.md). Symlinks, hard links, chmod and chown
 
 The destination field starts with the other panel's path; a leading `~` resolves against your home directory and a relative path against the active panel's directory. It supports path
 completion and the Bookmarks, History and Pinned pickers; `S-←` and
-`S-→` insert the active or inactive panel's path. While you type, the
+`S-→` insert the active or inactive panel's path, and `C-1` to `C-9` the
+path of that [tab](tabs.md) of the inactive panel. While you type, the
 panel whose directory matches the destination is outlined (in a warning colour
 for move). Move always asks for a destination; renaming in place is Rename.
 

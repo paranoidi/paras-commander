@@ -1101,7 +1101,7 @@ func (a *App) tryDispatchPanelLayout(actionID string) bool {
 			a.closeTab(a.model.ActivePanel)
 		}
 	default:
-		slot, ok := tabSlotOfAction(actionID)
+		slot, ok := keymap.PanelTabSlot(actionID)
 		if !ok {
 			return false
 		}

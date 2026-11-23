@@ -71,15 +71,24 @@ func tabCapsOf(styles theme.Theme) tabCaps {
 	return tabCaps{start, end}
 }
 
+// TabPath is the directory of slot (1-based) of panelID's bar; the zero Path is an unused slot
+// (or a slot out of range).
+func (m *Model) TabPath(panelID, slot int) pathloc.Path {
+	if slot < 1 || slot > config.TabSlots {
+		return pathloc.Path{}
+	}
+	if slot != m.Tabs[panelID].Active {
+		return m.Tabs[panelID].Paths[slot-1]
+	}
+	if panelID == SecondaryPanel {
+		return m.Secondary.Path
+	}
+	return m.Primary.Path
+}
+
 // tabLabel is the label of slot (1-based) of panelID's bar: the directory name, "/" at a root.
 func (m *Model) tabLabel(panelID, slot int) string {
-	loc := m.Tabs[panelID].Paths[slot-1]
-	if slot == m.Tabs[panelID].Active {
-		loc = m.Primary.Path
-		if panelID == SecondaryPanel {
-			loc = m.Secondary.Path
-		}
-	}
+	loc := m.TabPath(panelID, slot)
 	if loc.IsZero() {
 		return ""
 	}

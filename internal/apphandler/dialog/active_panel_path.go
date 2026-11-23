@@ -24,10 +24,10 @@ func DestinationShortcutFooterKeys(keys *keymap.Map, eligible bool) []menu.Funct
 	return out
 }
 
-// TryDestinationShortcut applies applyActive/applyInactive when ev matches a chord bound to
-// ActionDestinationActivePanel/ActionDestinationInactivePanel in keys, gated by eligible.
-// Shared by the transfer, flatten, and extract dialogs.
-func TryDestinationShortcut(ev *tcell.EventKey, keys *keymap.Map, eligible bool, applyActive, applyInactive func()) bool {
+// tryDestinationShortcut calls apply with the active or inactive panel path when ev matches a
+// chord bound to ActionDestinationActivePanel/ActionDestinationInactivePanel in keys, gated by
+// eligible. Shared by the transfer, flatten, and extract dialogs.
+func (h *Handler) tryDestinationShortcut(ev *tcell.EventKey, keys *keymap.Map, eligible bool, apply func(path string)) bool {
 	if keys == nil || !eligible {
 		return false
 	}
@@ -37,10 +37,10 @@ func TryDestinationShortcut(ev *tcell.EventKey, keys *keymap.Map, eligible bool,
 	}
 	switch id {
 	case keymap.ActionDestinationActivePanel:
-		applyActive()
+		apply(h.host.FocusedPanel().PathString())
 		return true
 	case keymap.ActionDestinationInactivePanel:
-		applyInactive()
+		apply(h.host.DestinationPanel().PathString())
 		return true
 	default:
 		return false
@@ -62,20 +62,13 @@ func (h *Handler) TransferDialogOverlayFooterKeys(keys *keymap.Map) []menu.Funct
 // or inactive panel path when the user presses a chord from [dialog.transfer]
 // while the destination row is focused.
 func (h *Handler) TryTransferDialogDestinationShortcut(ev *tcell.EventKey) bool {
-	return TryDestinationShortcut(ev, h.keysTransferDialog, h.transferDialogDestinationFooterEligible(),
-		h.applyTransferDestinationFromActivePanel, h.applyTransferDestinationFromInactivePanel)
+	return h.tryDestinationShortcut(ev, h.keysTransferDialog, h.transferDialogDestinationFooterEligible(),
+		h.applyTransferDestination)
 }
 
-func (h *Handler) applyTransferDestinationFromActivePanel() {
+func (h *Handler) applyTransferDestination(path string) {
 	d := &h.model.TransferDialog
-	d.Destination = TransferPrefilledDestination(h.host.FocusedPanel().PathString())
-	h.SyncPathFieldCompletion(&d.Destination, h.TransferDestinationTextWidth())
-	h.ArmTransferDestinationValidateTimer()
-}
-
-func (h *Handler) applyTransferDestinationFromInactivePanel() {
-	d := &h.model.TransferDialog
-	d.Destination = TransferPrefilledDestination(h.host.DestinationPanel().PathString())
+	d.Destination = TransferPrefilledDestination(path)
 	h.SyncPathFieldCompletion(&d.Destination, h.TransferDestinationTextWidth())
 	h.ArmTransferDestinationValidateTimer()
 }
@@ -94,20 +87,13 @@ func (h *Handler) FlattenDialogOverlayFooterKeys(keys *keymap.Map) []menu.Functi
 // panel path when the user presses a chord from [dialog.flatten] while the destination row is
 // focused.
 func (h *Handler) TryFlattenDialogDestinationShortcut(ev *tcell.EventKey) bool {
-	return TryDestinationShortcut(ev, h.keysFlattenDialog, h.flattenDialogDestinationFooterEligible(),
-		h.applyFlattenDestinationFromActivePanel, h.applyFlattenDestinationFromInactivePanel)
+	return h.tryDestinationShortcut(ev, h.keysFlattenDialog, h.flattenDialogDestinationFooterEligible(),
+		h.applyFlattenDestination)
 }
 
-func (h *Handler) applyFlattenDestinationFromActivePanel() {
+func (h *Handler) applyFlattenDestination(path string) {
 	d := &h.model.FlattenDialog
-	d.Destination = TransferPrefilledDestination(h.host.FocusedPanel().PathString())
-	h.SyncPathFieldCompletion(&d.Destination, h.TransferDestinationTextWidth())
-	h.ArmFlattenDestinationValidateTimer()
-}
-
-func (h *Handler) applyFlattenDestinationFromInactivePanel() {
-	d := &h.model.FlattenDialog
-	d.Destination = TransferPrefilledDestination(h.host.DestinationPanel().PathString())
+	d.Destination = TransferPrefilledDestination(path)
 	h.SyncPathFieldCompletion(&d.Destination, h.TransferDestinationTextWidth())
 	h.ArmFlattenDestinationValidateTimer()
 }
@@ -128,9 +114,8 @@ func (h *Handler) DestinationDialogOverlayFooterKeys(keys *keymap.Map) []menu.Fu
 // tryDestinationDialogShortcut sets the destination field to the active or inactive panel path
 // when the user presses a chord from [dialog.transfer] while the destination row is focused.
 func (h *Handler) tryDestinationDialogShortcut(ev *tcell.EventKey) bool {
-	return TryDestinationShortcut(ev, h.keysTransferDialog, h.destinationDialogFooterEligible(),
-		func() { h.applyDialogDestination(h.host.FocusedPanel().PathString()) },
-		func() { h.applyDialogDestination(h.host.DestinationPanel().PathString()) })
+	return h.tryDestinationShortcut(ev, h.keysTransferDialog, h.destinationDialogFooterEligible(),
+		h.applyDialogDestination)
 }
 
 func (h *Handler) applyDialogDestination(path string) {

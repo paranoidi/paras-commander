@@ -1,6 +1,10 @@
 package keymap
 
-import "github.com/paranoidi/paras-commander/internal/config"
+import (
+	"slices"
+
+	"github.com/paranoidi/paras-commander/internal/config"
+)
 
 // Action identifiers are the keybindings.toml keys (single-stroke bindings only in v1).
 const (
@@ -423,6 +427,12 @@ const (
 var PanelTabActions = [config.TabSlots]string{
 	"panel.tab-1", "panel.tab-2", "panel.tab-3", "panel.tab-4", "panel.tab-5",
 	"panel.tab-6", "panel.tab-7", "panel.tab-8", "panel.tab-9",
+}
+
+// PanelTabSlot returns the slot (1-based) a panel.tab-N action selects.
+func PanelTabSlot(actionID string) (slot int, ok bool) {
+	i := slices.Index(PanelTabActions[:], actionID)
+	return i + 1, i >= 0
 }
 
 // KnownActions lists action IDs accepted in keybindings.toml for the current app.

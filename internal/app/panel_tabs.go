@@ -1,11 +1,8 @@
 package app
 
 import (
-	"slices"
-
 	"github.com/paranoidi/paras-commander/internal/apphandler/meta"
 	"github.com/paranoidi/paras-commander/internal/config"
-	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -22,12 +19,6 @@ type panelTab struct {
 
 // noOtherTabMessage is the toast of closing a panel's only tab.
 const noOtherTabMessage = "No other tab"
-
-// tabSlotOfAction returns the slot (1-based) a panel.tab-N action selects.
-func tabSlotOfAction(actionID string) (int, bool) {
-	i := slices.Index(keymap.PanelTabActions[:], actionID)
-	return i + 1, i >= 0
-}
 
 // selectTab switches panelID to slot: a used slot is shown, an empty one is opened as a copy of
 // the current tab, the current slot is a no-op. Tabs exist in the browser only.

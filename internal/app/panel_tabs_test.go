@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // tabsApp builds an app over a directory holding the subdirectories orchard, lantern and willow,
@@ -381,5 +383,68 @@ func TestCtrlWInQuickFilterTypesNothing(t *testing.T) {
 		if got := usedSlots(app, ui.PrimaryPanel); len(got) != 2 {
 			t.Errorf("%s: used slots = %v, want two", ev.Name(), got)
 		}
+	}
+}
+
+func TestTabKeyInDialogPathFieldTypesInactivePanelTabPath(t *testing.T) {
+	app, screen, dir := tabsApp(t)
+	orchard, lantern := filepath.Join(dir, "orchard"), filepath.Join(dir, "lantern")
+	// Secondary: slot 1 at orchard (stored), slot 2 at lantern (shown). Primary stays active.
+	navigateTab(t, app, screen, ui.SecondaryPanel, orchard)
+	app.selectTab(ui.SecondaryPanel, 2)
+	settleTabLoads(t, app, screen)
+	navigateTab(t, app, screen, ui.SecondaryPanel, lantern)
+	p := app.focusedPanel()
+	for i := 0; i < p.VisibleEntryCount(); i++ {
+		if e, _, ok := p.VisibleEntry(i); ok && e.Name == "harbor.txt" {
+			p.Cursor = i
+		}
+	}
+	slotsBefore := usedSlots(app, ui.PrimaryPanel)
+
+	app.dialogCtrl.OpenCopyDialog()
+	if !app.model.TransferDialog.FocusOnDest() {
+		t.Fatal("copy dialog should focus the destination")
+	}
+	for i, want := range []string{orchard, lantern} {
+		app.handleKey(ctrlKey('1' + rune(i)))
+		if got := app.model.TransferDialog.Destination.Value; got != want+"/" {
+			t.Fatalf("C-%d: destination %q, want %q", i+1, got, want+"/")
+		}
+	}
+	app.handleKey(ctrlKey('5')) // unused slot: field unchanged, toast, no digit typed
+	if got := app.model.TransferDialog.Destination.Value; got != lantern+"/" {
+		t.Fatalf("C-5: destination %q, want it unchanged", got)
+	}
+	if got := app.model.Message; got != "Inactive panel has no tab 5" {
+		t.Fatalf("C-5: message %q", got)
+	}
+	// Off the path field the key leaves the destination alone.
+	app.model.TransferDialog.Focus = dlg.OK
+	app.handleKey(ctrlKey('1'))
+	if got := app.model.TransferDialog.Destination.Value; got != lantern+"/" {
+		t.Fatalf("C-1 on a button: destination %q, want it unchanged", got)
+	}
+	app.dialogCtrl.CloseTransferDialog()
+
+	p.SelectedPaths = map[string]bool{orchard: true}
+	app.dialogCtrl.OpenFlattenDialog()
+	app.handleKey(ctrlKey('1'))
+	if got := app.model.FlattenDialog.Destination.Value; got != orchard+"/" {
+		t.Fatalf("flatten: destination %q, want %q", got, orchard+"/")
+	}
+	app.dialogCtrl.CloseFlattenDialog()
+
+	p.SelectedPaths = nil
+	app.dispatch(keymap.ActionFileSymlink)
+	if !app.model.FileDialog.Open {
+		t.Fatalf("symlink dialog should be open, message %q", app.model.Message)
+	}
+	app.handleKey(ctrlKey('2'))
+	if f := app.dialogCtrl.FocusedField(); f == nil || f.Value != lantern+"/" {
+		t.Fatalf("symlink: focused field %+v, want %q", f, lantern+"/")
+	}
+	if got := usedSlots(app, ui.PrimaryPanel); !slices.Equal(got, slotsBefore) {
+		t.Fatalf("primary slots %v, want %v", got, slotsBefore)
 	}
 }
