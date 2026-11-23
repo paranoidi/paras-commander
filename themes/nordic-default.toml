@@ -67,7 +67,7 @@ special = "magenta"
 canceled = { fg = "fg", bold = true }
 
 [menu]
-dropdown = { fg = "fg", bg = "menu_bg" }
+dropdown.base = { fg = "fg", bg = "menu_bg" }
 dropdown.accent = { fg = "accent"}
 
 [message]
@@ -93,8 +93,8 @@ row.cursor.all_marked = { fg = "fg", bg = "file_cursor_bg", bold = true }
 full_dir_hidden = { fg = "fg" }
 
 [panel.active]
-header = { fg = "ink", bg = "header_bg", bold = true }
-usage.cursor = { fg = "file_cursor_fg", bg = "focus_bg" }  # tuned
+header.base = { fg = "ink", bg = "header_bg", bold = true }
+usage.cursor.base = { fg = "file_cursor_fg", bg = "focus_bg" }  # tuned
 usage.cursor.selected = { fg = "selected", bg = "focus_bg", bold = true }  # tuned
 
 [panel.inactive]
@@ -102,7 +102,7 @@ frame = { fg = "inactive_frame" }  # keep the dim frame: repair would brighten i
 usage.cursor.selected = { fg = "ink", bg = "highlight_bg", bold = true }
 
 [dialog.button]
-active_destructive = { fg = "ink", bg = "danger" }
+active_destructive.base = { fg = "ink", bg = "danger" }
 active_destructive.accent = { fg = "ink", bold = true }
 active_destructive.accent_alt = { fg = "ink", bold = true }
 

@@ -130,6 +130,21 @@ dropdown = { fg = "ink" }
 	assertStyleEqual(t, "menu.dropdown.accent", styleOf(t, got, "menu.dropdown.accent"), styleOf(t, def, "menu.dropdown.accent"))
 }
 
+func TestParseOverlayBaseSetsParentStyle(t *testing.T) {
+	got, err := parse([]byte(`name = "over"
+[menu]
+dropdown.base = { fg = "ink" }
+`))
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	def := Default()
+	if _, bg, _ := styleOf(t, got, "menu.dropdown").Decompose(); bg != tcell.ColorDefault {
+		t.Fatalf("menu.dropdown bg = %v, want none: .base replaces the style whole", bg)
+	}
+	assertStyleEqual(t, "menu.dropdown.accent", styleOf(t, got, "menu.dropdown.accent"), styleOf(t, def, "menu.dropdown.accent"))
+}
+
 func TestParseOverlayPaletteRolesAndIcons(t *testing.T) {
 	got, err := parse([]byte(`name = "over"
 [palette]
@@ -188,10 +203,13 @@ delete.gfx.0 = { fg = "fg" }
 
 func TestParseOverlayStaysStrict(t *testing.T) {
 	for name, body := range map[string]string{
-		"unknown style": "[footer]\nnope = { fg = \"fg\" }\n",
-		"hue colour":    "[footer]\nkey = { fg = \"yellow\" }\n",
-		"unknown field": "extra = 1\n",
-		"unknown role":  "[roles]\nnope = \"red\"\n",
+		"unknown style":                "[footer]\nnope = { fg = \"fg\" }\n",
+		"hue colour":                   "[footer]\nkey = { fg = \"yellow\" }\n",
+		"unknown field":                "extra = 1\n",
+		"unknown role":                 "[roles]\nnope = \"red\"\n",
+		"base not a table":             "[menu]\ndropdown.base = 1\n",
+		"style set twice":              "[menu]\ndropdown = { fg = \"ink\" }\ndropdown.base = { fg = \"fg\" }\n",
+		"style set twice, other order": "[menu]\ndropdown.base = { fg = \"fg\" }\ndropdown = { fg = \"ink\" }\n",
 	} {
 		if _, err := parse([]byte("name = \"bad\"\n" + body)); err == nil {
 			t.Errorf("%s: parse accepted the theme", name)

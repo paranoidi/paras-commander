@@ -2267,6 +2267,9 @@ func flattenStyleSpecs(prefix string, table map[string]any, specs map[string]sty
 		if !ok {
 			return fmt.Errorf("style %q must be a table", nextKey)
 		}
+		if key == "base" && prefix != "" {
+			nextKey = prefix // X.base sets style X (TOML cannot extend the inline table X)
+		}
 		if err := flattenStyleSpecs(nextKey, child, specs); err != nil {
 			return err
 		}
@@ -2278,6 +2281,9 @@ func flattenStyleSpecs(prefix string, table map[string]any, specs map[string]sty
 		spec, err := decodeStyleSpec(prefix, specFields)
 		if err != nil {
 			return err
+		}
+		if _, dup := specs[prefix]; dup {
+			return fmt.Errorf("style %q is set twice (as itself and as .base)", prefix)
 		}
 		specs[prefix] = spec
 	}

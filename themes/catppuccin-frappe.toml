@@ -64,7 +64,7 @@ error = "bright_red"
 special = "magenta"
 
 [menu]
-dropdown = { fg = "fg", bg = "menu_bg" }
+dropdown.base = { fg = "fg", bg = "menu_bg" }
 dropdown.accent = { fg = "accent"}
 dropdown.disabled = { fg = "info_columns" }  # surface2: greyed-out pulldown items sit well below the labels, as in the leader menu  # tuned
 
@@ -86,10 +86,10 @@ row.cursor.all_marked = { fg = "ink", bg = "file_cursor_bg", bold = true }
 row.cursor.keep = { fg = "ink", bg = "file_cursor_bg", bold = true }
 
 [panel.active]
-header = { fg = "ink", bg = "header_bg", bold = true }
+header.base = { fg = "ink", bg = "header_bg", bold = true }
 row.cursor.selected = { fg = "selected", bg = "file_cursor_bg", bold = true, icon = "file_cursor_fg" }  # keep yellow marked files on the cursor row: repair would swap it for ink  # tuned
 title = { fg = "special", bold = true }  # pink (magenta): the active panel title (path, Queue, Details, Operations) stands out  # tuned
-usage.cursor = { fg = "ink", bg = "highlight_bg" }  # tuned
+usage.cursor.base = { fg = "ink", bg = "highlight_bg" }  # tuned
 usage.cursor.selected = { fg = "ink", bg = "highlight_bg", bold = true }
 
 [panel.inactive]
@@ -97,16 +97,16 @@ frame = { fg = "inactive_frame" }  # keep the dim frame: repair would brighten i
 usage.cursor.selected = { fg = "ink", bg = "highlight_bg", bold = true }
 
 [panel.tab]
-active = { fg = "fg", bg = "file_cursor_dim", bold = true }  # surface0: the active tab  # tuned
+active.base = { fg = "fg", bg = "file_cursor_dim", bold = true }  # surface0: the active tab  # tuned
 active.number = { fg = "accent", bold = true }  # mauve slot digit  # tuned
-inactive = { fg = "muted", bg = "menu_bg" }  # crust: the other tabs, darker than the panel  # tuned
+inactive.base = { fg = "muted", bg = "menu_bg" }  # crust: the other tabs, darker than the panel  # tuned
 inactive.number = { fg = "accent", bold = true }  # mauve slot digit  # tuned
 blocked = { fg = "faint", bg = "menu_bg" }  # every tab while a dialog or menu has focus, crust like the inactive tabs  # tuned
 
 [panel.blocked]
 disk_usage_overview = { fg = "faint" }  # tuned
 frame = { fg = "faint" }  # tuned
-header = { fg = "faint", bold = true }  # tuned
+header.base = { fg = "faint", bold = true }  # tuned
 header.carousel = { fg = "faint", bg = "bg", bold = true }  # tuned
 row.directory = { fg = "faint", bold = true }  # tuned
 row.file = { fg = "faint" }  # tuned
@@ -119,7 +119,7 @@ title = { fg = "faint" }  # tuned
 title = { fg = "dialog_title", bold = true }  # lavender: dialog titles on the top border  # tuned
 
 [dialog.button]
-active_destructive = { fg = "ink", bg = "danger" }
+active_destructive.base = { fg = "ink", bg = "danger" }
 active_destructive.accent = { fg = "ink", bold = true }
 active_destructive.accent_alt = { fg = "accent_alt", bold = true }  # tuned
 

@@ -68,7 +68,7 @@ failed = { fg = "fg", bold = true }
 canceled = { fg = "fg", bold = true }
 
 [menu]
-dropdown = { fg = "fg", bg = "menu_bg" }
+dropdown.base = { fg = "fg", bg = "menu_bg" }
 dropdown.accent = { fg = "accent"}
 
 [menu.bar]
@@ -102,9 +102,9 @@ row.cursor.keep = { fg = "fg_strong", bg = "file_cursor_bg", bold = true }
 full_dir_hidden = { fg = "fg" }
 
 [panel.active]
-row.cursor = { fg = "file_cursor_fg", bg = "file_cursor_bg", icon = "file_cursor_fg" }  # keep snow storm text: repair would swap it for fg_strong  # tuned
+row.cursor.base = { fg = "file_cursor_fg", bg = "file_cursor_bg", icon = "file_cursor_fg" }  # keep snow storm text: repair would swap it for fg_strong  # tuned
 row.cursor.selected = { fg = "selected", bg = "file_cursor_bg", bold = true, icon = "file_cursor_fg" }  # keep yellow marked files on the cursor row  # tuned
-usage.cursor = { fg = "fg_strong", bg = "header_bg" }  # snow storm 3 on nord10, as the active header (3.5:1)  # tuned
+usage.cursor.base = { fg = "fg_strong", bg = "header_bg" }  # snow storm 3 on nord10, as the active header (3.5:1)  # tuned
 usage.cursor.selected = { fg = "selected", bg = "header_bg", bold = true }  # tuned
 
 [panel.inactive]
@@ -115,7 +115,7 @@ usage.cursor.selected = { fg = "ink", bg = "highlight_bg", bold = true }
 input.nomatch = { fg = "fg", bold = true }
 
 [dialog.button]
-active_destructive = { fg = "fg_strong", bg = "danger" }
+active_destructive.base = { fg = "fg_strong", bg = "danger" }
 active_destructive.accent = { fg = "fg_strong", bold = true }
 active_destructive.accent_alt = { fg = "accent_alt", bold = true }  # tuned
 

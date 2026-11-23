@@ -73,8 +73,8 @@ canceling = { fg = "fg", bold = true }
 completed = { fg = "fg", bold = true }
 
 [menu]
-status = { fg = "fg" }     # status-command text at top-left of menu bar (status.toml)
-dropdown = { fg = "fg", bg = "menu_bg" }
+status.base = { fg = "fg" }     # status-command text at top-left of menu bar (status.toml)
+dropdown.base = { fg = "fg", bg = "menu_bg" }
 dropdown.accent = { fg = "accent"}
 dropdown.disabled = { fg = "faint" }  # overlay0: greyed-out pulldown items sit well below the labels, as in the leader menu  # tuned
 dropdown.selected = { fg = "fg_strong", bg = "focus_bg", bold = true }
@@ -83,7 +83,7 @@ dropdown.selected = { fg = "fg_strong", bg = "focus_bg", bold = true }
 selected = { fg = "fg_strong", bg = "focus_bg", bold = true }
 
 [menu.progress]
-done = { fg = "fg" }
+done.base = { fg = "fg" }
 delete.gfx.2 = { fg = "fg" }
 delete.gfx.3 = { fg = "fg" }
 remove.gfx.1 = { fg = "fg" }
@@ -96,10 +96,10 @@ success_text = { fg = "fg" } # success line on a panel surface (Messages view ro
 success = { fg = "fg_strong", bg = "success" }
 
 [footer]
-hover = { fg = "fg_strong", bg = "focus_bg" }  # entry under the mouse pointer
+hover.base = { fg = "fg_strong", bg = "focus_bg" }  # entry under the mouse pointer
 
 [panel.row]
-cursor.range = { fg = "bg", bg = "selected", icon = "bg" }  # light text on the amber range row  # tuned
+cursor.range.base = { fg = "bg", bg = "selected", icon = "bg" }  # light text on the amber range row  # tuned
 cursor.range.selected = { fg = "bg", bg = "selected", bold = true, icon = "bg" }  # tuned
 selected = { fg = "selected", bold = true }  # marked files: the same amber on every row  # tuned
 symlink = { fg = "fg" }
@@ -149,7 +149,7 @@ potential = { fg = "fg" }
 row.cursor.selected = { fg = "selected", bg = "file_cursor_bg", bold = true, icon = "file_cursor_fg" }  # marked files: the same amber on the cursor row  # tuned
 row.cursor.unique = { fg = "fg_strong", bg = "success", icon = "ink" }
 title = { fg = "special", bold = true }  # pink (magenta): the active panel title (path, Queue, Details, Operations) stands out  # tuned
-usage.cursor = { fg = "ink", bg = "highlight_bg" }  # tuned
+usage.cursor.base = { fg = "ink", bg = "highlight_bg" }  # tuned
 usage.cursor.selected = { fg = "ink", bg = "highlight_bg", bold = true }
 
 [panel.target]
@@ -171,14 +171,14 @@ row.cursor.selected = { fg = "selected", bg = "file_cursor_dim", bold = true }  
 usage.cursor.selected = { fg = "ink", bg = "highlight_bg", bold = true }
 
 [panel.tab]
-active = { fg = "focus_fg", bg = "focus_bg", bold = true }  # keep the default backgrounds; the digit gets its own colours below  # tuned
+active.base = { fg = "focus_fg", bg = "focus_bg", bold = true }  # keep the default backgrounds; the digit gets its own colours below  # tuned
 active.number = { fg = "fg_strong", bold = true }  # black slot digit on the surface2 tab  # tuned
 inactive.number = { fg = "accent", bold = true }  # mauve slot digit  # tuned
 
 [panel.blocked]
 disk_usage_overview = { fg = "faint" }  # tuned
 frame = { fg = "faint" }  # tuned
-header = { fg = "faint", bold = true }  # tuned
+header.base = { fg = "faint", bold = true }  # tuned
 header.carousel = { fg = "faint", bg = "bg", bold = true }  # tuned
 row.directory = { fg = "faint", bold = true }  # tuned
 row.file = { fg = "faint" }  # tuned
@@ -188,22 +188,22 @@ text = { fg = "faint" }  # tuned
 title = { fg = "faint" }  # tuned
 
 [fuzzy]
-input = { fg = "fg", bold = true }
+input.base = { fg = "fg", bold = true }
 
 [dialog]
 title = { fg = "dialog_title", bold = true }  # lavender: dialog titles on the top border  # tuned
 accent_alt = { fg = "fg_strong", bold = true }
 
 [dialog.button]
-active = { fg = "fg_strong", bg = "button_focus_bg" }
+active.base = { fg = "fg_strong", bg = "button_focus_bg" }
 active.accent = { fg = "fg_strong", bold = true }
 active.accent_alt = { fg = "fg_strong", bold = true }
-active_destructive = { fg = "ink", bg = "danger" }
+active_destructive.base = { fg = "ink", bg = "danger" }
 active_destructive.accent = { fg = "ink", bold = true }
 active_destructive.accent_alt = { fg = "accent_alt", bold = true }  # tuned
 
 [dialog.option]
-active = { fg = "fg_strong", bold = true }
+active.base = { fg = "fg_strong", bold = true }
 selected = { fg = "fg_strong" }
 invalid = { fg = "fg_strong" }
 
@@ -230,7 +230,7 @@ info = { fg = "accent_alt" }  # rosewater info icon  # tuned
 [dialog.massrename]
 before.removed = { fg = "fg_strong", bold = true }
 before.replaced = { fg = "fg_strong", bold = true }
-after = { fg = "fg_strong" }
+after.base = { fg = "fg_strong" }
 after.added = { fg = "fg_strong", bold = true }
 
 [jobs.progress]

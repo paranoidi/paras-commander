@@ -82,7 +82,11 @@ func buildTestThemeBytes(name string, skip map[string]bool, overrides map[string
 		}
 		sort.Strings(keys)
 		for _, k := range keys {
-			fmt.Fprintf(&builder, "%s = %s\n", k, entries[k])
+			name := k
+			if i := sort.SearchStrings(keys, k+"."); i < len(keys) && strings.HasPrefix(keys[i], k+".") {
+				name += ".base" // also a parent of other keys: TOML cannot extend an inline table
+			}
+			fmt.Fprintf(&builder, "%s = %s\n", name, entries[k])
 		}
 		builder.WriteString("\n")
 	}

@@ -30,6 +30,7 @@ Inheritance works key by key:
 - A style entry replaces the default's style whole: `{ fg = "fg" }` does not keep the default's bold or background.
 - The progress light-bar gradients (`menu.progress.done.gfx.0` to `gfx.9`, and the `delete` and `remove` ones) are replaced as a set: if you define any step of a gradient, the default's steps for that gradient are dropped, so a shorter gradient stays short.
 - Unknown keys, and colors that are not roles in a style, are still errors in your file.
+- A style that also has child styles (the `dropdown` style of `[menu]` next to `dropdown.accent`, `dropdown.frame`, ...) is written with a `.base` suffix, such as `dropdown.base = { fg = "ink" }`, because TOML does not allow extending an inline table. `X.base` sets style X itself and leaves its children inherited. A theme that overrides only X may write `X = { ... }`, but one file must not set a style in both forms.
 
 ```toml
 name = "mine"

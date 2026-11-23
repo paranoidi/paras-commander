@@ -9,6 +9,10 @@ name = "default"
 # [roles] holds intents: a [palette] name, "#RRGGBB" or "default". Every style fg/bg/icon below
 # names a role, never a hue or a hex value, so a theme recolours the whole UI by editing [palette]
 # and [roles] only. A role left out takes its built-in default palette name (the ones listed here).
+#
+# A style that also has child styles is written `X.base = {...}` next to `X.child = {...}`: TOML
+# forbids extending an inline table. `X.base` sets style X itself; a theme that overrides only X may
+# write `X = {...}`, but not both forms in one file.
 [palette]
 black = 0
 red = 1
@@ -87,10 +91,9 @@ completed = { fg = "success", bold = true }
 
 [menu]                       # misc menu chrome
 detail = { fg = "fg" }
-status = { fg = "info" }     # status-command text at top-left of menu bar (status.toml)
+status.base = { fg = "info" }     # status-command text at top-left of menu bar (status.toml)
 status.separator = { fg = "muted" }  # glyph between and after status-command segments
-# dropdown is both a leaf style and a parent of .accent/.frame/.selected — keep dotted here
-dropdown = { fg = "ink", bg = "menu_bg" }
+dropdown.base = { fg = "ink", bg = "menu_bg" }
 dropdown.accent = { fg = "fg"}
 dropdown.disabled = { fg = "muted" }  # item with nothing to act on; fg only, on the dropdown fill
 dropdown.frame = { fg = "highlight_bg", bg = "menu_bg" }
@@ -104,7 +107,7 @@ alert = { fg = "error", bold = true }
 selected = { fg = "focus_fg", bg = "focus_bg", bold = true }
 
 [menu.progress]              # menu-bar aggregate progress
-done = { fg = "success" }
+done.base = { fg = "success" }
 done.gfx.0 = { fg = "fg" }          # light bar head (optional, gfx.0..gfx.9)
 done.gfx.1 = { fg = "success_strong" }   # light bar trail
 delete.gfx.0 = { fg = "error" }   # delete light bar head (optional, gfx.0..gfx.9)
@@ -132,9 +135,9 @@ sweep = { fg = "ink", bg = "inverse_bg" } # leading edge of a toast sweeping in
 
 [footer]
 key = { fg = "accent", bold = true }
-label = { fg = "fg" }
+label.base = { fg = "fg" }
 label.shift = { fg = "muted" }
-hover = { fg = "focus_fg", bg = "focus_bg" }  # entry under the mouse pointer
+hover.base = { fg = "focus_fg", bg = "focus_bg" }  # entry under the mouse pointer
 hover.active = { fg = "ink", bg = "highlight_bg" }  # its part a click presses (key + hint, or the shift word); its own bg keeps it distinct from the rest of the entry
 
 [panel]                      # panel-wide text
@@ -143,9 +146,9 @@ hint = { fg = "fg_strong", bold = true }
 empty = { fg = "muted" }  # "[empty]" text of empty lists
 
 [panel.row]                  # file-list row colors
-cursor.range = { fg = "ink", bg = "selected", icon = "ink" }  # cursor row while a range select is pending
+cursor.range.base = { fg = "ink", bg = "selected", icon = "ink" }  # cursor row while a range select is pending
 cursor.range.selected = { fg = "ink", bg = "selected", bold = true, icon = "ink" }
-range = { bg = "range_bg" }   # other rows a pending range select covers; background only, rows keep their text colors
+range.base = { bg = "range_bg" }   # other rows a pending range select covers; background only, rows keep their text colors
 range.unselect = { bg = "range_unselect_bg" }  # same, for a mouse drag that unselects them
 directory = { fg = "directory", bold = true }
 file = { fg = "fg" }
@@ -156,16 +159,16 @@ tree.connector = { fg = "muted" }
 
 [panel.row.mark]             # suffix marks on file rows
 selection_subtree = { fg = "selected" }
-new = { fg = "success_strong" }
+new.base = { fg = "success_strong" }
 new.previous = { fg = "attention" }
 new.older = { fg = "muted" }
 renamed = { fg = "info" }
 no_permission = { fg = "muted" }
 pinned = { fg = "special" }
 range_anchor = { fg = "selected" }
-other_match = { fg = "muted" }
+other_match.base = { fg = "muted" }
 other_match.cursor = { fg = "info" }
-job = { fg = "success" }
+job.base = { fg = "success" }
 job.read = { fg = "warning" }
 job.move = { fg = "danger" }
 job.delete = { fg = "danger" }
@@ -252,14 +255,14 @@ potential = { fg = "warning" }
 [panel.active]
 disk_usage_overview = { fg = "primary"}
 frame = { fg = "primary" }
-header = { fg = "fg_strong", bg = "header_bg", bold = true }
+header.base = { fg = "fg_strong", bg = "header_bg", bold = true }
 header.carousel = { fg = "fg", bg = "surface" }
-row.cursor = { fg = "file_cursor_fg", bg = "file_cursor_bg", icon = "file_cursor_fg" }
+row.cursor.base = { fg = "file_cursor_fg", bg = "file_cursor_bg", icon = "file_cursor_fg" }
 row.cursor.selected = { fg = "selected", bg = "file_cursor_bg", bold = true, icon = "file_cursor_fg" }
 row.cursor.unique = { fg = "ink", bg = "success", icon = "ink" }
 surface = { fg = "fg" }
 title = { fg = "fg", bold = true }
-usage.cursor = { fg = "ink", bg = "usage_cursor_bg" }
+usage.cursor.base = { fg = "ink", bg = "usage_cursor_bg" }
 usage.cursor.selected = { fg = "selected", bg = "highlight_bg", bold = true }
 
 [panel.target]
@@ -274,25 +277,25 @@ title = { fg = "warning", bold = true }
 frame = { fg = "warning" }
 
 [panel.carousel.inactive]
-row.cursor = { bg = "file_cursor_dim" }
+row.cursor.base = { bg = "file_cursor_dim" }
 row.cursor.selected = { fg = "selected", bg = "file_cursor_dim", bold = true }
 
 [panel.inactive]
 disk_usage_overview = { fg = "muted"}
 frame = { fg = "inactive_frame" }
-header = { fg = "fg_strong", bg = "inactive_header_bg", bold = true }
+header.base = { fg = "fg_strong", bg = "inactive_header_bg", bold = true }
 header.carousel = { fg = "faint", bg = "surface" }
-row.cursor = { bg = "file_cursor_dim" }
+row.cursor.base = { bg = "file_cursor_dim" }
 row.cursor.selected = { fg = "selected", bg = "file_cursor_dim", bold = true }
 surface = { fg = "fg" }
 title = { fg = "fg" }
-usage.cursor = { fg = "fg", bg = "file_cursor_dim" }
+usage.cursor.base = { fg = "fg", bg = "file_cursor_dim" }
 usage.cursor.selected = { fg = "selected", bg = "highlight_bg", bold = true }
 
 [panel.tab]                   # a panel's tab bar (more than one tab)
-active = { fg = "focus_fg", bg = "focus_bg", bold = true }
+active.base = { fg = "focus_fg", bg = "focus_bg", bold = true }
 active.number = { fg = "primary", bold = true }  # the slot digit; fg and attributes only, on the tab's own bg
-inactive = { fg = "fg", bg = "surface" }
+inactive.base = { fg = "fg", bg = "surface" }
 inactive.number = { fg = "attention", bold = true }
 blocked = { fg = "muted", bg = "surface" }  # every tab while a dialog or menu has focus; inactive.number colours the digits a dialog's path field accepts as keys
 # The non-space runes of the [icons.panel.tab] caps are drawn in the tab's own bg on the gap between tabs;
@@ -301,9 +304,9 @@ blocked = { fg = "muted", bg = "surface" }  # every tab while a dialog or menu h
 [panel.blocked]
 disk_usage_overview = { fg = "muted" }
 frame = { fg = "muted" }
-header = { fg = "muted", bold = true }
+header.base = { fg = "muted", bold = true }
 header.carousel = { fg = "muted", bg = "bg", bold = true }
-row.cursor = { fg = "fg", bg = "file_cursor_dim" }
+row.cursor.base = { fg = "fg", bg = "file_cursor_dim" }
 row.cursor.selected = { fg = "fg" }
 row.directory = { fg = "muted", bold = true }
 row.file = { fg = "muted" }
@@ -314,9 +317,9 @@ text = { fg = "muted" }
 title = { fg = "muted" }
 
 [fuzzy]
-highlight = { fg = "accent", bold = true }
+highlight.base = { fg = "accent", bold = true }
 highlight.cursor = { fg = "accent", bold = true }
-input = { fg = "attention", bold = true }
+input.base = { fg = "attention", bold = true }
 input.nomatch = { fg = "error", bold = true }
 
 [preview]                    # F3 fullscreen preview
@@ -342,30 +345,30 @@ search_icon = { fg = "faint", bg = "surface" }
 # "[ " / " ]" in the state's style and these are ignored. <state>.accent / <state>.accent_alt: the
 # shortcut letter on the focused button, plain and when it needs Alt (fg and bold over the face;
 # unfocused buttons use [dialog] accent / accent_alt).
-active = { fg = "focus_fg", bg = "button_focus_bg" }
+active.base = { fg = "focus_fg", bg = "button_focus_bg" }
 active.accent = { fg = "fg", bold = true }
 active.accent_alt = { fg = "accent_alt", bold = true }
 active.start = { fg = "button_focus_bg", bg = "surface" }
 active.end = { fg = "button_focus_bg", bg = "surface" }
-active_destructive = { fg = "fg", bg = "danger" }
+active_destructive.base = { fg = "fg", bg = "danger" }
 active_destructive.accent = { fg = "fg", bold = true }
 active_destructive.accent_alt = { fg = "accent_alt", bold = true }
 active_destructive.start = { fg = "danger", bg = "surface" }
 active_destructive.end = { fg = "danger", bg = "surface" }
-inactive = { fg = "fg", bg = "button_bg" }
+inactive.base = { fg = "fg", bg = "button_bg" }
 inactive.start = { fg = "button_bg", bg = "surface" }
 inactive.end = { fg = "button_bg", bg = "surface" }
 
 [dialog.input]
-active = { fg = "fg_strong", bold = true }
+active.base = { fg = "fg_strong", bold = true }
 active.error = { fg = "danger" }
 active.placeholder = { fg = "muted" }
-inactive = { fg = "fg", bg = "bg" }
+inactive.base = { fg = "fg", bg = "bg" }
 inactive.error = { fg = "danger", bg = "bg" }
 inactive.placeholder = { fg = "muted", bg = "bg" }
 
 [dialog.option]
-active = { fg = "selected", bold = true }
+active.base = { fg = "selected", bold = true }
 active.selected = { fg = "fg_strong", bold = true }
 inactive = { fg = "fg" }
 selected = { fg = "selected" }
@@ -395,9 +398,9 @@ section = { fg = "info", bold = true }
 key     = { fg = "accent", bold = true }
 
 [dialog.completion]        # path completion dropdown (see docs/path-completion.md)
-item          = { fg = "fg", bg = "bg" }
+item.base     = { fg = "fg", bg = "bg" }
 item.selected = { fg = "focus_fg", bg = "focus_bg", bold = true }
-match         = { fg = "selected", bg = "bg", bold = true }
+match.base    = { fg = "selected", bg = "bg", bold = true }
 match.selected = { fg = "focus_fg", bg = "focus_bg", bold = true, underline = true }
 
 [tooltip]                  # explanation box of the focused dialog widget (dlg Item.Tooltip)
@@ -405,16 +408,16 @@ text = { fg = "ink", bg = "inverse_bg" }
 info = { fg = "primary" }       # foreground of the info icon ([icons.dialog] info) on the box
 
 [dialog.massrename]
-before = { fg = "fg" }
+before.base = { fg = "fg" }
 before.removed = { fg = "danger", bold = true }
 before.replaced = { fg = "warning", bold = true }
-after = { fg = "warning" }
+after.base = { fg = "warning" }
 after.added = { fg = "success", bold = true }
 after.error = { fg = "error", bold = true }
 
 [jobs]                       # jobs list row text
-row = { fg = "fg" }
-header = { fg = "fg_strong", bold = true }  # Queue column header row (Type, Status, ...), Queue pane focused
+row.base = { fg = "fg" }
+header.base = { fg = "fg_strong", bold = true }  # Queue column header row (Type, Status, ...), Queue pane focused
 header.inactive = { fg = "fg_strong", bold = true }  # the same row while another pane is focused
 row.hover = { fg = "fg_strong", bg = "surface" }  # queue row under the mouse pointer
 
