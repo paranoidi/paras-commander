@@ -90,7 +90,7 @@ func (h *Handler) lookupPathPickerAction(ev *tcell.EventKey) (string, bool) {
 func (h *Handler) applyTabPath(slot int) {
 	loc := h.model.TabPath(h.host.DestinationPanelID(), slot)
 	if loc.IsZero() {
-		h.host.SetTransientMessage(fmt.Sprintf("Inactive panel has no tab %d", slot), ui.MessageUrgencyInfo)
+		h.host.SetTransientMessage(fmt.Sprintf("Inactive panel has no tab %d", slot), ui.MessageUrgencyWarn)
 		return
 	}
 	path := loc.String()

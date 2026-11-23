@@ -416,8 +416,8 @@ func TestTabKeyInDialogPathFieldTypesInactivePanelTabPath(t *testing.T) {
 	if got := app.model.TransferDialog.Destination.Value; got != lantern+"/" {
 		t.Fatalf("C-5: destination %q, want it unchanged", got)
 	}
-	if got := app.model.Message; got != "Inactive panel has no tab 5" {
-		t.Fatalf("C-5: message %q", got)
+	if got := app.model.Message; got != "Inactive panel has no tab 5" || app.model.MessageUrgency != ui.MessageUrgencyWarn {
+		t.Fatalf("C-5: message %q urgency %v, want a warning", got, app.model.MessageUrgency)
 	}
 	// Off the path field the key leaves the destination alone.
 	app.model.TransferDialog.Focus = dlg.OK
