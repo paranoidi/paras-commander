@@ -12,7 +12,7 @@ Both act on the active panel. Close tab is also in the Command menu. All keys ar
 - **Switching.** A key whose slot is in use shows that tab. A key whose slot is empty opens a new tab there, a copy of the current one, and shows it. The key of the current slot does nothing.
 - **Closing.** The nearest lower used slot is shown, else the next higher one. Slots are not renumbered, so tabs 1 and 5 can exist with nothing between. Closing the only tab shows "No other tab". While you type a [quick filter](panel-filter.md) `C-w` is ignored; a tab key cancels the filter first, then switches.
 - **Mouse.** A left click on a tab focuses that panel and switches to it ([Mouse](mouse.md)).
-- **In dialogs.** In a path field of the copy, move, flatten, extract, rsync, symlink, hard link and Navigate to dialogs a tab key inserts the directory of that tab of the inactive panel, the one the operation targets. If that panel has no such tab the text stays as it is and the status line says so.
+- **In dialogs.** In a path field of the copy, move, flatten, extract, rsync, symlink, hard link and Navigate to dialogs a tab key inserts the directory of that tab of the inactive panel, the one the operation targets. While such a dialog is open that panel's tab numbers keep their color instead of being dimmed. If the panel has no such tab the text stays as it is and a warning says so.
 - **Both panels.** The panels have separate tabs. Opening, switching and closing tabs affects the active panel only.
 - **Session only.** Tabs are not saved; `pc` starts with one tab per panel.
 - **Views.** Tabs exist in the file browser. In the jobs, messages, compare and other views the tab keys do nothing.

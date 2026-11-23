@@ -13,6 +13,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func tabBarOf(active int, paths map[int]string) TabBar {
@@ -349,6 +350,45 @@ func TestRenderDrawsTabBarAndPartialPaintUpdatesLabel(t *testing.T) {
 	for _, x := range []int{2, inactiveX + 2} {
 		if _, st = cellAt(screen, layout, x); st != styles.PanelTabBlocked {
 			t.Fatalf("a blocked tab's digit at %d must stay in the blocked style", x)
+		}
+	}
+}
+
+func TestRenderTabNumbersLitWhileDialogTakesTabPaths(t *testing.T) {
+	const w, h = 80, 24
+	styles := capTheme(slantStart, slantEnd)
+	pathField := []dialog.FileDialogField{{Label: "Target", PathPicker: true}}
+	for name, tc := range map[string]struct {
+		open func(m *Model)
+		lit  bool
+	}{
+		"copy":          {func(m *Model) { m.TransferDialog.Open = true }, true},
+		"flatten":       {func(m *Model) { m.FlattenDialog.Open = true }, true},
+		"symlink":       {func(m *Model) { m.FileDialog = dialog.FileDialogState{Open: true, Fields: pathField} }, true},
+		"copy advanced": {func(m *Model) { m.TransferDialog.Open, m.TransferDialog.Advanced = true, true }, false},
+		"copy rename": {func(m *Model) {
+			m.TransferDialog.Open, m.TransferDialog.Phase = true, dialog.TransferPhaseSelfCopyRename
+		}, false},
+		"path picker":  {func(m *Model) { m.TransferDialog.Open, m.PathPicker.Open = true, true }, false},
+		"no path":      {func(m *Model) { m.FileDialog = dialog.FileDialogState{Open: true} }, false},
+		"active panel": {func(m *Model) { m.TransferDialog.Open, m.ActivePanel = true, PrimaryPanel }, false},
+	} {
+		screen := newTreeTestScreen(t, w, h)
+		model, layout := tabsModel(w)
+		model.ActivePanel = SecondaryPanel // the tabs are on the primary, inactive panel
+		tc.open(&model)
+		drawPanelTabs(screen, layout, model, styles, true, func(int) bool { return true })
+		for _, x := range []int{2, 14 + 2} { // the digits of both tabs
+			want := styles.PanelTabBlocked
+			if tc.lit {
+				want = styles.PanelTabNumberOn(false, want)
+			}
+			if _, st := cellAt(screen, layout, x); st != want {
+				t.Fatalf("%s: digit at %d = %v, want %v", name, x, st, want)
+			}
+		}
+		if _, st := cellAt(screen, layout, 4); st != styles.PanelTabBlocked {
+			t.Fatalf("%s: the label must stay blocked", name)
 		}
 	}
 }

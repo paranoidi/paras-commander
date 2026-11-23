@@ -13,6 +13,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // TabBar is what a panel's tab bar needs: the active slot (1-based, 0 before the app publishes
@@ -228,6 +229,20 @@ func (m *Model) panelTabBar(layout Layout, styles theme.Theme, panelID int) (Rec
 	return rect, tabSpans(rect.Width, bar, m.TabLabels, tabCapsOf(styles), func(slot int) string { return m.tabLabel(panelID, slot) })
 }
 
+// tabKeysInsertPath reports that the open dialog has a path field the tab keys fill with a tab
+// path of panelID, the inactive panel. It does not follow the focus inside the dialog: file
+// dialogs repaint only their own area on a focus move.
+func (m *Model) tabKeysInsertPath(panelID int) bool {
+	if panelID != m.inactivePanelID() || m.PathPicker.Open {
+		return false
+	}
+	if t := &m.TransferDialog; t.Open {
+		return t.Phase == dialog.TransferPhaseDestination && !t.Advanced
+	}
+	return m.FlattenDialog.Open ||
+		m.FileDialog.Open && slices.ContainsFunc(m.FileDialog.Fields, func(f dialog.FileDialogField) bool { return f.PathPicker })
+}
+
 // drawPanelTabs paints the tab bar of every panel in scope that has more than one tab, in the
 // row geom reserved for it. A pane without tabs leaves its row as the screen background.
 func drawPanelTabs(screen tcell.Screen, layout Layout, model Model, styles theme.Theme, chromeBlocked bool, inScope func(panelID int) bool) {
@@ -243,6 +258,7 @@ func drawPanelTabs(screen tcell.Screen, layout Layout, model Model, styles theme
 		if chromeBlocked {
 			active, inactive = styles.PanelTabBlocked, styles.PanelTabBlocked
 		}
+		numbersLit := model.tabKeysInsertPath(id)
 		// The gaps keep the screen background (as Render fills it), so each tab stands out.
 		_, gapBG, _ := styles.PanelInactiveSurface.Decompose()
 		gapStyle := tcell.StyleDefault.Background(gapBG)
@@ -253,13 +269,14 @@ func drawPanelTabs(screen tcell.Screen, layout Layout, model Model, styles theme
 			if isActive {
 				st = active
 			}
-			// A blocked bar stays one colour: no digit style, no cut mark.
+			// A blocked bar stays one colour, without digit style and cut mark, except for the
+			// digits whose keys work in the open dialog.
 			var spans []primitive.Span
-			if !chromeBlocked {
-				spans = []primitive.Span{{Start: sp.Num, End: sp.Num + 1, Style: styles.PanelTabNumberOn(isActive, st)}}
-				if sp.Cut >= 0 {
-					spans = append(spans, primitive.Span{Start: sp.Cut, End: sp.Cut + 1, Style: theme.CutMarkStyle(st)})
-				}
+			if !chromeBlocked || numbersLit {
+				spans = append(spans, primitive.Span{Start: sp.Num, End: sp.Num + 1, Style: styles.PanelTabNumberOn(isActive && !chromeBlocked, st)})
+			}
+			if !chromeBlocked && sp.Cut >= 0 {
+				spans = append(spans, primitive.Span{Start: sp.Cut, End: sp.Cut + 1, Style: theme.CutMarkStyle(st)})
 			}
 			// Cap glyphs take the tab's background as foreground on the gap; spaces stay in the
 			// tab's style. A tab with no background of its own cannot do that (a default
