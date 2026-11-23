@@ -134,14 +134,17 @@ func (s *Session) run(ctx context.Context) {
 		files []FileRecord
 		err   error
 	}
+	var skipped atomic.Bool
+	walk := s.opts.Walk
+	walk.OnSkip = func(string) { skipped.Store(true) }
 	pCh := make(chan walkResult, 1)
 	sCh := make(chan walkResult, 1)
 	go func() {
-		files, err := WalkRoot(ctx, s.primaryRoot, s.opts.Walk)
+		files, err := WalkRoot(ctx, s.primaryRoot, walk)
 		pCh <- walkResult{files: files, err: err}
 	}()
 	go func() {
-		files, err := WalkRoot(ctx, s.secondaryRoot, s.opts.Walk)
+		files, err := WalkRoot(ctx, s.secondaryRoot, walk)
 		sCh <- walkResult{files: files, err: err}
 	}()
 
@@ -206,6 +209,7 @@ func (s *Session) run(ctx context.Context) {
 			Rows:            classify(),
 			WalkedPrimary:   len(primary),
 			WalkedSecondary: len(secondary),
+			Skipped:         skipped.Load(),
 		})
 		return
 	}
@@ -338,5 +342,6 @@ func (s *Session) run(ctx context.Context) {
 		WalkedSecondary: len(secondary),
 		Hashed:          hashTotal,
 		HashTotal:       hashTotal,
+		Skipped:         skipped.Load(),
 	})
 }

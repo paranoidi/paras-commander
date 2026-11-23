@@ -96,17 +96,24 @@ func drawCompareView(
 	primitive.Text(screen, contentX, headerY, leftPathW, primaryHeader, headerStyle)
 	primitive.Text(screen, rightX, headerY, pathW, secondaryHeader, headerStyle)
 
+	// Replaces the row legend, which would only repeat Identical on every row.
+	identical := snap.Identical()
+	legend := ""
+	if identical {
+		legend = comparepkg.IdenticalLegend(snap, styles.IconCompareEqual())
+	}
+
 	// Same chrome math as file panels / dedup: title + path header + bottom frame.
 	visibleRows := PanelListRows(rect)
 	if visibleRows <= 0 {
-		drawCompareBottomLegend(screen, rect, layoutChrome, "", styles)
+		drawCompareBottomLegend(screen, rect, layoutChrome, legend, styles)
 		return
 	}
 
 	if len(rows) == 0 {
 		msg := compareEmptyMessage(snap)
 		primitive.Text(screen, contentX, y, contentW, msg, styles.JobsRow.Background(bg))
-		drawCompareBottomLegend(screen, rect, layoutChrome, "", styles)
+		drawCompareBottomLegend(screen, rect, layoutChrome, legend, styles)
 		return
 	}
 
@@ -211,8 +218,7 @@ func drawCompareView(
 		}
 	}
 
-	legend := ""
-	if view.Selected >= 0 && view.Selected < len(rows) {
+	if !identical && view.Selected >= 0 && view.Selected < len(rows) {
 		row := rows[view.Selected]
 		icon := compareStatusIcon(styles, row, view.RelocatedNames)
 		legend = comparepkg.RowLegend(row, icon)

@@ -23,6 +23,8 @@ Files are compared in parallel (`hash_concurrency`); rows show Pending or Hashin
 
 Compare includes hidden files and folders and gitignored files regardless of the panel's hidden-files setting; folders excluded from disk usage are still skipped.
 
+When every file is identical, the bottom border says **All files are identical** instead of describing the row, whichever filters are active. If folders were left out (excluded from disk usage, or unreadable) it says **Compared files are identical, some folders were skipped**. Only files are compared: empty directories, permissions and timestamps do not count.
+
 ## Keys
 
 | Key | Action |

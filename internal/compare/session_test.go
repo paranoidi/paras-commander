@@ -172,3 +172,46 @@ func TestSessionCloseOnIdleRootsReturns(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestSessionIdentical(t *testing.T) {
+	for _, tc := range []struct {
+		name            string
+		extra           string // file added to the primary side
+		identical, skip bool
+	}{
+		{name: "same trees", identical: true},
+		{name: "one extra file", extra: "walnut.txt"},
+		{name: "extra file in excluded folder", extra: "excluded/walnut.txt", identical: true, skip: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			p, s := t.TempDir(), t.TempDir()
+			for _, dir := range []string{p, s} {
+				writeFile(t, dir, "orchard/apple.txt", "apple")
+				writeFile(t, dir, "empty.txt", "")
+			}
+			if tc.extra != "" {
+				writeFile(t, p, tc.extra, "walnut")
+			}
+			done := make(chan Snapshot, 1)
+			sess := Start(context.Background(), mustFilePath(t, p), mustFilePath(t, s), Options{
+				Walk: WalkOptions{ShouldSkipDir: func(path string) bool { return filepath.Base(path) == "excluded" }},
+				OnUpdate: func(snap Snapshot) {
+					if snap.Phase == PhaseDone {
+						done <- snap
+					} else if snap.Identical() {
+						t.Error("Identical before the compare finished")
+					}
+				},
+			})
+			defer waitSessionClose(t, sess)
+			select {
+			case snap := <-done:
+				if snap.Identical() != tc.identical || snap.Skipped != tc.skip {
+					t.Fatalf("Identical = %v, Skipped = %v, want %v, %v", snap.Identical(), snap.Skipped, tc.identical, tc.skip)
+				}
+			case <-time.After(2 * time.Second):
+				t.Fatal("compare did not finish")
+			}
+		})
+	}
+}

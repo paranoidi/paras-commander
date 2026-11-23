@@ -688,3 +688,33 @@ func TestCompareStatusIconShowsRelocatedNameChoice(t *testing.T) {
 		t.Fatalf("non-relocated row: icon = %q, want equal", got)
 	}
 }
+
+func TestDrawCompareViewIdenticalLegend(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 14)
+
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 11},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 11},
+	}
+	rect := MergeTwinPanelRects(layout.Primary, layout.Secondary, SplitHorizontal)
+	snap := comparepkg.Snapshot{
+		PrimaryRoot:   pathloc.MustParse("/left-root"),
+		SecondaryRoot: pathloc.MustParse("/right-root"),
+		Phase:         comparepkg.PhaseDone,
+		Rows: []comparepkg.Row{
+			{Kind: comparepkg.KindEqual, PrimaryRel: "alpha.txt", SecondaryRel: "alpha.txt", HashDone: true},
+		},
+	}
+	// Listed rows, and a list emptied by the filters (rowTextAt drops spaces).
+	for _, rows := range [][]comparepkg.Row{snap.Rows, nil} {
+		drawCompareView(screen, layout, CompareViewState{}, compareViewData{Snap: snap, Rows: rows}, theme.Default(), false, "", SplitHorizontal)
+		if got := rowTextAt(screen, rect.X, rect.Y+rect.Height-1, rect.Width); !strings.Contains(got, "Allfilesareidentical") {
+			t.Fatalf("%d rows: bottom border = %q", len(rows), got)
+		}
+	}
+}

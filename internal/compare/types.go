@@ -106,7 +106,23 @@ type Snapshot struct {
 	WalkedSecondary int
 	Hashed          int
 	HashTotal       int
-	Err             string
+	// Skipped is set on a Done snapshot when the walk left something out (excluded or
+	// unreadable folders), so Rows do not cover both trees in full.
+	Skipped bool
+	Err     string
+}
+
+// Identical reports whether the finished compare found files and every one of them is equal.
+func (s Snapshot) Identical() bool {
+	if s.Phase != PhaseDone || len(s.Rows) == 0 {
+		return false
+	}
+	for _, row := range s.Rows {
+		if row.Kind != KindEqual || !row.HashDone || row.Err != "" {
+			return false
+		}
+	}
+	return true
 }
 
 // Filter is a bitmask of the row kinds visible in the UI. Skipped rows have no bit and stay hidden.

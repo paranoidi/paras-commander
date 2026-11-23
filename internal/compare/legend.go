@@ -2,6 +2,14 @@ package compare
 
 import "fmt"
 
+// IdenticalLegend describes a Snapshot.Identical result with the Equal icon.
+func IdenticalLegend(snap Snapshot, icon string) string {
+	if snap.Skipped {
+		return fmt.Sprintf("%s Compared files are identical, some folders were skipped", icon)
+	}
+	return fmt.Sprintf("%s All files are identical", icon)
+}
+
 // RowPending reports whether the row still awaits content hashing (disk icon in the UI).
 func RowPending(row Row) bool {
 	if row.HashDone || row.Kind == KindContentDiff || row.Err != "" {
