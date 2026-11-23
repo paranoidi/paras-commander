@@ -82,14 +82,14 @@ func (a *App) reconcileCopiesPanel() {
 
 // copiesPanelRows is the number of entry rows the view's panel shows.
 func (a *App) copiesPanelRows(layout ui.Layout) int {
-	_, rect := ui.CopiesRects(layout, a.model.ActivePanel)
+	_, rect := ui.CopiesRects(layout)
 	return ui.PanelListRows(rect)
 }
 
 // copiesVisibleRows is the number of rows the copies list shows.
 func (a *App) copiesVisibleRows() int {
 	width, height := a.screen.Size()
-	list, _ := ui.CopiesRects(a.layoutForTerminalSize(width, height), a.model.ActivePanel)
+	list, _ := ui.CopiesRects(a.layoutForTerminalSize(width, height))
 	return ui.PanelListRows(list)
 }
 

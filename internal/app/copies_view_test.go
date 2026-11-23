@@ -12,6 +12,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
@@ -284,12 +285,38 @@ func TestCopiesViewOpensCopyInBrowserPanel(t *testing.T) {
 	}
 }
 
+func TestCopiesViewListIsFirstPaneWhicheverPanelIsActive(t *testing.T) {
+	for _, swap := range []bool{false, true} {
+		for _, active := range []int{ui.PrimaryPanel, ui.SecondaryPanel} {
+			a, screen, dir := copiesAppWith(t, "meadow/harbor.txt")
+			a.model.SwapPanes = swap
+			if active != a.model.ActivePanel {
+				if err := a.panelByID(active).Load(dir); err != nil {
+					t.Fatal(err)
+				}
+				a.model.ActivePanel = active
+			}
+			openCopiesFor(t, a, screen, filepath.Join(dir, "meadow"))
+			a.render()
+			width, height := screen.Size()
+			list, panelRect := ui.CopiesRects(a.layoutForTerminalSize(width, height))
+			if list.X != 0 || panelRect.X < list.Width {
+				t.Fatalf("swap=%v active=%d: list %+v, panel %+v", swap, active, list, panelRect)
+			}
+			title := tcelltest.TextAt(screen, list.X, list.Y, list.Width)
+			if !strings.Contains(title, "Other copies of harbor.txt (1)") {
+				t.Fatalf("swap=%v active=%d: left title = %q", swap, active, title)
+			}
+		}
+	}
+}
+
 func TestCopiesViewMouseFocusesAndSelects(t *testing.T) {
 	a, screen, dir := copiesAppWith(t, "meadow/harbor.txt", "orchard/harbor.txt")
 	openCopiesFor(t, a, screen, filepath.Join(dir, "meadow"))
 	width, height := screen.Size()
 	layout := a.layoutForTerminalSize(width, height)
-	list, panelRect := ui.CopiesRects(layout, a.model.ActivePanel)
+	list, panelRect := ui.CopiesRects(layout)
 
 	// A click on the panel focuses it; a click on the second row focuses the list and selects it.
 	click(a, panelRect.X+3, ui.PanelListTop(panelRect), tcell.Button1)

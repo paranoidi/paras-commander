@@ -10,9 +10,8 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
-// CopiesViewState is the Other copies view: the copies of one file as a flat list in the active
-// panel's place and a real file-list panel (Model.CopiesPanel) beside it, on the directory of the
-// cursor copy.
+// CopiesViewState is the Other copies view: the copies of one file as a flat list in the first pane
+// and a real file-list panel (Model.CopiesPanel) in the second, on the directory of the cursor copy.
 type CopiesViewState struct {
 	// Open: the view is shown, or hidden behind the fullscreen viewer it opened. The embedded
 	// panel exists exactly while Open.
@@ -56,23 +55,23 @@ func (s *CopiesViewState) MarkedFiles() []UniqueFile {
 	return out
 }
 
-// CopiesRects are the list's and the embedded panel's rects: the list takes the active panel's
-// place and the panel the inactive one's, as in Find unique files. Single source for drawing,
-// visible-row counts and hit tests.
-func CopiesRects(layout Layout, activePanel int) (list, panelRect Rect) {
-	return UniqueRects(layout, activePanel)
+// CopiesRects are the list's and the embedded panel's rects: the list is always the first
+// (left/top) pane, whichever browser panel is active (auxiliary views ignore SwapPanes). Single
+// source for drawing, visible-row counts and hit tests.
+func CopiesRects(layout Layout) (list, panelRect Rect) {
+	return layout.Primary, layout.Secondary
 }
 
 // CopiesListEntryAt returns the copy row of the Other copies view drawn at (x, y).
 func CopiesListEntryAt(layout Layout, model *Model, x, y int) (int, bool) {
-	list, _ := CopiesRects(layout, model.ActivePanel)
+	list, _ := CopiesRects(layout)
 	view := &model.CopiesView
 	return auxListRowAt(list, view.Pane.ListScroll, len(view.Files), x, y)
 }
 
 // CopiesPanelEntryAt returns the visible entry of the Other copies view's panel drawn at (x, y).
 func CopiesPanelEntryAt(layout Layout, model *Model, x, y int) (int, bool) {
-	_, rect := CopiesRects(layout, model.ActivePanel)
+	_, rect := CopiesRects(layout)
 	return auxListRowAt(rect, model.CopiesPanel.ScrollOffset, model.CopiesPanel.VisibleEntryCount(), x, y)
 }
 
@@ -107,7 +106,7 @@ const (
 // drawCopiesView paints the copies list and the embedded panel.
 func drawCopiesView(screen tcell.Screen, layout Layout, model *Model, styles theme.Theme, chromeBlocked bool) {
 	view := &model.CopiesView
-	listRect, panelRect := CopiesRects(layout, model.ActivePanel)
+	listRect, panelRect := CopiesRects(layout)
 	drawCopiesList(screen, listRect, view, model, styles, chromeBlocked)
 	drawEmbeddedPanel(screen, panelRect, &model.CopiesPanel, model.CopiesPanelID, view.FocusPanel, model, styles, chromeBlocked)
 }

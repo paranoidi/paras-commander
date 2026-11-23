@@ -239,8 +239,8 @@ or modes to filter on.
 `M-O` shows where else the file under the cursor exists according to the index, in a full-screen
 view. It works on local and index panels, on files only.
 
-**The view.** A list titled "Other copies of name (N)" takes the active panel's place: one row
-per other copy with its name, its directory and its indexed size. The other panel's place shows a
+**The view.** A list titled "Other copies of name (N)" is always on the left (on top when stacked): one row
+per other copy with its name, its directory and its indexed size. The right side shows a
 real file panel on the directory of the copy under the cursor, with the file highlighted, so you can see
 what else is there. Moving the cursor in the list takes the panel to that copy's directory; what you
 do inside the panel (browse into a folder, move its cursor) stays until the list cursor moves again.
