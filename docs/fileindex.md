@@ -240,7 +240,8 @@ or modes to filter on.
 view. It works on local and index panels, on files only.
 
 **The view.** A list titled "Other copies of name (N)" is always on the left (on top when stacked), one
-path per other copy. The other side shows a
+path per other copy. A path too long for the list is shortened; the one under the cursor then also shows
+in full on the bottom border, across both panels. The other side shows a
 real file panel on the directory of the copy under the cursor, with the file highlighted, so you can see
 what else is there. Moving the cursor in the list takes the panel to that copy's directory; what you
 do inside the panel (browse into a folder, move its cursor) stays until the list cursor moves again.

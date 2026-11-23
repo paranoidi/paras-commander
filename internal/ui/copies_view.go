@@ -80,6 +80,30 @@ func drawCopiesView(screen tcell.Screen, layout Layout, model *Model, styles the
 	listRect, panelRect := CopiesRects(layout)
 	drawCopiesList(screen, listRect, view, model, styles, chromeBlocked)
 	drawEmbeddedPanel(screen, panelRect, &model.CopiesPanel, model.CopiesPanelID, view.FocusPanel, model, styles, chromeBlocked)
+	drawCopiesPathHint(screen, layout, listRect, view, model.UserHomeDir, styles, chromeBlocked)
+}
+
+// copiesListWidth is the text width of a row of the copies list drawn in rect.
+func copiesListWidth(rect Rect) int { return rect.Width - 4 }
+
+// drawCopiesPathHint paints the cursor copy's full path above the footer when its row shortens it,
+// as the file list does for a clipped cursor name too wide for its own bottom border (a row is as
+// wide as the border's label, so a path the row shortens never fits the border). It comes after
+// both panes, whose bottom borders it covers.
+func drawCopiesPathHint(screen tcell.Screen, layout Layout, rect Rect, view *CopiesViewState, home string, styles theme.Theme, chromeBlocked bool) {
+	sel := view.Pane.Selected
+	if view.FocusPanel || chromeBlocked || sel < 0 || sel >= len(view.Files) {
+		return
+	}
+	path := primitive.PathWithHomeTilde(view.Files[sel].Path, home)
+	full := primitive.FitPathForWidth(path, layout.Width-4) // corners and padding
+	if full == primitive.FitPathForWidth(path, copiesListWidth(rect)) {
+		return
+	}
+	// The embedded terminal takes no rows in a full-screen view.
+	drawCursorNameHintScreenFallback(screen, layout, &CursorNameHintFallback{
+		FullName: panelSelectionSizePadded(full), Style: styles.PanelChrome(true, false).Title,
+	}, false)
 }
 
 func drawCopiesList(screen tcell.Screen, rect Rect, view *CopiesViewState, model *Model, styles theme.Theme, chromeBlocked bool) {
@@ -97,7 +121,7 @@ func drawCopiesList(screen tcell.Screen, rect Rect, view *CopiesViewState, model
 		drawQuickFilterTitle(screen, chrome.TitleX, rect.Y, chrome.TitleWidth, view.Pane.Filter, styles)
 	}
 	bg := chrome.ContentBG
-	contentX, listW := rect.X+2, rect.Width-4
+	contentX, listW := rect.X+2, copiesListWidth(rect)
 	visibleRows := CopiesListRows(rect)
 	if visibleRows <= 0 {
 		return

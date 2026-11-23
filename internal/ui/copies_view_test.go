@@ -39,6 +39,38 @@ func TestDrawCopiesListShowsPlainPaths(t *testing.T) {
 	}
 }
 
+// A cursor path the list shortens shows in full above the footer, but only while the list has focus.
+func TestDrawCopiesPathHint(t *testing.T) {
+	const w, h = 80, 24
+	styles := theme.Default()
+	draw := func(path string, focusPanel, blocked bool, orientation SplitOrientation) string {
+		screen := newTreeTestScreen(t, w, h)
+		layout := CalculateLayoutWithOrientation(w, h, true, PanelPaneSplit{}, orientation, 0, 0, false, false)
+		model := &Model{}
+		model.CopiesView = CopiesViewState{Files: []UniqueFile{{Path: path}}, FocusPanel: focusPanel}
+		drawCopiesView(screen, layout, model, styles, blocked)
+		return tcelltest.TextAt(screen, 0, layout.Footer.Y-1, w)
+	}
+	long := "/srv/meadow/orchard/clover/juniper/lantern-harbor.txt"
+	if got := draw(long, false, false, SplitHorizontal); !strings.Contains(got, " "+long+" ") {
+		t.Errorf("no full path above the footer: %q", got)
+	}
+	for name, got := range map[string]string{
+		"panel focused": draw(long, true, false, SplitHorizontal),
+		"dialog open":   draw(long, false, true, SplitHorizontal),
+		"stacked":       draw(long, false, false, SplitVertical),
+		"path fits":     draw("/srv/lantern.txt", false, false, SplitHorizontal),
+	} {
+		if strings.Contains(got, "/srv") {
+			t.Errorf("%s: hint shown: %q", name, got)
+		}
+	}
+	tooLong := "/" + strings.Repeat("meadow/", 14) + "lantern.txt"
+	if got := draw(tooLong, false, false, SplitHorizontal); !strings.Contains(got, "lantern.txt") {
+		t.Errorf("a path wider than the screen lost its name: %q", got)
+	}
+}
+
 func TestCopiesViewMarksKeepBytes(t *testing.T) {
 	view := &CopiesViewState{Files: []UniqueFile{{Path: "/a/x", Size: 5}, {Path: "/b/x", Size: 7}}}
 	view.SetMark(view.Files[0], true)
