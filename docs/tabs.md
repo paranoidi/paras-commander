@@ -34,15 +34,38 @@ Switching to a tab re-reads its directory, so a tab always shows the current con
 When a panel has more than one tab, a row of tabs appears above its frame:
 
 ```
- 1 projects   2 docs   5 /
+◢ 1 projects ◣ ◢ 2 docs ◣ ◢ 5 / ◣
 ```
+
+The slanted ends are Nerd Font glyphs (drawn here with similar plain triangles); without Nerd Font icons the tabs are square, ` 1 projects   2 docs   5 / `.
 
 - **Side by side:** one row between the menu bar and the panels, shown whenever a visible panel has more than one tab. The tabs of each panel sit over its own column, and both panels move down one row so their frames stay aligned.
 - **Stacked:** the row sits directly above each panel that has more than one tab.
-- A tab shows its slot number and, with `tab_labels` on, its directory name (`/` at the root). The active tab is highlighted.
-- When the labels do not fit, the longest are cut from the right with `…` until they share one width. Below four cells a label is dropped and only the numbers remain. If even those do not fit, the tabs after the last one that fits are left out; the active tab always stays.
+- A tab is a start cap, its slot number and, with `tab_labels` on, its directory name (`/` at the root), and an end cap. The active tab is highlighted. A click anywhere on a tab, caps included, selects it.
+- When the labels do not fit, the longest are cut from the right with `…` until they share one width. Below four cells a label is dropped and only the numbers remain. If the numbers with their caps do not fit, the tabs become square (` 1 `); if even those do not fit, the tabs after the last one that fits are left out. The active tab always stays.
 
 `tab_labels` in [`[ui]`](config.md#ui) turns the labels off. Colors are in the `[panel.tab]` theme section ([Themes](themes.md)).
+
+### Tab shape
+
+The caps come from the theme's `[icons.panel.tab]` `start` and `end`. Their spaces are part of the tab, so they are also its padding. The default theme draws slanted tabs; a theme can change that:
+
+```toml
+# Slanted (default): lower-right and lower-left triangles
+[icons.panel.tab]
+start = "\ue0ba "
+end = " \ue0b8"
+
+# Pill: half circles
+# start = "\ue0b6 "
+# end = " \ue0b4"
+
+# Square
+# start = " "
+# end = " "
+```
+
+A cap glyph is drawn in the tab's own background color on the gap between tabs, so the tab's colors need no extra keys; the spaces in a cap keep the tab's colors. A tab color without a background of its own gets a blank instead of the glyph. With `use_nerdfont_icons = false` in [`[ui]`](config.md#ui) the caps are plain spaces.
 
 ## Terminal support
 

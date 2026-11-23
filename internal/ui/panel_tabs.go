@@ -2,6 +2,7 @@ package ui
 
 import (
 	"slices"
+	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
@@ -45,13 +46,27 @@ func (m *Model) TabRows() (primary, secondary bool) {
 }
 
 // tabSpan is one drawn tab: its slot (1-based), the first cell relative to the bar's left edge,
-// its text (" N " or " N label ") and the rune index of the cut mark in text (-1 when the label
-// is whole or absent).
+// its text (start cap, "N" or "N label", end cap), the rune index of the slot digit (the start
+// cap is the runes before it), the rune index where the end cap begins, and the rune index of
+// the cut mark in text (-1 when the label is whole or absent).
 type tabSpan struct {
-	Slot int
-	X, W int
-	Text string
-	Cut  int
+	Slot  int
+	X, W  int
+	Text  string
+	Num   int
+	EndAt int
+	Cut   int
+}
+
+// tabCaps is [start, end] of the applied theme ([icons.panel.tab]).
+type tabCaps struct{ start, end string }
+
+// squareTabCaps are the caps of the " N " tab the layout falls back to before it drops tabs.
+var squareTabCaps = tabCaps{" ", " "}
+
+func tabCapsOf(styles theme.Theme) tabCaps {
+	start, end := styles.PanelTabCaps()
+	return tabCaps{start, end}
 }
 
 // tabLabel is the label of slot (1-based) of panelID's bar: the directory name, "/" at a root.
@@ -70,11 +85,12 @@ func (m *Model) tabLabel(panelID, slot int) string {
 }
 
 // tabSpans is the one layout of a tab bar width cells wide, shared by the painter and the click
-// hit test. Tabs are " N " or " N label ", one blank cell apart. When the full labels do not fit,
-// the longest shrink first to a common cap (primitive.TruncateRight, cells not runes); a cap
-// below config.TabLabelMinCells leaves slot numbers only; when even those overflow, the tabs
-// after the last that fits are dropped, keeping the active one.
-func tabSpans(width int, bar TabBar, labels bool, labelOf func(slot int) string) []tabSpan {
+// hit test. A tab is the start cap, "N" or "N label" and the end cap, the caps counted in cells,
+// one blank cell apart; the caps are part of the tab (and of its click area). The fit, in order:
+// full labels; the longest labels shrunk to a common cap (primitive.TruncateRight, cells not
+// runes) of at least config.TabLabelMinCells; slot numbers; slot numbers in square " N " tabs;
+// then the tabs after the last that fits are dropped, keeping the active one.
+func tabSpans(width int, bar TabBar, labels bool, caps tabCaps, labelOf func(slot int) string) []tabSpan {
 	var slots []int
 	for i := range bar.Paths {
 		if bar.used(i) {
@@ -90,14 +106,14 @@ func tabSpans(width int, bar TabBar, labels bool, labelOf func(slot int) string)
 			full[i] = labelOf(slot)
 		}
 	}
-	build := func(limit int) ([]tabSpan, int) {
+	build := func(caps tabCaps, limit int) ([]tabSpan, int) {
 		out := make([]tabSpan, 0, len(slots))
 		x := 0
 		for i, slot := range slots {
-			text, cut := tabText(slot, full[i], limit)
-			w := runewidth.StringWidth(text)
-			out = append(out, tabSpan{Slot: slot, X: x, W: w, Text: text, Cut: cut})
-			x += w + 1
+			sp := tabText(caps, slot, full[i], limit)
+			sp.X = x
+			out = append(out, sp)
+			x += sp.W + 1
 		}
 		return out, x - 1
 	}
@@ -106,34 +122,46 @@ func tabSpans(width int, bar TabBar, labels bool, labelOf func(slot int) string)
 		longest = max(longest, runewidth.StringWidth(l))
 	}
 	if longest > 0 {
-		if out, total := build(longest); total <= width {
+		if out, total := build(caps, longest); total <= width {
 			return out
 		}
 		for limit := longest - 1; limit >= config.TabLabelMinCells; limit-- {
-			if out, total := build(limit); total <= width {
+			if out, total := build(caps, limit); total <= width {
 				return out
 			}
 		}
 	}
-	out, total := build(0)
+	if out, total := build(caps, 0); total <= width {
+		return out
+	}
+	out, total := build(squareTabCaps, 0)
 	if total <= width {
 		return out
 	}
 	return dropTabsToFit(out, width, bar.Active)
 }
 
-// tabText is " N " (limit 0 or no label) or " N label " with label cut to limit cells.
-func tabText(slot int, label string, limit int) (text string, cut int) {
-	text = " " + string(rune('0'+slot)) + " "
-	if label == "" || limit <= 0 {
-		return text, -1
+// tabText lays out one tab (X unset): the caps around "N" (limit 0 or no label) or "N label" with
+// label cut to limit cells.
+func tabText(caps tabCaps, slot int, label string, limit int) tabSpan {
+	body := string(rune('0' + slot))
+	cut := -1
+	if label != "" && limit > 0 {
+		shown := primitive.TruncateRight(label, limit)
+		body += " " + shown
+		if shown != label {
+			cut = utf8.RuneCountInString(caps.start+body) - 1 // the ellipsis is TruncateRight's last rune
+		}
 	}
-	shown := primitive.TruncateRight(label, limit)
-	cut = -1
-	if shown != label {
-		cut = len([]rune(text+shown)) - 1 // the ellipsis is TruncateRight's last rune
+	text := caps.start + body + caps.end
+	return tabSpan{
+		Slot:  slot,
+		W:     runewidth.StringWidth(text),
+		Text:  text,
+		Num:   utf8.RuneCountInString(caps.start),
+		EndAt: utf8.RuneCountInString(caps.start + body),
+		Cut:   cut,
 	}
-	return text + shown + " ", cut
 }
 
 // dropTabsToFit keeps the leading tabs that fit width; when the active one is not among them, the
@@ -187,20 +215,46 @@ func drawPanelTabs(screen tcell.Screen, layout Layout, model Model, styles theme
 		// The gaps keep the screen background (as Render fills it), so each tab stands out.
 		_, gapBG, _ := styles.PanelInactiveSurface.Decompose()
 		primitive.Fill(screen, primitive.Rect{X: rect.X, Y: rect.Y, Width: rect.Width, Height: 1}, ' ', tcell.StyleDefault.Background(gapBG))
-		for _, sp := range tabSpans(rect.Width, model.Tabs[id], model.TabLabels, func(slot int) string { return model.tabLabel(id, slot) }) {
+		caps := tabCapsOf(styles)
+		gapStyle := tcell.StyleDefault.Background(gapBG)
+		for _, sp := range tabSpans(rect.Width, model.Tabs[id], model.TabLabels, caps, func(slot int) string { return model.tabLabel(id, slot) }) {
+			isActive := sp.Slot == model.Tabs[id].Active
 			st := inactive
-			if sp.Slot == model.Tabs[id].Active {
+			if isActive {
 				st = active
 			}
-			// The slot digit is rune 1 of " N " / " N label "; a blocked bar stays one colour.
+			// A blocked bar stays one colour: no digit style.
 			var spans []primitive.Span
 			if !chromeBlocked {
-				spans = []primitive.Span{{Start: 1, End: 2, Style: styles.PanelTabNumberOn(sp.Slot == model.Tabs[id].Active, st)}}
+				spans = []primitive.Span{{Start: sp.Num, End: sp.Num + 1, Style: styles.PanelTabNumberOn(isActive, st)}}
 			}
 			if sp.Cut >= 0 {
 				spans = append(spans, primitive.Span{Start: sp.Cut, End: sp.Cut + 1, Style: theme.CutMarkStyle(st)})
 			}
-			primitive.StyledText(screen, rect.X+sp.X, rect.Y, min(sp.W, rect.Width-sp.X), sp.Text, st, spans)
+			// Cap glyphs take the tab's background as foreground on the gap; spaces stay in the
+			// tab's style. A tab with no background of its own cannot do that (a default
+			// foreground would show a stray wedge), so its glyph cells are blanked afterwards.
+			_, tabBG, _ := st.Decompose()
+			runes := []rune(sp.Text)
+			var blanks []int // cells of glyph runes to blank
+			cell := 0
+			for i, r := range runes {
+				if (i < sp.Num || i >= sp.EndAt) && r != ' ' {
+					if tabBG == tcell.ColorDefault {
+						blanks = append(blanks, cell)
+					} else {
+						spans = append(spans, primitive.Span{Start: i, End: i + 1, Style: gapStyle.Foreground(tabBG)})
+					}
+				}
+				cell += runewidth.RuneWidth(r)
+			}
+			w := min(sp.W, rect.Width-sp.X)
+			primitive.StyledText(screen, rect.X+sp.X, rect.Y, w, sp.Text, st, spans)
+			for _, c := range blanks {
+				if c < w {
+					screen.SetContent(rect.X+sp.X+c, rect.Y, ' ', nil, gapStyle)
+				}
+			}
 		}
 	}
 }

@@ -26,7 +26,7 @@ func MenuBarMenuAt(layout Layout, model *Model, x, y int) (int, bool) {
 }
 
 // PanelTabAt returns the panel and slot (1-based) of the tab drawn at (x, y).
-func PanelTabAt(layout Layout, model *Model, x, y int) (panelID, slot int, ok bool) {
+func PanelTabAt(layout Layout, model *Model, styles theme.Theme, x, y int) (panelID, slot int, ok bool) {
 	for _, id := range [...]int{PrimaryPanel, SecondaryPanel} {
 		rect := layout.PrimaryTabs
 		if id == SecondaryPanel {
@@ -35,7 +35,7 @@ func PanelTabAt(layout Layout, model *Model, x, y int) (panelID, slot int, ok bo
 		if !rect.Contains(x, y) || model.Tabs[id].Count() < 2 {
 			continue
 		}
-		for _, sp := range tabSpans(rect.Width, model.Tabs[id], model.TabLabels, func(slot int) string { return model.tabLabel(id, slot) }) {
+		for _, sp := range tabSpans(rect.Width, model.Tabs[id], model.TabLabels, tabCapsOf(styles), func(slot int) string { return model.tabLabel(id, slot) }) {
 			if x >= rect.X+sp.X && x < rect.X+sp.X+sp.W {
 				return id, sp.Slot, true
 			}

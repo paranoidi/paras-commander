@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"maps"
 	"strings"
 	"testing"
 
@@ -28,6 +29,26 @@ func labelsFrom(paths map[int]string) func(int) string {
 	return func(slot int) string { return pathloc.MustParse(paths[slot]).Base() }
 }
 
+const (
+	slantStart = "\ue0ba "
+	slantEnd   = " \ue0b8"
+)
+
+var (
+	squareCaps = tabCaps{" ", " "}
+	slantCaps  = tabCaps{slantStart, slantEnd}
+)
+
+// capTheme is the default theme with Nerd Font icons on and the given tab caps.
+func capTheme(start, end string) theme.Theme {
+	th := theme.Default()
+	th.UseNerdfontIcons = true
+	th.Icons = maps.Clone(th.Icons)
+	th.Icons[theme.IconKeyPanelTabStart] = start
+	th.Icons[theme.IconKeyPanelTabEnd] = end
+	return th
+}
+
 func spanTexts(spans []tabSpan) []string {
 	var out []string
 	for _, s := range spans {
@@ -36,9 +57,13 @@ func spanTexts(spans []tabSpan) []string {
 	return out
 }
 
+func spansOf(width int, bar TabBar, labels bool, caps tabCaps, paths map[int]string) []tabSpan {
+	return tabSpans(width, bar, labels, caps, labelsFrom(paths))
+}
+
 func TestTabSpansFullLabelsWhenTheyFit(t *testing.T) {
 	paths := map[int]string{1: "/srv/orchard", 2: "/srv/lantern", 5: "/"}
-	spans := tabSpans(60, tabBarOf(1, paths), true, labelsFrom(paths))
+	spans := spansOf(60, tabBarOf(1, paths), true, squareCaps, paths)
 	want := []string{" 1 orchard ", " 2 lantern ", " 5 / "}
 	if got := spanTexts(spans); strings.Join(got, "|") != strings.Join(want, "|") {
 		t.Fatalf("tabs = %q, want %q", got, want)
@@ -46,45 +71,75 @@ func TestTabSpansFullLabelsWhenTheyFit(t *testing.T) {
 	if spans[1].X != spans[0].W+1 {
 		t.Fatalf("tabs must be one cell apart: %+v", spans)
 	}
+	spans = spansOf(60, tabBarOf(1, paths), true, slantCaps, paths)
+	want = []string{slantStart + "1 orchard" + slantEnd, slantStart + "2 lantern" + slantEnd, slantStart + "5 /" + slantEnd}
+	if got := spanTexts(spans); strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("slanted tabs = %q, want %q", got, want)
+	}
+	first := spans[0]
+	if first.Num != 2 || first.EndAt != 2+len("1 orchard") || first.Cut != -1 {
+		t.Fatalf("rune indexes of the digit and the end cap: %+v", first)
+	}
+	if first.W != runewidth.StringWidth(first.Text) || spans[1].X != first.W+1 {
+		t.Fatalf("caps must count in cells: %+v", spans)
+	}
 }
 
 func TestTabSpansLongestShrinkToCommonCap(t *testing.T) {
 	paths := map[int]string{1: "/srv/harbourmaster", 2: "/srv/ember", 3: "/srv/lanternkeeper"}
-	spans := tabSpans(36, tabBarOf(1, paths), true, labelsFrom(paths))
-	if len(spans) != 3 {
-		t.Fatalf("spans = %+v", spans)
-	}
-	last := spans[2]
-	if last.X+last.W > 36 {
-		t.Fatalf("bar overflows 36 cells: %+v", spans)
-	}
-	if spans[0].Cut < 0 || spans[2].Cut < 0 || spans[1].Cut >= 0 {
-		t.Fatalf("only the long labels may be cut: %+v", spans)
-	}
-	if runewidth.StringWidth(spans[0].Text) != runewidth.StringWidth(spans[2].Text) {
-		t.Fatalf("cut labels share one cap: %q vs %q", spans[0].Text, spans[2].Text)
-	}
-	if !strings.Contains(spans[1].Text, "ember") {
-		t.Fatalf("a short label must stay whole: %q", spans[1].Text)
-	}
-	r := []rune(spans[0].Text)
-	if r[spans[0].Cut] != '…' {
-		t.Fatalf("cut index %d points at %q, not the ellipsis", spans[0].Cut, string(r[spans[0].Cut]))
+	for _, caps := range []tabCaps{squareCaps, slantCaps} {
+		spans := spansOf(40, tabBarOf(1, paths), true, caps, paths)
+		if len(spans) != 3 {
+			t.Fatalf("spans = %+v", spans)
+		}
+		last := spans[2]
+		if last.X+last.W > 40 {
+			t.Fatalf("bar overflows 40 cells: %+v", spans)
+		}
+		if spans[0].Cut < 0 || spans[2].Cut < 0 || spans[1].Cut >= 0 {
+			t.Fatalf("only the long labels may be cut: %+v", spans)
+		}
+		if runewidth.StringWidth(spans[0].Text) != runewidth.StringWidth(spans[2].Text) {
+			t.Fatalf("cut labels share one cap: %q vs %q", spans[0].Text, spans[2].Text)
+		}
+		if !strings.Contains(spans[1].Text, "ember") {
+			t.Fatalf("a short label must stay whole: %q", spans[1].Text)
+		}
+		r := []rune(spans[0].Text)
+		if r[spans[0].Cut] != '…' {
+			t.Fatalf("caps %q: cut index %d points at %q, not the ellipsis", caps.start, spans[0].Cut, string(r[spans[0].Cut]))
+		}
+		if !strings.HasPrefix(spans[0].Text, caps.start) || !strings.HasSuffix(spans[0].Text, caps.end) {
+			t.Fatalf("a shrunk tab keeps its caps: %q", spans[0].Text)
+		}
 	}
 }
 
-func TestTabSpansNumbersOnlyBelowMinimumCap(t *testing.T) {
+func TestTabSpansFallbackOrderNumbersThenSquareNumbers(t *testing.T) {
 	paths := map[int]string{1: "/srv/harbourmaster", 2: "/srv/lanternkeeper", 3: "/srv/emberwillow"}
-	// Three numbers need 11 cells; a cap of config.TabLabelMinCells needs far more than 20.
-	spans := tabSpans(20, tabBarOf(1, paths), true, labelsFrom(paths))
-	if got := strings.Join(spanTexts(spans), "|"); got != " 1 | 2 | 3 " {
+	bar := tabBarOf(1, paths)
+	// Square tabs: three numbers need 11 cells; a cap of config.TabLabelMinCells needs far more than 20.
+	if got := strings.Join(spanTexts(spansOf(20, bar, true, squareCaps, paths)), "|"); got != " 1 | 2 | 3 " {
 		t.Fatalf("tabs = %q, want numbers only (min cap %d)", got, config.TabLabelMinCells)
+	}
+	// Slanted numbers are 5 cells each (17 in all); labels would need more than 17.
+	numbers := strings.Join([]string{slantStart + "1" + slantEnd, slantStart + "2" + slantEnd, slantStart + "3" + slantEnd}, "|")
+	if got := strings.Join(spanTexts(spansOf(17, bar, true, slantCaps, paths)), "|"); got != numbers {
+		t.Fatalf("tabs = %q, want slanted numbers %q", got, numbers)
+	}
+	// One cell less and the numbers turn square.
+	if got := strings.Join(spanTexts(spansOf(16, bar, true, slantCaps, paths)), "|"); got != " 1 | 2 | 3 " {
+		t.Fatalf("tabs = %q, want square numbers", got)
+	}
+	// Square numbers take 11 cells; below that tabs are dropped.
+	if got := spansOf(10, bar, true, slantCaps, paths); len(got) != 2 || got[0].Text != " 1 " {
+		t.Fatalf("tabs = %+v, want two square numbers", got)
 	}
 }
 
 func TestTabSpansLabelsOffShowsNumbers(t *testing.T) {
 	paths := map[int]string{1: "/srv/orchard", 2: "/srv/lantern"}
-	got := strings.Join(spanTexts(tabSpans(60, tabBarOf(1, paths), false, labelsFrom(paths))), "|")
+	got := strings.Join(spanTexts(spansOf(60, tabBarOf(1, paths), false, squareCaps, paths)), "|")
 	if got != " 1 | 2 " {
 		t.Fatalf("tabs = %q", got)
 	}
@@ -92,16 +147,23 @@ func TestTabSpansLabelsOffShowsNumbers(t *testing.T) {
 
 func TestTabSpansWideRunesCutOnCellBoundaries(t *testing.T) {
 	paths := map[int]string{1: "/srv/日本語のフォルダ名前", 2: "/srv/ember"}
-	for width := 14; width <= 40; width++ {
-		spans := tabSpans(width, tabBarOf(1, paths), true, labelsFrom(paths))
-		for _, s := range spans {
-			if s.X+s.W > width {
-				t.Fatalf("width %d: %+v overflows", width, spans)
-			}
-			if runewidth.StringWidth(s.Text) != s.W {
-				t.Fatalf("width %d: tab %q declares %d cells, is %d", width, s.Text, s.W, runewidth.StringWidth(s.Text))
+	wide := tabCaps{"＜", "＞"} // fullwidth: two cells each
+	for _, caps := range []tabCaps{squareCaps, slantCaps, wide} {
+		for width := 14; width <= 50; width++ {
+			spans := spansOf(width, tabBarOf(1, paths), true, caps, paths)
+			for _, s := range spans {
+				if s.X+s.W > width {
+					t.Fatalf("width %d: %+v overflows", width, spans)
+				}
+				if runewidth.StringWidth(s.Text) != s.W {
+					t.Fatalf("width %d: tab %q declares %d cells, is %d", width, s.Text, s.W, runewidth.StringWidth(s.Text))
+				}
 			}
 		}
+	}
+	spans := spansOf(60, tabBarOf(1, paths), true, wide, map[int]string{1: "/srv/ember", 2: "/srv/ember"})
+	if spans[0].Text != "＜1 ember＞" || spans[0].W != 4+len("1 ember") {
+		t.Fatalf("wide caps: %+v", spans[0])
 	}
 }
 
@@ -110,19 +172,21 @@ func TestTabSpansDropTabsKeepsActive(t *testing.T) {
 	for slot := 1; slot <= 9; slot++ {
 		paths[slot] = "/srv/ember"
 	}
-	for _, active := range []int{1, 4, 9} {
-		spans := tabSpans(14, tabBarOf(active, paths), true, labelsFrom(paths))
-		var slots []int
-		kept := false
-		for _, s := range spans {
-			slots = append(slots, s.Slot)
-			kept = kept || s.Slot == active
-			if s.X+s.W > 14 {
-				t.Fatalf("active %d: %+v overflows", active, spans)
+	for _, caps := range []tabCaps{squareCaps, slantCaps} {
+		for _, active := range []int{1, 4, 9} {
+			spans := spansOf(14, tabBarOf(active, paths), true, caps, paths)
+			var slots []int
+			kept := false
+			for _, s := range spans {
+				slots = append(slots, s.Slot)
+				kept = kept || s.Slot == active
+				if s.X+s.W > 14 {
+					t.Fatalf("active %d: %+v overflows", active, spans)
+				}
 			}
-		}
-		if !kept || len(spans) >= 9 {
-			t.Fatalf("active %d: kept slots %v, want a subset holding the active tab", active, slots)
+			if !kept || len(spans) >= 9 {
+				t.Fatalf("active %d: kept slots %v, want a subset holding the active tab", active, slots)
+			}
 		}
 	}
 }
@@ -157,85 +221,124 @@ func TestTabRowsOnlyForPanelsWithMoreThanOneTab(t *testing.T) {
 }
 
 func TestPanelTabAtMatchesDrawnSpans(t *testing.T) {
-	model, layout := tabsModel(80)
-	if layout.PrimaryTabs.Width == 0 {
-		t.Fatal("primary has tabs but no row")
-	}
-	spans := tabSpans(layout.PrimaryTabs.Width, model.Tabs[PrimaryPanel], model.TabLabels,
-		func(slot int) string { return model.tabLabel(PrimaryPanel, slot) })
-	if len(spans) != 2 {
-		t.Fatalf("spans = %+v", spans)
-	}
-	for _, sp := range spans {
-		for dx := 0; dx < sp.W; dx++ {
-			id, slot, ok := PanelTabAt(layout, &model, layout.PrimaryTabs.X+sp.X+dx, layout.PrimaryTabs.Y)
-			if !ok || id != PrimaryPanel || slot != sp.Slot {
-				t.Fatalf("cell %d of tab %d hit (%d,%d,%v)", dx, sp.Slot, id, slot, ok)
+	for _, styles := range []theme.Theme{theme.Default(), capTheme(slantStart, slantEnd), capTheme("\ue0b6 ", " \ue0b4")} {
+		model, layout := tabsModel(80)
+		if layout.PrimaryTabs.Width == 0 {
+			t.Fatal("primary has tabs but no row")
+		}
+		spans := tabSpans(layout.PrimaryTabs.Width, model.Tabs[PrimaryPanel], model.TabLabels, tabCapsOf(styles),
+			func(slot int) string { return model.tabLabel(PrimaryPanel, slot) })
+		if len(spans) != 2 {
+			t.Fatalf("spans = %+v", spans)
+		}
+		for _, sp := range spans {
+			// Every cell, the caps included, hits the tab.
+			for dx := 0; dx < sp.W; dx++ {
+				id, slot, ok := PanelTabAt(layout, &model, styles, layout.PrimaryTabs.X+sp.X+dx, layout.PrimaryTabs.Y)
+				if !ok || id != PrimaryPanel || slot != sp.Slot {
+					t.Fatalf("cell %d of tab %d hit (%d,%d,%v)", dx, sp.Slot, id, slot, ok)
+				}
 			}
 		}
-	}
-	gap := layout.PrimaryTabs.X + spans[0].W
-	if _, _, ok := PanelTabAt(layout, &model, gap, layout.PrimaryTabs.Y); ok {
-		t.Fatal("the blank cell between tabs is no tab")
-	}
-	if _, _, ok := PanelTabAt(layout, &model, layout.PrimaryTabs.X, layout.PrimaryTabs.Y+1); ok {
-		t.Fatal("below the bar is no tab")
-	}
-	// Secondary has one tab: its row is blank and not clickable.
-	if _, _, ok := PanelTabAt(layout, &model, layout.SecondaryTabs.X+1, layout.SecondaryTabs.Y); ok {
-		t.Fatal("a single tab shows no bar")
+		gap := layout.PrimaryTabs.X + spans[0].W
+		if _, _, ok := PanelTabAt(layout, &model, styles, gap, layout.PrimaryTabs.Y); ok {
+			t.Fatal("the blank cell between tabs is no tab")
+		}
+		if _, _, ok := PanelTabAt(layout, &model, styles, layout.PrimaryTabs.X, layout.PrimaryTabs.Y+1); ok {
+			t.Fatal("below the bar is no tab")
+		}
+		// Secondary has one tab: its row is blank and not clickable.
+		if _, _, ok := PanelTabAt(layout, &model, styles, layout.SecondaryTabs.X+1, layout.SecondaryTabs.Y); ok {
+			t.Fatal("a single tab shows no bar")
+		}
 	}
 }
 
-func TestRenderDrawsTabBarAndPartialPaintUpdatesLabel(t *testing.T) {
+func tabsScreen(t *testing.T, w, h int) tcell.SimulationScreen {
+	t.Helper()
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(screen.Fini)
-	const w, h = 80, 24
 	screen.SetSize(w, h)
+	return screen
+}
+
+// cellAt returns the rune and style at column x of the primary tab bar.
+func cellAt(screen tcell.SimulationScreen, layout Layout, x int) (string, tcell.Style) {
+	ch, st, _ := screen.Get(layout.PrimaryTabs.X+x, layout.PrimaryTabs.Y)
+	return ch, st
+}
+
+// wantCaps checks the cap cells of the tab at [x, x+w): glyph runes (the first and last cell)
+// take the tab's background as foreground on the gap background with no attributes, the padding
+// spaces stay in the tab's own style.
+func wantCaps(t *testing.T, screen tcell.SimulationScreen, layout Layout, x, w int, tab tcell.Style, gapBG tcell.Color, start, end string) {
+	t.Helper()
+	_, tabBG, _ := tab.Decompose()
+	glyph := func(cell int, want string) {
+		ch, st := cellAt(screen, layout, cell)
+		fg, bg, attrs := st.Decompose()
+		if ch != want || fg != tabBG || bg != gapBG || attrs != tcell.AttrNone {
+			t.Fatalf("cap cell %d = %q fg %v bg %v attrs %v, want %q fg %v on gap bg %v with no attributes", cell, ch, fg, bg, attrs, want, tabBG, gapBG)
+		}
+	}
+	space := func(cell int) {
+		ch, st := cellAt(screen, layout, cell)
+		if ch != " " || st != tab {
+			t.Fatalf("cap padding cell %d = %q %v, want a space in the tab style", cell, ch, st)
+		}
+	}
+	glyph(x, strings.TrimSpace(start))
+	space(x + 1)
+	space(x + w - 2)
+	glyph(x+w-1, strings.TrimSpace(end))
+}
+
+func TestRenderDrawsTabBarAndPartialPaintUpdatesLabel(t *testing.T) {
+	const w, h = 80, 24
+	screen := tabsScreen(t, w, h)
 	model, layout := tabsModel(w)
-	styles := theme.Default()
+	styles := capTheme(slantStart, slantEnd)
+	_, gapBG, _ := styles.PanelInactiveSurface.Decompose()
 
 	Render(screen, model, styles)
 	row := screenRowText(screen, layout.PrimaryTabs, layout.PrimaryTabs.Y)
-	if !strings.HasPrefix(row, " 1 orchard   3 willow ") {
+	if !strings.HasPrefix(row, slantStart+"1 orchard"+slantEnd+" "+slantStart+"3 willow"+slantEnd) {
 		t.Fatalf("tab row = %q", row)
 	}
-	_, st, _ := screen.Get(layout.PrimaryTabs.X, layout.PrimaryTabs.Y)
-	if st != styles.PanelTabActive {
-		t.Fatal("the active tab must use the active style")
+	// "◢ 1 orchard ◣" is 13 cells, the gap one, the second tab starts at 14.
+	const activeW, inactiveX, inactiveW = 13, 14, 12
+	wantCaps(t, screen, layout, 0, activeW, styles.PanelTabActive, gapBG, slantStart, slantEnd)
+	wantCaps(t, screen, layout, inactiveX, inactiveW, styles.PanelTabInactive, gapBG, slantStart, slantEnd)
+	if _, st := cellAt(screen, layout, activeW); func() bool { _, bg, _ := st.Decompose(); return bg != gapBG }() {
+		t.Fatal("the gap between tabs must keep the gap background")
 	}
-	_, st, _ = screen.Get(layout.PrimaryTabs.X+2, layout.PrimaryTabs.Y)
-	if st != styles.PanelTabActive {
-		t.Fatal("the active tab's label must keep the tab style")
+	if got := screenRowText(screen, layout.SecondaryTabs, layout.SecondaryTabs.Y); strings.TrimSpace(got) != "" {
+		t.Fatalf("a panel with one tab drew %q", got)
 	}
-	r, st, _ := screen.Get(layout.PrimaryTabs.X+1, layout.PrimaryTabs.Y)
+
+	// The digit is rune 2 of the active tab: number fg and attributes on the tab's background.
+	r, st := cellAt(screen, layout, 2)
 	wantFG, _, wantAttrs := styles.PanelTabActiveNumber.Decompose()
 	gotFG, gotBG, gotAttrs := st.Decompose()
 	_, tabBG, _ := styles.PanelTabActive.Decompose()
 	if r != "1" || gotFG != wantFG || gotAttrs != wantAttrs || gotBG != tabBG {
 		t.Fatalf("active digit %q = %v, want number fg/attrs on the tab bg", r, st)
 	}
-	inactiveX := layout.PrimaryTabs.X + len(" 1 orchard ") + 1
-	r, st, _ = screen.Get(inactiveX+1, layout.PrimaryTabs.Y)
+	if _, st = cellAt(screen, layout, 4); st != styles.PanelTabActive {
+		t.Fatal("the active tab's label must keep the tab style")
+	}
+	r, st = cellAt(screen, layout, inactiveX+2)
 	wantFG, _, wantAttrs = styles.PanelTabInactiveNumber.Decompose()
 	gotFG, gotBG, gotAttrs = st.Decompose()
 	_, tabBG, _ = styles.PanelTabInactive.Decompose()
 	if r != "3" || gotFG != wantFG || gotAttrs != wantAttrs || gotBG != tabBG {
 		t.Fatalf("inactive digit %q = %v, want number fg/attrs on the tab bg", r, st)
 	}
-	if _, st, _ = screen.Get(inactiveX+3, layout.PrimaryTabs.Y); st != styles.PanelTabInactive {
+	if _, st = cellAt(screen, layout, inactiveX+4); st != styles.PanelTabInactive {
 		t.Fatal("the inactive tab's label must keep the tab style")
-	}
-	_, st, _ = screen.Get(layout.PrimaryTabs.X+len(" 1 orchard "), layout.PrimaryTabs.Y)
-	_, gapBG, _ := st.Decompose()
-	if _, tabBG, _ := styles.PanelTabInactive.Decompose(); gapBG == tabBG {
-		t.Fatal("the gap between tabs must not have the tab background")
-	}
-	if got := screenRowText(screen, layout.SecondaryTabs, layout.SecondaryTabs.Y); strings.TrimSpace(got) != "" {
-		t.Fatalf("a panel with one tab drew %q", got)
 	}
 
 	// Navigating repaints only the panel; the label must follow the live path.
@@ -244,18 +347,120 @@ func TestRenderDrawsTabBarAndPartialPaintUpdatesLabel(t *testing.T) {
 		t.Fatal("partial paint declined")
 	}
 	row = screenRowText(screen, layout.PrimaryTabs, layout.PrimaryTabs.Y)
-	if !strings.HasPrefix(row, " 1 harbour   3 willow ") {
+	if !strings.HasPrefix(row, slantStart+"1 harbour"+slantEnd+" "+slantStart+"3 willow"+slantEnd) {
 		t.Fatalf("tab row after partial paint = %q", row)
 	}
+	wantCaps(t, screen, layout, 0, activeW, styles.PanelTabActive, gapBG, slantStart, slantEnd)
 
+	// A blocked bar: caps in the blocked tab's background, every other cell one style.
 	model.Menu.Open = true
 	Render(screen, model, styles)
-	_, st, _ = screen.Get(layout.PrimaryTabs.X+1, layout.PrimaryTabs.Y)
-	if st != styles.PanelTabBlocked {
-		t.Fatal("tabs must use the blocked style while a menu has focus")
+	wantCaps(t, screen, layout, 0, activeW, styles.PanelTabBlocked, gapBG, slantStart, slantEnd)
+	wantCaps(t, screen, layout, inactiveX, inactiveW, styles.PanelTabBlocked, gapBG, slantStart, slantEnd)
+	for _, x := range []int{2, inactiveX + 2} {
+		if _, st = cellAt(screen, layout, x); st != styles.PanelTabBlocked {
+			t.Fatalf("a blocked tab's digit at %d must stay in the blocked style", x)
+		}
 	}
-	_, st, _ = screen.Get(inactiveX+1, layout.PrimaryTabs.Y)
-	if st != styles.PanelTabBlocked {
-		t.Fatal("a blocked tab's digit must stay in the blocked style")
+}
+
+func TestRenderTabCutMarkFollowsCaps(t *testing.T) {
+	const w, h = 80, 24
+	screen := tabsScreen(t, w, h)
+	model, layout := tabsModel(w)
+	model.Primary.Path = pathloc.MustParse("/srv/harbourmasterlongname")
+	model.Tabs[PrimaryPanel] = tabBarOf(1, map[int]string{1: "/srv/x", 3: "/srv/willowlanternkeeper"})
+	styles := capTheme(slantStart, slantEnd)
+	Render(screen, model, styles)
+	spans := tabSpans(layout.PrimaryTabs.Width, model.Tabs[PrimaryPanel], true, slantCaps,
+		func(slot int) string { return model.tabLabel(PrimaryPanel, slot) })
+	if spans[0].Cut < 0 {
+		t.Fatalf("test needs a cut label: %+v", spans)
+	}
+	for _, sp := range spans {
+		ch, st := cellAt(screen, layout, sp.X+runewidth.StringWidth(string([]rune(sp.Text)[:sp.Cut])))
+		fg, _, _ := st.Decompose()
+		tab := styles.PanelTabInactive
+		if sp.Slot == 1 {
+			tab = styles.PanelTabActive
+		}
+		wantFG, _, _ := theme.CutMarkStyle(tab).Decompose()
+		if ch != "…" || fg != wantFG {
+			t.Fatalf("tab %d cut mark = %q fg %v, want ellipsis fg %v", sp.Slot, ch, fg, wantFG)
+		}
+	}
+}
+
+func TestRenderTabsWithoutNerdFontIconsAreSquare(t *testing.T) {
+	const w, h = 80, 24
+	screen := tabsScreen(t, w, h)
+	model, layout := tabsModel(w)
+	styles := theme.Default()
+	styles.UseNerdfontIcons = false
+	Render(screen, model, styles)
+	if row := screenRowText(screen, layout.PrimaryTabs, layout.PrimaryTabs.Y); !strings.HasPrefix(row, " 1 orchard   3 willow ") {
+		t.Fatalf("tab row = %q", row)
+	}
+	if _, st := cellAt(screen, layout, 0); st != styles.PanelTabActive {
+		t.Fatal("a square cap is a space in the tab style")
+	}
+}
+
+func TestRenderPillCapsOfCustomTheme(t *testing.T) {
+	const w, h = 80, 24
+	screen := tabsScreen(t, w, h)
+	model, layout := tabsModel(w)
+	styles := capTheme("\ue0b6 ", " \ue0b4")
+	_, gapBG, _ := styles.PanelInactiveSurface.Decompose()
+	Render(screen, model, styles)
+	if row := screenRowText(screen, layout.PrimaryTabs, layout.PrimaryTabs.Y); !strings.HasPrefix(row, "\ue0b6 1 orchard \ue0b4 \ue0b6 3 willow \ue0b4") {
+		t.Fatalf("tab row = %q", row)
+	}
+	wantCaps(t, screen, layout, 0, 13, styles.PanelTabActive, gapBG, "\ue0b6", "\ue0b4")
+	wantCaps(t, screen, layout, 14, 12, styles.PanelTabInactive, gapBG, "\ue0b6", "\ue0b4")
+}
+
+func TestRenderTabWithDefaultBackgroundBlanksCapGlyphs(t *testing.T) {
+	const w, h = 80, 24
+	screen := tabsScreen(t, w, h)
+	model, layout := tabsModel(w)
+	styles := capTheme(slantStart, slantEnd)
+	styles.PanelTabInactive = tcell.StyleDefault.Foreground(tcell.ColorWhite) // no background of its own
+	_, gapBG, _ := styles.PanelInactiveSurface.Decompose()
+	Render(screen, model, styles)
+	for _, x := range []int{14, 14 + 11} { // the inactive tab's start and end glyph cells
+		ch, st := cellAt(screen, layout, x)
+		if _, bg, _ := st.Decompose(); ch != " " || bg != gapBG {
+			t.Fatalf("cell %d = %q on %v, want a blank on the gap background %v", x, ch, bg, gapBG)
+		}
+	}
+	// The padding spaces and the label stay in the tab's style.
+	if ch, st := cellAt(screen, layout, 15); ch != " " || st != styles.PanelTabInactive {
+		t.Fatalf("padding = %q %v", ch, st)
+	}
+	if row := screenRowText(screen, layout.PrimaryTabs, layout.PrimaryTabs.Y); strings.ContainsAny(row[len(slantStart+"1 orchard"+slantEnd):], "\ue0ba\ue0b8") {
+		t.Fatalf("a cap glyph leaked onto a default-background tab: %q", row)
+	}
+}
+
+func TestRenderWideCapsKeepWidthsInStep(t *testing.T) {
+	const w, h = 80, 24
+	screen := tabsScreen(t, w, h)
+	model, layout := tabsModel(w)
+	styles := capTheme("＜", "＞")
+	_, gapBG, _ := styles.PanelInactiveSurface.Decompose()
+	Render(screen, model, styles)
+	ch, st := cellAt(screen, layout, 0)
+	fg, bg, _ := st.Decompose()
+	_, tabBG, _ := styles.PanelTabActive.Decompose()
+	if ch != "＜" || fg != tabBG || bg != gapBG {
+		t.Fatalf("wide start cap = %q fg %v bg %v", ch, fg, bg)
+	}
+	if ch, _ = cellAt(screen, layout, 2); ch != "1" {
+		t.Fatalf("digit after a two-cell cap = %q", ch)
+	}
+	id, slot, ok := PanelTabAt(layout, &model, styles, layout.PrimaryTabs.X+1, layout.PrimaryTabs.Y)
+	if !ok || id != PrimaryPanel || slot != 1 {
+		t.Fatalf("the second cell of a wide cap hit (%d,%d,%v)", id, slot, ok)
 	}
 }

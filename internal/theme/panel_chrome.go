@@ -2,6 +2,21 @@ package theme
 
 import "github.com/gdamore/tcell/v2"
 
+const (
+	IconKeyPanelTabStart = "panel.tab.start"
+	IconKeyPanelTabEnd   = "panel.tab.end"
+)
+
+// PanelTabCaps returns the strings drawn before and after a panel tab's "N" / "N label"
+// ([icons.panel.tab] start / end). They are not trimmed: their spaces are part of the tab. When
+// UseNerdfontIcons is false, returns the square caps " " / " " (the tab is " N label ").
+func (t Theme) PanelTabCaps() (start, end string) {
+	if !t.UseNerdfontIcons {
+		return " ", " "
+	}
+	return t.Icons[IconKeyPanelTabStart], t.Icons[IconKeyPanelTabEnd]
+}
+
 // PanelChrome holds resolved frame/title/surface/header styles for one panel chrome state.
 type PanelChrome struct {
 	Frame             tcell.Style

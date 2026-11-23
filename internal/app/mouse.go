@@ -646,7 +646,7 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 			return false, false
 		}
 	}
-	if id, slot, ok := ui.PanelTabAt(layout, &a.model, x, y); ok && pressed&tcell.Button1 != 0 {
+	if id, slot, ok := ui.PanelTabAt(layout, &a.model, a.styles, x, y); ok && pressed&tcell.Button1 != 0 {
 		a.focusPanelByMouse(id)
 		a.selectTab(id, slot)
 		a.render()
