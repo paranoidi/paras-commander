@@ -195,6 +195,11 @@ func CalculateLayout(width, height int, showMenuBar bool, split PanelPaneSplit) 
 
 // CalculateLayoutWithOrientation is the orientation-aware layout entry point.
 func CalculateLayoutWithOrientation(in LayoutInput) Layout {
+	return withTabRows(calculatePanes(in), in)
+}
+
+// calculatePanes is the layout before the tab-bar rows are taken off the panes.
+func calculatePanes(in LayoutInput) Layout {
 	width, height, showMenuBar, split, orientation := in.Width, in.Height, in.ShowMenuBar, in.Split, in.Orientation
 	layout := Layout{Width: width, Height: height}
 	minH := minHeight
@@ -252,22 +257,22 @@ func CalculateLayoutWithOrientation(in LayoutInput) Layout {
 		if split.SwapPanes {
 			layout.Secondary = Rect{X: 0, Y: menuY, Width: width, Height: secondaryH}
 			layout.Primary = Rect{X: 0, Y: menuY + secondaryH, Width: width, Height: primaryH}
-			return withTabRows(layout, in)
+			return layout
 		}
 		layout.Primary = Rect{X: 0, Y: menuY, Width: width, Height: primaryH}
 		layout.Secondary = Rect{X: 0, Y: menuY + primaryH, Width: width, Height: secondaryH}
-		return withTabRows(layout, in)
+		return layout
 	}
 
 	primaryW, secondaryW := mainPanelColumnWidths(width, split)
 	if split.SwapPanes {
 		layout.Secondary = Rect{X: 0, Y: menuY, Width: secondaryW, Height: panelAreaH}
 		layout.Primary = Rect{X: secondaryW, Y: menuY, Width: primaryW, Height: panelAreaH}
-		return withTabRows(layout, in)
+		return layout
 	}
 	layout.Primary = Rect{X: 0, Y: menuY, Width: primaryW, Height: panelAreaH}
 	layout.Secondary = Rect{X: primaryW, Y: menuY, Width: secondaryW, Height: panelAreaH}
-	return withTabRows(layout, in)
+	return layout
 }
 
 // withTabRows takes the tab-bar rows off the top of the panes (see LayoutInput.PrimaryTabs). It

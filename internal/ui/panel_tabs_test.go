@@ -254,17 +254,6 @@ func TestPanelTabAtMatchesDrawnSpans(t *testing.T) {
 	}
 }
 
-func tabsScreen(t *testing.T, w, h int) tcell.SimulationScreen {
-	t.Helper()
-	screen := tcell.NewSimulationScreen("UTF-8")
-	if err := screen.Init(); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(screen.Fini)
-	screen.SetSize(w, h)
-	return screen
-}
-
 // cellAt returns the rune and style at column x of the primary tab bar.
 func cellAt(screen tcell.SimulationScreen, layout Layout, x int) (string, tcell.Style) {
 	ch, st, _ := screen.Get(layout.PrimaryTabs.X+x, layout.PrimaryTabs.Y)
@@ -298,7 +287,7 @@ func wantCaps(t *testing.T, screen tcell.SimulationScreen, layout Layout, x, w i
 
 func TestRenderDrawsTabBarAndPartialPaintUpdatesLabel(t *testing.T) {
 	const w, h = 80, 24
-	screen := tabsScreen(t, w, h)
+	screen := newTreeTestScreen(t, w, h)
 	model, layout := tabsModel(w)
 	styles := capTheme(slantStart, slantEnd)
 	_, gapBG, _ := styles.PanelInactiveSurface.Decompose()
@@ -366,7 +355,7 @@ func TestRenderDrawsTabBarAndPartialPaintUpdatesLabel(t *testing.T) {
 
 func TestRenderTabCutMarkFollowsCaps(t *testing.T) {
 	const w, h = 80, 24
-	screen := tabsScreen(t, w, h)
+	screen := newTreeTestScreen(t, w, h)
 	model, layout := tabsModel(w)
 	model.Primary.Path = pathloc.MustParse("/srv/harbourmasterlongname")
 	model.Tabs[PrimaryPanel] = tabBarOf(1, map[int]string{1: "/srv/x", 3: "/srv/willowlanternkeeper"})
@@ -389,11 +378,21 @@ func TestRenderTabCutMarkFollowsCaps(t *testing.T) {
 			t.Fatalf("tab %d cut mark = %q fg %v, want ellipsis fg %v", sp.Slot, ch, fg, wantFG)
 		}
 	}
+
+	// A blocked bar stays one colour: the ellipsis keeps the blocked style.
+	model.Menu.Open = true
+	Render(screen, model, styles)
+	for _, sp := range spans {
+		ch, st := cellAt(screen, layout, sp.X+runewidth.StringWidth(string([]rune(sp.Text)[:sp.Cut])))
+		if ch != "…" || st != styles.PanelTabBlocked {
+			t.Fatalf("blocked tab %d cut mark = %q %v, want an ellipsis in the blocked style", sp.Slot, ch, st)
+		}
+	}
 }
 
 func TestRenderTabsWithoutNerdFontIconsAreSquare(t *testing.T) {
 	const w, h = 80, 24
-	screen := tabsScreen(t, w, h)
+	screen := newTreeTestScreen(t, w, h)
 	model, layout := tabsModel(w)
 	styles := theme.Default()
 	styles.UseNerdfontIcons = false
@@ -408,7 +407,7 @@ func TestRenderTabsWithoutNerdFontIconsAreSquare(t *testing.T) {
 
 func TestRenderPillCapsOfCustomTheme(t *testing.T) {
 	const w, h = 80, 24
-	screen := tabsScreen(t, w, h)
+	screen := newTreeTestScreen(t, w, h)
 	model, layout := tabsModel(w)
 	styles := capTheme("\ue0b6 ", " \ue0b4")
 	_, gapBG, _ := styles.PanelInactiveSurface.Decompose()
@@ -422,7 +421,7 @@ func TestRenderPillCapsOfCustomTheme(t *testing.T) {
 
 func TestRenderTabWithDefaultBackgroundBlanksCapGlyphs(t *testing.T) {
 	const w, h = 80, 24
-	screen := tabsScreen(t, w, h)
+	screen := newTreeTestScreen(t, w, h)
 	model, layout := tabsModel(w)
 	styles := capTheme(slantStart, slantEnd)
 	styles.PanelTabInactive = tcell.StyleDefault.Foreground(tcell.ColorWhite) // no background of its own
@@ -445,7 +444,7 @@ func TestRenderTabWithDefaultBackgroundBlanksCapGlyphs(t *testing.T) {
 
 func TestRenderWideCapsKeepWidthsInStep(t *testing.T) {
 	const w, h = 80, 24
-	screen := tabsScreen(t, w, h)
+	screen := newTreeTestScreen(t, w, h)
 	model, layout := tabsModel(w)
 	styles := capTheme("＜", "＞")
 	_, gapBG, _ := styles.PanelInactiveSurface.Decompose()

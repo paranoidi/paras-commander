@@ -2,6 +2,8 @@ package ui
 
 import (
 	"slices"
+	"sort"
+	"strconv"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -62,7 +64,7 @@ type tabSpan struct {
 type tabCaps struct{ start, end string }
 
 // squareTabCaps are the caps of the " N " tab the layout falls back to before it drops tabs.
-var squareTabCaps = tabCaps{" ", " "}
+var squareTabCaps = tabCaps{theme.PanelTabSquareCap, theme.PanelTabSquareCap}
 
 func tabCapsOf(styles theme.Theme) tabCaps {
 	start, end := styles.PanelTabCaps()
@@ -125,10 +127,16 @@ func tabSpans(width int, bar TabBar, labels bool, caps tabCaps, labelOf func(slo
 		if out, total := build(caps, longest); total <= width {
 			return out
 		}
-		for limit := longest - 1; limit >= config.TabLabelMinCells; limit-- {
-			if out, total := build(caps, limit); total <= width {
-				return out
-			}
+		// The bar never grows as the limit shrinks, so the widest limit that fits is searchable.
+		shrunk := func(i int) ([]tabSpan, int) { return build(caps, longest-1-i) }
+		limits := longest - config.TabLabelMinCells
+		i := sort.Search(limits, func(i int) bool {
+			_, total := shrunk(i)
+			return total <= width
+		})
+		if i < limits {
+			out, _ := shrunk(i)
+			return out
 		}
 	}
 	if out, total := build(caps, 0); total <= width {
@@ -144,7 +152,7 @@ func tabSpans(width int, bar TabBar, labels bool, caps tabCaps, labelOf func(slo
 // tabText lays out one tab (X unset): the caps around "N" (limit 0 or no label) or "N label" with
 // label cut to limit cells.
 func tabText(caps tabCaps, slot int, label string, limit int) tabSpan {
-	body := string(rune('0' + slot))
+	body := strconv.Itoa(slot)
 	cut := -1
 	if label != "" && limit > 0 {
 		shown := primitive.TruncateRight(label, limit)
@@ -197,15 +205,29 @@ func dropTabsToFit(spans []tabSpan, width, active int) []tabSpan {
 	return keep
 }
 
+// panelTabBar returns panelID's tab-bar row and its laid-out tabs, none when the panel shows no
+// bar. The one source for the painter and the click hit test.
+func (m *Model) panelTabBar(layout Layout, styles theme.Theme, panelID int) (Rect, []tabSpan) {
+	rect := layout.PrimaryTabs
+	if panelID == SecondaryPanel {
+		rect = layout.SecondaryTabs
+	}
+	bar := m.Tabs[panelID]
+	if rect.Width <= 0 || rect.Height <= 0 || bar.Count() < 2 {
+		return rect, nil
+	}
+	return rect, tabSpans(rect.Width, bar, m.TabLabels, tabCapsOf(styles), func(slot int) string { return m.tabLabel(panelID, slot) })
+}
+
 // drawPanelTabs paints the tab bar of every panel in scope that has more than one tab, in the
 // row geom reserved for it. A pane without tabs leaves its row as the screen background.
 func drawPanelTabs(screen tcell.Screen, layout Layout, model Model, styles theme.Theme, chromeBlocked bool, inScope func(panelID int) bool) {
 	for _, id := range [...]int{PrimaryPanel, SecondaryPanel} {
-		rect := layout.PrimaryTabs
-		if id == SecondaryPanel {
-			rect = layout.SecondaryTabs
+		if !inScope(id) {
+			continue
 		}
-		if rect.Width <= 0 || rect.Height <= 0 || !inScope(id) || model.Tabs[id].Count() < 2 {
+		rect, tabs := model.panelTabBar(layout, styles, id)
+		if len(tabs) == 0 {
 			continue
 		}
 		active, inactive := styles.PanelTabActive, styles.PanelTabInactive
@@ -214,22 +236,21 @@ func drawPanelTabs(screen tcell.Screen, layout Layout, model Model, styles theme
 		}
 		// The gaps keep the screen background (as Render fills it), so each tab stands out.
 		_, gapBG, _ := styles.PanelInactiveSurface.Decompose()
-		primitive.Fill(screen, primitive.Rect{X: rect.X, Y: rect.Y, Width: rect.Width, Height: 1}, ' ', tcell.StyleDefault.Background(gapBG))
-		caps := tabCapsOf(styles)
 		gapStyle := tcell.StyleDefault.Background(gapBG)
-		for _, sp := range tabSpans(rect.Width, model.Tabs[id], model.TabLabels, caps, func(slot int) string { return model.tabLabel(id, slot) }) {
+		primitive.Fill(screen, primitive.Rect{X: rect.X, Y: rect.Y, Width: rect.Width, Height: 1}, ' ', gapStyle)
+		for _, sp := range tabs {
 			isActive := sp.Slot == model.Tabs[id].Active
 			st := inactive
 			if isActive {
 				st = active
 			}
-			// A blocked bar stays one colour: no digit style.
+			// A blocked bar stays one colour: no digit style, no cut mark.
 			var spans []primitive.Span
 			if !chromeBlocked {
 				spans = []primitive.Span{{Start: sp.Num, End: sp.Num + 1, Style: styles.PanelTabNumberOn(isActive, st)}}
-			}
-			if sp.Cut >= 0 {
-				spans = append(spans, primitive.Span{Start: sp.Cut, End: sp.Cut + 1, Style: theme.CutMarkStyle(st)})
+				if sp.Cut >= 0 {
+					spans = append(spans, primitive.Span{Start: sp.Cut, End: sp.Cut + 1, Style: theme.CutMarkStyle(st)})
+				}
 			}
 			// Cap glyphs take the tab's background as foreground on the gap; spaces stay in the
 			// tab's style. A tab with no background of its own cannot do that (a default

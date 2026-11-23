@@ -48,8 +48,6 @@ func (s *State) Duplicate() State {
 
 	d.matchNames = &matchNamesCache{}
 	d.GitByPath = maps.Clone(s.GitByPath)
-	d.GitPending = false
-	d.gitStatusChildPending = 0
 	if s.ActiveEntryFilter != nil {
 		f := *s.ActiveEntryFilter
 		d.ActiveEntryFilter = &f
@@ -70,10 +68,8 @@ func (s *State) Duplicate() State {
 		d.RenameMarksByDir[dir] = maps.Clone(names)
 	}
 
-	d.ListingPending, d.ListingPendingPath, d.ShowLoadingIcon = false, "", false
-	d.SkipIndexDrift = false
-	d.indexDriftPending, d.indexListed = nil, nil
-	d.climbToExistingAncestor = false
+	d.clearPending()
+	d.indexListed = nil
 	d.ancestorClimbOrigin = pathloc.Path{}
 
 	d.TreeRoots = cloneTreeNodes(s.TreeRoots)
@@ -82,7 +78,6 @@ func (s *State) Duplicate() State {
 	d.treePriorChildren, d.treePrefetch = nil, nil
 	d.treeCursorFallback = slices.Clone(s.treeCursorFallback)
 	d.treeExpandQuiet = 0
-	d.treeExpandAllAuto = false
 
 	d.listingByPath, d.filteredIdx, d.filteredTreeShape, d.treeRows = nil, nil, nil, nil
 	d.rebuildListingByPath()
@@ -100,12 +95,28 @@ func (s *State) Duplicate() State {
 // Refresh returns early for a pending load to another directory, so a stale flag would block the
 // reload that follows.
 func (s *State) Park() {
+	s.clearPending()
+	s.abandonTreeChildLoads(false)
+}
+
+// clearPending resets every flag that marks a result as awaited.
+func (s *State) clearPending() {
 	s.ListingPending, s.ListingPendingPath, s.ShowLoadingIcon = false, "", false
 	s.GitPending, s.gitStatusChildPending = false, 0
 	s.indexDriftPending, s.SkipIndexDrift = nil, false
 	s.climbToExistingAncestor = false
-	s.abandonTreeChildLoads(false)
 	s.treeExpandAllAuto = false
+}
+
+// AdoptPanelSettings takes over from another tab's state what belongs to the panel, not to the
+// tab: the scroll settings, the disk usage idle sort, the strip tree mode and the selection stash.
+// Hidden-file visibility is panel-wide too, but changing it needs a reload (App.swapTab).
+func (s *State) AdoptPanelSettings(from *State) {
+	s.ScrollMode, s.ScrollEdgeMargin = from.ScrollMode, from.ScrollEdgeMargin
+	s.DiskUsageIdleSortEligible = from.DiskUsageIdleSortEligible
+	s.Strip.Tree = from.Strip.Tree
+	s.SelectionStashPaths = from.SelectionStashPaths
+	s.SelectionStashStripCursorPath = from.SelectionStashStripCursorPath
 }
 
 // cloneTreeNodes deep-copies a tree (nodes are mutated in place) with no node marked Loading: a

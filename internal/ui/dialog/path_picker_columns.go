@@ -56,11 +56,11 @@ func pathPickerSeparatorCount(nameW int) int {
 func pathPickerRowMarksWidth(state PathPickerState, rowMarks RowMarksFunc) int {
 	max := 0
 	for _, item := range state.Items {
-		m := RowMarks{Missing: state.rowMissing(item)}
+		var m RowMarks
 		if rowMarks != nil {
 			m = rowMarks(item.Path)
-			m.Missing = state.rowMissing(item)
 		}
+		m.Missing = state.rowMissing(item)
 		if w := dlg.RowMarksWidth(m); w > max {
 			max = w
 			if max >= dlg.RowMarksMaxWidth {

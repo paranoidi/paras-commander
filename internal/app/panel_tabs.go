@@ -1,6 +1,8 @@
 package app
 
 import (
+	"slices"
+
 	"github.com/paranoidi/paras-commander/internal/apphandler/meta"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
@@ -23,12 +25,8 @@ const noOtherTabMessage = "No other tab"
 
 // tabSlotOfAction returns the slot (1-based) a panel.tab-N action selects.
 func tabSlotOfAction(actionID string) (int, bool) {
-	for i, id := range keymap.PanelTabActions {
-		if id == actionID {
-			return i + 1, true
-		}
-	}
-	return 0, false
+	i := slices.Index(keymap.PanelTabActions[:], actionID)
+	return i + 1, i >= 0
 }
 
 // selectTab switches panelID to slot: a used slot is shown, an empty one is opened as a copy of
@@ -39,9 +37,7 @@ func (a *App) selectTab(panelID, slot int) {
 		slot < 1 || slot > config.TabSlots || slot == inst.activeTab {
 		return
 	}
-	next := inst.tabs[slot-1]
-	inst.tabs[slot-1] = nil
-	a.swapTab(panelID, slot, next, true)
+	a.swapTab(panelID, slot, true)
 }
 
 // closeTab closes panelID's active tab and shows the nearest lower used slot, else the next
@@ -66,22 +62,22 @@ func (a *App) closeTab(panelID int) {
 		a.setTransientMessage(noOtherTabMessage, ui.MessageUrgencyInfo)
 		return
 	}
-	next := inst.tabs[slot-1]
-	inst.tabs[slot-1] = nil
-	a.swapTab(panelID, slot, next, false)
+	a.swapTab(panelID, slot, false)
 }
 
 // swapTab is the one entry of every tab change (select, close, mouse): it leaves the live tab,
-// keeping it in its slot when keep is set, and shows next in slot; a nil next is a new tab, a copy
-// of the tab being left.
+// keeping it in its slot when keep is set, and shows the tab stored in slot; an empty slot gets a
+// new tab, a copy of the tab being left.
 //
 // Panel IDs 0 and 1 are assumed everywhere to be &model.Primary / &model.Secondary, and the
 // closures wired on panel.State resolve the panel by ID, so the swap replaces the State value in
 // place instead of re-pointing anything.
-func (a *App) swapTab(panelID, slot int, next *panelTab, keep bool) {
+func (a *App) swapTab(panelID, slot int, keep bool) {
 	inst := a.panelInst(panelID)
 	live := inst.state
 	prevSlot := inst.activeTab
+	next := inst.tabs[slot-1]
+	inst.tabs[slot-1] = nil
 
 	// Leave. The pending load is rolled back while the state is still the live one: its Rollback
 	// closure captures the State pointer, which only means this tab until the value is replaced.
@@ -96,11 +92,7 @@ func (a *App) swapTab(panelID, slot int, next *panelTab, keep bool) {
 	// Enter. Settings that belong to the panel, not to the tab, follow the live state (hidden-file
 	// visibility is applied by the load below).
 	entered := next.state
-	entered.ScrollMode, entered.ScrollEdgeMargin = left.state.ScrollMode, left.state.ScrollEdgeMargin
-	entered.DiskUsageIdleSortEligible = left.state.DiskUsageIdleSortEligible
-	entered.Strip.Tree = left.state.Strip.Tree
-	entered.SelectionStashPaths = left.state.SelectionStashPaths
-	entered.SelectionStashStripCursorPath = left.state.SelectionStashStripCursorPath
+	entered.AdoptPanelSettings(&left.state)
 	entered.BumpGenerationsPast(&left.state)
 	if keep {
 		inst.tabs[prevSlot-1] = left

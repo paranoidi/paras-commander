@@ -5,14 +5,17 @@ import "github.com/gdamore/tcell/v2"
 const (
 	IconKeyPanelTabStart = "panel.tab.start"
 	IconKeyPanelTabEnd   = "panel.tab.end"
+
+	// PanelTabSquareCap is the start and end cap of a square panel tab (" N label ").
+	PanelTabSquareCap = " "
 )
 
 // PanelTabCaps returns the strings drawn before and after a panel tab's "N" / "N label"
 // ([icons.panel.tab] start / end). They are not trimmed: their spaces are part of the tab. When
-// UseNerdfontIcons is false, returns the square caps " " / " " (the tab is " N label ").
+// UseNerdfontIcons is false, both are PanelTabSquareCap.
 func (t Theme) PanelTabCaps() (start, end string) {
 	if !t.UseNerdfontIcons {
-		return " ", " "
+		return PanelTabSquareCap, PanelTabSquareCap
 	}
 	return t.Icons[IconKeyPanelTabStart], t.Icons[IconKeyPanelTabEnd]
 }

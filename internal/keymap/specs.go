@@ -1,5 +1,7 @@
 package keymap
 
+import "strconv"
+
 // HelpViews is a bitmask of views whose F1 help lists the action.
 // The zero value means the action appears in no F1 help — used for
 // dialog-overlay-only shortcuts documented by the dialog itself.
@@ -2646,7 +2648,7 @@ func DefaultActionSpecs() []ActionSpec {
 func panelTabSpecs() []ActionSpec {
 	specs := make([]ActionSpec, 0, len(PanelTabActions)+1)
 	for i, id := range PanelTabActions {
-		n := string(rune('1' + i))
+		n := strconv.Itoa(i + 1)
 		specs = append(specs, ActionSpec{
 			ID:          id,
 			Views:       HelpBrowser,
