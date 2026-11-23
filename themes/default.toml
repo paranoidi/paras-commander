@@ -38,7 +38,7 @@ surface = "bright_black"      # dialog fill, chips, bar tracks, carousel header,
 header_bg = "blue"            # panel headers
 inactive_header_bg = "bright_black"  # header of the inactive panel
 menu_bg = "blue"              # menu dropdown fill and frame
-leader_bg = "black"           # leader (Esc) menu fill, apart from the panels behind it
+leader_bg = "black"           # leader (Esc) menu fill, apart from the panels behind it; inactive and blocked panel tabs
 focus_bg = "cyan"             # the focused item: open menu-bar title, selected pulldown entry, selected completion entry, hovered footer entry
 button_bg = "black"           # face of an unfocused dialog button
 button_focus_bg = "cyan"      # face of the focused dialog button
@@ -293,11 +293,11 @@ usage.cursor.base = { fg = "fg", bg = "file_cursor_dim" }
 usage.cursor.selected = { fg = "selected", bg = "highlight_bg", bold = true }
 
 [panel.tab]                   # a panel's tab bar (more than one tab)
-active.base = { fg = "focus_fg", bg = "focus_bg", bold = true }
-active.number = { fg = "primary", bold = true }  # the slot digit; fg and attributes only, on the tab's own bg
-inactive.base = { fg = "fg", bg = "surface" }
-inactive.number = { fg = "attention", bold = true }
-blocked = { fg = "muted", bg = "surface" }  # every tab while a dialog or menu has focus; inactive.number colours the digits a dialog's path field accepts as keys
+active.base = { fg = "fg", bg = "surface", bold = true }
+active.number = { fg = "fg_strong", bold = true }  # the slot digit; fg and attributes only, on the tab's own bg
+inactive.base = { fg = "fg", bg = "leader_bg" }
+inactive.number = { fg = "accent", bold = true }
+blocked = { fg = "muted", bg = "leader_bg" }  # every tab while a dialog or menu has focus; inactive.number colours the digits a dialog's path field accepts as keys
 # The non-space runes of the [icons.panel.tab] caps are drawn in the tab's own bg on the gap between tabs;
 # there are no cap style keys.
 

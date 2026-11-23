@@ -171,9 +171,11 @@ row.cursor.selected = { fg = "selected", bg = "file_cursor_dim", bold = true }  
 usage.cursor.selected = { fg = "ink", bg = "highlight_bg", bold = true }
 
 [panel.tab]
-active.base = { fg = "focus_fg", bg = "focus_bg", bold = true }  # keep the default backgrounds; the digit gets its own colours below  # tuned
+active.base = { fg = "focus_fg", bg = "focus_bg", bold = true }  # surface2: the active tab; the digit gets its own colours below  # tuned
 active.number = { fg = "fg_strong", bold = true }  # black slot digit on the surface2 tab  # tuned
+inactive.base = { fg = "fg", bg = "surface" }  # surface0: leader_bg is lighter in this theme  # tuned
 inactive.number = { fg = "accent", bold = true }  # mauve slot digit  # tuned
+blocked = { fg = "muted", bg = "surface" }  # like the inactive tabs  # tuned
 
 [panel.blocked]
 disk_usage_overview = { fg = "faint" }  # tuned

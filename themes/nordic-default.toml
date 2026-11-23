@@ -101,6 +101,9 @@ usage.cursor.selected = { fg = "selected", bg = "focus_bg", bold = true }  # tun
 frame = { fg = "inactive_frame" }  # keep the dim frame: repair would brighten it  # tuned
 usage.cursor.selected = { fg = "ink", bg = "highlight_bg", bold = true }
 
+[panel.tab]
+active.base = { fg = "focus_fg", bg = "focus_bg", bold = true }  # gray4: a clear step past the inactive tabs  # tuned
+
 [dialog.button]
 active_destructive.base = { fg = "ink", bg = "danger" }
 active_destructive.accent = { fg = "ink", bold = true }

@@ -111,6 +111,9 @@ usage.cursor.selected = { fg = "selected", bg = "header_bg", bold = true }  # tu
 frame = { fg = "inactive_frame" }  # keep the dim frame: repair would brighten it  # tuned
 usage.cursor.selected = { fg = "ink", bg = "highlight_bg", bold = true }
 
+[panel.tab]
+active.base = { fg = "focus_fg", bg = "focus_bg", bold = true }  # nord3: surface is too close to the inactive tabs  # tuned
+
 [fuzzy]
 input.nomatch = { fg = "fg", bold = true }
 
