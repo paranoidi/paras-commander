@@ -479,6 +479,9 @@ type UIConfig struct {
 	// VolumeInfo selects the panel title's free-space label (VolumeInfoFull / Medium / Small /
 	// None); unknown values reset to DefaultVolumeInfo in Validate.
 	VolumeInfo string `toml:"volume_info"`
+	// OtherCopiesOrientation is how the Other copies view opens: PaneSplitStacked, PaneSplitSideBySide
+	// or OtherCopiesFollow; unknown values reset to DefaultOtherCopiesOrientation in Validate.
+	OtherCopiesOrientation string `toml:"other_copies_orientation"`
 	// Tooltips shows the explanation box of the focused dialog widget (dlg Item.Tooltip).
 	// Default DefaultTooltips.
 	Tooltips bool `toml:"tooltips"`
@@ -753,6 +756,7 @@ func Default() Config {
 			TabLabels:                   DefaultTabLabels,
 			OtherPanelMatchMarks:        DefaultOtherPanelMatchMarks,
 			VolumeInfo:                  DefaultVolumeInfo,
+			OtherCopiesOrientation:      DefaultOtherCopiesOrientation,
 			Tooltips:                    DefaultTooltips,
 			ScreenRenderHashCache:       DefaultScreenRenderHashCache,
 			KeyRepeatDebounceMS:         DefaultKeyRepeatDebounceMS,
@@ -1318,6 +1322,10 @@ func (c *Config) validateUIZoom(builtin *Config) {
 	}
 	if !c.paneSplitOrientationValid(c.UI.Zoom.Orientation) {
 		c.UI.Zoom.Orientation = DefaultPaneSplitOrientation
+	}
+	c.UI.OtherCopiesOrientation = strings.ToLower(strings.TrimSpace(c.UI.OtherCopiesOrientation))
+	if o := c.UI.OtherCopiesOrientation; o != OtherCopiesFollow && !c.paneSplitOrientationValid(o) {
+		c.UI.OtherCopiesOrientation = DefaultOtherCopiesOrientation
 	}
 	if !c.scrollModeValid(c.UI.Scroll.Mode) {
 		c.UI.Scroll.Mode = DefaultScrollMode

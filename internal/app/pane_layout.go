@@ -19,8 +19,21 @@ func (a *App) savedPaneSplitOrientation() ui.SplitOrientation {
 	return splitOrientationFromConfig(a.config.UI.Zoom.Orientation)
 }
 
-// effectivePaneSplitOrientation returns saved preference plus optional session-only override.
+// viewSplitOrientation is the shown view's own orientation ([ui].other_copies_orientation), nil when
+// it uses the file panels'.
+func (a *App) viewSplitOrientation() *ui.SplitOrientation {
+	if a.model.ViewMode == ui.ViewCopies {
+		return a.model.CopiesView.Split
+	}
+	return nil
+}
+
+// effectivePaneSplitOrientation is the shown view's own orientation, else the saved preference plus
+// optional session-only override.
 func (a *App) effectivePaneSplitOrientation() ui.SplitOrientation {
+	if own := a.viewSplitOrientation(); own != nil {
+		return *own
+	}
 	if a.paneSplitOrientationOverride != nil {
 		return *a.paneSplitOrientationOverride
 	}
@@ -34,7 +47,8 @@ func paneSplitOrientationLabel(o ui.SplitOrientation) string {
 	return "side by side"
 }
 
-// togglePaneSplitOrientation flips the visible twin-pane layout for this session only.
+// togglePaneSplitOrientation flips the visible twin-pane layout for this session only, or just the
+// shown view's when it has its own.
 func (a *App) togglePaneSplitOrientation() {
 	current := a.effectivePaneSplitOrientation()
 	var next ui.SplitOrientation
@@ -43,12 +57,13 @@ func (a *App) togglePaneSplitOrientation() {
 	} else {
 		next = ui.SplitVertical
 	}
-	saved := a.savedPaneSplitOrientation()
-	if next == saved {
+	switch {
+	case a.viewSplitOrientation() != nil:
+		a.model.CopiesView.Split = &next
+	case next == a.savedPaneSplitOrientation():
 		a.paneSplitOrientationOverride = nil
-	} else {
-		v := next
-		a.paneSplitOrientationOverride = &v
+	default:
+		a.paneSplitOrientationOverride = &next
 	}
 	a.setTransientMessage("Split: "+paneSplitOrientationLabel(next), ui.MessageUrgencyInfo)
 }

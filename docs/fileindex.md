@@ -239,14 +239,18 @@ or modes to filter on.
 `M-O` shows where else the file under the cursor exists according to the index, in a full-screen
 view. It works on local and index panels, on files only.
 
-**The view.** A list titled "Other copies of name (N)" is always on the left (on top when stacked), one
+**The view.** A list titled "Other copies of name (N)" is always on top (on the left when side by side), one
 path per other copy. A path too long for the list is shortened; the one under the cursor then also shows
-in full on the bottom border, across both panels. The other side shows a
+in full on the bottom border, across both panels. The other half shows a
 real file panel on the directory of the copy under the cursor, with the file highlighted, so you can see
 what else is there. Moving the cursor in the list takes the panel to that copy's directory; what you
 do inside the panel (browse into a folder, move its cursor) stays until the list cursor moves again.
 Started from an index view, the panel shows the index view of the directory, otherwise the real
 directory (the index view of it when it is gone from disk).
+
+The view opens stacked; [`[ui] other_copies_orientation`](config.md#ui) changes that to side by side, or
+to follow the file panels, in which case `C-Space` in the view switches them too. When the terminal has too
+few rows for stacked, it follows the file panels.
 
 `Tab` switches between the list and the panel; `Shift+Tab` switches back. With the panel
 focused it works like a normal file panel (select, rename, create folders, sort, quick filter, view,
@@ -263,7 +267,7 @@ are as they were.
 | `F8` | Delete the marked copies, else the copy under the cursor, after the usual confirmation; they leave the list |
 | `F3` / `F4` | View or edit the copy |
 | `S-Left` / `S-Right` | Show the copy in the left or right file panel, with the file highlighted; from the panel, its cursor entry |
-| `C-Space` | Switch between side by side and stacked |
+| `C-Space` | Switch this view between stacked and side by side until it closes |
 | `F9` / `F1` | The view's menu and its Help |
 
 The mouse works as well: a click selects a row of the list or an entry of the panel and gives it

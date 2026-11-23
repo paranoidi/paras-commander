@@ -30,6 +30,8 @@ type CopiesViewState struct {
 	Pane DedupPane
 	// FocusPanel: the embedded panel has focus instead of the list.
 	FocusPanel bool
+	// Split is the view's own split orientation; nil follows the file panels.
+	Split *SplitOrientation
 	MarkSet
 }
 

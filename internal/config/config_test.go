@@ -406,6 +406,28 @@ func TestValidateClampsRefreshIntervalMS(t *testing.T) {
 	}
 }
 
+func TestValidateOtherCopiesOrientation(t *testing.T) {
+	if got := Default().UI.OtherCopiesOrientation; got != PaneSplitStacked {
+		t.Fatalf("default = %q, want %q", got, PaneSplitStacked)
+	}
+	for in, want := range map[string]string{
+		"stacked":        PaneSplitStacked,
+		" Side_By_Side ": PaneSplitSideBySide,
+		"Follow":         OtherCopiesFollow,
+		"":               DefaultOtherCopiesOrientation,
+		"upside_down":    DefaultOtherCopiesOrientation,
+	} {
+		cfg := Default()
+		cfg.UI.OtherCopiesOrientation = in
+		if err := cfg.Validate(); err != nil {
+			t.Fatal(err)
+		}
+		if got := cfg.UI.OtherCopiesOrientation; got != want {
+			t.Errorf("%q -> %q, want %q", in, got, want)
+		}
+	}
+}
+
 func TestValidateClampsScrollMode(t *testing.T) {
 	cfg := Default()
 	cfg.UI.Scroll.Mode = "bogus"

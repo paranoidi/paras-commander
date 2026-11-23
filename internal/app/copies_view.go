@@ -2,6 +2,7 @@ package app
 
 import (
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/config"
 	fi "github.com/paranoidi/paras-commander/internal/fileindex"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -36,6 +37,13 @@ func (a *App) openCopiesView(origin string, indexPanel bool, copies []fi.CopyFil
 		return
 	}
 	a.copiesCtrl.Open(origin, indexPanel, copies)
+	if mode := a.config.UI.OtherCopiesOrientation; mode != config.OtherCopiesFollow {
+		split := splitOrientationFromConfig(mode)
+		a.model.CopiesView.Split = &split
+		if a.layoutForTerminalSize(a.screen.Size()).TooSmall {
+			a.model.CopiesView.Split = nil // stacked needs more rows than the terminal has
+		}
+	}
 	a.reconcileCopiesPanel()
 }
 

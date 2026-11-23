@@ -355,6 +355,10 @@ const (
 	PaneSplitStacked    = "stacked"
 	// DefaultPaneSplitOrientation is the default twin-pane layout (primary left, secondary right).
 	DefaultPaneSplitOrientation = PaneSplitSideBySide
+	// OtherCopiesFollow is the [ui].other_copies_orientation value for the file panels' orientation.
+	OtherCopiesFollow = "follow"
+	// DefaultOtherCopiesOrientation is the default [ui].other_copies_orientation.
+	DefaultOtherCopiesOrientation = PaneSplitStacked
 
 	// DefaultSelectedPanelMaxRows is the effective selected-strip row cap when
 	// [ui].selected_panel_max_rows is 0 (sentinel meaning "use this default").

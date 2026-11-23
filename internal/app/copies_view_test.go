@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -308,6 +309,7 @@ func TestCopiesViewListIsFirstPaneWhicheverPanelIsActive(t *testing.T) {
 		for _, active := range []int{ui.PrimaryPanel, ui.SecondaryPanel} {
 			a, screen, dir := copiesAppWith(t, "meadow/harbor.txt")
 			a.model.SwapPanes = swap
+			a.config.UI.OtherCopiesOrientation = config.PaneSplitSideBySide
 			if active != a.model.ActivePanel {
 				if err := a.panelByID(active).Load(dir); err != nil {
 					t.Fatal(err)
@@ -332,6 +334,7 @@ func TestCopiesViewListIsFirstPaneWhicheverPanelIsActive(t *testing.T) {
 func TestCopiesViewTogglesSplitOrientation(t *testing.T) {
 	for _, fromPanel := range []bool{false, true} {
 		a, screen, dir := copiesAppWith(t, "meadow/harbor.txt", "orchard/harbor.txt")
+		a.config.UI.OtherCopiesOrientation = config.PaneSplitSideBySide
 		openCopiesFor(t, a, screen, filepath.Join(dir, "meadow"))
 		if fromPanel {
 			copiesKey(a, tcell.KeyTab, 0, tcell.ModNone)
@@ -348,6 +351,50 @@ func TestCopiesViewTogglesSplitOrientation(t *testing.T) {
 		if list, p := rects(); p.X < list.X+list.Width || p.Y != list.Y {
 			t.Fatalf("fromPanel=%v: not side by side again: list %+v, panel %+v", fromPanel, list, p)
 		}
+	}
+}
+
+// The view opens as [ui].other_copies_orientation says. Toggling a fixed orientation changes the view
+// only, until it closes; in follow mode it changes the file panels too.
+func TestCopiesViewOpensInConfiguredOrientation(t *testing.T) {
+	flip := map[ui.SplitOrientation]ui.SplitOrientation{ui.SplitHorizontal: ui.SplitVertical, ui.SplitVertical: ui.SplitHorizontal}
+	for _, panels := range []ui.SplitOrientation{ui.SplitHorizontal, ui.SplitVertical} {
+		for mode, want := range map[string]ui.SplitOrientation{
+			config.PaneSplitStacked:    ui.SplitVertical,
+			config.PaneSplitSideBySide: ui.SplitHorizontal,
+			config.OtherCopiesFollow:   panels,
+		} {
+			a, screen, dir := copiesAppWith(t, "meadow/harbor.txt")
+			a.config.UI.OtherCopiesOrientation = mode
+			a.paneSplitOrientationOverride = &panels
+			check := func(when string, want ui.SplitOrientation) {
+				t.Helper()
+				if got := a.effectivePaneSplitOrientation(); got != want {
+					t.Errorf("panels %v, mode %s, %s: orientation %v, want %v", panels, mode, when, got, want)
+				}
+			}
+			openCopiesFor(t, a, screen, filepath.Join(dir, "meadow"))
+			check("at open", want)
+			copiesKey(a, tcell.KeyCtrlSpace, 0, tcell.ModCtrl)
+			check("toggled", flip[want])
+			copiesKey(a, tcell.KeyEsc, 0, tcell.ModNone)
+			if mode == config.OtherCopiesFollow {
+				check("after closing", flip[panels])
+				continue
+			}
+			check("after closing", panels)
+			openCopiesFor(t, a, screen, filepath.Join(dir, "meadow"))
+			check("reopened", want)
+		}
+	}
+}
+
+func TestCopiesViewOpensSideBySideWhenStackedDoesNotFit(t *testing.T) {
+	a, screen, dir := copiesAppWith(t, "meadow/harbor.txt")
+	screen.SetSize(100, 12)
+	openCopiesFor(t, a, screen, filepath.Join(dir, "meadow"))
+	if got := a.effectivePaneSplitOrientation(); got != ui.SplitHorizontal || a.layoutForTerminalSize(screen.Size()).TooSmall {
+		t.Fatalf("orientation = %v", got)
 	}
 }
 
