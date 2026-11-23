@@ -156,3 +156,20 @@ func TestPathPickerAllOpensFromStarKeys(t *testing.T) {
 		})
 	}
 }
+
+func TestPathPickerKeepsRemotePath(t *testing.T) {
+	const remote = "sftp://meadow/srv/orchard"
+	h, host := newBookmarkTestHandler(t)
+	host.active.History = []string{remote}
+	h.host = allPickerHost{bookmarkTestHost: host, inactive: &panel.State{Path: pathloc.FileMust(host.active.PathString())}}
+	h.model.TransferDialog = uidialog.TransferDialogState{
+		Open:        true,
+		Phase:       uidialog.TransferPhaseDestination,
+		Destination: uidialog.FileDialogField{Value: "x"},
+	}
+	h.OpenPathPickerForTransfer(pathPickerListHistory)
+	h.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if got := h.model.TransferDialog.Destination.Value; got != remote {
+		t.Fatalf("destination = %q, want %q", got, remote)
+	}
+}

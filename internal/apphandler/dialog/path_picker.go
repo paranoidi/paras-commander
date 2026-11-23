@@ -125,7 +125,7 @@ func (h *Handler) activatePathPickerSelection() {
 	if entIdx < 0 || entIdx >= len(st.Items) {
 		return
 	}
-	path := filepath.Clean(st.Items[entIdx].Path)
+	path := st.Items[entIdx].Path // builders store clean host paths; filepath.Clean would mangle sftp://
 
 	switch st.Purpose {
 	case dialog.PathPickerPurposeNavigate:
@@ -304,8 +304,8 @@ func (h *Handler) PathPickerItemsPinned() ([]dialog.PathPickerItem, error) {
 		if !p.IsDir {
 			continue
 		}
-		cp := filepath.Clean(p.Path)
-		if _, ok := seen[cp]; ok {
+		cp := panel.CleanPathString(p.Path) // not filepath.Clean: it collapses the // of sftp://
+		if _, ok := seen[cp]; cp == "" || ok {
 			continue
 		}
 		seen[cp] = struct{}{}
