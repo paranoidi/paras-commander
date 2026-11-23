@@ -1059,13 +1059,14 @@ func DefaultActionSpecs() []ActionSpec {
 
 		// ── Other copies ──
 		{
-			ID:          ActionCopiesClose,
-			Views:       HelpCopies,
-			Title:       "Close view",
-			Section:     "Other copies",
-			DefaultKeys: nil, // overlay: DefaultCopiesOverlayKeys
-			Keywords:    []string{"back", "browser"},
-			LeaderKey:   "x",
+			ID:           ActionCopiesClose,
+			Views:        HelpCopies,
+			Title:        "Close view",
+			Section:      "Other copies",
+			DefaultKeys:  nil, // overlay: DefaultCopiesOverlayKeys
+			Keywords:     []string{"back", "browser"},
+			PreferredKey: "esc",
+			LeaderKey:    "x",
 		},
 		{
 			ID:          ActionCopiesPrevPane,
@@ -1295,7 +1296,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionPanelToggleSplitOrientation,
-			Views:        HelpBrowser,
+			Views:        HelpBrowser | HelpDedup | HelpUnique | HelpCopies,
 			Title:        "Toggle split orientation",
 			Section:      "View",
 			DefaultKeys:  []string{"C-space"},

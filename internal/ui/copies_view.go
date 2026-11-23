@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -25,23 +26,11 @@ type CopiesViewState struct {
 	// Find unique files (Unverified is unused), so the transfer and delete dialogs read both views
 	// alike.
 	Files []UniqueFile
-	// nameW and sizeW are the widest name and size text of Files (SetFiles).
-	nameW, sizeW int
 	// Pane holds the cursor (Selected), scroll and type-to-jump filter over Files.
 	Pane DedupPane
 	// FocusPanel: the embedded panel has focus instead of the list.
 	FocusPanel bool
 	MarkSet
-}
-
-// SetFiles replaces the listed copies and measures the name and size columns they need.
-func (s *CopiesViewState) SetFiles(files []UniqueFile) {
-	s.Files = files
-	s.nameW, s.sizeW = 0, 0
-	for _, f := range files {
-		s.sizeW = max(s.sizeW, utf8.RuneCountInString(formatByteSizeListed(f.Size)))
-		s.nameW = max(s.nameW, utf8.RuneCountInString(filepath.Base(f.Path)))
-	}
 }
 
 // MarkedFiles is the marked copies in list order.
@@ -62,11 +51,17 @@ func CopiesRects(layout Layout) (list, panelRect Rect) {
 	return layout.Primary, layout.Secondary
 }
 
+// CopiesListRows is the number of rows the copies list in rect shows; it has no header row.
+func CopiesListRows(rect Rect) int { return SelectedStripListRows(rect) }
+
+// CopiesListTop is the screen row of the first copy in the list drawn in rect.
+func CopiesListTop(rect Rect) int { return rect.Y + 1 }
+
 // CopiesListEntryAt returns the copy row of the Other copies view drawn at (x, y).
 func CopiesListEntryAt(layout Layout, model *Model, x, y int) (int, bool) {
 	list, _ := CopiesRects(layout)
 	view := &model.CopiesView
-	return auxListRowAt(list, view.Pane.ListScroll, len(view.Files), x, y)
+	return listRowAt(list, CopiesListTop(list), CopiesListRows(list), view.Pane.ListScroll, len(view.Files), x, y)
 }
 
 // CopiesPanelEntryAt returns the visible entry of the Other copies view's panel drawn at (x, y).
@@ -78,30 +73,6 @@ func CopiesPanelEntryAt(layout Layout, model *Model, x, y int) (int, bool) {
 func copiesViewTitle(view *CopiesViewState) string {
 	return fmt.Sprintf(" Other copies of %s (%d) ", view.Origin, len(view.Files))
 }
-
-// copiesColumns is the horizontal layout of the list: name, directory, size.
-type copiesColumns struct {
-	nameX, nameW, dirX, dirW, sizeX, sizeW, listW int
-}
-
-func copiesColumnLayout(view *CopiesViewState, contentX, innerRight int) copiesColumns {
-	sizeW := max(view.sizeW, utf8.RuneCountInString(dedupListSizeTitle))
-	nameW := max(view.nameW, utf8.RuneCountInString(copiesNameTitle))
-	sizeRight := innerRight - 1
-	sizeX := sizeRight - sizeW + 1
-	avail := max(sizeX-1-contentX, 2)
-	nameW = min(nameW, max(avail/2, 1))
-	dirX := contentX + nameW + 1
-	return copiesColumns{
-		nameX: contentX, nameW: nameW, dirX: dirX, dirW: max(sizeX-1-dirX, 1),
-		sizeX: sizeX, sizeW: sizeW, listW: sizeRight - contentX + 1,
-	}
-}
-
-const (
-	copiesNameTitle = "Name"
-	copiesDirTitle  = "Directory"
-)
 
 // drawCopiesView paints the copies list and the embedded panel.
 func drawCopiesView(screen tcell.Screen, layout Layout, model *Model, styles theme.Theme, chromeBlocked bool) {
@@ -126,31 +97,18 @@ func drawCopiesList(screen tcell.Screen, rect Rect, view *CopiesViewState, model
 		drawQuickFilterTitle(screen, chrome.TitleX, rect.Y, chrome.TitleWidth, view.Pane.Filter, styles)
 	}
 	bg := chrome.ContentBG
-	contentX, innerRight := rect.X+2, rect.X+rect.Width-2
-	cols := copiesColumnLayout(view, contentX, innerRight)
-	headerY := rect.Y + 1
-	headerStyle := chrome.Chrome.Header
-	primitive.Text(screen, rect.X+1, headerY, rect.Width-2, "", headerStyle)
-	primitive.Text(screen, cols.nameX, headerY, cols.listW, fmt.Sprintf("%-*s %-*s %*s",
-		cols.nameW, primitive.TruncateRight(copiesNameTitle, cols.nameW),
-		cols.dirW, primitive.TruncateRight(copiesDirTitle, cols.dirW),
-		cols.sizeW, primitive.TruncateRight(dedupListSizeTitle, cols.sizeW)), headerStyle)
-
-	visibleRows := PanelListRows(rect)
+	contentX, listW := rect.X+2, rect.Width-4
+	visibleRows := CopiesListRows(rect)
 	if visibleRows <= 0 {
 		return
 	}
-	y := headerY + 1
+	y := CopiesListTop(rect)
 	if len(view.Files) == 0 {
-		primitive.Text(screen, contentX, y, cols.listW, "No copies left", styles.JobsRow.Background(bg))
+		primitive.Text(screen, contentX, y, listW, "No copies left", styles.JobsRow.Background(bg))
 		return
 	}
-	scroll := max(view.Pane.ListScroll, 0)
-	if scroll+visibleRows > len(view.Files) {
-		scroll = max(0, len(view.Files)-visibleRows)
-	}
+	scroll := auxListScroll(view.Pane.ListScroll, len(view.Files), visibleRows)
 	base := styles.PanelRowFile.Background(bg)
-	dim := styles.PanelBlockedText.Background(bg)
 	for row := range visibleRows {
 		idx := scroll + row
 		if idx >= len(view.Files) {
@@ -161,27 +119,25 @@ func drawCopiesList(screen tcell.Screen, rect Rect, view *CopiesViewState, model
 		selected := view.Marked[f.Path]
 		rowSelected := idx == view.Pane.Selected
 
-		lineStyle, cursorRow := treeListRowStyle(styles, base, bg, selected, rowSelected,
+		lineStyle, _ := treeListRowStyle(styles, base, bg, selected, rowSelected,
 			!chromeBlocked && model.AuxListHover.Active && model.AuxListHover.Row == idx,
 			theme.PanelListingCursorOpts{ChromeBlocked: chromeBlocked, FileListActive: focused})
 		primitive.Text(screen, rect.X+1, lineY, rect.Width-2, "", lineStyle)
 
-		name := primitive.TruncateRight(filepath.Base(f.Path), cols.nameW)
+		name := filepath.Base(f.Path)
+		text := primitive.FitPathForWidth(primitive.PathWithHomeTilde(f.Path, model.UserHomeDir), listW)
 		var spans []primitive.Span
-		if name == filepath.Base(f.Path) {
+		if strings.HasSuffix(text, name) { // the filter matches names; a shortened one has no ranges to show
+			off := utf8.RuneCountInString(text) - utf8.RuneCountInString(name)
 			matchStyle := styles.FuzzyHighlight
 			if rowSelected && focused {
 				matchStyle = styles.FuzzyHighlightCursor
 			}
 			_, rowBG, _ := lineStyle.Decompose()
 			for _, r := range view.Pane.Filter.Ranges(idx) {
-				spans = append(spans, primitive.Span{Start: r.Start, End: r.End, Style: matchStyle.Background(rowBG)})
+				spans = append(spans, primitive.Span{Start: off + r.Start, End: off + r.End, Style: matchStyle.Background(rowBG)})
 			}
 		}
-		primitive.StyledText(screen, cols.nameX, lineY, cols.nameW, name, lineStyle, spans)
-		detailStyle := treeDetailStyle(styles, lineStyle, dim, cursorRow, selected)
-		dir := primitive.PathWithHomeTilde(filepath.Dir(f.Path), model.UserHomeDir)
-		primitive.Text(screen, cols.dirX, lineY, cols.dirW, primitive.FitPathForWidth(dir, cols.dirW), detailStyle)
-		primitive.Text(screen, cols.sizeX, lineY, cols.sizeW, fmt.Sprintf("%*s", cols.sizeW, formatByteSizeListed(f.Size)), detailStyle)
+		primitive.StyledText(screen, contentX, lineY, listW, text, lineStyle, spans)
 	}
 }

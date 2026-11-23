@@ -239,8 +239,8 @@ or modes to filter on.
 `M-O` shows where else the file under the cursor exists according to the index, in a full-screen
 view. It works on local and index panels, on files only.
 
-**The view.** A list titled "Other copies of name (N)" is always on the left (on top when stacked): one row
-per other copy with its name, its directory and its indexed size. The right side shows a
+**The view.** A list titled "Other copies of name (N)" is always on the left (on top when stacked), one
+path per other copy. The other side shows a
 real file panel on the directory of the copy under the cursor, with the file highlighted, so you can see
 what else is there. Moving the cursor in the list takes the panel to that copy's directory; what you
 do inside the panel (browse into a folder, move its cursor) stays until the list cursor moves again.
@@ -249,7 +249,8 @@ directory (the index view of it when it is gone from disk).
 
 `Tab` switches between the list and the panel; `Shift+Tab` switches back. With the panel
 focused it works like a normal file panel (select, rename, create folders, sort, quick filter, view,
-edit). `Esc` closes the view and its panel and returns to the file panels, which are as they were.
+edit). `Esc`, or `Left` in the list, closes the view and its panel and returns to the file panels, which
+are as they were.
 
 **Keys in the list.** Typing jumps to matching names. `Insert` or `Space` marks a copy and moves down;
 `C-u` unmarks all. Enter opens the copy with the default application.
@@ -261,6 +262,7 @@ edit). `Esc` closes the view and its panel and returns to the file panels, which
 | `F8` | Delete the marked copies, else the copy under the cursor, after the usual confirmation; they leave the list |
 | `F3` / `F4` | View or edit the copy |
 | `S-Left` / `S-Right` | Show the copy in the left or right file panel, with the file highlighted; from the panel, its cursor entry |
+| `C-Space` | Switch between side by side and stacked |
 | `F9` / `F1` | The view's menu and its Help |
 
 The mouse works as well: a click selects a row of the list or an entry of the panel and gives it

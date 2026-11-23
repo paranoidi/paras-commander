@@ -16,6 +16,7 @@ func TestCopiesOverlayDefaultsAndRebinding(t *testing.T) {
 	}
 	for ev, want := range map[*tcell.EventKey]string{
 		tcell.NewEventKey(tcell.KeyEscape, 0, tcell.ModNone):  ActionCopiesClose,
+		tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone):    ActionCopiesClose,
 		tcell.NewEventKey(tcell.KeyBacktab, 0, tcell.ModNone): ActionCopiesPrevPane,
 		tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift):   ActionOpenInPrimary,
 		tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift):  ActionOpenInSecondary,

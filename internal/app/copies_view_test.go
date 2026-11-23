@@ -246,6 +246,24 @@ func TestCopiesViewCloseClosesThePanel(t *testing.T) {
 	}
 }
 
+// Left leaves the view from the list; in the view's panel it goes to the parent directory.
+func TestCopiesViewLeftClosesOnlyFromTheList(t *testing.T) {
+	a, screen, dir := copiesAppWith(t, "meadow/harbor.txt")
+	openCopiesFor(t, a, screen, filepath.Join(dir, "meadow"))
+	copiesKey(a, tcell.KeyTab, 0, tcell.ModNone)
+	copiesKey(a, tcell.KeyLeft, 0, tcell.ModNone)
+	p := &a.model.CopiesPanel
+	drainInterruptEventsUntil(t, a, screen, 5*time.Second, func() bool { return p.PathString() == dir && !p.ListingPending })
+	if a.model.ViewMode != ui.ViewCopies {
+		t.Fatal("Left in the panel closed the view")
+	}
+	copiesKey(a, tcell.KeyTab, 0, tcell.ModNone)
+	copiesKey(a, tcell.KeyLeft, 0, tcell.ModNone)
+	if a.model.ViewMode != ui.ViewBrowser || a.model.CopiesView.Open {
+		t.Fatalf("Left in the list: view = %v", a.model.ViewMode)
+	}
+}
+
 func TestCopiesViewKeepsItsPanelBehindTheViewer(t *testing.T) {
 	a, screen, dir := copiesAppWith(t, "meadow/harbor.txt")
 	openCopiesFor(t, a, screen, filepath.Join(dir, "meadow"))
@@ -311,6 +329,39 @@ func TestCopiesViewListIsFirstPaneWhicheverPanelIsActive(t *testing.T) {
 	}
 }
 
+func TestCopiesViewTogglesSplitOrientation(t *testing.T) {
+	for _, fromPanel := range []bool{false, true} {
+		a, screen, dir := copiesAppWith(t, "meadow/harbor.txt", "orchard/harbor.txt")
+		openCopiesFor(t, a, screen, filepath.Join(dir, "meadow"))
+		if fromPanel {
+			copiesKey(a, tcell.KeyTab, 0, tcell.ModNone)
+		}
+		rects := func() (list, panelRect ui.Rect) {
+			width, height := screen.Size()
+			return ui.CopiesRects(a.layoutForTerminalSize(width, height))
+		}
+		copiesKey(a, tcell.KeyCtrlSpace, 0, tcell.ModCtrl)
+		if list, p := rects(); p.Y < list.Y+list.Height || p.X != list.X {
+			t.Fatalf("fromPanel=%v: not stacked: list %+v, panel %+v", fromPanel, list, p)
+		}
+		copiesKey(a, tcell.KeyCtrlSpace, 0, tcell.ModCtrl)
+		if list, p := rects(); p.X < list.X+list.Width || p.Y != list.Y {
+			t.Fatalf("fromPanel=%v: not side by side again: list %+v, panel %+v", fromPanel, list, p)
+		}
+	}
+}
+
+func TestResultViewsToggleSplitOrientation(t *testing.T) {
+	for _, view := range []ui.ViewMode{ui.ViewDedup, ui.ViewUnique, ui.ViewCopies} {
+		a, _, _ := copiesAppWith(t, "meadow/harbor.txt")
+		a.model.ViewMode = view
+		before := a.effectivePaneSplitOrientation()
+		if !a.tryDispatchTreeViews(keymap.ActionPanelToggleSplitOrientation) || a.effectivePaneSplitOrientation() == before {
+			t.Errorf("view %v: the split orientation did not toggle", view)
+		}
+	}
+}
+
 func TestCopiesViewMouseFocusesAndSelects(t *testing.T) {
 	a, screen, dir := copiesAppWith(t, "meadow/harbor.txt", "orchard/harbor.txt")
 	openCopiesFor(t, a, screen, filepath.Join(dir, "meadow"))
@@ -323,7 +374,7 @@ func TestCopiesViewMouseFocusesAndSelects(t *testing.T) {
 	if !a.model.CopiesView.FocusPanel {
 		t.Fatal("clicking the panel did not focus it")
 	}
-	click(a, list.X+3, ui.PanelListTop(list)+1, tcell.Button1)
+	click(a, list.X+3, ui.CopiesListTop(list)+1, tcell.Button1)
 	a.reconcileAfterEvent()
 	if a.model.CopiesView.FocusPanel || a.model.CopiesView.Pane.Selected != 1 {
 		t.Fatalf("clicking row 2: %+v", a.model.CopiesView)

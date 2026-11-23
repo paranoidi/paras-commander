@@ -90,7 +90,7 @@ func (a *App) copiesPanelRows(layout ui.Layout) int {
 func (a *App) copiesVisibleRows() int {
 	width, height := a.screen.Size()
 	list, _ := ui.CopiesRects(a.layoutForTerminalSize(width, height))
-	return ui.PanelListRows(list)
+	return ui.CopiesListRows(list)
 }
 
 // openCopiesDeleteDialog opens the standard delete confirmation for the marked copies, else the
@@ -115,6 +115,8 @@ func (a *App) tryDispatchCopies(actionID string) bool {
 		a.copiesCtrl.ClearMarks()
 	case keymap.ActionPanelSelectToggle:
 		a.copiesCtrl.SelectToggleAndAdvance()
+	case keymap.ActionPanelToggleSplitOrientation:
+		a.togglePaneSplitOrientation()
 	case keymap.ActionPanelSwitch, keymap.ActionCopiesPrevPane:
 		a.copiesCtrl.SwitchPane()
 	case keymap.ActionFileDelete:

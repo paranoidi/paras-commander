@@ -187,6 +187,10 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 	case keymap.ActionPanelRefresh:
 		a.dedupCtrl.Refresh()
 		return true
+	case keymap.ActionPanelToggleSplitOrientation:
+		a.togglePaneSplitOrientation()
+		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
+		return true
 	case keymap.ActionDedupToggleSort:
 		a.dedupCtrl.ToggleSortOrder()
 		return true
@@ -540,7 +544,7 @@ func (a *App) handleDedupStripKey(action string, event *tcell.EventKey) bool {
 	case keymap.ActionPanelRefresh, keymap.ActionDedupToggleSort, keymap.ActionDedupToggleEmpty,
 		keymap.ActionDedupFilterDialog, keymap.ActionDedupToggleTree, keymap.ActionDedupHashPotential,
 		keymap.ActionPanelSelectGroup, keymap.ActionPanelUnselectGroup, keymap.ActionFileDelete,
-		keymap.ActionPanelClearSelection, keymap.ActionPanelFocusSelected:
+		keymap.ActionPanelClearSelection, keymap.ActionPanelFocusSelected, keymap.ActionPanelToggleSplitOrientation:
 		a.tryDispatchDedup(action)
 	}
 	c.EnsureSelectionVisible(a.dedupVisibleRows())

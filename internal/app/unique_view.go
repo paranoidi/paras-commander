@@ -177,6 +177,8 @@ func (a *App) tryDispatchUnique(actionID string) bool {
 		a.announceRange(res, added)
 	case keymap.ActionPanelSelectToggle:
 		a.uniqueCtrl.SelectToggleAndAdvance()
+	case keymap.ActionPanelToggleSplitOrientation:
+		a.togglePaneSplitOrientation()
 	case keymap.ActionPanelSwitch, keymap.ActionUniquePrevPane:
 		a.uniqueCtrl.SwitchPane()
 	case keymap.ActionFileDelete:

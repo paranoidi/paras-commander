@@ -4,30 +4,37 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/paranoidi/paras-commander/internal/quickfilter"
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
-func TestDrawCopiesListShowsNameDirectoryAndSize(t *testing.T) {
+func TestDrawCopiesListShowsPlainPaths(t *testing.T) {
 	styles := theme.Default()
 	rect := Rect{X: 0, Y: 0, Width: 70, Height: 10}
 	screen := newTreeTestScreen(t, 70, 10)
-	view := &CopiesViewState{Origin: "lantern.txt"}
-	view.SetFiles([]UniqueFile{
+	view := &CopiesViewState{Origin: "lantern.txt", Files: []UniqueFile{
 		{Path: "/srv/meadow/lantern.txt", Size: 2048},
 		{Path: "/srv/orchard/clover/lantern.txt", Size: 2048},
-	})
+	}}
+	view.Pane.AppendFilterRune('l', []string{"lantern.txt", "lantern.txt"}, quickfilter.Options{})
 	view.SetMark(view.Files[1], true)
-	drawCopiesList(screen, rect, view, &Model{AuxListHover: ListRowHover{}}, styles, false)
+	view.FocusPanel = true // the title row shows the title, not the filter
+	drawCopiesList(screen, rect, view, &Model{}, styles, false)
 
-	var text []string
-	for y := range rect.Height {
-		text = append(text, tcelltest.TextAt(screen, 0, y, rect.Width))
+	if title := tcelltest.TextAt(screen, 0, 0, rect.Width); !strings.Contains(title, "Other copies of lantern.txt (2)") || !strings.Contains(title, "1 marked") {
+		t.Errorf("title = %q", title)
 	}
-	all := strings.Join(text, "\n")
-	for _, want := range []string{"Other copies of lantern.txt (2)", "Name", "Directory", "Size", "/srv/meadow", "/srv/orchard/clover", " 2K", "1 marked"} {
-		if !strings.Contains(all, want) {
-			t.Errorf("missing %q in:\n%s", want, all)
+	for i, f := range view.Files {
+		y := CopiesListTop(rect) + i
+		if got := strings.TrimSpace(tcelltest.TextAt(screen, 1, y, rect.Width-2)); got != f.Path {
+			t.Errorf("row %d = %q, want %q", i, got, f.Path)
+		}
+		// The name match is highlighted where the name starts in the path.
+		_, style, _ := screen.Get(2+len(f.Path)-len("lantern.txt"), y)
+		wantFG, _, _ := styles.FuzzyHighlight.Decompose()
+		if fg, _, _ := style.Decompose(); fg != wantFG {
+			t.Errorf("row %d: the match is not highlighted", i)
 		}
 	}
 }

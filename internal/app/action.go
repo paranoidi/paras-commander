@@ -71,7 +71,12 @@ func (a *App) embeddedPanelAction(ev *tcell.EventKey, id string) string {
 		return keymap.ActionNavForward
 	case keymap.ActionDedupCollapseCopies:
 		return keymap.ActionNavBackward
-	case keymap.ActionDedupClose, keymap.ActionDedupPrevPane, keymap.ActionUniqueClose, keymap.ActionUniquePrevPane, keymap.ActionCopiesClose, keymap.ActionCopiesPrevPane,
+	case keymap.ActionCopiesClose:
+		if global, _ := a.keys.Global.Lookup(ev); global == keymap.ActionNavParent {
+			return global
+		}
+		return id
+	case keymap.ActionDedupClose, keymap.ActionDedupPrevPane, keymap.ActionUniqueClose, keymap.ActionUniquePrevPane, keymap.ActionCopiesPrevPane,
 		keymap.ActionOpenInPrimary, keymap.ActionOpenInSecondary:
 		return id
 	}

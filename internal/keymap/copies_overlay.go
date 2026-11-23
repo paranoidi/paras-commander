@@ -5,7 +5,7 @@ import "strings"
 // DefaultCopiesOverlayKeys holds built-in chords for the Other copies view ([copies]).
 func DefaultCopiesOverlayKeys() map[string][]string {
 	return withOpenInPanelKeys(map[string][]string{
-		ActionCopiesClose:    {"esc"},
+		ActionCopiesClose:    {"esc", "left"}, // left stays nav.parent while the view's panel has focus (embeddedPanelAction)
 		ActionCopiesPrevPane: {"S-tab"}, // shadows global panel.toggle-hide-inactive in-view
 	})
 }

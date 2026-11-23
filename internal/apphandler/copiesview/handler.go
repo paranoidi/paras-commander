@@ -48,8 +48,7 @@ func (h *Handler) Open(origin string, indexPanel bool, copies []fi.CopyFile) {
 	for i, c := range copies {
 		files[i] = ui.UniqueFile{Path: c.Path, Size: c.Size}
 	}
-	h.model.CopiesView = ui.CopiesViewState{Open: true, Origin: origin, IndexPanel: indexPanel}
-	h.model.CopiesView.SetFiles(files)
+	h.model.CopiesView = ui.CopiesViewState{Open: true, Origin: origin, IndexPanel: indexPanel, Files: files}
 	h.model.ViewMode = ui.ViewCopies
 	h.model.MenuDefinitions = h.host.CopiesMenuDefinitions()
 	h.model.Menu.ActiveMenu = menu.DefaultIndexDedup()
@@ -180,7 +179,7 @@ func (h *Handler) FilesQueued(paths []string, gone bool) {
 	for _, p := range paths {
 		drop[p] = true
 	}
-	st.SetFiles(slices.DeleteFunc(slices.Clone(st.Files), func(f ui.UniqueFile) bool { return drop[f.Path] }))
+	st.Files = slices.DeleteFunc(slices.Clone(st.Files), func(f ui.UniqueFile) bool { return drop[f.Path] })
 	st.Pane.Selected = min(st.Pane.Selected, max(len(st.Files)-1, 0))
 	if st.Pane.Filter.Query != "" {
 		st.Pane.Filter.Rebuild(h.names(), h.host.FilterOptions())

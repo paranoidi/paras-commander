@@ -19,11 +19,15 @@ func auxListScroll(scroll, n, visibleRows int) int {
 // auxListRowAt returns the entry under (x, y) in a one-line-per-entry aux list drawn in rect: a
 // header row below the top border, then one entry per row.
 func auxListRowAt(rect Rect, scroll, n, x, y int) (int, bool) {
+	return listRowAt(rect, PanelListTop(rect), PanelListRows(rect), scroll, n, x, y)
+}
+
+// listRowAt is auxListRowAt for a list whose first of visibleRows rows is at screen row top.
+func listRowAt(rect Rect, top, visibleRows, scroll, n, x, y int) (int, bool) {
 	if x <= rect.X || x >= rect.X+rect.Width-1 {
 		return 0, false
 	}
-	visibleRows := PanelListRows(rect)
-	row := y - PanelListTop(rect)
+	row := y - top
 	if row < 0 || row >= visibleRows {
 		return 0, false
 	}
