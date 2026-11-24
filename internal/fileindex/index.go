@@ -77,6 +77,9 @@ type Index struct {
 
 	// writeMu serializes pc's own index writes: Apply's drain and the backend's Rename and Remove.
 	writeMu sync.Mutex
+
+	// tagViews holds the match sets of tag views (tagview.go).
+	tagViews tagViewCache
 }
 
 // New returns an Index for pc's [fileindex] settings. Nothing is read until DB is called.

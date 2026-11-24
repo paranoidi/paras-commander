@@ -87,7 +87,11 @@ func fileEntry(loc pathloc.Path, f db.ListedFile) fsbackend.Entry {
 
 // List lists an indexed directory: subdirs (no size or mtime) then files with their indexed
 // size and mtime. The index root lists empty when nothing is indexed yet.
-func (b *Backend) List(_ context.Context, dir pathloc.Path) ([]fsbackend.Entry, error) {
+//
+// In a tag view (pathloc.TagQuery) the list of a flat view is its matches, and a directory of a
+// structure view that is not tagged itself nor inside a tagged one lists only what leads to a
+// match; any other directory lists as the plain index does.
+func (b *Backend) List(ctx context.Context, dir pathloc.Path) ([]fsbackend.Entry, error) {
 	host, err := pathloc.IndexHostPath(dir)
 	if err != nil {
 		return nil, err
@@ -95,6 +99,17 @@ func (b *Backend) List(_ context.Context, dir pathloc.Path) ([]fsbackend.Entry, 
 	d, err := b.open()
 	if err != nil {
 		return nil, err
+	}
+	var ms *matchSet
+	if q, ok := dir.TagQuery(); ok {
+		if dir.IsTagList() {
+			return b.idx().tagList(ctx, q)
+		}
+		if !q.Flat {
+			if ms, err = b.idx().matches(ctx, q); err != nil {
+				return nil, err
+			}
+		}
 	}
 	id, found, err := db.DirByPath(d, host)
 	if err != nil {
@@ -105,6 +120,9 @@ func (b *Backend) List(_ context.Context, dir pathloc.Path) ([]fsbackend.Entry, 
 			return nil, nil
 		}
 		return nil, &fs.PathError{Op: "list", Path: dir.String(), Err: fs.ErrNotExist}
+	}
+	if ms != nil && !ms.covered(host) {
+		return ms.partial(dir, host), nil
 	}
 	files, subdirs, err := d.ListDir(*id)
 	if err != nil {
@@ -184,8 +202,9 @@ func (b *Backend) Symlink(context.Context, pathloc.Path, string) error {
 }
 
 // Rename records that the entry moved (fileindex's Move: an instance moves, a directory moves
-// or merges into an indexed one). The disk is not touched.
-func (b *Backend) Rename(_ context.Context, oldLoc, newLoc pathloc.Path) error {
+// or merges into an indexed one). The disk is not touched. A tag view's top and a directory it
+// shows only in part (NotTaggedError) are not moved.
+func (b *Backend) Rename(ctx context.Context, oldLoc, newLoc pathloc.Path) error {
 	src, err := pathloc.IndexHostPath(oldLoc)
 	if err != nil {
 		return err
@@ -198,6 +217,9 @@ func (b *Backend) Rename(_ context.Context, oldLoc, newLoc pathloc.Path) error {
 	if err != nil {
 		return err
 	}
+	if err := b.idx().guardTagChange(ctx, d, oldLoc, src); err != nil {
+		return err
+	}
 	b.idx().writeMu.Lock()
 	_, err = d.Move(src, dst, nil)
 	b.idx().writeMu.Unlock()
@@ -206,7 +228,8 @@ func (b *Backend) Rename(_ context.Context, oldLoc, newLoc pathloc.Path) error {
 }
 
 // Remove removes an indexed file's instance, or a directory with everything under it, from the
-// index. The disk is not touched.
+// index. The disk is not touched. A tag view's top and a directory it shows only in part
+// (NotTaggedError) are not removed.
 func (b *Backend) Remove(ctx context.Context, loc pathloc.Path) error {
 	host, err := pathloc.IndexHostPath(loc)
 	if err != nil {
@@ -221,6 +244,9 @@ func (b *Backend) Remove(ctx context.Context, loc pathloc.Path) error {
 	} else if isDir {
 		return b.RemoveTree(ctx, loc)
 	}
+	if err := b.idx().guardTagChange(ctx, d, loc, host); err != nil {
+		return err
+	}
 	b.idx().writeMu.Lock()
 	_, err = d.RemoveInstance(host)
 	b.idx().writeMu.Unlock()
@@ -228,14 +254,18 @@ func (b *Backend) Remove(ctx context.Context, loc pathloc.Path) error {
 	return err
 }
 
-// RemoveTree removes an indexed directory and everything under it from the index.
-func (b *Backend) RemoveTree(_ context.Context, dir pathloc.Path) error {
+// RemoveTree removes an indexed directory and everything under it from the index (see Remove for
+// the tag view refusals).
+func (b *Backend) RemoveTree(ctx context.Context, dir pathloc.Path) error {
 	host, err := pathloc.IndexHostPath(dir)
 	if err != nil {
 		return err
 	}
 	d, err := b.open()
 	if err != nil {
+		return err
+	}
+	if err := b.idx().guardTagChange(ctx, d, dir, host); err != nil {
 		return err
 	}
 	b.idx().writeMu.Lock()

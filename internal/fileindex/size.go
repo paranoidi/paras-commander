@@ -18,7 +18,9 @@ LEFT JOIN instance i ON i.dir_id = t.id`
 
 // SubtreeSize is the disk-usage total of a fileindex:// path, read from the index without
 // touching the disk (diskusage.SubtreeSizer): an indexed directory's files and bytes, or an
-// indexed file's size and 1. A path the index does not hold is fs.ErrNotExist.
+// indexed file's size and 1. A path the index does not hold is fs.ErrNotExist. In a tag view the
+// list of a flat view and a directory of a structure view that is not tagged itself nor inside a
+// tagged one total their matches only.
 func (x *Index) SubtreeSize(ctx context.Context, raw string) (bytes, files int64, err error) {
 	loc, err := pathloc.Parse(raw)
 	if err != nil {
@@ -32,9 +34,26 @@ func (x *Index) SubtreeSize(ctx context.Context, raw string) (bytes, files int64
 	if err != nil {
 		return 0, 0, err
 	}
+	q, inView := loc.TagQuery()
+	if inView && loc.IsTagList() {
+		ms, err := x.matches(ctx, q)
+		if err != nil {
+			return 0, 0, err
+		}
+		return ms.totals(ctx, d, "/")
+	}
 	id, isDir, err := db.DirByPath(d, host)
 	if err != nil {
 		return 0, 0, err
+	}
+	if isDir && inView && !q.Flat {
+		ms, err := x.matches(ctx, q)
+		if err != nil {
+			return 0, 0, err
+		}
+		if !ms.covered(host) {
+			return ms.totals(ctx, d, host)
+		}
 	}
 	if isDir {
 		err = d.QueryRowContext(ctx, subtreeQuery, id).Scan(&files, &bytes)
