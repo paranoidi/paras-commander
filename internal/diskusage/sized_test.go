@@ -3,6 +3,7 @@ package diskusage
 import (
 	"context"
 	"io/fs"
+	"strings"
 	"testing"
 	"time"
 )
@@ -29,7 +30,7 @@ func TestSizerTotalsPrefixedRootsAndOrigin(t *testing.T) {
 	t.Parallel()
 	e := New()
 	totals := map[string]int64{"idx:///w": 30, "idx:///w/a": 10, "idx:///w/b": 20}
-	e.SetSubtreeSizer("idx://", func(_ context.Context, p string) (int64, int64, error) {
+	e.SetSubtreeSizer(func(p string) bool { return strings.HasPrefix(p, "idx://") }, func(_ context.Context, p string) (int64, int64, error) {
 		n, ok := totals[p]
 		if !ok {
 			return 0, 0, fs.ErrNotExist
@@ -61,5 +62,24 @@ func TestSizerTotalsPrefixedRootsAndOrigin(t *testing.T) {
 	}
 	if _, ok := e.ByteSize("/local"); !ok {
 		t.Fatal("ForgetSized dropped a disk total")
+	}
+}
+
+// TestSizerMatchSeesCleanedFlatPath: a flat tag view path inside a list row is sized although
+// CleanKey collapses its "//" row boundary.
+func TestSizerMatchSeesCleanedFlatPath(t *testing.T) {
+	t.Parallel()
+	e := New()
+	const key = "fileindex@(clover):///meadow/orchard/lantern"
+	e.SetSubtreeSizer(func(p string) bool { return strings.HasPrefix(p, "fileindex") }, func(_ context.Context, p string) (int64, int64, error) {
+		if p != key {
+			return 0, 0, fs.ErrNotExist
+		}
+		return 7, 1, nil
+	})
+	e.StartScanFromDirectory("fileindex@(clover):///meadow//orchard/", []string{"fileindex@(clover):///meadow//orchard/lantern"}, nil, 0, ListingVolumeGate{})
+	waitUntil(t, func() bool { _, ok := e.ByteSize(key); return ok && !e.DiskScanBusy() }, 2*time.Second, "flat path sized")
+	if got, _ := e.ByteSize(key); got != 7 {
+		t.Fatalf("ByteSize = %d, want 7", got)
 	}
 }

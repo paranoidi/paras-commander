@@ -106,12 +106,12 @@ type Engine struct {
 	// workerBusy is true while the worker is executing a dequeued scan job (runPlanner or hook).
 	workerBusy atomic.Bool
 
-	// sizerPrefix and sizer total paths that are not walked on disk (SetSubtreeSizer); set
+	// sizerMatch and sizer total paths that are not walked on disk (SetSubtreeSizer); set
 	// once before the first scan. sizedEpoch counts ForgetSized calls, so a sizer query that
 	// raced one is not cached.
-	sizerPrefix string
-	sizer       SubtreeSizer
-	sizedEpoch  atomic.Uint64
+	sizerMatch func(path string) bool
+	sizer      SubtreeSizer
+	sizedEpoch atomic.Uint64
 	// sizedKeys are the cache keys the sizer filled (guarded by mu), so ForgetSized drops them
 	// without sweeping the whole cache.
 	sizedKeys map[string]struct{}

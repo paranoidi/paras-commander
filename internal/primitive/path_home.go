@@ -13,6 +13,8 @@ import (
 //
 // A URI ("scheme://rest") is never cleaned: it is shown as is, or with its scheme prefix replaced
 // by the registered display text (SetPathDisplayPrefixes) and the rest shortened as a host path.
+// A scheme word with a query in parentheses ("fileindex@(a|b)://") shows the registered text of
+// its plain prefix with the query kept: "<icon>@(a|b) ".
 func PathWithHomeTilde(absPath, homeDir string) string {
 	if i := strings.Index(absPath, "://"); i > 0 {
 		canon, rest := absPath[:i+3], absPath[i+3:]
@@ -55,6 +57,24 @@ func pathDisplayPrefix(canon string) (string, bool) {
 	if m == nil {
 		return "", false
 	}
-	shown, ok := (*m)[canon]
-	return shown, ok
+	if shown, ok := (*m)[canon]; ok {
+		return shown, true
+	}
+	// A query follows the scheme word, after an optional "@": "scheme@(query)://".
+	word, ok := strings.CutSuffix(canon, ")://")
+	if !ok {
+		return "", false
+	}
+	k := strings.Index(word, "(")
+	if k > 0 && word[k-1] == '@' {
+		k--
+	}
+	if k <= 0 {
+		return "", false
+	}
+	shown, ok := (*m)[word[:k]+"://"]
+	if !ok {
+		return "", false
+	}
+	return strings.TrimSuffix(shown, " ") + word[k:] + ") ", true
 }

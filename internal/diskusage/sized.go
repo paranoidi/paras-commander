@@ -19,15 +19,15 @@ func CleanKey(p string) string {
 	return filepath.Clean(p)
 }
 
-// SetSubtreeSizer makes paths starting with prefix (e.g. "fileindex://") take their totals from
-// sizer instead of a disk walk. Call it before the first scan.
-func (e *Engine) SetSubtreeSizer(prefix string, sizer SubtreeSizer) {
-	e.sizerPrefix, e.sizer = prefix, sizer
+// SetSubtreeSizer makes the paths match accepts (e.g. fileindex:// ones) take their totals from
+// sizer instead of a disk walk. match sees cleaned keys (CleanKey). Call it before the first scan.
+func (e *Engine) SetSubtreeSizer(match func(path string) bool, sizer SubtreeSizer) {
+	e.sizerMatch, e.sizer = match, sizer
 }
 
 // sized reports whether p takes its total from the subtree sizer.
 func (e *Engine) sized(p string) bool {
-	return e.sizer != nil && strings.HasPrefix(p, e.sizerPrefix)
+	return e.sizer != nil && e.sizerMatch(p)
 }
 
 // ForgetSized drops every cached total under the sizer prefix, after the data behind it changed.

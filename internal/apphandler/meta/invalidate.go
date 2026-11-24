@@ -3,7 +3,6 @@ package meta
 import (
 	"context"
 	"path/filepath"
-	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/fschange"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
@@ -52,7 +51,10 @@ func newFSReports(batch []fschange.Change) fsReports {
 // A row under a reported directory counts as gone: only a new listing can say it still exists.
 // Rows of fileindex:// panels are matched by their host path, which is what changes report.
 func (r fsReports) lookup(rowPath string) (rep fsReport, ok bool) {
-	host := strings.TrimPrefix(rowPath, pathloc.FileIndexPrefix)
+	host := rowPath
+	if _, indexHost, ok := pathloc.CutIndexPrefix(rowPath); ok {
+		host = indexHost
+	}
 	rep, ok = r[host]
 	for dir := filepath.Dir(host); ; dir = filepath.Dir(dir) {
 		if up, found := r[dir]; found && up.dir && (!ok || up.seq > rep.seq) {

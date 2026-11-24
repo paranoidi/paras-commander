@@ -3,7 +3,6 @@ package panel
 import (
 	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -92,7 +91,7 @@ func (s *State) commandTagTest() func(p string) bool {
 	// indexRoot is the host directory a fileindex:// tag is compared with.
 	indexRoot, _ := s.Path.HostPath()
 	return func(p string) bool {
-		if !strings.HasPrefix(p, pathloc.FileIndexPrefix) {
+		if _, _, isIndex := pathloc.CutIndexPrefix(p); !isIndex {
 			return inScope(root, p)
 		}
 		loc, err := pathloc.Parse(p)

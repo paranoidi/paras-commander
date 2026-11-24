@@ -46,3 +46,27 @@ func TestPathWithHomeTildeURIs(t *testing.T) {
 		t.Fatalf("index root = %q", got)
 	}
 }
+
+func TestPathWithHomeTildeTagViews(t *testing.T) {
+	t.Cleanup(func() { SetPathDisplayPrefixes(nil) })
+	const raw = "fileindex(clover&thistle):///home/wren/orchard"
+	SetPathDisplayPrefixes(nil)
+	if got := PathWithHomeTilde(raw, "/home/wren"); got != raw {
+		t.Fatalf("unregistered tag view = %q, want it unchanged", got)
+	}
+	SetPathDisplayPrefixes(map[string]string{"fileindex://": "# "})
+	for in, want := range map[string]string{
+		raw:                                        "#(clover&thistle) ~/orchard",
+		"fileindex@(clover|thistle):///":           "#@(clover|thistle) /",
+		"fileindex@(clover):///home/wren/a//b/c":   "#@(clover) ~/a/b/c",
+		"fileindex(a%20b):///home/wren":            "#(a%20b) ~/",
+		"harbor(x)://srv":                          "harbor(x)://srv",
+		"fileindex(~tilde):///home/wren/orchard":   "#(~tilde) ~/orchard",
+		"/home/wren/fileindex(clover):///orchard":  "/home/wren/fileindex(clover):///orchard",
+		"fileindex(clover):///home/wren/ore/more/": "#(clover) ~/ore/more",
+	} {
+		if got := PathWithHomeTilde(in, "/home/wren"); got != want {
+			t.Errorf("PathWithHomeTilde(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

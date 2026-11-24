@@ -199,7 +199,7 @@ func (s *State) GhostSources(paths ...string) []string {
 	}
 	var names []string
 	for _, p := range paths {
-		if strings.HasPrefix(p, pathloc.FileIndexPrefix) {
+		if _, _, isIndex := pathloc.CutIndexPrefix(p); isIndex {
 			names = append(names, filepath.Base(p))
 		}
 	}

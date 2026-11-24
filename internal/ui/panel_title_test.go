@@ -122,3 +122,16 @@ func TestPanelTitleSegmentsSkipDisplayPrefix(t *testing.T) {
 		}
 	}
 }
+
+func TestPanelTitlePathAbbreviatesTagViewPathOnly(t *testing.T) {
+	t.Cleanup(func() { primitive.SetPathDisplayPrefixes(nil) })
+	const raw = "fileindex(~clover&thistle):///home/wren/orchard/lantern/meadow"
+	primitive.SetPathDisplayPrefixes(map[string]string{"fileindex://": "# "})
+	if got := PanelTitlePath(raw, "/home/wren", 31); got != "#(~clover&thistle) ~/o/l/meadow" {
+		t.Fatalf("icon form = %q, want the query whole and the path abbreviated", got)
+	}
+	primitive.SetPathDisplayPrefixes(nil)
+	if got := PanelTitlePath(raw, "/home/wren", 50); got != "fileindex(~clover&thistle):///h/w/o/lantern/meadow" {
+		t.Fatalf("raw form = %q, want the query whole and the path abbreviated", got)
+	}
+}

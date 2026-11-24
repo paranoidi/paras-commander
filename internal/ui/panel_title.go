@@ -48,8 +48,9 @@ func abbreviatePanelTitlePath(display string, maxRunes int) string {
 }
 
 func splitPanelTitlePath(s string) (prefix string, segs []string, ok bool) {
-	// A display prefix ("<icon> " for fileindex://) stays whole; only the path after it shortens.
-	if i := strings.Index(s, " "); i > 0 && !strings.ContainsAny(s[:i], "/~") &&
+	// A display prefix ("<icon> " for fileindex://, "<icon>(tags) " for a tag view) stays whole; only the path after it shortens.
+	// A tag view shows its query right after it ("<icon>(a&b) "), which may hold "~".
+	if i := strings.Index(s, " "); i > 0 && !strings.Contains(s[:i], "/") && !strings.HasPrefix(s[:i], "~") &&
 		(strings.HasPrefix(s[i+1:], "/") || strings.HasPrefix(s[i+1:], "~/")) {
 		p, segs, ok := splitPanelTitlePath(s[i+1:])
 		return s[:i+1] + p, segs, ok

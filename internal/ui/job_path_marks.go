@@ -1,8 +1,6 @@
 package ui
 
 import (
-	"strings"
-
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
@@ -172,7 +170,7 @@ func EntryPathJobMark(absPath string, jobMarks []JobPathMark) (JobRowMark, bool)
 	if absPath == "" || len(jobMarks) == 0 {
 		return JobRowMark{}, false
 	}
-	hostPath, isIndex := strings.CutPrefix(absPath, pathloc.FileIndexPrefix)
+	_, hostPath, isIndex := pathloc.CutIndexPrefix(absPath)
 	bestPri := -1
 	bestLen := -1
 	bestIdx := -1

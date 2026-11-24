@@ -734,7 +734,10 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		return nil, fmt.Errorf("register fileindex backend: %w", err)
 	}
 	// fileindex:// directory sizes come from the index, not a disk walk.
-	app.disk.engine.SetSubtreeSizer(pathloc.FileIndexPrefix, app.fileIndex.SubtreeSize)
+	app.disk.engine.SetSubtreeSizer(func(p string) bool {
+		_, _, ok := pathloc.CutIndexPrefix(p)
+		return ok
+	}, app.fileIndex.SubtreeSize)
 	app.metaCtrl = metactrl.New(metactrl.Deps{
 		Host:      metaHost{appShellHost: appShellHost{app: app}},
 		Screen:    screen,
@@ -1524,7 +1527,7 @@ func (a *App) setStyles(t theme.Theme) {
 }
 
 // syncPathDisplayPrefixes shows fileindex:// paths as the theme's fileindex icon + " " when
-// Nerd Font icons are on (primitive.PathWithHomeTilde), else in full.
+// Nerd Font icons are on (primitive.PathWithHomeTilde; tag views get the icon too), else in full.
 func syncPathDisplayPrefixes(t theme.Theme) {
 	m := map[string]string{}
 	if icon := t.IconFileIndex(); icon != "" {
