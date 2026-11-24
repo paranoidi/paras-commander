@@ -123,6 +123,17 @@ _Avoid_: index panel, database view
 A local panel (`State.WithIndex`) whose listing has the index merged in: each row carries an `IndexStatus` shown as an icon in the git strip, and entries only the index knows appear as ghost rows. Contrast with the index view, which replaces the filesystem.
 _Avoid_: index overlay mode
 
+**Tag view**:
+An index view (`fileindex://` path with a tag query before the `://`) that lists the index entries carrying the query's tags themselves, not the whole index. It always covers the whole index and has a flat or a structure mode. See ADR 0029.
+_Avoid_: tag filter, tag search
+
+**Tag query**:
+The tags of a tag view plus how they match (`pathloc.TagQuery`: `Tags` sorted and unique, `Any` for at least one tag, else all of them) and the mode (`Flat`). It is part of the path string, so history, tabs and bookmarks keep it.
+
+**Flat / structure mode**:
+How a tag view shows its matches: flat is one list with one row per match from every directory (a tagged directory is one row); structure keeps the index's directory structure, showing only the matches and the directories that lead to them. Not the panel's flat or tree layout (`ListLayout`), which is a separate setting.
+_Avoid_: list mode, tree mode
+
 **Unique file**:
 An indexed file with no confirmed copy outside a scope of directories: what deleting that scope would lose, as far as the index knows. Copies inside the scope do not count. A file whose copies cannot be ruled out (not fully hashed, or a potential duplicate outside) is still unique, flagged unverified.
 _Avoid_: orphan, singleton

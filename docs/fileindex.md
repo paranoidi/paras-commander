@@ -2,8 +2,9 @@
 
 pc has [fileindex](https://github.com/paranoidi/fileindex) built in. fileindex is a
 SQLite index of your files by content hash, with tags. In pc you can browse the
-index like a directory tree, show tags as a panel column, add and remove tags,
-and run scans and prunes as background jobs.
+index like a directory tree, browse just the entries that carry chosen tags,
+show tags as a panel column, add and remove tags, and run scans and prunes as
+background jobs.
 
 pc shares its index with the `fileindex` command. Set the database location
 with `database` under `[fileindex]` in pc's `config.toml`; left empty, pc uses
@@ -42,8 +43,10 @@ fileindex. The keys below are the defaults; rebind the shortcuts under
 |---|---|---|
 | `M-F` | `f` | [Find in index](#find-in-index) from the current directory, on a local or `fileindex://` panel |
 | `M-I` | `i` | Toggle [browsing with fileindex](#browsing-with-fileindex): the real directory plus the index's state per entry |
-| `M-B` | `b` | Toggle: show the current directory in the index, or from the index go to the real location |
-| `M-R` | `r` | Back to the plain filesystem: from the index, go to the entry's real location; with browsing with fileindex on, turn it off |
+| `M-B` | `b` | Toggle: show the current directory in the index, or from the index go to the real location; from a [tag view](#browsing-by-tags) it opens the plain index at the entry |
+| `M-R` | `r` | Back to the plain filesystem: from the index or a tag view, go to the entry's real location; with browsing with fileindex on, turn it off |
+| `M-G` | `g` | [Browse by tags](#browsing-by-tags): pick tags and show the entries that carry them, as a flat list or in their directory structure |
+| `M-L` | `l` | Switch a [tag view](#browsing-by-tags) between the flat list and the directory structure (dimmed outside a tag view) |
 | `M-W` | `F` | [Find duplicates within index](find-duplicates.md): duplicates from the index for the current directory, also from a normal panel: it never reads the disk, so it only sees indexed files (selected directories on a normal panel are ignored) |
 | `M-O` | `o` | [Other copies](#other-copies) of the file under the cursor, from the index |
 | `M-D` | `d` | [Copies outside directory](#copies-outside-directory): files under the current directory that also exist elsewhere in the index |
@@ -156,6 +159,9 @@ bookmarks and the path picker accept `fileindex://` paths too. The index root is
 and other path displays show `fileindex://` as the database icon followed by
 a space.
 
+To see only the entries that carry certain tags, use
+[Browsing by tags](#browsing-by-tags).
+
 An index view lists what the index recorded, including files that have since
 gone from disk. Files show their indexed size and modification time;
 directories show no modification time, and their size once it is requested,
@@ -191,6 +197,102 @@ In an index view:
   in the index drops the totals; request them again to see the new ones.
 - Git status and folder colours are not available, as on [SFTP](sftp.md)
   panels.
+
+## Browsing by tags
+
+`M-G` (File Index menu `g`) shows only the entries that carry the tags you
+pick, from any panel, as a **tag view** in the active panel. It opens the
+**Browse by tags** dialog:
+
+- **Tags:** every tag in the database as checkboxes, which work as in the
+  [tag editor](#tags): Space, Enter or a click toggles, typing jumps to the
+  best match. Check at least one tag (the dialog warns otherwise). With no tags
+  in the database yet it says "No tags yet".
+- **Match:** **All tags** keeps entries carrying every checked tag, **Any tag**
+  entries carrying at least one.
+- **View:** **Flat list** or **Directory structure** (below).
+
+Opened inside a tag view, the dialog starts with that view's tags, Match and
+View; elsewhere it starts with the Match and View you last used (All tags and
+Flat list the first time). When nothing carries the tags the panel stays where
+it is and a message says "No entries tagged beach & holiday".
+
+An entry matches by its own tags only: a file by the tags the Tags column shows
+for it (copies of one content all match), a directory by its own. Entries inside
+a tagged directory do not match because the directory does. A view always covers
+the whole index, wherever the panel was.
+
+**Flat list.** One row per match, from every directory, sorted by path. A row
+shows the entry's own name, so two matches called `notes.txt` in different
+directories are two rows; the panel applies the `tag-list` [column
+profile](columns.md#profiles) (Size, Tags and the **Directory** column, which
+tells them apart). A tagged directory is one row: Enter opens it and shows its
+whole content, the plain index. Going up from a row, or from anything opened
+inside one, leads back up to the list (with the cursor on the row you came
+from), not to the directory the row lives in.
+
+**Directory structure.** The index's directory tree, with only the matching
+entries and the directories that lead to them. It opens at the deepest
+directory that holds every match. A tagged directory, and everything inside
+one, shows its whole content.
+
+`M-L` switches the view you are in between the two. From the flat list the
+cursor row appears in its real directory; from the structure the list opens with
+the cursor on that entry's row (when the entry is itself a match). `M-B` in a
+tag view opens the plain index at the entry under the cursor (a second `M-B`
+goes to the real directory, as in any index view), and `M-R` shows the entry at
+its real location. Titles show the query: with Nerd Font icons the database icon,
+then `(beach&holiday)` for a structure view or `@(beach|holiday)` for a flat
+one, then the directory.
+
+In a tag view:
+
+- **Copy** reads the real files, as in any index view. Copying a directory of a
+  structure view that shows only part of its content (one that is neither tagged
+  nor inside a tagged directory) copies only the matches, with their
+  directories. Rows of a flat list that share a name meet the usual conflict
+  handling.
+- **Rename, move and delete** change the index only, as in any index view. A
+  directory that a structure view shows only in part is refused ("Not tagged
+  itself: name"), since the change would also reach the entries the view hides;
+  so is the top of a view. Tagged directories and what is inside them, and the
+  rows of a flat list, work as usual.
+- **Disk usage** of such a partly shown directory counts the matches only.
+- **Find in index** and **Jump to directory** search the whole index below the
+  panel directory, not only the matches (from the flat list, the whole index),
+  and open their result in the plain index.
+- **Find duplicates** in a structure directory covers everything under it, not
+  only the matches.
+- On the flat list there is no real directory, so what would use the panel's
+  directory is refused with "This is a list of tagged entries: select something
+  first" unless it has something of its own: Scan and Fast scan need selected
+  entries, Report differences the directory under the cursor, Find unique files
+  selected directories, Edit tags a selection or the entry under the cursor.
+  Prune, Copies outside directory and Find duplicates are always refused there.
+  Inside a row, or in a structure view, the panel has a directory and they work
+  as usual.
+
+A tag view reloads when the index changes (a tag edit, a prune, a delete or
+move in the index, the end of a scan), but not at every commit of a running
+scan: during one it follows the panel's periodic refresh
+([Panels](panels.md#staying-current)) and catches up when the scan ends.
+Moving around inside a view is quick: the matches are looked up once and kept
+while the database is unchanged.
+
+**Paths.** A tag view is a `fileindex://` path with the query in parentheses
+before the `://`, so history, bookmarks, tabs and the path picker keep it, and
+you can type one:
+
+| Path | Shows |
+|---|---|
+| `fileindex(beach&holiday):///home/me` | structure view, entries with **all** of the tags, at `/home/me` |
+| `fileindex@(beach\|holiday):///` | flat list, entries with **any** of the tags (`@` marks flat) |
+| `fileindex@(beach):///home/me/Trip//2019` | inside the flat row `/home/me/Trip`: the `//` marks where the row ends |
+
+Use `&` or `|` in one query, never both. A tag name containing `%`, `/`, `:`,
+`(`, `)`, `&`, `|` or a space is written with those characters as `%XX` (a space
+is `%20`); the tags of a path are sorted, so one query has one path. The flat
+form with no directory, `fileindex@(beach)://`, is accepted for the list.
 
 ## Finding in the index
 
@@ -387,6 +489,7 @@ index views, and sort and filter like any meta column:
 | **Last seen** | `fileindex.last-seen` | when a scan last saw the file or directory, in local time |
 | **Tree files** | `fileindex.tree-files` | for a directory, how many indexed files are under it |
 | **Hash** | `fileindex.hash` | the first 12 hex digits of the file's SHA-256 |
+| **Directory** | `fileindex.directory` | the directory the entry is in, with `~` for home; shortened to the column width with the last names kept (`~/P…/Holiday/Trip`). It needs no index data, so it works on local panels too |
 
 Tree files adds up the whole subtree, which at the index root is the whole
 index. A directory's indexed size shows in the size column of an index view
@@ -395,8 +498,12 @@ index. A directory's indexed size shows in the size column of an index view
 A panel with no meta columns applies the [column profile](columns.md#profiles)
 named by `[fileindex] default_profile` ([config.toml](config.md); by default
 `index`, which is Size and the tags column) when it enters an index view (a
-`fileindex://` panel or Browse with fileindex). When it leaves both, its previous
-columns come back, unless you changed the columns in between.
+`fileindex://` panel or Browse with fileindex). In a flat [tag view](#browsing-by-tags)
+it applies the `tag-list` profile (Size, Tags and Directory) instead, and
+moving between a flat tag view and another index view switches between the two.
+When it leaves the index views, its previous columns come back, unless you
+changed the columns in between. A `default_profile` of `""` applies none of
+them.
 
 ## Tags
 
@@ -405,7 +512,8 @@ the cursor, else the current directory. It lists every tag in the database as
 checkboxes in two columns, with the tags the entries already carry checked. A
 tag that only some of the selected entries carry shows as mixed (`[-]`).
 
-Nothing is written until OK; Cancel or Esc discards the edits.
+Nothing is written until OK; Cancel or Esc discards the edits. To see what carries
+a tag, use [Browse by tags](#browsing-by-tags).
 
 - **Checkboxes:** the list comes first and has focus when the dialog opens.
   Space, Enter or a click toggles a tag. A mixed tag cycles through set on all,

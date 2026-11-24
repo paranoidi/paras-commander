@@ -1,0 +1,28 @@
+# Tag views are fileindex paths with a tag query
+
+Status: accepted. Builds on ADR 0027 (a `fileindex://` panel changes the index only).
+
+A tag view lists the index entries that carry chosen tags, as one flat list or in the directory structure. It is a `fileindex://` path with the query in parentheses before the `://`: `fileindex(a&b):///host` (structure, all tags), `fileindex@(a|b):///host` (flat, any tag).
+
+## Context
+
+- The panels, history, tabs, bookmarks, reload and restart all keep a location as one path string. A view that was panel state instead would need each of them taught about it.
+- About thirty places test `SchemeFileIndex` and already do the right thing for the index: index-only operations, refusals, providers, find, reveal, edit and view of the real file.
+- `db.FindByTags` walks the tree, so from the root it touches every instance. The tag tables hold the matches directly.
+- Going up from a row of a flat list has to lead back to the list, not to the directory the row lives in, and two rows can have one name.
+
+## Decision
+
+- **Not a new scheme.** The tag view stays `SchemeFileIndex`. `pathloc.CutIndexPrefix` is the one recogniser of any fileindex form, replacing every literal prefix check, and `IndexHostPath` returns the host path without the query. A scheme of its own would have meant revisiting every scheme test above, and the operations on a view still end at the host path in the index.
+- **The query goes before the `://`, not after it.** As a URI authority (`fileindex://a&b/host`) it would read as part of the path. In front of the `://` the host path stays exactly what the index view uses, and code that keeps everything up to `://` whole (title shortening, `diskusage.CleanKey`) works unchanged. The tags are sorted, deduplicated and `%XX`-escaped, so one query has one path; mixing `&` and `|` is a parse error.
+- **The mode is part of the path, not panel state.** `@` marks flat. A panel flag would have to be carried through history, tabs, bookmarks and reload on its own, where a path string already is.
+- **No inheritance from directories.** An entry matches by its own tags only: a file by its content's tags (or a pending tag), a directory by its own. Letting an entry inherit a directory's tags would make every file below a tagged directory a match, and the flat list as large as the directory; the directory is one row, opened to show its whole content. A tagged directory and everything inside it list as the plain index in structure mode.
+- **The match set comes from the tag tables, not from walking the tree with `FindByTags`,** which from the root would touch every instance. The query reads `content_tag` and `pending_tag` joined to instances, `dir_tag`, and the ancestors above them from one recursive query, in one transaction (a prune running meanwhile cannot take a directory from under the paths built from it). Listings are map lookups on that set.
+
+## Consequences
+
+- **Cache stamp rule.** A match set is kept per query (flat and structure share it), at most four queries, while the size and mtime of the database file and its `-wal` are unchanged. That catches pc's own writes and the `fileindex` command's alike without wiring. File times tick in milliseconds and a write-ahead log at its high-water mark keeps its size, so two commits close together can leave one stamp: a set built while the stamp is younger than 100 ms (`tagViewSettle`) is used but not kept. The stamp is read before the build, so a write during it leaves the cached stamp stale and the next listing rebuilds. A running scan commits often and each commit changes the stamp, so every listing then rebuilds the set; tag views therefore do not reload on a scan's commits (`showsTagListing` in `handleIndexScanWake`), only on `OnChange` and tag edits. There is no row cap in flat mode.
+- **`//` boundary, `Up` against `Parent`.** In flat mode `//` marks where the row ends: `fileindex@(q):///a/Trip//2019`. A clean host path never holds `//`, so it carries the row without any panel state. `Parent`, `Join` and `HasPrefix` stay true to the host path (rename targets rely on it); `Up` is where going up leads in a panel and differs from `Parent` only in a flat view. Anything that cleans a path with `filepath.Clean` collapses the `//` to `/`, which names the same host path but a different place in the view; the places that compare or rebuild index paths (history entries, the tree cursor id, row selection, rename and disk sort) keep them whole.
+- **Partial directories are refused.** A structure directory that is neither tagged nor inside a tagged one lists only what leads to a match, so a rename, move or delete there would also reach records the view hides. `Backend.Rename`, `Remove` and `RemoveTree` refuse it with `NotTaggedError` ("Not tagged itself: name"), as they refuse the top of a view. Copy out is unaffected and, going through `Backend.List`, copies only the matches. Disk usage of such a directory totals the matches only (without counting a match inside a tagged directory twice).
+- **`RefuseTagList`.** The host path of the flat list is `/`, so an action that falls back to the panel directory (scan, prune, copies outside, find duplicates, find unique files, report differences, a scan queued by a user-menu command) would work on the whole filesystem root. `host.RefuseTagList` refuses it with `pathloc.TagListRefusal`; an action with a selection or cursor entry of its own is unaffected. Find in index and Jump to directory use the host path, so from the list they search the whole index.
+- A new operation that falls back to the panel directory must call `RefuseTagList`. Any new `fileindex://` prefix check must use `pathloc.CutIndexPrefix`.

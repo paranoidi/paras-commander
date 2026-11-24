@@ -52,7 +52,7 @@ Enter changes the panel to the highlighted directory. `S-←` / `S-→` point th
 - **Include hidden** (`M-i`, default off) adds dot-directories and git-ignored directories.
 - **Stay on current volume** (`M-v`, default on) does not descend into other mounted file systems.
 
-On an [index view](fileindex.md) Jump to directory searches the directories the index records instead of the disk, so directories that have gone from disk are found too; it lists nothing until you type, and Enter shows the directory in the index view.
+On an [index view](fileindex.md) Jump to directory searches the directories the index records instead of the disk, so directories that have gone from disk are found too; it lists nothing until you type, and Enter shows the directory in the index view. In a [tag view](fileindex.md#browsing-by-tags) it searches the index below the panel's directory (the whole index from the flat list), not only the tagged directories, and Enter shows the directory in the plain index.
 
 ## Other ways to move
 

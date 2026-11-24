@@ -52,8 +52,9 @@ A profile is a saved set of ticked columns, both file and meta.
 | `permissions` | Size, Permissions |
 | `brief` | Size |
 | `index` | Size, the fileindex Tags column |
+| `tag-list` | Size, the fileindex Tags and Directory columns |
 
-These four are built in. They always exist and can't be overwritten or deleted.
+These five are built in. They always exist and can't be overwritten or deleted.
 
 In the Columns dialog:
 
@@ -67,7 +68,7 @@ The keys can be rebound under `[dialog.columns]` in `keybindings.toml`.
 
 ## Cycling
 
-`M-t` moves the active panel to the next profile and shows its name in a message: `modified`, `permissions`, `brief`, then your saved profiles in file order, and back to the start. `index` is left out of the cycle. After you choose columns that match no profile, `M-t` starts again from the first profile.
+`M-t` moves the active panel to the next profile and shows its name in a message: `modified`, `permissions`, `brief`, then your saved profiles in file order, and back to the start. `index` and `tag-list` are left out of the cycle. After you choose columns that match no profile, `M-t` starts again from the first profile.
 
 A profile replaces both file and meta columns, so cycling to a profile with no meta columns switches meta columns off.
 
@@ -76,7 +77,7 @@ In [carousel](quick-view-preview.md) view both the dialog and `M-t` work. Meta c
 ## Defaults and files
 
 - `default_column_profile` under [`[panels]`](config.md#panels) picks the profile both panels start with, including its meta columns. `F6` in the profile list sets it. An unknown name shows a warning and uses `brief`.
-- `default_profile` under [`[fileindex]`](config.md#fileindex) is applied when a panel with no meta columns enters an index view, and the panel's previous columns come back when it leaves, unless you changed the columns in between. See [Fileindex](fileindex.md#columns).
+- `default_profile` under [`[fileindex]`](config.md#fileindex) is applied when a panel with no meta columns enters an index view, and the panel's previous columns come back when it leaves, unless you changed the columns in between. A flat [tag view](fileindex.md#browsing-by-tags) applies `tag-list` instead (and none when `default_profile` is empty). See [Fileindex](fileindex.md#columns).
 - Saved profiles live in `column-profiles.toml` in the config directory ([`[columns] file`](config.md#columns)). Editing that file by hand takes effect the next time the Columns dialog opens.
 
 ```toml

@@ -23,7 +23,7 @@ New here? Start with [Getting started](getting-started.md), then
 - **Tools** — [disk usage](disk-usage.md), [directory compare](compare-directories.md), [find duplicates](find-duplicates.md), [mass rename](mass-rename.md).
 - **Commands** — run a command for each selected file, user menu with background and worker-pool commands, [meta columns](meta-columns.md) fed by external commands, [column profiles](columns.md). See [Commands](commands.md).
 - **Remote** — browse SFTP hosts from `~/.ssh/config`. See [SFTP](sftp.md).
-- **fileindex** — browse a [fileindex](fileindex.md) content-hash index as `fileindex://`, show and edit its tags as a column, scan and prune it as background jobs.
+- **fileindex** — browse a [fileindex](fileindex.md) content-hash index as `fileindex://`, browse just the entries carrying chosen tags as a flat list or a directory tree, show and edit its tags as a column, scan and prune it as background jobs.
 - **Subshell** — `C-o` shell with selected filenames at hand. See [Subshell](subshell.md).
 - **Status commands** — load average, memory, battery or your own commands at the top-left of the menu bar. See [Status commands](status-commands.md).
 - **Mouse** — click, double click, right click, drag select and wheel in the file browser. See [Mouse](mouse.md).
