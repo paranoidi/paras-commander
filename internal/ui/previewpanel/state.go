@@ -29,6 +29,9 @@ type State struct {
 	Phase Phase
 	// Path is the absolute file path being previewed.
 	Path string
+	// IndexPath is the fileindex path whose file Path is, when the fullscreen view was opened for
+	// one ("" otherwise).
+	IndexPath string
 	// TitleBase is shown in the panel title (usually filepath.Base(Path)).
 	TitleBase string
 	// IsDir is true when Path is a directory being previewed by an external
@@ -123,4 +126,13 @@ func (st State) SourceLineToScrollOffset(lineN, textWidth int, base tcell.Style)
 		l = st.buildLayout(textWidth, base)
 	}
 	return l.rowOfLine(lineN)
+}
+
+// ListedPath is the previewed path as the panel it was opened from lists it: what a delete from the
+// fullscreen view acts on, so a fileindex record is removed and not the file.
+func (st State) ListedPath() string {
+	if st.IndexPath != "" {
+		return st.IndexPath
+	}
+	return st.Path
 }

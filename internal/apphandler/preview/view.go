@@ -9,6 +9,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	previewrun "github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -460,7 +461,7 @@ func (h *Handler) OpenFilePreviewFullscreen() {
 	if h.host.InQuickFilterUI() {
 		return
 	}
-	path, _, mode := h.quickViewWantFile()
+	path, mode := h.quickViewWantEntry()
 	if mode == quickViewWantDir {
 		if dirPath, ok := h.activeDirRuleTarget(); ok {
 			// ponytail: unlike quick view, fullscreen has no directory-overlay fallback. If
@@ -493,9 +494,14 @@ func (h *Handler) OpenFilePreviewFullscreen() {
 // every other caller passing a regular file) — this function does not stat path itself. Whether
 // path is actually previewable as text is checked asynchronously (see dispatchFilePreviewCheck
 // below): a binary/unreadable file still opens the view, showing the reason in the pane instead
-// of blocking the caller on a synchronous stat+open+read.
+// of blocking the caller on a synchronous stat+open+read. A fileindex path shows its file on disk
+// and stays what a delete from the view acts on (previewpanel.State.ListedPath).
 func (h *Handler) OpenFullscreenFilePreviewAt(path string, isDir bool) error {
-	path = filepath.Clean(path)
+	indexPath := ""
+	if _, _, ok := pathloc.CutIndexPrefix(path); ok {
+		indexPath = path
+	}
+	path = pathloc.DiskPath(path)
 	w, ht := h.screen.Size()
 	lay := h.host.LayoutForTerminalSize(w, ht)
 	if lay.TooSmall {
@@ -504,7 +510,7 @@ func (h *Handler) OpenFullscreenFilePreviewAt(path string, isDir bool) error {
 	union := ui.MergeTwinPanelRects(lay.Primary, lay.Secondary, h.host.EffectivePaneSplitOrientation())
 	panelPath := filepath.Dir(path)
 	if active := h.host.FocusedPanel(); active != nil && active.PathString() != "" {
-		panelPath = active.PathString()
+		panelPath = previewWorkDir(active)
 	}
 	if isDir {
 		// So a rule command like "eza --tree ." works without needing %f.
@@ -529,6 +535,7 @@ func (h *Handler) OpenFullscreenFilePreviewAt(path string, isDir bool) error {
 		st.Open = true
 		st.Phase = ui.FilePreviewPhasePending
 		st.Path = path
+		st.IndexPath = indexPath
 		st.TitleBase = titleBase
 		st.IsDir = isDir
 		st.CombinedText = ""

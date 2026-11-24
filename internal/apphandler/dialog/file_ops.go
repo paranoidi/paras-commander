@@ -282,14 +282,18 @@ func (h *Handler) OpenDeleteDialogForPath(path, name string) {
 	if path == "" {
 		return
 	}
-	entry, err := localfs.EntryFromPath(path)
+	entry, err := localfs.EntryFromPath(pathloc.DiskPath(path)) // a fileindex path's file
 	if err != nil {
 		h.host.SetErrorMessage("Delete", err)
 		return
 	}
+	note, listed := "", entry.Path
+	if loc, err := pathloc.Parse(path); err == nil && fsbackend.Default().IsIndexOnly(loc) {
+		note, listed = deleteIndexNote, path
+	}
 	entries := []dialog.DeleteListEntry{{
 		Name: name,
-		Path: entry.Path,
+		Path: listed,
 		Type: entry.Type,
 	}}
 	fd := dialog.FileDialogState{
@@ -297,6 +301,7 @@ func (h *Handler) OpenDeleteDialogForPath(path, name string) {
 		DialogType:    dialog.FileDialogDelete,
 		DeleteSummary: ui.FormatDeleteImpactSummary(1, entry.Size, false, ""),
 		DeleteEntries: entries,
+		Note:          note,
 		Focus:         dlg.Cancel, // No is the safe default
 	}
 	fd.DeleteLayoutMinWidth = dialog.ComputeDeleteDialogLayoutMinWidth(fd, ui.DialogListIconLeadingWidth(h.model.UseNerdfontIcons))
@@ -805,7 +810,7 @@ func (h *Handler) ExecuteDelete() {
 		return
 	}
 	if h.model.ViewMode == ui.ViewFilePreview {
-		path := h.model.FullscreenFilePreview.Path
+		path := h.model.FullscreenFilePreview.ListedPath()
 		h.CloseFileDialog()
 		h.jobs.EnqueueDeleteJob([]string{path}, false, true)
 		h.preview.CloseFilePreviewFullscreen()

@@ -136,7 +136,7 @@ func (h *Handler) refreshFullscreenFilePreview() {
 	if !ok {
 		return
 	}
-	req := h.previewRequest(st.Path, tw, contentH, h.host.FocusedPanel().PathString(), h.model.PanelsChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetFullscreen, st.IsDir)
+	req := h.previewRequest(st.Path, tw, contentH, previewWorkDir(h.host.FocusedPanel()), h.model.PanelsChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetFullscreen, st.IsDir)
 	req.Raw = h.model.FullscreenFilePreviewRaw
 	ctx, gen := h.beginPreviewRun(previewTargetFullscreen)
 	h.postRenderWake()

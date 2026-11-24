@@ -331,3 +331,23 @@ func TestCommonParentInTagView(t *testing.T) {
 		t.Error("a tag view and the plain index share no ancestor")
 	}
 }
+
+func TestRawCleanAndDiskPath(t *testing.T) {
+	for _, tc := range []struct{ raw, clean, disk string }{
+		{"/orchard//moss/", "/orchard/moss", "/orchard/moss"},
+		{"moss/../fern", "fern", "fern"},
+		{"", ".", "."},
+		{"fileindex:///orchard/moss/", "fileindex:///orchard/moss", "/orchard/moss"},
+		{"fileindex(b&a):///orchard", "fileindex(a&b):///orchard", "/orchard"},
+		{"fileindex@(a):///orchard//moss", "fileindex@(a):///orchard//moss", "/orchard/moss"},
+		{"sftp://host/orchard", MustParse("sftp://host/orchard").String(), MustParse("sftp://host/orchard").String()},
+		{"fileindex(a&b|c):///orchard", "fileindex(a&b|c):///orchard", "/orchard"},
+	} {
+		if got := Clean(tc.raw); got != tc.clean {
+			t.Errorf("Clean(%q) = %q, want %q", tc.raw, got, tc.clean)
+		}
+		if got := DiskPath(tc.raw); got != tc.disk {
+			t.Errorf("DiskPath(%q) = %q, want %q", tc.raw, got, tc.disk)
+		}
+	}
+}

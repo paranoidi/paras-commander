@@ -16,6 +16,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	previewrun "github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
@@ -594,55 +595,73 @@ const (
 // does not call it on the UI goroutine.
 var stripStat = os.Stat
 
-// quickViewWantFile returns an absolute file path to preview when mode == quickViewWantFile
+// quickViewWantFile returns the disk path of the file to preview when mode == quickViewWantFile
 // or quickViewWantEmpty. Empty (0-byte) files are skipped by inactive-column quick view but
 // remain valid targets for explicit F3 / file.view.
 func (h *Handler) quickViewWantFile() (path string, workDir string, mode quickViewWantMode) {
+	path, mode = h.quickViewWantEntry()
+	if path != "" {
+		path = pathloc.DiskPath(path)
+	}
+	return path, previewWorkDir(h.host.FocusedPanel()), mode
+}
+
+// previewWorkDir is the directory a panel's previews run in: the panel's own on disk, or the cursor
+// row's in the list of a flat tag view, which has none.
+func previewWorkDir(p *panel.State) string {
+	if p.Path.IsTagList() {
+		return pathloc.DiskPath(p.CursorDir().String())
+	}
+	return pathloc.DiskPath(p.PathString())
+}
+
+// quickViewWantEntry is quickViewWantFile with the path as the panel lists it, which on an index
+// panel names the record rather than the file.
+func (h *Handler) quickViewWantEntry() (path string, mode quickViewWantMode) {
 	p := h.host.FocusedPanel()
-	workDir = p.PathString()
 	if h.model.ViewMode == ui.ViewBrowser && h.model.ActiveSubFocus == ui.SubFocusSelectedStrip && p.SelectedStripCount() > 0 {
 		selPath, ok := p.SelectedPathAtStripIndex(p.Strip.Cursor)
 		if !ok {
-			return "", workDir, quickViewWantNone
+			return "", quickViewWantNone
 		}
-		selPath = filepath.Clean(selPath)
+		selPath = pathloc.Clean(selPath)
 		if selPath == "" || selPath == "." {
-			return "", workDir, quickViewWantNone
+			return "", quickViewWantNone
 		}
 		if p.SelectedDirPaths[selPath] {
-			return "", workDir, quickViewWantDir
+			return "", quickViewWantDir
 		}
 		for _, e := range p.Entries {
 			if e.Path != selPath {
 				continue
 			}
 			if e.Type == localfs.EntryDirectory {
-				return "", workDir, quickViewWantDir
+				return "", quickViewWantDir
 			}
 			if e.Size == 0 {
-				return selPath, workDir, quickViewWantEmpty
+				return selPath, quickViewWantEmpty
 			}
-			return selPath, workDir, quickViewWantFile
+			return selPath, quickViewWantFile
 		}
 		// Off-listing strip row: do not Stat on the UI goroutine. Missing or
 		// unreadable paths are reported by the async preview gate.
-		return selPath, workDir, quickViewWantFile
+		return selPath, quickViewWantFile
 	}
 	entry, ok := p.CurrentEntry()
 	if !ok {
-		return "", workDir, quickViewWantNone
+		return "", quickViewWantNone
 	}
 	if entry.Type == localfs.EntryDirectory {
-		return "", workDir, quickViewWantDir
+		return "", quickViewWantDir
 	}
-	path = filepath.Clean(entry.Path)
+	path = pathloc.Clean(entry.Path)
 	if path == "" || path == "." {
-		return "", workDir, quickViewWantNone
+		return "", quickViewWantNone
 	}
 	if entry.Size == 0 {
-		return path, workDir, quickViewWantEmpty
+		return path, quickViewWantEmpty
 	}
-	return path, workDir, quickViewWantFile
+	return path, quickViewWantFile
 }
 
 // ClearQuickViewDirOverlay clears the inactive-column directory overlay state.
@@ -790,6 +809,7 @@ func (h *Handler) ApplyQuickViewSlow(p QuickViewSlowPayload) bool {
 // directory-listing overlay.
 func (h *Handler) activeDirRuleTarget() (string, bool) {
 	dirPath, ok := h.host.SyncFollowTargetPath(h.host.FocusedPanel())
+	dirPath = pathloc.DiskPath(dirPath)
 	if !ok || !previewrun.MatchAnyCommandRule(h.host.Config().Preview, dirPath, localfs.EntryDirectory, filepath.Dir(dirPath)) {
 		return "", false
 	}
@@ -962,7 +982,7 @@ func (h *Handler) refreshInactiveFilePreview() {
 	if !ok {
 		return
 	}
-	workDir := h.host.FocusedPanel().PathString()
+	workDir := previewWorkDir(h.host.FocusedPanel())
 	req := h.previewRequest(st.Path, tw, contentH, workDir, h.model.PanelsChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetInactive, false)
 	ctx, gen := h.beginPreviewRun(previewTargetInactive)
 	h.postRenderWake()

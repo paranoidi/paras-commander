@@ -7,6 +7,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	previewrun "github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
@@ -200,7 +201,7 @@ func (h *Handler) carouselChildPreviewLayoutMetrics() (textW, contentH int, ok b
 // declined that directory, so the child listing shows instead. Config is read live because the
 // settings dialog mutates it in place.
 func (h *Handler) CarouselDirRule(dirPath string) bool {
-	dirPath = filepath.Clean(dirPath)
+	dirPath = pathloc.DiskPath(dirPath)
 	return dirPath != h.carouselDirRuleDeclined &&
 		previewrun.MatchAnyCommandRule(h.host.Config().Preview, dirPath, localfs.EntryDirectory, filepath.Dir(dirPath))
 }
@@ -213,7 +214,7 @@ func (h *Handler) carouselFilePreviewWantPath() (path string, isDir, ok bool) {
 	if !okEntry {
 		return "", false, false
 	}
-	path = filepath.Clean(entry.Path)
+	path = pathloc.DiskPath(entry.Path)
 	if path == "" || path == "." {
 		return "", false, false
 	}
@@ -281,7 +282,7 @@ func (h *Handler) applyCarouselFilePreviewNow() {
 		h.CloseCarouselFilePreview()
 		return
 	}
-	workDir := h.host.FocusedPanel().PathString()
+	workDir := previewWorkDir(h.host.FocusedPanel())
 	if isDir {
 		// WorkDir is the directory itself, same as quick view's dir rules.
 		workDir = path
@@ -330,7 +331,7 @@ func (h *Handler) refreshCarouselFilePreview() {
 	if !ok {
 		return
 	}
-	workDir := h.host.FocusedPanel().PathString()
+	workDir := previewWorkDir(h.host.FocusedPanel())
 	req := h.previewRequest(st.Path, tw, contentH, workDir, h.model.PanelsChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetCarousel, false)
 	ctx, gen := h.beginPreviewRun(previewTargetCarousel)
 	h.postRenderWake()
