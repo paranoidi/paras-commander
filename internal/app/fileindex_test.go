@@ -89,6 +89,8 @@ func TestFileIndexActionsInHelpAndMenus(t *testing.T) {
 			wantKey = 'S'
 		case keymap.ActionFileIndexFindDuplicates:
 			wantKey = 'F'
+		case keymap.ActionFileIndexBrowseTags:
+			wantKey = 'T'
 		}
 		if ch.Mod != tcell.ModAlt || !unicode.IsUpper(ch.Rune) || wantKey != e.Key {
 			t.Errorf("%s: menu key %q does not match its chord %s", e.ActionID, e.Key, keymap.FormatChord(ch))
