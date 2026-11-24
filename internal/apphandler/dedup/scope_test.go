@@ -21,6 +21,8 @@ func TestScanScope(t *testing.T) {
 		{"nested collapses to outer", []string{"/scan/meadow", "/scan/meadow/lantern"}, "/scan/meadow", nil},
 		{"siblings share parent", []string{"/scan/meadow/lantern", "/scan/harbor"}, "/scan", []string{"harbor", "meadow/lantern"}},
 		{"name prefix is not an ancestor", []string{"/scan/ab", "/scan/abc"}, "/scan", []string{"ab", "abc"}},
+		{"index siblings share parent", []string{"fileindex:///scan/meadow/lantern", "fileindex:///scan/harbor"}, "fileindex:///scan", []string{"harbor", "meadow/lantern"}},
+		{"flat tag rows use their host paths", []string{"fileindex@(beach):///scan/meadow", "fileindex@(beach):///orchard/harbor"}, "fileindex:///", []string{"orchard/harbor", "scan/meadow"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			root, only := scanScope(tc.dirs)

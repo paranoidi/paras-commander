@@ -206,3 +206,28 @@ func TestRenameEntryKeepsTreeExpansion(t *testing.T) {
 		t.Fatal("child not re-pathed under renamed directory")
 	}
 }
+
+func TestRenameEntryKeepsIndexPathsWhole(t *testing.T) {
+	for _, tc := range []struct{ dir, old, want string }{
+		{"fileindex:///meadow", "fileindex:///meadow/willow.txt", "fileindex:///meadow/harbor.txt"},
+		{"fileindex@(beach):///", "fileindex@(beach):///meadow/willow.txt", "fileindex@(beach):///meadow/harbor.txt"},
+		{"fileindex@(beach):///meadow", "fileindex@(beach):///meadow//willow.txt", "fileindex@(beach):///meadow//harbor.txt"},
+	} {
+		s := &State{Path: pathloc.MustParse(tc.dir), Entries: []localfs.Entry{{Name: "willow.txt", Path: tc.old, Type: localfs.EntryFile}}}
+		if !s.RenameEntry(tc.old, "harbor.txt", 10) || s.Entries[0].Path != tc.want {
+			t.Errorf("RenameEntry(%q) left %q, want %q", tc.old, s.Entries[0].Path, tc.want)
+		}
+	}
+}
+
+func TestListingFullyDiskCachedAsksForWholeIndexPaths(t *testing.T) {
+	const path = "fileindex:///meadow/lantern"
+	s := &State{Entries: []localfs.Entry{{Name: "lantern", Path: path, Type: localfs.EntryDirectory}},
+		DiskSorter: func(p string) (int64, bool) { return 7, p == path }}
+	if !s.ListingFullyDiskCached() {
+		t.Error("a cached index directory counts as not cached")
+	}
+	if n, ok := diskSortSize(s.Entries[0], s.DiskSorter); !ok || n != 7 {
+		t.Errorf("diskSortSize = %d, %v", n, ok)
+	}
+}

@@ -56,7 +56,15 @@ func (h *Handler) returnDialogActivate(id dlg.ID) {
 // scanScope roots a selected-directories scan at the dirs' deepest common ancestor and
 // limits it to the dirs (relative to that root); a single dir is scanned as the root.
 func scanScope(dirs []string) (pathloc.Path, []string) {
-	dirs = panel.PruneNestedPaths(dirs)
+	indexed := false
+	hosts := make([]string, len(dirs))
+	for i, d := range dirs {
+		hosts[i] = d
+		if _, host, ok := pathloc.CutIndexPrefix(d); ok {
+			hosts[i], indexed = host, true
+		}
+	}
+	dirs = panel.PruneNestedPaths(hosts)
 	root := dirs[0]
 	for _, d := range dirs[1:] {
 		for root != filepath.Dir(root) && !strings.HasPrefix(d, root+string(filepath.Separator)) {
@@ -71,6 +79,6 @@ func scanScope(dirs []string) (pathloc.Path, []string) {
 			}
 		}
 	}
-	loc, _ := pathloc.File(root)
+	loc, _ := pathloc.ForPanel(root, indexed)
 	return loc, only
 }

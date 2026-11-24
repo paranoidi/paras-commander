@@ -2396,7 +2396,7 @@ func (s *State) ListingFullyDiskCached() bool {
 	}
 	anyCached := false
 	for _, e := range s.Entries {
-		key := filepath.Clean(e.Path)
+		key := e.Path
 		if _, ok := s.DiskSorter(key); ok {
 			anyCached = true
 			continue

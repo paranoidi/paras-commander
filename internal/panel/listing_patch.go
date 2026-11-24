@@ -16,11 +16,18 @@ func (s *State) RenameEntry(oldPath, newName string, viewportRows int) bool {
 		return false
 	}
 	priorCursor := s.Cursor
-	oldClean := filepath.Clean(oldPath)
-	newPath := filepath.Join(filepath.Dir(oldClean), newName)
+	oldLoc, err := pathloc.Parse(oldPath)
+	if err != nil {
+		return false
+	}
+	newLoc, err := oldLoc.Sibling(newName)
+	if err != nil {
+		return false
+	}
+	oldClean, newPath := oldLoc.String(), newLoc.String()
 	found := false
 	for i := range s.Entries {
-		if filepath.Clean(s.Entries[i].Path) != oldClean {
+		if !isCleanPath(s.Entries[i].Path, oldClean) {
 			continue
 		}
 		s.Entries[i].Name = newName
@@ -134,9 +141,14 @@ func (s *State) viewportRowsOr(viewportRows int) int {
 	return 0
 }
 
+// isCleanPath reports whether path is clean, a cleanPathString result, as written or once cleaned.
+func isCleanPath(path, clean string) bool {
+	return path == clean || !pathloc.HasURIPrefix(path) && filepath.Clean(path) == clean
+}
+
 func renameTreeNode(nodes []treeflat.Node[TreeEntry], oldPath, newName, newPath string) bool {
 	for i := range nodes {
-		if filepath.Clean(nodes[i].ID) == oldPath || filepath.Clean(nodes[i].Value.Entry.Path) == oldPath {
+		if isCleanPath(nodes[i].ID, oldPath) || isCleanPath(nodes[i].Value.Entry.Path, oldPath) {
 			nodes[i].ID = newPath
 			nodes[i].Value.Entry.Name = newName
 			nodes[i].Value.Entry.Path = newPath
@@ -174,7 +186,7 @@ func reprefixPath(p, oldPrefix, newPrefix string) string {
 		return newPrefix
 	}
 	if rest, ok := strings.CutPrefix(p, oldPrefix+string(filepath.Separator)); ok {
-		return filepath.Join(newPrefix, rest)
+		return newPrefix + string(filepath.Separator) + rest // not filepath.Join: it would collapse the "//" of a URI
 	}
 	return p
 }

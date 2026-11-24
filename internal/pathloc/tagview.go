@@ -312,6 +312,20 @@ func (p Path) Up() Path {
 	return Path{scheme: SchemeFileIndex, s: prefix + "/"}
 }
 
+// Sibling is the entry called name beside p: Parent().Join(name), except that beside a row of a
+// flat tag view it is a row too.
+func (p Path) Sibling(name string) (Path, error) {
+	if up := p.Up(); up.IsTagList() && !p.IsTagList() {
+		prefix, row, _, _ := p.indexParts()
+		beside, err := Path{scheme: SchemeFileIndex, s: FileIndexPrefix + filepath.Dir(row)}.Join(name)
+		if err != nil {
+			return Path{}, err
+		}
+		return parseFileIndex(prefix + beside.indexHost())
+	}
+	return p.Parent().Join(name)
+}
+
 // indexHasPrefix is HasPrefix for two fileindex paths: the same prefix, and the flat list holds
 // everything of its view, otherwise the host paths decide.
 func (p Path) indexHasPrefix(of Path) bool {

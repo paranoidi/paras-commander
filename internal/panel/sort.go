@@ -3,7 +3,6 @@ package panel
 import (
 	"fmt"
 	"math"
-	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -234,7 +233,7 @@ func (s *State) ActiveMetaSortColumn() string {
 // the scan cannot stat).
 func diskSortSize(e localfs.Entry, diskSorter func(string) (int64, bool)) (int64, bool) {
 	if diskSorter != nil {
-		if n, ok := diskSorter(filepath.Clean(e.Path)); ok {
+		if n, ok := diskSorter(e.Path); ok {
 			return n, true
 		}
 	}
