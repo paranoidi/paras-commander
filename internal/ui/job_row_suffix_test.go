@@ -6,6 +6,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panellist"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
@@ -16,44 +17,44 @@ func TestJobRowSuffixIconsByTypeAndStatus(t *testing.T) {
 		return []JobPathMark{{Type: string(typ), Status: string(status), Sources: []string{"/src/willow.txt"}, Destination: "/dst", DestIsDir: true}}
 	}
 
-	s, st := jobRowSuffix("/src/willow.txt", mark(jobs.TypeMove, jobs.StatusQueued), th, false)
+	s, st := jobRowSuffix("/src/willow.txt", mark(jobs.TypeMove, jobs.StatusQueued), th, false, false)
 	if st != string(jobs.StatusQueued) || s.JobIcon != 0 || s.JobQueuedIcon != th.IconFilelistQueued() || s.JobOpIcon != th.IconFilelistMove() || s.JobWrite {
 		t.Fatalf("queued move: %+v status=%q", s, st)
 	}
-	s, _ = jobRowSuffix("/src/willow.txt", mark(jobs.TypeMove, jobs.StatusScanning), th, false)
+	s, _ = jobRowSuffix("/src/willow.txt", mark(jobs.TypeMove, jobs.StatusScanning), th, false, false)
 	if s.JobIcon != th.IconFilelistJob() || s.JobQueuedIcon != 0 || s.JobOpIcon != th.IconFilelistMove() {
 		t.Fatalf("scanning move: %+v", s)
 	}
-	s, _ = jobRowSuffix("/dst/willow.txt", mark(jobs.TypeMove, jobs.StatusRunning), th, false)
+	s, _ = jobRowSuffix("/dst/willow.txt", mark(jobs.TypeMove, jobs.StatusRunning), th, false, false)
 	if s.JobIcon != th.IconFilelistJob() || !s.JobWrite || s.JobOpIcon != 0 {
 		t.Fatalf("running move destination: %+v", s)
 	}
-	s, _ = jobRowSuffix("/dst/willow.txt", mark(jobs.TypeCopy, jobs.StatusPaused), th, false)
+	s, _ = jobRowSuffix("/dst/willow.txt", mark(jobs.TypeCopy, jobs.StatusPaused), th, false, false)
 	if s.JobIcon != 0 || s.JobQueuedIcon != 0 || s.JobOpIcon != 0 || s.JobWrite {
 		t.Fatalf("paused copy: %+v", s)
 	}
-	s, _ = jobRowSuffix("/src/willow.txt", mark(jobs.TypeDelete, jobs.StatusRunning), th, false)
+	s, _ = jobRowSuffix("/src/willow.txt", mark(jobs.TypeDelete, jobs.StatusRunning), th, false, false)
 	if s.JobQueuedIcon != 0 || s.JobOpIcon != th.IconFilelistDelete() || !s.JobWrite {
 		t.Fatalf("running delete: %+v", s)
 	}
-	s, _ = jobRowSuffix("/src/willow.txt", mark(jobs.TypeCopy, jobs.StatusRunning), th, false)
+	s, _ = jobRowSuffix("/src/willow.txt", mark(jobs.TypeCopy, jobs.StatusRunning), th, false, false)
 	if s.JobIcon == 0 || s.JobQueuedIcon != 0 || s.JobOpIcon != 0 {
 		t.Fatalf("running copy: %+v", s)
 	}
-	s, _ = jobRowSuffix("/dst/willow.txt", mark(jobs.TypeCopy, jobs.StatusRunning), th, false)
+	s, _ = jobRowSuffix("/dst/willow.txt", mark(jobs.TypeCopy, jobs.StatusRunning), th, false, false)
 	if s.JobIcon != th.IconFilelistJob() || !s.JobWrite || s.JobQueuedIcon != 0 || s.JobOpIcon != 0 {
 		t.Fatalf("running copy destination: %+v", s)
 	}
 	nf := th
 	nf.UseNerdfontIcons = true
-	s, _ = jobRowSuffix("/src/willow.txt", mark(jobs.TypeTask, jobs.StatusRunning), nf, false)
+	s, _ = jobRowSuffix("/src/willow.txt", mark(jobs.TypeTask, jobs.StatusRunning), nf, false, false)
 	if s.JobIcon != nf.IconFileIndexState(localfs.IndexStatusScanning) {
 		t.Fatalf("running task: %+v", s)
 	}
-	if s, _ := jobRowSuffix("/src/willow.txt", mark(jobs.TypeTask, jobs.StatusRunning), nf, true); s.JobIcon != 0 {
+	if s, _ := jobRowSuffix("/src/willow.txt", mark(jobs.TypeTask, jobs.StatusRunning), nf, true, false); s.JobIcon != 0 {
 		t.Fatalf("running task beside index state column: %+v", s)
 	}
-	if s, _ := jobRowSuffix("/elsewhere.txt", mark(jobs.TypeMove, jobs.StatusQueued), th, false); s.JobIcon != 0 {
+	if s, _ := jobRowSuffix("/elsewhere.txt", mark(jobs.TypeMove, jobs.StatusQueued), th, false, false); s.JobIcon != 0 {
 		t.Fatalf("unrelated path got job suffix: %+v", s)
 	}
 }
@@ -87,17 +88,17 @@ func TestJobRowSuffixFollowsActiveSource(t *testing.T) {
 		{"/meadow/acorn", false, false, false},
 	}
 	for _, c := range cases {
-		s, _ := jobRowSuffix(c.path, copyMarks, th, false)
+		s, _ := jobRowSuffix(c.path, copyMarks, th, false, false)
 		if (s.JobIcon != 0) != c.job || (s.JobQueuedIcon != 0) != c.queued || s.JobWrite != c.write {
 			t.Errorf("%s: %+v, want job=%v queued=%v write=%v", c.path, s, c.job, c.queued, c.write)
 		}
 	}
-	if _, st := jobRowSuffix("/orchard/clover", copyMarks, th, false); st != string(jobs.StatusQueued) {
+	if _, st := jobRowSuffix("/orchard/clover", copyMarks, th, false, false); st != string(jobs.StatusQueued) {
 		t.Fatalf("pending source status = %q, want queued", st)
 	}
 
 	moveMarks := build(jobs.TypeMove, jobs.StatusRunning, 1, midway)
-	if s, _ := jobRowSuffix("/orchard/clover", moveMarks, th, false); s.JobQueuedIcon == 0 || s.JobOpIcon != th.IconFilelistMove() || s.JobIcon != 0 {
+	if s, _ := jobRowSuffix("/orchard/clover", moveMarks, th, false, false); s.JobQueuedIcon == 0 || s.JobOpIcon != th.IconFilelistMove() || s.JobIcon != 0 {
 		t.Fatalf("pending move source: %+v", s)
 	}
 
@@ -106,7 +107,7 @@ func TestJobRowSuffixFollowsActiveSource(t *testing.T) {
 		build(jobs.TypeCopy, jobs.StatusRunning, -1, make([]jobs.SourcePhase, 3)),
 		build(jobs.TypeCopy, jobs.StatusQueued, 1, midway),
 	} {
-		active, _ := jobRowSuffix("/meadow/acorn", m, th, false)
+		active, _ := jobRowSuffix("/meadow/acorn", m, th, false, false)
 		queued := jobs.Status(m[0].Status) == jobs.StatusQueued
 		if !queued && active.JobIcon == 0 || queued && active.JobQueuedIcon == 0 {
 			t.Fatalf("%s active=%d: finished-source destination lost its mark: %+v", m[0].Status, m[0].ActiveSource, active)
@@ -129,13 +130,13 @@ func TestJobRowSuffixMoveRemovingSources(t *testing.T) {
 		RemovingSources: true,
 	})}
 	for _, p := range []string{"/orchard/acorn", "/orchard/bramble/deep/thistle.txt", "/orchard/clover"} {
-		s, _ := jobRowSuffix(p, marks, th, false)
+		s, _ := jobRowSuffix(p, marks, th, false, false)
 		if s.JobIcon != th.IconFilelistJob() || s.JobOpIcon != th.IconFilelistMoveRemoving() || s.JobOpStyle != th.PanelRowMarkJobRemoving || s.JobWrite {
 			t.Errorf("%s: %+v, want job + removing icons", p, s)
 		}
 	}
 	for _, p := range []string{"/meadow/acorn", "/meadow/clover"} {
-		if s, _ := jobRowSuffix(p, marks, th, false); s != (panellist.JobSuffix{}) {
+		if s, _ := jobRowSuffix(p, marks, th, false, false); s != (panellist.JobSuffix{}) {
 			t.Errorf("%s: destination marked while removing sources: %+v", p, s)
 		}
 	}
@@ -144,7 +145,38 @@ func TestJobRowSuffixMoveRemovingSources(t *testing.T) {
 	}
 
 	marks[0].RemovingSources = false
-	if s, _ := jobRowSuffix("/orchard/clover", marks, th, false); s.JobOpIcon != th.IconFilelistMove() {
+	if s, _ := jobRowSuffix("/orchard/clover", marks, th, false, false); s.JobOpIcon != th.IconFilelistMove() {
 		t.Fatalf("move source before removal: %+v", s)
+	}
+}
+
+// A finished source of a scan task keeps the scanning icon on a row that has yet to settle, and
+// only there; indexStateShown still hands the icon to the state column.
+func TestJobRowSuffixTaskSourceDoneKeepsUnsettledRows(t *testing.T) {
+	t.Parallel()
+	th := theme.Default()
+	th.UseNerdfontIcons = true
+	marks := func(typ jobs.Type) []JobPathMark {
+		return []JobPathMark{withIndex(JobPathMark{
+			ID: "harbor", Type: string(typ), Status: string(jobs.StatusRunning),
+			Sources:      []string{"/vol/thistle", "/vol/bramble"},
+			SourcePhases: []jobs.SourcePhase{jobs.SourceFinished, jobs.SourceStarted}, ActiveSource: 1,
+		})}
+	}
+	row := "/vol/thistle/lantern.txt"
+	if s, st := jobRowSuffix(row, marks(jobs.TypeTask), th, false, true); s.JobIcon != th.IconFileIndexState(localfs.IndexStatusScanning) || !s.JobIndexScan || st != string(jobs.StatusRunning) {
+		t.Fatalf("unsettled row: %+v status=%q", s, st)
+	}
+	if s, _ := jobRowSuffix(row, marks(jobs.TypeTask), th, false, false); s != (panellist.JobSuffix{}) {
+		t.Fatalf("settled row: %+v", s)
+	}
+	if s, _ := jobRowSuffix(row, marks(jobs.TypeTask), th, true, true); s.JobIcon != 0 {
+		t.Fatalf("unsettled row beside the index state column: %+v", s)
+	}
+	if s, _ := jobRowSuffix(row, marks(jobs.TypeCopy), th, false, true); s != (panellist.JobSuffix{}) {
+		t.Fatalf("done copy source: %+v", s)
+	}
+	if s, _ := jobRowSuffix(pathloc.FileIndexPrefix+row, marks(jobs.TypeTask), th, false, true); s.JobIcon != th.IconFileIndexState(localfs.IndexStatusScanning) {
+		t.Fatalf("fileindex:// row: %+v", s)
 	}
 }

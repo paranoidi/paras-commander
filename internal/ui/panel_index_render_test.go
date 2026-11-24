@@ -115,3 +115,43 @@ func TestIndexCheckingStateUsesTheLoadingStyleAndSearchGlyph(t *testing.T) {
 		t.Errorf("checking icon = %U, want U+F0866", got)
 	}
 }
+
+// Once a scan's walk of a source is done, a row stays scanning while it waits for a hash (an
+// unhashed file, a directory with one below it) or for its re-list (new, changed); a settled row
+// shows its own state, and so does any row under another job type or a finished job.
+func TestIndexRowStateScanningUntilHashed(t *testing.T) {
+	t.Parallel()
+	marks := func(typ jobs.Type, status jobs.Status) []JobPathMark {
+		return []JobPathMark{withIndex(JobPathMark{
+			ID: "harbor", Type: string(typ), Status: string(status),
+			Sources:      []string{"/vol/thistle", "/vol/bramble"},
+			SourcePhases: []jobs.SourcePhase{jobs.SourceFinished, jobs.SourceStarted}, ActiveSource: 1,
+		})}
+	}
+	task := marks(jobs.TypeTask, jobs.StatusRunning)
+	file := func(status string, unhashed bool) localfs.Entry {
+		return localfs.Entry{Path: "/vol/thistle/lantern/pebble.txt", IndexStatus: status, Unhashed: unhashed}
+	}
+	for _, c := range []struct {
+		name  string
+		entry localfs.Entry
+		marks []JobPathMark
+		want  string
+	}{
+		{"unhashed file", file(localfs.IndexStatusUnhashed, true), task, localfs.IndexStatusScanning},
+		{"unhashed directory", localfs.Entry{Path: "/vol/thistle/lantern", Type: localfs.EntryDirectory, IndexStatus: localfs.IndexStatusIndexed, Unhashed: true}, task, localfs.IndexStatusScanning},
+		{"new row", file(localfs.IndexStatusNew, false), task, localfs.IndexStatusScanning},
+		{"changed row", file(localfs.IndexStatusChanged, false), task, localfs.IndexStatusScanning},
+		{"hashed file", file(localfs.IndexStatusIndexed, false), task, localfs.IndexStatusIndexed},
+		{"excluded row", file(localfs.IndexStatusExcluded, false), task, localfs.IndexStatusExcluded},
+		{"ghost row", file(localfs.IndexStatusMissing, false), task, localfs.IndexStatusMissing},
+		{"no state", file("", true), task, ""},
+		{"copy job", file(localfs.IndexStatusUnhashed, true), marks(jobs.TypeCopy, jobs.StatusRunning), localfs.IndexStatusUnhashed},
+		{"finished job", file(localfs.IndexStatusUnhashed, true), marks(jobs.TypeTask, jobs.StatusCompleted), localfs.IndexStatusUnhashed},
+		{"no job", file(localfs.IndexStatusUnhashed, true), nil, localfs.IndexStatusUnhashed},
+	} {
+		if got := indexRowState(c.entry, c.marks, false); got != c.want {
+			t.Errorf("%s = %q, want %q", c.name, got, c.want)
+		}
+	}
+}

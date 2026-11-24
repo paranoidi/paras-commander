@@ -29,7 +29,8 @@ func newSourceProgress(n int) *sourceProgress {
 }
 
 // newTaskSourceProgress tracks every source of a task, even a lone one: its source finishes while
-// the task goes on (FinishSource), and the file-list marks follow that.
+// the task goes on (FinishSource), and the file-list marks follow that, apart from the rows of a
+// finished source that have yet to settle (ui.scanPending).
 func newTaskSourceProgress(n int) *sourceProgress {
 	return &sourceProgress{phases: make([]SourcePhase, n), current: -1}
 }

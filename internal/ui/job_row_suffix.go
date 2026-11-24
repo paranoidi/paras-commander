@@ -13,9 +13,10 @@ import (
 // actually working on the tree (Status.IsActive); a queued or paused job shows just the
 // clock/operation icons, and so does a source a running multi-source job has not started yet
 // (JobRowMark.Pending; its status reads queued). indexStateShown drops a task job's icon: the
-// row's fileindex state column already shows scanning (indexRowState).
-func jobRowSuffix(absPath string, jobMarks []JobPathMark, th theme.Theme, indexStateShown bool) (panellist.JobSuffix, string) {
-	m, ok := EntryPathJobMark(absPath, jobMarks)
+// row's fileindex state column already shows scanning (indexRowState). unsettled is the row's
+// scanPending: a task job whose walk of the row's source is done still marks it then.
+func jobRowSuffix(absPath string, jobMarks []JobPathMark, th theme.Theme, indexStateShown, unsettled bool) (panellist.JobSuffix, string) {
+	m, ok := EntryPathJobMark(absPath, jobMarks, unsettled)
 	if !ok {
 		return panellist.JobSuffix{}, ""
 	}

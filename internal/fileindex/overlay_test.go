@@ -343,3 +343,99 @@ func TestDirDriftYieldsEachDirectoryAsItFinishes(t *testing.T) {
 		t.Fatalf("yielded %v, want only orchard, before the cancel", got)
 	}
 }
+
+// discoverFixture records files of root (by relative path) as walked but not hashed yet.
+func discoverFixture(t *testing.T, x *Index, root string, rels ...string) {
+	t.Helper()
+	d, err := x.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var batch []db.DiscoveredFile
+	for _, rel := range rels {
+		fi, err := os.Stat(filepath.Join(root, rel))
+		if err != nil {
+			t.Fatal(err)
+		}
+		batch = append(batch, db.DiscoveredFile{Dir: filepath.Dir(filepath.Join(root, rel)), Name: filepath.Base(rel), Size: fi.Size(), Mtime: fi.ModTime()})
+	}
+	if _, err := d.CommitDiscovered(batch, []string{root}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Unhashed marks an indexed file with no hash and a directory with such a file below it; hashing
+// the file clears both. A row with no state, a ghost row and a plain index listing of a settled
+// directory carry none.
+func TestOverlayAndListMarkUnhashedRows(t *testing.T) {
+	root := tree(t)
+	x := testIndex(t, initIndex(t))
+	for _, rel := range []string{"willow.txt", "lantern/deep/pebble.txt", "orchard/clover.txt", "bramble.txt"} {
+		writeFile(t, root, rel, "body of "+rel)
+	}
+	overlayFixture(t, x, root, "harbor.txt", "lantern/meadow.txt", "orchard/clover.txt", "bramble.txt")
+	discoverFixture(t, x, root, "willow.txt", "lantern/deep/pebble.txt")
+	if err := os.Remove(filepath.Join(root, "bramble.txt")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(root, "lantern"), filepath.Join(root, "link")); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, root, "mirage.txt", "fades away") // recorded unhashed, then a dangling link
+	discoverFixture(t, x, root, "mirage.txt")
+	if err := os.Remove(filepath.Join(root, "mirage.txt")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(root, "absent"), filepath.Join(root, "mirage.txt")); err != nil {
+		t.Fatal(err)
+	}
+
+	unhashed := func(entries []fsbackend.Entry) map[string]bool {
+		out := map[string]bool{}
+		for _, e := range entries {
+			if e.Unhashed {
+				out[e.Name] = true
+			}
+		}
+		return out
+	}
+	check := func(what string, got map[string]bool, want ...string) {
+		t.Helper()
+		if len(got) != len(want) {
+			t.Errorf("%s: unhashed rows %v, want %v", what, got, want)
+		}
+		for _, n := range want {
+			if !got[n] {
+				t.Errorf("%s: %s is not unhashed (%v)", what, n, got)
+			}
+		}
+	}
+	dir, _ := pathloc.File(root)
+	overlay := func() []fsbackend.Entry {
+		out, err := x.Overlay(context.Background(), dir, listLocal(t, root))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return out
+	}
+	list := func(host string) []fsbackend.Entry {
+		out, err := NewBackend(x).List(context.Background(), at(t, host))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return out
+	}
+
+	check("overlay", unhashed(overlay()), "willow.txt", "lantern")
+	check("list", unhashed(list(root)), "willow.txt", "mirage.txt", "lantern")
+	check("list of lantern", unhashed(list(filepath.Join(root, "lantern"))), "deep")
+	check("list of deep", unhashed(list(filepath.Join(root, "lantern", "deep"))), "pebble.txt")
+	check("list of settled orchard", unhashed(list(filepath.Join(root, "orchard"))))
+
+	overlayFixture(t, x, root, "lantern/deep/pebble.txt") // hashed now
+	check("overlay after hashing one", unhashed(overlay()), "willow.txt")
+	if err := os.Remove(filepath.Join(root, "willow.txt")); err != nil { // an unhashed ghost row
+		t.Fatal(err)
+	}
+	check("overlay with an unhashed ghost", unhashed(overlay()))
+}

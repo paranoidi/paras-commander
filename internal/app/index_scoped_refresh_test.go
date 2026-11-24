@@ -84,7 +84,9 @@ func inFlight(a *App) []int {
 	return out
 }
 
-func TestScanCommitReListsOnlyThePanelShowingTheDir(t *testing.T) {
+// A scan's commit re-lists the panels showing the directory or one above the committed one (a
+// directory row stays scanning until everything below it is hashed), and no other.
+func TestScanCommitReListsOnlyThePanelsShowingOrAboveTheDir(t *testing.T) {
 	a, left, _ := scopedPanels(t)
 	block := make(chan struct{})
 	orig := fetchListingForPanelRefresh
@@ -94,15 +96,47 @@ func TestScanCommitReListsOnlyThePanelShowingTheDir(t *testing.T) {
 	}
 	t.Cleanup(func() { close(block); fetchListingForPanelRefresh = orig })
 
-	asyncWakes(a).indexScan.push(filepath.Join(left, "deeper")) // not what a panel shows
-	a.handleIndexScanWake()
-	if got := inFlight(a); len(got) != 0 {
-		t.Fatalf("re-listing %v for a dir no panel shows", got)
+	for _, d := range []string{filepath.Dir(left), left + "-not"} { // above the panels; a sibling by prefix
+		asyncWakes(a).indexScan.push(d)
+		a.handleIndexScanWake()
+		if got := inFlight(a); len(got) != 0 {
+			t.Fatalf("re-listing %v for %s, which no panel shows or has below it", got, d)
+		}
 	}
-	asyncWakes(a).indexScan.push(left)
+	asyncWakes(a).indexScan.push(filepath.Join(left, "deeper", "deepest")) // below the left panel's dir
 	a.handleIndexScanWake()
 	if got := inFlight(a); !slices.Equal(got, []int{ui.PrimaryPanel}) {
-		t.Fatalf("re-listing %v, want the panel showing it", got)
+		t.Fatalf("re-listing %v, want the panel with the dir below it", got)
+	}
+}
+
+// scanCommitHits matches a commit below the panel's dir or an expanded tree dir, and names every
+// expanded dir above it for the re-list; a sibling of the expanded dir only hits the panel's dir.
+func TestScanCommitHitsExpandedTreeDirs(t *testing.T) {
+	a, left, right := scopedPanels(t)
+	p := a.panelByID(ui.PrimaryPanel)
+	shelf, nook, bin := filepath.Join(left, "shelf"), filepath.Join(left, "shelf", "nook"), filepath.Join(left, "bin")
+	p.ListLayout = panel.ListLayoutTree
+	p.TreeExpanded = map[string]bool{shelf: true, nook: true, bin: true}
+
+	deep := filepath.Join(nook, "burrow", "den")
+	ids, matched := a.scanCommitHits(p, []string{deep, filepath.Join(left, "other"), right})
+	slices.Sort(ids)
+	if want := []string{shelf, nook}; !slices.Equal(ids, want) {
+		t.Errorf("tree ids = %v, want %v", ids, want)
+	}
+	if want := []string{deep, filepath.Join(left, "other")}; !slices.Equal(matched, want) {
+		t.Errorf("matched = %v, want %v", matched, want)
+	}
+
+	p.Path = pathloc.MustParse("/") // the filesystem root shows everything below it
+	if _, matched := a.scanCommitHits(p, []string{deep}); !slices.Equal(matched, []string{deep}) {
+		t.Errorf("matched under / = %v", matched)
+	}
+
+	p.Path = pathloc.MustParse(pathloc.FileIndexPrefix + left) // a fileindex:// panel shows the same host dir
+	if _, matched := a.scanCommitHits(p, []string{deep}); !slices.Equal(matched, []string{deep}) {
+		t.Errorf("matched on a fileindex:// panel = %v", matched)
 	}
 }
 

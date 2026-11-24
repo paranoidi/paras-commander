@@ -95,15 +95,20 @@ func walkRoots(absPath string, hit func(path string) bool) {
 // whether that root is a destination (destinations win when both match at the same depth) and
 // whether it is a pending source, or (0, false, false) when nothing matches. m's phases (nil
 // marks every root active, JobPathMark.rootPhase) drop done roots and pending destinations; the
-// walk then continues to the outer roots.
-func (idx *jobPathIndex) rootMatch(absPath string, m *JobPathMark) (maxLen int, isDest, pending bool) {
+// walk then continues to the outer roots. A done source of a task job still matches, as an active
+// one, when unsettled is set: the row it names has yet to settle (scanPending).
+func (idx *jobPathIndex) rootMatch(absPath string, m *JobPathMark, unsettled bool) (maxLen int, isDest, pending bool) {
 	walkRoots(absPath, func(s string) bool {
 		if src, ok := idx.dests[s]; ok && m.rootPhase(src, true) == rootActive {
 			maxLen, isDest = len(s), true
 			return true
 		}
 		if src, ok := idx.sources[s]; ok {
-			if p := m.rootPhase(src, false); p != rootDone {
+			p := m.rootPhase(src, false)
+			if p == rootDone && unsettled && jobs.Type(m.Type) == jobs.TypeTask {
+				p = rootActive // m is not nil: only a job's own phases say done
+			}
+			if p != rootDone {
 				maxLen, isDest, pending = len(s), false, p == rootPending
 				return true
 			}
@@ -143,9 +148,9 @@ func jobTypeMarkPriority(t string) int {
 // longestMatchingRootLen returns the maximum length of a path (source or resolved
 // destination) that matches absPath as root-of-subtree, whether that best match is a
 // destination root (destination preferred on equal length) and whether it is a pending source
-// (JobPathMark.rootPhase), or (0, false, false) if none.
-func longestMatchingRootLen(j JobPathMark, absPath string) (maxLen int, isDest, pending bool) {
-	return j.index().rootMatch(absPath, &j)
+// (JobPathMark.rootPhase), or (0, false, false) if none. unsettled is rootMatch's.
+func longestMatchingRootLen(j JobPathMark, absPath string, unsettled bool) (maxLen int, isDest, pending bool) {
+	return j.index().rootMatch(absPath, &j, unsettled)
 }
 
 // JobRowMark is the best non-finished job matching a row's path, per EntryPathJobMark. Pending
@@ -166,7 +171,9 @@ type JobRowMark struct {
 // when the matched role is a write (destination, or any delete-type job — deletes mutate their
 // sources and have no destination). A fileindex:// path is matched by its host path against task
 // jobs (fileindex scans and prunes, always queued with host paths) and as is against every other type.
-func EntryPathJobMark(absPath string, jobMarks []JobPathMark) (JobRowMark, bool) {
+// A task job's source whose walk is done still matches while unsettled is set: the row has yet to
+// be hashed or re-listed (scanPending), which the scan keeps showing as scanning.
+func EntryPathJobMark(absPath string, jobMarks []JobPathMark, unsettled bool) (JobRowMark, bool) {
 	if absPath == "" || len(jobMarks) == 0 {
 		return JobRowMark{}, false
 	}
@@ -183,7 +190,7 @@ func EntryPathJobMark(absPath string, jobMarks []JobPathMark) (JobRowMark, bool)
 		if isIndex && jobs.Type(j.Type) == jobs.TypeTask {
 			p = hostPath
 		}
-		rootLen, isDest, pending := longestMatchingRootLen(j, p)
+		rootLen, isDest, pending := longestMatchingRootLen(j, p, unsettled)
 		if rootLen == 0 {
 			continue
 		}
@@ -214,7 +221,7 @@ func EntryPathJobMark(absPath string, jobMarks []JobPathMark) (JobRowMark, bool)
 // a write (destination, or any delete-type job — deletes mutate their sources and
 // have no destination). See EntryPathJobMark.
 func EntryPathJobMarkStatus(absPath string, jobMarks []JobPathMark) (bool, string, bool) {
-	m, ok := EntryPathJobMark(absPath, jobMarks)
+	m, ok := EntryPathJobMark(absPath, jobMarks, false)
 	return ok, m.Status, m.Write
 }
 
@@ -240,7 +247,7 @@ func PanelTouchedByJobs(panelPath string, jobMarks []JobPathMark) bool {
 			continue
 		}
 		idx := j.index()
-		if n, _, _ := idx.rootMatch(panelPath, nil); n > 0 {
+		if n, _, _ := idx.rootMatch(panelPath, nil, false); n > 0 {
 			return true
 		}
 		for _, dir := range idx.sourceDirs {

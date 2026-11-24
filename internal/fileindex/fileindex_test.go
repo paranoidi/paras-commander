@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/paranoidi/fileindex/db"
@@ -106,6 +107,34 @@ func TestScanTaskFinishesEachPath(t *testing.T) {
 	if rep.last.DoneFiles != 3 || rep.last.TotalFiles != 3 || rep.last.DoneBytes != int64(len("anchor and rope")+len("clover")+len("bramble patch")) {
 		t.Fatalf("scan progress = %+v, want 3/3 files and their bytes", rep.last)
 	}
+}
+
+// TestScanReporterFinishesWalkedSourceLater: a walked source stays active until its rows can have
+// re-listed, and one still waiting finishes with the task, never after it.
+func TestScanReporterFinishesWalkedSourceLater(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		rec := &recReporter{}
+		rep := newScanReporter(rec, false)
+		finished := func(want ...int) {
+			t.Helper()
+			synctest.Wait()
+			rec.mu.Lock()
+			defer rec.mu.Unlock()
+			if !slices.Equal(rec.finished, want) {
+				t.Fatalf("finished = %v, want %v", rec.finished, want)
+			}
+		}
+		rep.RootDone(0)
+		time.Sleep(config.DefaultIndexScanSettleDelay - time.Millisecond)
+		finished()
+		time.Sleep(time.Millisecond)
+		finished(0)
+		rep.RootDone(1)
+		rep.finish(scan.Stats{Interrupted: true})
+		finished(0, 1)
+		time.Sleep(2 * config.DefaultIndexScanSettleDelay)
+		finished(0, 1)
+	})
 }
 
 func scanned(t *testing.T) (*Index, string) {

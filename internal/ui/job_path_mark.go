@@ -91,7 +91,8 @@ func JobPathMarksFromEntries(entries []JobEntry) []JobPathMark {
 
 // rootPhase is how the filelist marks one source's roots: rootActive (the job icon, as for a
 // job working on every source), rootPending (a source not started yet: the queued icon on its
-// source rows, nothing on its destination) or rootDone (no mark).
+// source rows, nothing on its destination) or rootDone (no mark; a task job's source still marks
+// a row that has yet to settle, rootMatch).
 type rootPhase uint8
 
 const (

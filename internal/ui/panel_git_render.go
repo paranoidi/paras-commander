@@ -76,14 +76,23 @@ func paintGitColumn(screen tcell.Screen, x, y int, cell gitstatus.Cell, rowStyle
 	}
 }
 
+// scanPending reports whether a row has yet to settle under a scan: it is not hashed (Unhashed), or
+// it is new or changed, which the walk has passed but the listing has yet to show as indexed. A task
+// job keeps such a row scanning after its walk of the row's source is done (rootMatch); an excluded,
+// missing or indexed row settles at once.
+func scanPending(e localfs.Entry) bool {
+	return e.Unhashed || e.IndexStatus == localfs.IndexStatusNew || e.IndexStatus == localfs.IndexStatusChanged
+}
+
 // indexRowState is the fileindex state icon key of a row: scanning while a task job (a scan or
-// prune) works on it, checking while a drift pass has yet to report on it (driftPending), else
-// the overlay's IndexStatus ("" for rows the index has no opinion on).
+// prune) works on it, a scan's included until the row has settled (scanPending); checking while a
+// drift pass has yet to report on it (driftPending), else the overlay's IndexStatus ("" for rows the
+// index has no opinion on).
 func indexRowState(entry localfs.Entry, jobMarks []JobPathMark, driftPending bool) string {
 	if entry.IndexStatus == "" {
 		return ""
 	}
-	if m, ok := EntryPathJobMark(entry.Path, jobMarks); ok && jobs.Type(m.Type) == jobs.TypeTask && jobs.Status(m.Status).IsActive() {
+	if m, ok := EntryPathJobMark(entry.Path, jobMarks, scanPending(entry)); ok && jobs.Type(m.Type) == jobs.TypeTask && jobs.Status(m.Status).IsActive() {
 		return localfs.IndexStatusScanning
 	}
 	if driftPending {

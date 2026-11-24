@@ -41,6 +41,8 @@ type Entry struct {
 	BrokenLink bool
 	// IndexStatus is localfs.Entry.IndexStatus: the fileindex overlay's state for the row.
 	IndexStatus string
+	// Unhashed is localfs.Entry.Unhashed.
+	Unhashed bool
 	// Owner, Group, Links, ChangedAt, AccessedAt and CreatedAt are the localfs.Entry columns of
 	// the same names; zero values mean the source has no such fact (see localfs.Entry).
 	Owner      string

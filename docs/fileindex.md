@@ -21,7 +21,9 @@ it was, and the next action asks again.
 
 A database from an older fileindex version gets the same kind of question:
 **Yes** upgrades it (what `fileindex init` does) and carries on. Upgrading
-rebuilds the search indexes and can take minutes on a large index; the menu-bar spinner
+rebuilds the search indexes and counts the files still waiting to be hashed
+below each directory (what keeps a directory `scanning` until they are
+hashed), and can take minutes on a large index; the menu-bar spinner
 turns while it runs, and other fileindex work waits until it is done. A database from a newer fileindex
 version is reported in the Messages log, and fileindex actions say so instead
 of running; it needs a newer pc.
@@ -96,7 +98,7 @@ not watched.
 | `new` | not in index | On disk but not in the index |
 | `missing` | only in index | Only in the index (ghost row) |
 | `excluded` | excluded | Not in the index, and the scan rules in fileindex's `config.ini` (`exclude_dirs`, `exclude_files`, file patterns) skip it |
-| `scanning` | scanning | A scan or prune task job is working on the row |
+| `scanning` | scanning | A scan or prune task job is working on the row, or has walked it and a file in it is still waiting to be hashed |
 | `checking` | checking | An indexed directory the background check has not finished with yet |
 | `differs` | differs below | An indexed directory with something different below it: a new file a scan would add, a file whose size or modification time changed, or an indexed file gone from disk |
 | `unchecked` | browser scan depth exceeded | An indexed directory with nothing different found in the folders the automatic check reached, but with deeper folders it did not look into |
@@ -613,8 +615,15 @@ again instead.
 
 While a scan or prune works on an entry, its panel row shows the `scanning`
 state icon: in the state column while browsing with fileindex, else at the end
-of the row. A scan hashes all chosen entries together and clears each entry's
-icon as soon as its files are committed.
+of the row. A scan hashes all chosen entries together. A file keeps the icon
+until it is hashed and a directory until every file below it is hashed, so a
+directory clears once its own files are done, even while the scan goes on with
+others. A file that is new or changed on disk keeps it as well, until the scan has
+recorded it. A scan that does not hash everything (`hash = false` under
+`[fileindex]`, a fast scan, a scan that tags) leaves some files unhashed: their
+rows keep the icon until the job ends and then show `unhashed`. A directory the
+scan is not working on keeps its usual state. Cancelling the scan returns the
+rows to what the database holds.
 
 ## Operations and the index
 

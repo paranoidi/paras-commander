@@ -45,6 +45,9 @@ type Entry struct {
 	// IndexStatus is the fileindex state of the row (an IndexStatus* value), set only on
 	// listings of a panel browsing with the fileindex overlay; "" elsewhere.
 	IndexStatus string
+	// Unhashed is set on an indexed file that has no full hash yet, and on a directory with one
+	// below it. A scan task job keeps such a row scanning after its walk ends (IndexStatusScanning).
+	Unhashed bool
 	// Owner and Group are the entry's owner and group, resolved to names during the listing
 	// fetch (numeric ids when unknown); the painters never look them up. "" when the source has
 	// no such fact, like fileindex:// rows.
@@ -61,7 +64,8 @@ type Entry struct {
 }
 
 // Fileindex states a row can carry in Entry.IndexStatus. The fileindex.status column shows the
-// same words; scanning is never stored, the renderer derives it from the row's task-job mark.
+// same words; scanning is never stored, the renderer derives it from the row's task-job mark, which
+// outlives the walk while the row is still new, changed or Unhashed.
 const (
 	IndexStatusIndexed   = "indexed"   // in the index and, for a file, the same size and mtime on disk
 	IndexStatusChanged   = "changed"   // a file whose size or mtime on disk differs from the index
@@ -72,7 +76,7 @@ const (
 	IndexStatusTagged    = "tagged"    // indexed and carrying tags
 	IndexStatusDiffers   = "differs"   // an indexed directory whose subtree differs from the index
 	IndexStatusUnchecked = "unchecked" // an indexed directory with a subdirectory too deep for the automatic check
-	IndexStatusScanning  = "scanning"  // render-only: a scan or prune task job works on the row
+	IndexStatusScanning  = "scanning"  // render-only: a scan or prune task job walks the row or has yet to hash it
 	IndexStatusChecking  = "checking"  // render-only: a drift pass has yet to report on the directory
 )
 

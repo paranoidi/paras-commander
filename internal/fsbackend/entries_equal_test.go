@@ -3,6 +3,8 @@ package fsbackend
 import (
 	"testing"
 	"time"
+
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 func TestEntriesListingEqual(t *testing.T) {
@@ -71,5 +73,26 @@ func TestEntriesListingEqualSeesMetadataButNotAccessTime(t *testing.T) {
 	other.AccessedAt = stamp.Add(time.Hour)
 	if !EntriesListingEqual([]Entry{base}, []Entry{other}) {
 		t.Fatal("an access time change must not count")
+	}
+}
+
+func TestEntriesListingEqualSeesUnhashed(t *testing.T) {
+	mod := time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC)
+	row := func(unhashed bool) []Entry {
+		return []Entry{{Name: "willow.txt", Type: EntryFile, Size: 7, ModifiedAt: mod, IndexStatus: "indexed", Unhashed: unhashed}}
+	}
+	if EntriesListingEqual(row(true), row(false)) || EntriesListingEqual(row(false), row(true)) {
+		t.Fatal("an Unhashed flip is not a difference")
+	}
+	if !EntriesListingEqual(row(true), row(true)) {
+		t.Fatal("equal rows differ")
+	}
+}
+
+func TestPanelEntryCarriesUnhashed(t *testing.T) {
+	loc := pathloc.MustParse("/orchard/willow.txt")
+	e := Entry{Name: "willow.txt", Loc: loc, Type: EntryFile, Unhashed: true}
+	if !ToPanelEntry(e).Unhashed || !FromPanelEntry(ToPanelEntry(e)).Unhashed {
+		t.Fatal("Unhashed lost in the conversion")
 	}
 }

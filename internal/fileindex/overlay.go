@@ -52,6 +52,17 @@ func (x *Index) Overlay(ctx context.Context, dir pathloc.Path, entries []fsbacke
 	if err != nil {
 		return entries, err
 	}
+	gone := x.goneNow() // before the records are read: see goneNow
+	files, err := d.DirFiles(host)
+	if err != nil {
+		return entries, err
+	}
+	var dirs map[string]bool
+	if id, found, err := db.DirByPath(d, host); err == nil && found {
+		if dirs, err = subdirs(d, id); err != nil {
+			return entries, err
+		}
+	}
 	out := make([]fsbackend.Entry, len(entries), len(entries)+8)
 	onDisk := make(map[string]bool, len(entries))
 	for i, e := range entries {
@@ -60,12 +71,15 @@ func (x *Index) Overlay(ctx context.Context, dir pathloc.Path, entries []fsbacke
 		if e.IndexStatus == StatusIndexed && len(tags[e.Name]) > 0 {
 			e.IndexStatus = StatusTagged
 		}
+		// a row with no state (a link to a directory) or a ghost-to-be has nothing to wait for
+		if e.IndexStatus != "" && e.IndexStatus != StatusMissing {
+			if e.Type == fsbackend.EntryDirectory {
+				e.Unhashed = dirs[e.Name]
+			} else if r, ok := files[e.Name]; ok {
+				e.Unhashed = !r.Hashed
+			}
+		}
 		out[i] = e
-	}
-	gone := x.goneNow() // before the records are read: see goneNow
-	files, err := d.DirFiles(host)
-	if err != nil {
-		return out, err
 	}
 	// ghostOf adds an index-only name unless it exists on disk after all (hidden or git-ignored
 	// entries are missing from entries but not from the disk) or its record is about to go.
@@ -92,14 +106,8 @@ func (x *Index) Overlay(ctx context.Context, dir pathloc.Path, entries []fsbacke
 			return fileEntry(loc, db.ListedFile{Name: name, Size: r.Size, Mtime: r.Mtime})
 		})
 	}
-	if id, found, err := db.DirByPath(d, host); err == nil && found {
-		subdirs, err := subdirNames(d, id)
-		if err != nil {
-			return out, err
-		}
-		for _, name := range subdirs {
-			ghostOf(name, func(loc pathloc.Path) fsbackend.Entry { return dirEntry(loc, name) })
-		}
+	for name := range dirs {
+		ghostOf(name, func(loc pathloc.Path) fsbackend.Entry { return dirEntry(loc, name) })
 	}
 	return out, nil
 }

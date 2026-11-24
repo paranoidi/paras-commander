@@ -20,14 +20,14 @@ func listingIndexState(e Entry) string {
 // sameListingFacts reports whether two rows of one name show the same listing metadata.
 func sameListingFacts(a, b *Entry) bool {
 	return a.Type == b.Type && a.Size == b.Size && a.ModifiedAt.Equal(b.ModifiedAt) &&
-		listingIndexState(*a) == listingIndexState(*b) &&
+		listingIndexState(*a) == listingIndexState(*b) && a.Unhashed == b.Unhashed &&
 		a.Mode == b.Mode && a.Owner == b.Owner && a.Group == b.Group && a.Links == b.Links &&
 		a.ChangedAt.Equal(b.ChangedAt)
 }
 
 // EntriesListingEqual reports whether two directory snapshots have the same visible
 // membership and per-name metadata (type, size, modification time, mode, owner, group, links,
-// ctime, fileindex overlay state). Access time is left out: reading a file changes it, so it
+// ctime, fileindex overlay state, unhashed). Access time is left out: reading a file changes it, so it
 // would re-apply listings endlessly, and an Accessed column updates with the next change or reload.
 func EntriesListingEqual(a, b []Entry) bool {
 	if len(a) != len(b) {

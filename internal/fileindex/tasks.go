@@ -26,7 +26,8 @@ const DifferencesLease = "fileindex.differences"
 // ScanTask returns the task job scanning paths (local host paths) into the index: hashing new
 // and changed files, then pruning what is gone under them (fileindex's scan.Run with its
 // config.ini rules). Each path is reported done (jobs.TaskReporter.FinishSource) once its files
-// are committed, while the others are still hashed, so its file-list mark clears.
+// are committed, while the others are still hashed. Its file-list mark then clears only from the
+// rows that have settled: one still unhashed, new or changed stays scanning until it is hashed.
 func (x *Index) ScanTask(paths []string) *jobs.Task {
 	return x.scanTask(paths, false, "fileindex scan", "Hash new files", nil)
 }
@@ -233,7 +234,9 @@ func (w *warnings) flush() {
 // stays unknown. Pruning: TotalFiles is still unknown and CurrentPath is the directory being
 // checked. Hashing: TotalFiles is the number of files to hash, DoneFiles counts the files whose
 // hashing finished or failed (FileDone, scan.FileReporter), Speed samples add the bytes hashed
-// since the last sample. A root whose files are committed finishes its job source. Its methods are called from scan's goroutines concurrently.
+// since the last sample. A root whose files are committed finishes its job source shortly after
+// (RootDone), not its rows: the file list keeps marking those that wait for a hash. Its methods are
+// called from scan's goroutines concurrently.
 type scanReporter struct {
 	r jobs.TaskReporter
 	w warnings
@@ -243,6 +246,7 @@ type scanReporter struct {
 	skipHash bool                // the scan stops after pruning
 	rootDone func(i int)         // optional, runs before the root's job source finishes
 	onCommit func(dirs []string) // optional, Index.OnScanCommit
+	walked   map[int]*time.Timer // sources walked but not finished yet (RootDone)
 	hashing  bool                // Pruned was reached and hashing follows
 	bytes    float64
 	lastTick time.Time
@@ -357,17 +361,44 @@ func (s *scanReporter) Committed(_ scan.Stage, dirs []string) {
 	}
 }
 
-// RootDone finishes source i: scan.Run's roots are ScanTask's paths, which are the job's sources.
+// RootDone finishes source i: scan.Run's roots are ScanTask's paths, which are the job's sources. It
+// does so config.DefaultIndexScanSettleDelay later, when a panel has re-listed the walk's last commit
+// and its rows know what is unhashed, or when the scan ends (finish).
+// ponytail: a fixed delay; a listing slower than it still flashes the old state, which only a
+// listing that says what it has seen would avoid.
 func (s *scanReporter) RootDone(i int) {
 	if s.rootDone != nil {
 		s.rootDone(i)
 	}
-	s.r.FinishSource(i)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.walked == nil {
+		s.walked = map[int]*time.Timer{}
+	}
+	s.walked[i] = time.AfterFunc(config.DefaultIndexScanSettleDelay, func() {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		s.finishSource(i)
+	})
 }
 
-// finish flushes the dropped-warning count and, for a scan that completed its hashing, the
-// committed counts.
+// finishSource finishes walked source i, once; caller holds s.mu.
+func (s *scanReporter) finishSource(i int) {
+	if t, ok := s.walked[i]; ok {
+		t.Stop()
+		delete(s.walked, i)
+		s.r.FinishSource(i)
+	}
+}
+
+// finish finishes the walked sources still waiting, so that nothing is reported after the task ends,
+// flushes the dropped-warning count and, for a scan that completed its hashing, the committed counts.
 func (s *scanReporter) finish(stats scan.Stats) {
+	s.mu.Lock()
+	for i := range s.walked {
+		s.finishSource(i)
+	}
+	s.mu.Unlock()
 	s.w.flush()
 	if stats.Interrupted {
 		return

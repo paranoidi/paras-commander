@@ -134,14 +134,18 @@ func (b *Backend) List(ctx context.Context, dir pathloc.Path) ([]fsbackend.Entry
 		if err != nil {
 			continue // a name the index allows but a path element cannot hold
 		}
-		out = append(out, dirEntry(loc, s.Name))
+		e := dirEntry(loc, s.Name)
+		e.Unhashed = s.Unhashed
+		out = append(out, e)
 	}
 	for _, f := range files {
 		loc, err := dir.Join(f.Name)
 		if err != nil {
 			continue
 		}
-		out = append(out, fileEntry(loc, f))
+		e := fileEntry(loc, f)
+		e.Unhashed = !f.Hashed
+		out = append(out, e)
 	}
 	return out, nil
 }

@@ -111,8 +111,9 @@ func (a *App) queueIndexScanWake(dirs []string) {
 }
 
 // handleIndexScanWake re-lists the panels showing a directory a running scan committed results for,
-// so rows change state as results land. Outside the browser or behind a modal the directories are
-// dropped: the scan's end refreshes everything (UI goroutine).
+// or one below it (a directory row stays scanning until everything under it is hashed), so rows
+// change state as results land. Outside the browser or behind a modal the directories are dropped:
+// the scan's end refreshes everything (UI goroutine).
 func (a *App) handleIndexScanWake() {
 	dirs := asyncWakes(a).indexScan.drain()
 	if len(dirs) == 0 || a.model.ViewMode != ui.ViewBrowser || a.model.ModalDialogOpen() {
@@ -123,10 +124,7 @@ func (a *App) handleIndexScanWake() {
 		if !p.ShowsIndex() || showsTagListing(p) {
 			continue
 		}
-		ids, matched := matchChangedDirs(p.Path, watchTreeIDs(p), dirs)
-		if shown := a.fileIndex.ShownDir(p.Path); shown != "" && slices.Contains(dirs, shown) && !slices.Contains(matched, shown) {
-			matched = append(matched, shown)
-		}
+		ids, matched := a.scanCommitHits(p, dirs)
 		if len(matched) == 0 {
 			continue
 		}
@@ -134,6 +132,47 @@ func (a *App) handleIndexScanWake() {
 			a.queueIndexScanWake(matched) // transient skip: ask again after one more window
 		}
 	}
+}
+
+// scanCommitHits picks, from the host directories a scan committed, those at or under the directory
+// the panel shows or one of its expanded tree directories, as the index records them (ShownDir, so
+// a fileindex:// panel matches too). It returns the tree node ids whose listings show a hit (every
+// expanded directory above it: each lists the row leading to it) and the directories that hit, for
+// a retry. Each directory's ancestors are looked up in the set of shown ones, so the cost is its
+// depth.
+func (a *App) scanCommitHits(p *panel.State, dirs []string) (ids, matched []string) {
+	shown := map[string]string{} // host directory -> tree node id, "" for the panel's own
+	if host := a.fileIndex.ShownDir(p.Path); host != "" {
+		shown[host] = ""
+	}
+	for _, id := range watchTreeIDs(p) {
+		if loc, err := pathloc.Parse(id); err == nil {
+			if host := a.fileIndex.ShownDir(loc); host != "" {
+				shown[host] = id
+			}
+		}
+	}
+	if len(shown) == 0 {
+		return nil, nil
+	}
+	for _, d := range dirs {
+		hit := false
+		for cur := d; ; cur = pathloc.Dir(cur) {
+			if id, ok := shown[cur]; ok {
+				hit = true
+				if id != "" && !slices.Contains(ids, id) {
+					ids = append(ids, id)
+				}
+			}
+			if pathloc.Dir(cur) == cur {
+				break
+			}
+		}
+		if hit {
+			matched = append(matched, d)
+		}
+	}
+	return ids, matched
 }
 
 // showsTagListing reports whether the panel lists by a tag query: a structure view, or the list of

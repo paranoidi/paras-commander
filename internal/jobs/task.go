@@ -63,8 +63,8 @@ type TaskReporter interface {
 	// Warn adds a non-fatal line to the job's Warnings.
 	Warn(msg string)
 	// FinishSource marks source i (an index into Job.Sources) done, so its file-list mark
-	// clears while the task works on the others (every source starts with the task,
-	// Job.StartAllSources).
+	// clears from the rows that have settled while the task works on the others (every source
+	// starts with the task, Job.StartAllSources).
 	FinishSource(i int)
 }
 

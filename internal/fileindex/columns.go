@@ -277,16 +277,12 @@ func entryStatuses(ctx context.Context, d *db.DB, host string, entries []localfs
 	if err != nil {
 		return nil, err
 	}
-	dirs := map[string]bool{}
+	var dirs map[string]bool
 	if id, found, err := db.DirByPath(d, host); err != nil {
 		return nil, err
 	} else if found {
-		names, err := subdirNames(d, id)
-		if err != nil {
+		if dirs, err = subdirs(d, id); err != nil {
 			return nil, err
-		}
-		for _, n := range names {
-			dirs[n] = true
 		}
 	}
 	out := make(map[string]string, len(entries))
@@ -335,8 +331,9 @@ func entryStatuses(ctx context.Context, d *db.DB, host string, entries []localfs
 				out[e.Name] = StatusIndexed
 			}
 		case localfs.EntryDirectory:
+			_, indexed := dirs[e.Name]
 			switch {
-			case dirs[e.Name]:
+			case indexed:
 				out[e.Name] = StatusIndexed
 			case rules.ExcludeDir(e.Name):
 				out[e.Name] = StatusExcluded
@@ -348,19 +345,22 @@ func entryStatuses(ctx context.Context, d *db.DB, host string, entries []localfs
 	return out, nil
 }
 
-func subdirNames(d *db.DB, id *int64) ([]string, error) {
-	rows, err := d.Query("SELECT name FROM dir WHERE parent_id IS ?", id)
+// subdirs maps each subdirectory directly in the dir with id to whether a file below it waits to
+// be hashed (dir.unhashed_below).
+func subdirs(d *db.DB, id *int64) (map[string]bool, error) {
+	rows, err := d.Query("SELECT name, unhashed_below > 0 FROM dir WHERE parent_id IS ?", id)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
-	var out []string
+	out := map[string]bool{}
 	for rows.Next() {
 		var n sql.NullString
-		if err := rows.Scan(&n); err != nil {
+		var unhashed bool
+		if err := rows.Scan(&n, &unhashed); err != nil {
 			return nil, err
 		}
-		out = append(out, n.String)
+		out[n.String] = unhashed
 	}
 	return out, rows.Err()
 }

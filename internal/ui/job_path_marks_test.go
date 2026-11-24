@@ -626,17 +626,70 @@ func TestEntryPathJobMark_fileIndexRowMatching(t *testing.T) {
 
 	task := mark(jobs.TypeTask, dir)
 	for _, row := range []string{idxFile, idxDir} {
-		if _, ok := EntryPathJobMark(row, task); !ok {
+		if _, ok := EntryPathJobMark(row, task, false); !ok {
 			t.Fatalf("task job with host source should mark %q", row)
 		}
 	}
-	if _, ok := EntryPathJobMark(file, task); !ok {
+	if _, ok := EntryPathJobMark(file, task, false); !ok {
 		t.Fatal("task job should still mark the local row")
 	}
-	if _, ok := EntryPathJobMark(idxFile, mark(jobs.TypeDelete, dir)); ok {
+	if _, ok := EntryPathJobMark(idxFile, mark(jobs.TypeDelete, dir), false); ok {
 		t.Fatal("local delete job must not mark a fileindex:// row")
 	}
-	if _, ok := EntryPathJobMark(idxFile, mark(jobs.TypeDelete, idxDir)); !ok {
+	if _, ok := EntryPathJobMark(idxFile, mark(jobs.TypeDelete, idxDir), false); !ok {
 		t.Fatal("fileindex:// delete job should mark the fileindex:// row")
+	}
+}
+
+// A task job's source whose walk is done still marks the rows that have yet to settle (unsettled),
+// as an active source; the walk past it to an outer root, a queued source, a finished job and any
+// other job type are as before.
+func TestEntryPathJobMarkUnsettledKeepsDoneTaskSource(t *testing.T) {
+	t.Parallel()
+	build := func(typ jobs.Type, status jobs.Status, sources []string, phases ...jobs.SourcePhase) []JobPathMark {
+		return []JobPathMark{withIndex(JobPathMark{
+			ID: "harbor", Type: string(typ), Status: string(status), Sources: sources,
+			SourcePhases: phases, ActiveSource: 1, Destination: "/meadow", DestIsDir: true,
+		})}
+	}
+	roots := []string{"/vol/thistle", "/vol/bramble"}
+	done := []jobs.SourcePhase{jobs.SourceFinished, jobs.SourceStarted}
+	row := "/vol/thistle/lantern/pebble.txt"
+
+	task := build(jobs.TypeTask, jobs.StatusRunning, roots, done...)
+	if _, ok := EntryPathJobMark(row, task, false); ok {
+		t.Error("a settled row under a done task source is marked")
+	}
+	m, ok := EntryPathJobMark(row, task, true)
+	if !ok || m.Pending || m.Status != string(jobs.StatusRunning) || m.Type != string(jobs.TypeTask) {
+		t.Errorf("an unsettled row under a done task source: %+v ok=%v, want an active task mark", m, ok)
+	}
+	if m, ok := EntryPathJobMark(pathloc.FileIndexPrefix+row, task, true); !ok || m.Pending {
+		t.Errorf("fileindex:// row: %+v ok=%v, want the task mark by its host path", m, ok)
+	}
+	if _, ok := EntryPathJobMark("/vol/other/pebble.txt", task, true); ok {
+		t.Error("a row outside every source is marked")
+	}
+	if m, ok := EntryPathJobMark("/vol/bramble/pebble.txt", task, false); !ok || m.Pending {
+		t.Errorf("the started source: %+v ok=%v", m, ok)
+	}
+
+	queued := build(jobs.TypeTask, jobs.StatusRunning, roots, jobs.SourceFinished, jobs.SourceQueued)
+	if m, ok := EntryPathJobMark("/vol/bramble/pebble.txt", queued, true); !ok || !m.Pending {
+		t.Errorf("a queued source: %+v ok=%v, want pending", m, ok)
+	}
+	if _, ok := EntryPathJobMark(row, build(jobs.TypeTask, jobs.StatusCompleted, roots, done...), true); ok {
+		t.Error("a finished job marks a row")
+	}
+	for _, typ := range []jobs.Type{jobs.TypeCopy, jobs.TypeMove, jobs.TypeDelete} {
+		if _, ok := EntryPathJobMark(row, build(typ, jobs.StatusRunning, roots, done...), true); ok {
+			t.Errorf("a done %s source marks an unsettled row", typ)
+		}
+	}
+
+	// A done source nested in a started one: the walk goes on to the outer root either way.
+	nested := build(jobs.TypeTask, jobs.StatusRunning, []string{"/vol/thistle/lantern", "/vol/thistle"}, jobs.SourceFinished, jobs.SourceStarted)
+	if _, ok := EntryPathJobMark(row, nested, false); !ok {
+		t.Error("the outer started root does not mark a row under a done inner root")
 	}
 }

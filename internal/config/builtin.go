@@ -84,6 +84,10 @@ const (
 	// DefaultIndexScanRefreshInterval is how often a running fileindex scan re-lists a panel showing
 	// a directory it committed results for: results within it share one re-list.
 	DefaultIndexScanRefreshInterval = time.Second
+	// DefaultIndexScanSettleDelay is how long after a fileindex scan walked a source its rows keep the
+	// scanning mark unconditionally: the panel re-lists the walk's last commit meanwhile, so the rows
+	// go from walking to hashing without showing their old state.
+	DefaultIndexScanSettleDelay = 2 * DefaultIndexScanRefreshInterval
 	// MetaFSChangeDebounce is the throttle window of filesystem changes reaching the meta columns:
 	// the reports of a busy job within it invalidate rows in one pass.
 	MetaFSChangeDebounce = 100 * time.Millisecond

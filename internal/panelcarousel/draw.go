@@ -12,8 +12,8 @@ import (
 )
 
 // JobMarkFunc returns the job suffix icons (<job><queued><operation>) and the matched job's
-// status for an absolute path; a zero JobSuffix means no unfinished job touches it.
-type JobMarkFunc func(absPath string) (job panellist.JobSuffix, status string)
+// status for a row; a zero JobSuffix means no unfinished job touches it.
+type JobMarkFunc func(entry localfs.Entry) (job panellist.JobSuffix, status string)
 
 // NewFileMarkFunc reports the new-file suffix tier for an entry.
 type NewFileMarkFunc func(entry localfs.Entry) panellist.NewFileMarkTier
@@ -234,7 +234,7 @@ func drawCarouselColumn(cp carouselColumnParams) {
 		var jobSuffix panellist.JobSuffix
 		var jobStatus string
 		if p.JobMark != nil {
-			jobSuffix, jobStatus = p.JobMark(entry.Path)
+			jobSuffix, jobStatus = p.JobMark(entry)
 		}
 		subtree := entry.Type == localfs.EntryDirectory && selState.HasSelectionInSubtree(entry.Path)
 		newFileTier := panellist.NewFileMarkNone
