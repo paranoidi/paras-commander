@@ -1992,16 +1992,7 @@ func (h *Handler) PaneOpenableFile(copies bool) (string, bool) {
 	if !ok || row.HasChildren || row.Value.Kind != ui.DedupRowFile {
 		return "", false
 	}
-	return diskPath(row.Value.File.Abs), true
-}
-
-// diskPath is the host path to open or view for loc: an indexed view's fileindex:// path maps
-// to the file it records (the viewer and the opener only read the disk).
-func diskPath(loc pathloc.Path) string {
-	if host, err := loc.Local().FilePath(); err == nil {
-		return host
-	}
-	return loc.String()
+	return pathloc.DiskPath(row.Value.File.Abs.String()), true
 }
 
 // ClearMarks unmarks every file and clears keep designations, reusing the
@@ -2091,7 +2082,7 @@ func (h *Handler) EmptyDirsAfterDelete() []string {
 		if err != nil {
 			continue
 		}
-		rel, err := filepath.Rel(rootFP, dfp)
+		rel, err := pathloc.Rel(rootFP, dfp)
 		if err != nil || rel == ".." || strings.HasPrefix(rel, "../") { // above a trimmed display root
 			rel = dfp
 		}

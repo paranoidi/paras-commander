@@ -202,7 +202,7 @@ func (a *App) tryDispatchUnique(actionID string) bool {
 	case keymap.ActionPanelExternalBrowser:
 		if path, isDir, ok := a.uniqueCtrl.Target(); ok {
 			if !isDir {
-				path = filepath.Dir(path)
+				path = pathloc.Dir(path)
 			}
 			a.openDirInExternalBrowser(path)
 		}

@@ -7,7 +7,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/cmdmacro"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/localfs"
-	"github.com/paranoidi/paras-commander/internal/textutil"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/usermenu"
 )
 
@@ -28,7 +28,7 @@ func BuildRunForEachItem(cmdTemplate string, ent localfs.Entry, ctx cmdmacro.Con
 	if requireF && !usermenu.CommandRequiresIteratedF(cmdTemplate) {
 		return RunForEachBuiltItem{}, errors.New(usermenu.ErrRunForEachRequiresF)
 	}
-	ctx.FOverride = textutil.AbsPathClean(ent.Path)
+	ctx.FOverride = pathloc.Canonical(ent.Path)
 	built, err := cmdrun.BuildInvocation(cmdrun.InvocationSpec{
 		Template:   cmdTemplate,
 		Mode:       cmdrun.ModeAuto,

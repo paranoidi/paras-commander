@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/paranoidi/paras-commander/internal/fswalk"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // File represents nodes in a memoized filesystem tree with accumulated directory sizes.
@@ -30,7 +31,7 @@ func (f *File) Path() string {
 	if f.Parent == nil {
 		return f.Name
 	}
-	return filepath.Join(f.Parent.Path(), f.Name)
+	return filepath.Join(f.Parent.Path(), f.Name) //nolint:forbidigo // the tree is walked on disk
 }
 
 // UpdateSize aggregates directory sizes recursively.
@@ -95,7 +96,7 @@ func WalkFolder(
 	if ignore == nil {
 		ignore = func(string) bool { return false }
 	}
-	rootPath = filepath.Clean(rootPath)
+	rootPath = pathloc.Clean(rootPath)
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -129,7 +130,7 @@ func walkSubFolderConcurrently(
 		result.Name = leafName
 		result.Parent = parent
 	} else {
-		result.Name = filepath.Join(dirName, leafName)
+		result.Name = filepath.Join(dirName, leafName) //nolint:forbidigo // the tree is walked on disk
 	}
 
 	if ctx.Err() != nil {
@@ -153,7 +154,7 @@ func walkSubFolderConcurrently(
 		}
 		if entry.IsDir() {
 			numSubFolders++
-			subFolderPath := filepath.Join(path, entry.Name())
+			subFolderPath := filepath.Join(path, entry.Name()) //nolint:forbidigo // the tree is walked on disk
 			wg.Add(1)
 
 			go func(subPath string) {
@@ -214,26 +215,26 @@ func CountFilesInSubtree(root *File) int64 {
 	return n
 }
 
-// FlattenSizes records every node's Size keyed by filepath.Clean of Path().
+// FlattenSizes records every node's Size keyed by pathloc.Clean of Path().
 // Call after the root subtree has UpdateSize applied on the subtree root chain.
 func FlattenSizes(root *File, dest map[string]int64) {
 	if root == nil || dest == nil {
 		return
 	}
-	dest[filepath.Clean(root.Path())] = root.Size
+	dest[pathloc.Clean(root.Path())] = root.Size
 
 	for _, ch := range root.Files {
 		FlattenSizes(ch, dest)
 	}
 }
 
-// FlattenFileCounts records every node's subtree file count keyed by filepath.Clean of Path().
+// FlattenFileCounts records every node's subtree file count keyed by pathloc.Clean of Path().
 // Call after the root subtree has UpdateSize applied on the subtree root chain.
 func FlattenFileCounts(root *File, dest map[string]int64) {
 	if root == nil || dest == nil {
 		return
 	}
-	dest[filepath.Clean(root.Path())] = CountFilesInSubtree(root)
+	dest[pathloc.Clean(root.Path())] = CountFilesInSubtree(root)
 
 	for _, ch := range root.Files {
 		FlattenFileCounts(ch, dest)

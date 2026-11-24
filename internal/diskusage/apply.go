@@ -1,9 +1,8 @@
 package diskusage
 
 import (
-	"path/filepath"
-
 	"github.com/paranoidi/paras-commander/internal/fschange"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // Apply queues a batch of filesystem changes (fschange.Sink). It only appends under a small lock,
@@ -200,7 +199,7 @@ func (e *Engine) growAncestorsLocked(p string, d, total ancestorDelta) bool {
 	deltas := ancestorDeltas{}
 	var missing []string
 	for a := p; ; {
-		parent := filepath.Dir(a)
+		parent := pathloc.Dir(a)
 		if parent == a || e.excluded[parent] {
 			break
 		}
@@ -262,12 +261,12 @@ func (g *sweepGroup) remove(p string, isDir bool) {
 
 func (g *sweepGroup) track(p string) {
 	g.paths[p] = struct{}{}
-	for a := filepath.Dir(p); ; a = filepath.Dir(a) {
+	for a := pathloc.Dir(p); ; a = pathloc.Dir(a) {
 		if _, ok := g.ancestors[a]; ok {
 			return
 		}
 		g.ancestors[a] = struct{}{}
-		if filepath.Dir(a) == a {
+		if pathloc.Dir(a) == a {
 			return
 		}
 	}

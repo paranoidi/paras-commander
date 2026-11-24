@@ -9,6 +9,7 @@ import (
 	"github.com/mattn/go-runewidth"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -244,7 +245,7 @@ func entryPrimaryAbs(snap comparepkg.Snapshot, row comparepkg.Row) string {
 	if err != nil {
 		return ""
 	}
-	return filepath.Clean(loc.String())
+	return pathloc.Clean(loc.String())
 }
 
 func entrySecondaryAbs(snap comparepkg.Snapshot, row comparepkg.Row) string {
@@ -255,7 +256,7 @@ func entrySecondaryAbs(snap comparepkg.Snapshot, row comparepkg.Row) string {
 	if err != nil {
 		return ""
 	}
-	return filepath.Clean(loc.String())
+	return pathloc.Clean(loc.String())
 }
 
 func comparePathCellStyle(pathBase tcell.Style, colFocused, rowCursor, pathSelected bool, styles theme.Theme, chromeBlocked bool, bg tcell.Color, rangePending bool) tcell.Style {

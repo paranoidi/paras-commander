@@ -83,7 +83,7 @@ func (a *App) openCopyGitMenu() {
 // singleCopyTarget builds the paths/entries/dirPath triple for a copy-menu
 // invocation targeting one file (preview, compare, dedup selections).
 func singleCopyTarget(path string) ([]string, []localfs.Entry, string) {
-	return []string{canonicalTargetPath(path)}, []localfs.Entry{{Name: filepath.Base(path)}}, filepath.Dir(path)
+	return []string{pathloc.Canonical(path)}, []localfs.Entry{{Name: filepath.Base(path)}}, pathloc.Dir(path)
 }
 
 // copyTargets resolves the paths/entries/dirPath the copy actions operate on
@@ -133,7 +133,7 @@ func gitAvailable(paths []string, dirPath string) bool {
 		return gitignore.ValidWorkTreeRoot(dirPath) != ""
 	}
 	for _, p := range paths {
-		if gitignore.ValidWorkTreeRoot(filepath.Dir(p)) != "" {
+		if gitignore.ValidWorkTreeRoot(pathloc.Dir(p)) != "" {
 			return true
 		}
 	}
@@ -239,7 +239,7 @@ func (a *App) copyToClipboard(actionID string) {
 				return
 			}
 			inWorkTree = true
-			r, err := filepath.Rel(root, target)
+			r, err := pathloc.Rel(root, target)
 			if err != nil {
 				return
 			}
@@ -250,7 +250,7 @@ func (a *App) copyToClipboard(actionID string) {
 			rel = append(rel, r)
 		}
 		for _, p := range paths {
-			dir := filepath.Dir(p)
+			dir := pathloc.Dir(p)
 			if dirAction {
 				add(dir, dir)
 			} else {

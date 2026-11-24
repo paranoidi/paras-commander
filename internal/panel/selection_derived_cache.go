@@ -48,7 +48,7 @@ func (s *State) SetStripForced(on bool) {
 func (s *State) selDerivedValid() bool {
 	return s.selDerivedCache.built &&
 		s.selDerivedCache.gen == s.selectionDerivedGen &&
-		s.selDerivedCache.path == cleanPathString(s.Path.String())
+		s.selDerivedCache.path == pathloc.Canonical(s.Path.String())
 }
 
 func (s *State) ensureSelectionDerived() {
@@ -59,7 +59,7 @@ func (s *State) ensureSelectionDerived() {
 }
 
 func (s *State) rebuildSelectionDerived() {
-	cur := cleanPathString(s.Path.String())
+	cur := pathloc.Canonical(s.Path.String())
 	cache := selectionDerivedCache{
 		built: true,
 		path:  cur,
@@ -74,12 +74,12 @@ func (s *State) rebuildSelectionDerived() {
 }
 
 func (s *State) patchSelectionDerivedAfterAdd(path string, isDir bool) {
-	cur := cleanPathString(s.Path.String())
+	cur := pathloc.Canonical(s.Path.String())
 	if !s.selDerivedCache.built || s.selDerivedCache.path != cur {
 		s.rebuildSelectionDerived()
 		return
 	}
-	path = cleanPathString(path)
+	path = pathloc.Canonical(path)
 	if path == "" {
 		s.invalidateSelectionDerived()
 		return
@@ -97,12 +97,12 @@ func (s *State) patchSelectionDerivedAfterAdd(path string, isDir bool) {
 }
 
 func (s *State) patchSelectionDerivedAfterRemove(path string, wasDir bool) {
-	cur := cleanPathString(s.Path.String())
+	cur := pathloc.Canonical(s.Path.String())
 	if !s.selDerivedCache.built || s.selDerivedCache.path != cur {
 		s.rebuildSelectionDerived()
 		return
 	}
-	path = cleanPathString(path)
+	path = pathloc.Canonical(path)
 	if path == "" {
 		s.invalidateSelectionDerived()
 		return
@@ -177,7 +177,7 @@ func (s *State) patchPrunedRootsAfterRemove(path string, wasDir bool) {
 }
 
 func insertSortedUnique(sorted []string, path string) []string {
-	path = cleanPathString(path)
+	path = pathloc.Canonical(path)
 	if path == "" {
 		return sorted
 	}
@@ -193,7 +193,7 @@ func insertSortedUnique(sorted []string, path string) []string {
 }
 
 func removeSortedPath(sorted []string, path string) []string {
-	path = cleanPathString(path)
+	path = pathloc.Canonical(path)
 	if path == "" || len(sorted) == 0 {
 		return sorted
 	}
@@ -208,7 +208,7 @@ func removeSortedPath(sorted []string, path string) []string {
 }
 
 func insertPrunedRoot(roots []string, path string, isDir bool) []string {
-	path = cleanPathString(path)
+	path = pathloc.Canonical(path)
 	if path == "" {
 		return roots
 	}
@@ -220,7 +220,7 @@ func insertPrunedRoot(roots []string, path string, isDir bool) []string {
 }
 
 func (s *State) applySelectionAdd(path string, isDir bool) {
-	path = cleanPathString(path)
+	path = pathloc.Canonical(path)
 	if path == "" {
 		return
 	}
@@ -243,7 +243,7 @@ func (s *State) applySelectionAdd(path string, isDir bool) {
 // selected changes nothing (its counts and bytes were never added); whether it was a directory
 // comes from SelectedDirPaths, never a stat.
 func (s *State) applySelectionRemove(path string) {
-	path = cleanPathString(path)
+	path = pathloc.Canonical(path)
 	if path == "" || !s.SelectedPaths[path] {
 		return
 	}
@@ -276,14 +276,14 @@ func (s *State) buildSelectedStripPaths(cur string) []string {
 }
 
 func selectionsOutsideDir(selected map[string]bool, dir string) bool {
-	dir = cleanPathString(dir)
+	dir = pathloc.Canonical(dir)
 	for p, on := range selected {
 		if !on {
 			continue
 		}
 		parent, ok := selectionParentDir(p)
 		if !ok {
-			if cleanPathString(p) != dir {
+			if pathloc.Canonical(p) != dir {
 				return true
 			}
 			continue
@@ -307,14 +307,14 @@ func selectionParentDir(path string) (string, bool) {
 	if parent.Equal(loc) || parent.IsZero() {
 		return "", false
 	}
-	return cleanPathString(parent.String()), true
+	return pathloc.Canonical(parent.String()), true
 }
 
 // knownSelectionIsDir reports whether path is a directory from listing or selection
 // metadata (SelectedDirPaths). known is false only when the path is not a current
 // selection and is not in the listing — callers must not Stat on the UI goroutine.
 func (s *State) knownSelectionIsDir(path string) (isDir bool, known bool) {
-	path = cleanPathString(path)
+	path = pathloc.Canonical(path)
 	if path == "" {
 		return false, false
 	}
@@ -333,7 +333,7 @@ func (s *State) knownSelectionIsDir(path string) (isDir bool, known bool) {
 // StripNavTarget returns the directory latched sync mirrors for a selected strip path and, when
 // the path is a file, the basename to highlight. Type comes from listing or
 // SelectedDirPaths; a selected path that is not marked as a directory is treated
-// as a file. No filepath.Dir / os.Stat — sftp:// URIs stay backend-neutral.
+// as a file. No os.Stat: the parent is pathloc.Path.Parent, so sftp:// URIs stay backend-neutral.
 func (s *State) StripNavTarget(raw string) (dir pathloc.Path, selectName string, err error) {
 	loc, err := pathloc.Parse(raw)
 	if err != nil {
@@ -417,7 +417,7 @@ func sortedUniqueSelectionPaths(paths []string) []string {
 	}
 	sorted := make([]string, len(paths))
 	for i, p := range paths {
-		sorted[i] = cleanPathString(p)
+		sorted[i] = pathloc.Canonical(p)
 	}
 	sort.Strings(sorted)
 	out := make([]string, 0, len(sorted))
@@ -454,7 +454,7 @@ func (s *State) BulkAddSelections(paths []string, isDir func(string) bool) bool 
 	// existing selections too, which SelectedDirPaths already answers.
 	batchDir := make(map[string]bool, len(paths))
 	for _, p := range paths {
-		if p = cleanPathString(p); p != "" {
+		if p = pathloc.Canonical(p); p != "" {
 			if _, ok := batchDir[p]; !ok {
 				batchDir[p] = isDir(p)
 			}
@@ -521,7 +521,7 @@ func (s *State) RemoveSelections(paths []string) int {
 	patch := removeSelectionsPatches(len(paths), len(s.SelectedPaths))
 	removed := 0
 	for _, p := range paths {
-		p = cleanPathString(p)
+		p = pathloc.Canonical(p)
 		if p == "" || !s.SelectedPaths[p] {
 			continue
 		}

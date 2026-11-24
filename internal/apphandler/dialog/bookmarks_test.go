@@ -24,6 +24,11 @@ func TestDefaultBookmarkName(t *testing.T) {
 		{path: "/home/user/projects", want: "projects"},
 		{path: ".", want: "root"},
 		{path: "", want: "root"},
+		{path: "fileindex:///", want: "root"},
+		{path: "fileindex(clover):///", want: "root"},
+		{path: "fileindex:///meadow/orchard/", want: "orchard"},
+		{path: "fileindex@(clover):///meadow//orchard", want: "orchard"},
+		{path: "sftp://willow@harbor/meadow", want: "meadow"},
 	}
 	for _, tt := range tests {
 		if got := DefaultBookmarkName(tt.path); got != tt.want {

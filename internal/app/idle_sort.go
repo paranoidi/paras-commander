@@ -1,12 +1,12 @@
 package app
 
 import (
-	"path/filepath"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
 
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -117,7 +117,7 @@ func (a *App) idleSortDirChanged(s idleSortSpec, panelID int) bool {
 		return false
 	}
 	p := a.panelByID(panelID)
-	cur := filepath.Clean(p.PathString())
+	cur := pathloc.Clean(p.PathString())
 	if ps := s.slot(a.panelInst(panelID)); ps.navPath != cur {
 		a.idleSortInvalidate(s, panelID)
 		ps.navPath = cur

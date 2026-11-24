@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
@@ -99,7 +100,7 @@ type FindEntry struct {
 
 // AbsPath reconstructs the absolute path of the entry from the dialog's root path.
 func (e FindEntry) AbsPath(rootPath string) string {
-	return filepath.Join(rootPath, filepath.FromSlash(e.RelLine))
+	return filepath.Join(rootPath, filepath.FromSlash(e.RelLine)) //nolint:forbidigo // the Find root is a host path and RelLine comes from a disk walk
 }
 
 // FindDialogState is a fuzzy picker over recursively indexed paths under a panel root. Its
@@ -189,7 +190,7 @@ func (s *FindDialogState) FindEntryAt(idx int) (FindEntry, bool) {
 func (s *FindDialogState) RebuildPathIndex() {
 	s.pathIndex = make(map[string]int, len(s.Entries))
 	for i, e := range s.Entries {
-		s.pathIndex[filepath.Clean(e.AbsPath(s.RootPath))] = i
+		s.pathIndex[pathloc.Clean(e.AbsPath(s.RootPath))] = i
 	}
 }
 
@@ -200,7 +201,7 @@ func (s *FindDialogState) ExtendPathIndex(from int) {
 		return
 	}
 	for i := from; i < len(s.Entries); i++ {
-		s.pathIndex[filepath.Clean(s.Entries[i].AbsPath(s.RootPath))] = i
+		s.pathIndex[pathloc.Clean(s.Entries[i].AbsPath(s.RootPath))] = i
 	}
 }
 
@@ -223,7 +224,7 @@ type HistoryDialogState struct {
 	Open            bool
 	PanelID         int             // PrimaryPanel or SecondaryPanel
 	Paths           []string        // current list (single panel or merged)
-	CurrentPath     string          // PanelID's directory at open (CleanPathString); hidden from the list
+	CurrentPath     string          // PanelID's directory at open (pathloc.Canonical); hidden from the list
 	BothPanels      bool            // true when showing merged list
 	PanelPaths      []string        // snapshot of PanelID history at open (for F5 toggle back)
 	Zoxide          []string        // zoxide directories (loaded async), appended after the history when IncludeZoxide

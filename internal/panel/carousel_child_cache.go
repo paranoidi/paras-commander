@@ -2,6 +2,7 @@ package panel
 
 import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // CarouselCenterHasSubdirectories reports whether the center listing has any child
@@ -22,8 +23,7 @@ func (s *State) CarouselCenterHasSubdirectories() bool {
 // CarouselParentPreviewTarget returns the center directory whose parent listing the carousel
 // parent column should show — also the cache key an async parent-snapshot fetch is tagged with
 // (see internal/app's carousel snapshot dispatch). pathloc.Path is already canonical, so the
-// string needs no further cleaning (and must not get any: filepath.Clean would collapse the "//"
-// of an sftp:// location).
+// string needs no further cleaning.
 func (s *State) CarouselParentPreviewTarget() (string, bool) {
 	if s.Path.IsZero() {
 		return "", false
@@ -46,7 +46,7 @@ func (s *State) CarouselChildPreviewTarget() (string, bool) {
 	if !ok || entry.Type != localfs.EntryDirectory {
 		return "", false
 	}
-	path := cleanPathString(entry.Path) // not filepath.Clean: it would collapse the "//" of a URI
+	path := pathloc.Canonical(entry.Path)
 	if path == "" || path == "." {
 		return "", false
 	}

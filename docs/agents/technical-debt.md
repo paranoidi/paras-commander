@@ -66,7 +66,7 @@ The minimal (`default:`) branch of `ensureSelectionVisible` reimplements `panel.
 
 ## Disk-usage directory sweeps scan the whole cache
 
-A directory rename or removal applied to the disk-usage cache (`flushSweepLocked` in `internal/diskusage/apply.go`) runs `rebaseKeys` over every key. `rebaseKeys` calls `rebase`, then `drop` when `rebase` misses, and each is a `nearestAncestor` walk of `filepath.Dir` to the root, repeated for `cache`, `fileCounts` and `excluded`, all while holding `e.mu`. For: it runs on the engine's apply goroutine, never the UI goroutine, and coalescing makes a burst (a merge move's children) cost one sweep; the code is simple. Against: on a very large size cache, scans and readers block on `e.mu` for the whole sweep. The fix is one walk per key that answers both questions, or a children index so a subtree is found in O(subtree). Relevance: low. Do it only if profiling shows it.
+A directory rename or removal applied to the disk-usage cache (`flushSweepLocked` in `internal/diskusage/apply.go`) runs `rebaseKeys` over every key. `rebaseKeys` calls `rebase`, then `drop` when `rebase` misses, and each is a `nearestAncestor` walk of `pathloc.Dir` to the root, repeated for `cache`, `fileCounts` and `excluded`, all while holding `e.mu`. For: it runs on the engine's apply goroutine, never the UI goroutine, and coalescing makes a burst (a merge move's children) cost one sweep; the code is simple. Against: on a very large size cache, scans and readers block on `e.mu` for the whole sweep. The fix is one walk per key that answers both questions, or a children index so a subtree is found in O(subtree). Relevance: low. Do it only if profiling shows it.
 
 ## Find walker reads directories sorted and serially
 

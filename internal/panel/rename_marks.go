@@ -10,7 +10,7 @@ func (s *State) AddRenameMarks(dir pathloc.Path, names []string) {
 	if len(names) == 0 {
 		return
 	}
-	key := cleanPathString(dir.String())
+	key := pathloc.Canonical(dir.String())
 	if key == "" {
 		return
 	}

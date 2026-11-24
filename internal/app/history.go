@@ -2,13 +2,13 @@ package app
 
 import (
 	"maps"
-	"path/filepath"
 	"slices"
 
 	"github.com/gdamore/tcell/v2"
 	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -37,7 +37,7 @@ func (a *App) openHistoryDialog(panelID int) {
 	a.model.HistoryDialog = dialog.HistoryDialogState{
 		Open:          true,
 		PanelID:       panelID,
-		CurrentPath:   panel.CleanPathString(p.Path.String()),
+		CurrentPath:   pathloc.Canonical(p.Path.String()),
 		PanelPaths:    panelPaths,
 		IncludeZoxide: a.config.History.Zoxide,
 		Loading:       a.screen != nil,
@@ -124,7 +124,7 @@ func (a *App) rebuildHistoryDialogPaths() {
 	}
 	seen := map[string]struct{}{st.CurrentPath: {}}
 	base = slices.DeleteFunc(base, func(p string) bool {
-		cp := panel.CleanPathString(p)
+		cp := pathloc.Canonical(p)
 		_, dup := seen[cp]
 		seen[cp] = struct{}{}
 		return dup
@@ -219,9 +219,9 @@ func (a *App) reloadHistoryDialogList() {
 	st.DisplayLines = st.Paths
 	a.syncHistoryDialogRanks()
 	if selectedPath != "" {
-		want := panel.CleanPathString(selectedPath)
+		want := pathloc.Canonical(selectedPath)
 		for i, idx := range st.Ranked {
-			if idx >= 0 && idx < len(st.Paths) && panel.CleanPathString(st.Paths[idx]) == want {
+			if idx >= 0 && idx < len(st.Paths) && pathloc.Canonical(st.Paths[idx]) == want {
 				st.Selected = i
 				break
 			}
@@ -256,21 +256,12 @@ func (a *App) openHistorySelectionInPanel(panelID int) {
 	if entIdx < 0 || entIdx >= len(st.Paths) {
 		return
 	}
-	path := historyEntryPath(st.Paths[entIdx])
+	path := pathloc.Canonical(st.Paths[entIdx])
 	if err := a.navigatePanelToDirectory(panelID, path, ""); err != nil {
 		a.setErrorMessage("History", err)
 		return
 	}
 	a.setTransientMessage("Opened: "+path, ui.MessageUrgencyInfo)
-}
-
-// historyEntryPath is a history path as navigation takes it: the pathloc form, not filepath.Clean,
-// which would collapse the "//" of a fileindex or sftp URI.
-func historyEntryPath(raw string) string {
-	if p := panel.CleanPathString(raw); p != "" {
-		return p
-	}
-	return filepath.Clean(raw)
 }
 
 func (a *App) syncHistoryDialogRanks() {
@@ -300,7 +291,7 @@ func (a *App) activateHistorySelection() {
 	if entIdx < 0 || entIdx >= len(st.Paths) {
 		return
 	}
-	path := historyEntryPath(st.Paths[entIdx])
+	path := pathloc.Canonical(st.Paths[entIdx])
 	if err := a.navigatePanelToDirectory(st.PanelID, path, ""); err != nil {
 		a.setErrorMessage("History", err)
 		return
@@ -321,8 +312,8 @@ func (a *App) pinHistorySelection() {
 	if entIdx < 0 || entIdx >= len(st.Paths) {
 		return
 	}
-	path := historyEntryPath(st.Paths[entIdx])
-	a.pinCtrl.TogglePath(filepath.Base(path), path, true)
+	path := pathloc.Canonical(st.Paths[entIdx])
+	a.pinCtrl.TogglePath(pathloc.Base(path), path, true)
 }
 
 func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {

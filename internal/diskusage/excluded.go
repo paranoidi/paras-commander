@@ -1,6 +1,6 @@
 package diskusage
 
-import "path/filepath"
+import "github.com/paranoidi/paras-commander/internal/pathloc"
 
 // ListingVolumeGate skips descending into directories whose device differs from RefDev when Enabled && Valid.
 // FromRoot resolves RefDev from the scan root itself (off the UI goroutine) so an explicitly
@@ -21,7 +21,7 @@ func ComposeListingVolumeIgnore(base ShouldIgnoreFolder, gate ListingVolumeGate)
 		if !gate.Enabled || !gate.Valid {
 			return false
 		}
-		dev, ok := pathStatDevice(filepath.Clean(abs))
+		dev, ok := pathStatDevice(pathloc.Clean(abs))
 		if !ok {
 			return true
 		}
@@ -31,7 +31,7 @@ func ComposeListingVolumeIgnore(base ShouldIgnoreFolder, gate ListingVolumeGate)
 
 // ScanExcluded reports whether a directory would not be descended into by disk-usage rules used for the listing row (godu + optional mount gate).
 func ScanExcluded(absPath string, descendIntoMountPoints bool, listingDev uint64, listingDevValid bool, goduIgnore ShouldIgnoreFolder) bool {
-	clean := filepath.Clean(absPath)
+	clean := pathloc.Clean(absPath)
 	if goduIgnore != nil && goduIgnore(clean) {
 		return true
 	}

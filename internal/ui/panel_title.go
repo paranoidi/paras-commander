@@ -9,7 +9,7 @@ import (
 )
 
 // PanelTitlePath formats a directory path for the panel title bar.
-// homeDir should be filepath.Clean(os.UserHomeDir()); when empty, paths are not collapsed to ~/.
+// homeDir should be pathloc.Clean(os.UserHomeDir()); when empty, paths are not collapsed to ~/.
 // maxRunes is the maximum width in terminal cells (runes) for the path only—the caller
 // adds surrounding spaces separately.
 func PanelTitlePath(absPath, homeDir string, maxRunes int) string {

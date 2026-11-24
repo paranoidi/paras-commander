@@ -1,11 +1,10 @@
 package usermenu
 
 import (
-	"path/filepath"
-
 	"github.com/paranoidi/paras-commander/internal/cmdmacro"
 	"github.com/paranoidi/paras-commander/internal/entrymatch"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // EvalContext carries panel state for condition evaluation.
@@ -51,14 +50,14 @@ func panelSnapshot(ps *panel.State) *cmdmacro.PanelSnapshot {
 	if ps == nil {
 		return nil
 	}
-	root := filepath.Clean(ps.PathString())
+	root := pathloc.Clean(ps.PathString())
 	snap := &cmdmacro.PanelSnapshot{Dir: root}
 	if ent, ok := ps.CurrentEntry(); ok {
 		snap.HasCurrent = true
 		snap.CurrentName = ent.Path
 		// Tree rows can sit in expanded subdirectories, and rows of a flat tag view in many: %d is
 		// the directory holding the caret row.
-		snap.Dir = filepath.Clean(ps.EntryDir(ent).String())
+		snap.Dir = pathloc.Clean(ps.EntryDir(ent).String())
 	}
 	snap.TaggedInDir = ps.CommandTags()
 	return snap

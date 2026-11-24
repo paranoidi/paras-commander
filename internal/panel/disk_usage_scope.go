@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/paranoidi/paras-commander/internal/diskusage"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // ListingPathInDiskUsageScanScope reports whether listingPath is the scan origin or under a scan root.
@@ -12,8 +12,8 @@ func ListingPathInDiskUsageScanScope(listingPath, origin string, roots []string)
 	if origin == "" || len(roots) == 0 {
 		return false
 	}
-	cur := diskusage.CleanKey(listingPath)
-	if cur == diskusage.CleanKey(origin) {
+	cur := pathloc.Clean(listingPath)
+	if cur == pathloc.Clean(origin) {
 		return true
 	}
 	for _, root := range roots {
@@ -25,8 +25,8 @@ func ListingPathInDiskUsageScanScope(listingPath, origin string, roots []string)
 }
 
 func pathEqualOrUnder(child, root string) bool {
-	r := diskusage.CleanKey(root)
-	c := diskusage.CleanKey(child)
+	r := pathloc.Clean(root)
+	c := pathloc.Clean(child)
 	if c == r {
 		return true
 	}

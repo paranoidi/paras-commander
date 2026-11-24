@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -18,7 +19,7 @@ func resolveExistingStartPath(raw, homeDir string) (string, os.FileInfo, error) 
 		return "", nil, err
 	}
 	if !filepath.IsAbs(path) {
-		path, err = filepath.Abs(path)
+		path, err = filepath.Abs(path) //nolint:forbidigo // a command-line path argument is a disk path
 		if err != nil {
 			return "", nil, err
 		}
@@ -93,7 +94,7 @@ func (a *App) applyStartPaths(rawPaths []string) error {
 			return fmt.Errorf("preview %s: %w", r.path, err)
 		}
 		if err := a.model.Primary.NavigateTo(
-			filepath.Dir(r.path),
+			pathloc.Dir(r.path),
 			filepath.Base(r.path),
 			a.panelViewportRows(ui.PrimaryPanel),
 		); err != nil {
@@ -119,7 +120,7 @@ func (a *App) applyStartPaths(rawPaths []string) error {
 			}
 			continue
 		}
-		if err := p.NavigateTo(filepath.Dir(r.path), filepath.Base(r.path), vr); err != nil {
+		if err := p.NavigateTo(pathloc.Dir(r.path), filepath.Base(r.path), vr); err != nil {
 			return err
 		}
 		filePanel = panelID

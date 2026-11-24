@@ -1,7 +1,6 @@
 package dialog
 
 import (
-	"path/filepath"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/jobs"
@@ -85,13 +84,13 @@ func (h *Handler) applyPendingPanelFocus() {
 		h.pendingFocus = pendingPanelFocus{}
 		return
 	}
-	if filepath.Clean(p.PathString()) != filepath.Clean(f.listDir) {
+	if pathloc.Clean(p.PathString()) != pathloc.Clean(f.listDir) {
 		h.pendingFocus = pendingPanelFocus{}
 		return
 	}
 	if f.snapCursorPath != "" {
 		cur, ok := p.CurrentEntry()
-		if !ok || filepath.Clean(cur.Path) != filepath.Clean(f.snapCursorPath) {
+		if !ok || pathloc.Clean(cur.Path) != pathloc.Clean(f.snapCursorPath) {
 			h.pendingFocus = pendingPanelFocus{}
 			return
 		}

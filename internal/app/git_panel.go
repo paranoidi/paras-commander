@@ -8,6 +8,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -43,12 +44,12 @@ func (a *App) primeGitStatusForCLIPreview(path string) {
 	if a.gitStatusCache == nil {
 		return
 	}
-	listDir := filepath.Clean(filepath.Dir(path))
+	listDir := pathloc.Clean(pathloc.Dir(path))
 	workRoot := gitignore.ValidWorkTreeRoot(listDir)
 	if workRoot == "" {
 		return
 	}
-	path = filepath.Clean(path)
+	path = pathloc.Clean(path)
 	cell, err := gitstatus.StatusForFile(context.Background(), workRoot, path)
 	if err != nil {
 		return
@@ -89,14 +90,14 @@ func (a *App) gitStatusScheduler(panelID int) panel.GitStatusScheduler {
 			return false
 		}
 		pan := inst.state
-		listDir := filepath.Clean(req.ListDir)
+		listDir := pathloc.Clean(req.ListDir)
 		if a.pathVolumeContendsWithActiveJob(listDir) {
 			// A job is already saturating this volume. false means "not scheduled", so the
 			// caller's pending/generation bookkeeping stays intact and retries on its next trigger.
 			return false
 		}
 		host, hostErr := pan.Path.FilePath()
-		cwdLevel := hostErr == nil && filepath.Clean(host) == listDir
+		cwdLevel := hostErr == nil && pathloc.Clean(host) == listDir
 		var gen uint64
 		if cwdLevel {
 			gen = inst.gitStatusLoadGen.Add(1)
@@ -155,7 +156,7 @@ func (a *App) applyOneGitStatusLoad(p gitStatusPayload) bool {
 	if err != nil {
 		return false
 	}
-	host = filepath.Clean(host)
+	host = pathloc.Clean(host)
 	if p.cwdLevel {
 		if inst.gitStatusLoadGen.Load() != p.gen || p.listDir != host {
 			return false
@@ -204,12 +205,12 @@ func (a *App) applyOneGitStatusLoad(p gitStatusPayload) bool {
 }
 
 // isWithinDir reports whether child is parent or a descendant of parent. Both paths must
-// already be filepath.Clean'd.
+// already be pathloc.Clean'd.
 func isWithinDir(child, parent string) bool {
 	if parent == "" {
 		return false
 	}
-	rel, err := filepath.Rel(parent, child)
+	rel, err := pathloc.Rel(parent, child)
 	if err != nil {
 		return false
 	}

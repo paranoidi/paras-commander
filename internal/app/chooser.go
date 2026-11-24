@@ -8,6 +8,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -18,21 +19,21 @@ func expandUserPath(raw, homeDir string) (string, error) {
 	}
 	switch {
 	case raw == "~" && homeDir != "":
-		return filepath.Clean(homeDir), nil
+		return pathloc.Clean(homeDir), nil
 	case strings.HasPrefix(raw, "~/") && homeDir != "":
-		return filepath.Clean(filepath.Join(homeDir, strings.TrimPrefix(raw, "~/"))), nil
+		return pathloc.Clean(filepath.Join(homeDir, strings.TrimPrefix(raw, "~/"))), nil //nolint:forbidigo // a typed chooser path under the home directory is a disk path
 	default:
-		return filepath.Clean(raw), nil
+		return pathloc.Clean(raw), nil
 	}
 }
 
 // writePathFile writes path's absolute form plus a newline to file (--chooser-file, --cwd-file).
 func writePathFile(file, path string) error {
-	abs, err := filepath.Abs(path)
+	abs, err := filepath.Abs(path) //nolint:forbidigo // the --chooser-file / --cwd-file content is a disk path
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
+	if err := os.MkdirAll(pathloc.Dir(file), 0o755); err != nil {
 		return fmt.Errorf("create directory for %s: %w", file, err)
 	}
 	return os.WriteFile(file, []byte(abs+"\n"), 0o600)
@@ -70,12 +71,12 @@ func (a *App) applyChooserSelect(raw string) error {
 		if info.IsDir() {
 			return a.model.Primary.NavigateTo(path, "", vr)
 		}
-		return a.model.Primary.NavigateTo(filepath.Dir(path), filepath.Base(path), vr)
+		return a.model.Primary.NavigateTo(pathloc.Dir(path), filepath.Base(path), vr)
 	}
 	if !os.IsNotExist(statErr) {
 		return statErr
 	}
-	dir := filepath.Dir(path)
+	dir := pathloc.Dir(path)
 	if err := a.model.Primary.NavigateTo(dir, "", vr); err != nil {
 		return err
 	}
@@ -127,7 +128,7 @@ func (a *App) selectedFilesToOpen(activePanel *panel.State) []string {
 		return nil
 	}
 	cur, ok := activePanel.CurrentEntry()
-	if !ok || cur.Type == localfs.EntryDirectory || !activePanel.SelectedPaths[filepath.Clean(cur.Path)] {
+	if !ok || cur.Type == localfs.EntryDirectory || !activePanel.SelectedPaths[pathloc.Clean(cur.Path)] {
 		return nil
 	}
 	entries, err := activePanel.SelectedEntries(true, nil)
@@ -149,7 +150,7 @@ func (a *App) handleChooserOpen(activePanel *panel.State) bool {
 	if !ok || entry.Type == localfs.EntryDirectory {
 		return false
 	}
-	p := filepath.Clean(entry.Path)
+	p := pathloc.Clean(entry.Path)
 	if p == "" || p == "." {
 		a.setErrorMessage("Chooser", fmt.Errorf("no path"))
 		return false

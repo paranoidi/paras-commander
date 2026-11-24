@@ -2,12 +2,12 @@ package pin
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/gdamore/tcell/v2"
 	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
 	"github.com/paranoidi/paras-commander/internal/apphandler/host"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -154,7 +154,7 @@ func (h *Handler) RemoveSelected() {
 	}
 	h.model.PinnedItems = append(h.model.PinnedItems[:idx], h.model.PinnedItems[idx+1:]...)
 	h.SyncDialogRanks()
-	h.host.SetTransientMessage(fmt.Sprintf("Unpinned %s", filepath.Base(removed.Path)), ui.MessageUrgencyInfo)
+	h.host.SetTransientMessage(fmt.Sprintf("Unpinned %s", pathloc.Base(removed.Path)), ui.MessageUrgencyInfo)
 }
 
 // RemoveAll unpins every item (Shift+F8) and closes the dialog. No-op if there are no pins.

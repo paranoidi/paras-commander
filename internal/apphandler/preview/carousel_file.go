@@ -2,7 +2,6 @@ package preview
 
 import (
 	"context"
-	"path/filepath"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -203,7 +202,7 @@ func (h *Handler) carouselChildPreviewLayoutMetrics() (textW, contentH int, ok b
 func (h *Handler) CarouselDirRule(dirPath string) bool {
 	dirPath = pathloc.DiskPath(dirPath)
 	return dirPath != h.carouselDirRuleDeclined &&
-		previewrun.MatchAnyCommandRule(h.host.Config().Preview, dirPath, localfs.EntryDirectory, filepath.Dir(dirPath))
+		previewrun.MatchAnyCommandRule(h.host.Config().Preview, dirPath, localfs.EntryDirectory, pathloc.Dir(dirPath))
 }
 
 // carouselFilePreviewWantPath returns the path to preview in the child column: the highlighted

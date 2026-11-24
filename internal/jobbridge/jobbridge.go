@@ -237,7 +237,7 @@ func ActivityDetailLabel(active *jobs.Job, ev jobs.Event) string {
 		if err != nil {
 			goto baseLabel
 		}
-		rel, err := filepath.Rel(root, dst)
+		rel, err := pathloc.Rel(root, dst)
 		if err == nil && rel != "." &&
 			rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 			return rel

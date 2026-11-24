@@ -16,6 +16,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -333,7 +334,7 @@ func (a *App) editConfigTOMLFromDialog() {
 // if needed, e.g. on a first run) and opens it in the external editor.
 func (a *App) createAndEditConfigStub() {
 	path := a.paths.ConfigFile
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(pathloc.Dir(path), 0o755); err != nil {
 		a.setErrorMessage("Edit config", err)
 		return
 	}

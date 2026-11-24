@@ -612,11 +612,11 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	folderColors := foldercolor.New()
 	homeDir, _ := os.UserHomeDir()
 	if homeDir != "" {
-		homeDir = filepath.Clean(homeDir)
+		homeDir = pathloc.Clean(homeDir)
 	}
 	var duIgnorer diskusage.ShouldIgnoreFolder
 	if homeDir != "" {
-		if ig, err := diskusage.LoadGoduIgnoreBasenames(filepath.Join(homeDir, ".goduignore")); err == nil && ig != nil {
+		if ig, err := diskusage.LoadGoduIgnoreBasenames(filepath.Join(homeDir, ".goduignore")); err == nil && ig != nil { //nolint:forbidigo // the goduignore file in the home directory
 			duIgnorer = ig
 		}
 	}

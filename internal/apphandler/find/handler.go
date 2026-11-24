@@ -11,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/scan"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -27,7 +28,7 @@ func (h *Handler) OpenDialog(panelID int) {
 		h.host.FocusedPanel().CancelFilter(h.host.FocusedViewportRows())
 	}
 	if st := &h.model.FindDialog; st.Parked {
-		if st.PanelID == panelID && st.RootPath == filepath.Clean(h.host.PanelByID(panelID).PathString()) {
+		if st.PanelID == panelID && st.RootPath == pathloc.Clean(h.host.PanelByID(panelID).PathString()) {
 			h.RestoreParked()
 			return
 		}
@@ -49,7 +50,7 @@ func (h *Handler) OpenFresh(panelID int) {
 		h.CloseDialog()
 	}
 	p := h.host.PanelByID(panelID)
-	root := filepath.Clean(p.PathString())
+	root := pathloc.Clean(p.PathString())
 	selRoots := panel.PruneNestedPaths(p.SelectedDirectoryPaths())
 	h.model.FindDialog = dialog.FindDialogState{
 		Open:                       true,
@@ -106,11 +107,11 @@ func (h *Handler) findScopeRoots(st *dialog.FindDialogState) []string {
 	if st.ShowSearchSelectionsOption && st.SearchOnlySelections && len(st.SelectionDirRoots) > 0 {
 		out := make([]string, len(st.SelectionDirRoots))
 		for i, r := range st.SelectionDirRoots {
-			out[i] = filepath.Clean(r)
+			out[i] = pathloc.Clean(r)
 		}
 		return out
 	}
-	return []string{filepath.Clean(st.RootPath)}
+	return []string{pathloc.Clean(st.RootPath)}
 }
 
 // findIndexingSkipsRank is true while a walk is running and the dialog filters nothing.
@@ -268,7 +269,7 @@ func emptyQueryDisplayIndicesFromEntries(entries []dialog.FindEntry, onlyDirs, o
 }
 
 func findEntryAbsPath(st *dialog.FindDialogState, ent dialog.FindEntry) string {
-	return filepath.Clean(ent.AbsPath(st.RootPath))
+	return pathloc.Clean(ent.AbsPath(st.RootPath))
 }
 
 func (h *Handler) findPathIsDir(st *dialog.FindDialogState) func(string) bool {
@@ -276,7 +277,7 @@ func (h *Handler) findPathIsDir(st *dialog.FindDialogState) func(string) bool {
 		if st.PathMeta == nil {
 			return false
 		}
-		isDir, _, ok := st.PathMeta(filepath.Clean(path))
+		isDir, _, ok := st.PathMeta(pathloc.Clean(path))
 		return ok && isDir
 	}
 }
@@ -617,7 +618,7 @@ func (h *Handler) scheduleFindMarkedFileSizes(st *dialog.FindDialogState) {
 		if !on {
 			continue
 		}
-		path = filepath.Clean(path)
+		path = pathloc.Clean(path)
 		idx, ok := st.PathIndexLookup(path)
 		if !ok {
 			continue
@@ -680,7 +681,7 @@ func (h *Handler) applyPendingFindFileSizes() bool {
 	}
 	changed := false
 	for path, size := range upd.sizes {
-		idx, ok := st.PathIndexLookup(filepath.Clean(path))
+		idx, ok := st.PathIndexLookup(pathloc.Clean(path))
 		if !ok {
 			continue
 		}
@@ -737,7 +738,7 @@ func findDialogMarkedPaths(st *dialog.FindDialogState) []string {
 		if !on {
 			continue
 		}
-		path = filepath.Clean(path)
+		path = pathloc.Clean(path)
 		if path == "" {
 			continue
 		}
@@ -754,7 +755,7 @@ func (h *Handler) applyFindDialogMarkedSelections() {
 		if !on {
 			continue
 		}
-		path = filepath.Clean(path)
+		path = pathloc.Clean(path)
 		if path == "" {
 			continue
 		}

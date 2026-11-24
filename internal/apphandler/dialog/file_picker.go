@@ -149,7 +149,7 @@ func (h *Handler) openFilePickerCursorIn(panelID int) {
 		return
 	}
 	name := filepath.Base(item.Path)
-	if host.ShowInPanel(h.host, panelID, filepath.Dir(item.Path), name, h.model.PathPicker.IndexPanel, "Show file") {
+	if host.ShowInPanel(h.host, panelID, pathloc.Dir(item.Path), name, h.model.PathPicker.IndexPanel, "Show file") {
 		host.ReportOpenedInPanel(h.host, name, panelID)
 	}
 }

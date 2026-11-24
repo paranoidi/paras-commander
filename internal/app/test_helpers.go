@@ -114,7 +114,7 @@ func loadTestTheme(t *testing.T) (theme.Theme, config.Paths) {
 	t.Helper()
 	data := theme.TestThemeBytes(t, nil)
 	dir := t.TempDir()
-	path := filepath.Join(dir, "test-theme.toml")
+	path := filepath.Join(dir, "test-theme.toml") //nolint:forbidigo // a file in a test temp directory
 	if err := os.WriteFile(path, data, 0o644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
@@ -139,7 +139,7 @@ func testAppMinimal(t *testing.T) *App {
 func testOptions(dir string) Options {
 	cfg := config.Default()
 	// Never let a test open the user's real fileindex database; tests that need one set this.
-	cfg.FileIndex.Database = filepath.Join(dir, ".no-fileindex", "index.sqlite")
+	cfg.FileIndex.Database = filepath.Join(dir, ".no-fileindex", "index.sqlite") //nolint:forbidigo // a file in a test temp directory
 	// Watch wakeups would race the tests that wait for one specific async event; the watcher's
 	// own tests turn it on.
 	cfg.Panels.WatchDirectories = false

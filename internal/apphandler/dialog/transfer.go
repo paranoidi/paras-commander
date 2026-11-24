@@ -311,7 +311,7 @@ func transferBasenameIssue(name string) string {
 	if trimmed == "." || trimmed == ".." {
 		return "Invalid name"
 	}
-	if filepath.Dir(trimmed) != "." {
+	if pathloc.Dir(trimmed) != "." {
 		return "Use a single file or folder name"
 	}
 	return ""
@@ -493,14 +493,14 @@ func viewCommonRoot(files []ui.UniqueFile) (string, bool) {
 	if len(files) < 2 {
 		return "", false
 	}
-	root, multi := filepath.Dir(files[0].Path), false
+	root, multi := pathloc.Dir(files[0].Path), false
 	for _, f := range files[1:] {
-		dir := filepath.Dir(f.Path)
+		dir := pathloc.Dir(f.Path)
 		if dir != root {
 			multi = true
 		}
 		for root != "/" && dir != root && !strings.HasPrefix(dir, root+"/") {
-			root = filepath.Dir(root)
+			root = pathloc.Dir(root)
 		}
 	}
 	return root, multi

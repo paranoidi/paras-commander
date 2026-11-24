@@ -1,7 +1,6 @@
 package panel
 
 import (
-	"path/filepath"
 	"sort"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -23,7 +22,7 @@ func (s *State) SelectedEntries(skipMissing bool, resolve func(path string) (loc
 		if !on {
 			continue
 		}
-		path = cleanPathString(path)
+		path = pathloc.Canonical(path)
 		if path == "" {
 			continue
 		}
@@ -86,7 +85,7 @@ func (s *State) commandTagTest() func(p string) bool {
 	// inScope reports whether path sits directly in root, or in a tree layout under it. The direct
 	// test cleans both sides alike, which keeps sftp:// roots and paths comparable.
 	inScope := func(root, path string) bool {
-		return filepath.Clean(filepath.Dir(path)) == filepath.Clean(root) || tree && IsStrictPathDescendant(root, path)
+		return pathloc.Dir(path) == pathloc.Clean(root) || tree && IsStrictPathDescendant(root, path)
 	}
 	// indexRoot is the host directory a fileindex:// tag is compared with.
 	indexRoot, _ := s.Path.HostPath()

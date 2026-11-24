@@ -383,6 +383,21 @@ func TestTagViewRenameOfAFlatRowStaysIndexOnly(t *testing.T) {
 	}
 }
 
+func TestTagViewRenameOfAFlatRowFocusesTheRow(t *testing.T) {
+	a, screen := tagViewApp(t)
+	tvGoTo(t, a, screen, tvList)
+	tvSelect(t, a, tvOrchN)
+	dispatchFileOp(t, a, keymap.ActionFileRename)
+	a.model.FileDialog.Fields[0].Value = "anchor.txt"
+	a.model.FileDialog.RenameFocusAfter = true
+	a.dialogCtrl.ExecuteFileDialog()
+	want := "fileindex@(beach):///orchard/anchor.txt" // the row's path, not one inside a row ("//")
+	drainInterruptEventsUntil(t, a, screen, 5*time.Second, func() bool {
+		e, ok := a.focusedPanel().CurrentEntry()
+		return ok && e.Path == want
+	})
+}
+
 func TestTagViewDeleteOfAFlatRowRemovesOnlyThatRecord(t *testing.T) {
 	a, screen := tagViewApp(t)
 	tvGoTo(t, a, screen, tvList)

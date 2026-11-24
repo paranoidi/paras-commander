@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"maps"
-	"path/filepath"
 	"sort"
 	"sync/atomic"
 	"time"
@@ -609,7 +608,7 @@ func (s State) MatchRanges(index int) []search.Range {
 // AddSelection marks path as selected without changing the file-list cursor.
 // Returns true if conflicting selections were removed before adding path.
 func (s *State) AddSelection(path string) bool {
-	path = cleanPathString(path)
+	path = pathloc.Canonical(path)
 	if path == "" {
 		return false
 	}
@@ -627,7 +626,7 @@ func (s *State) AddSelection(path string) bool {
 
 // TogglePathSelection toggles selection for an absolute path not required to be listed.
 func (s *State) TogglePathSelection(path string) (selected bool, conflictsRemoved bool) {
-	path = cleanPathString(path)
+	path = pathloc.Canonical(path)
 	if path == "" {
 		return false, false
 	}
@@ -769,7 +768,7 @@ func (s *State) IsSelected(entry localfs.Entry) bool {
 
 // IsSelectedPath reports whether an absolute path is selected.
 func (s *State) IsSelectedPath(path string) bool {
-	path = cleanPathString(path)
+	path = pathloc.Canonical(path)
 	return path != "" && s.SelectedPaths != nil && s.SelectedPaths[path]
 }
 
@@ -778,7 +777,7 @@ func (s *State) HasSelectionInSubtree(dirPath string) bool {
 	if s.SelectedPaths == nil {
 		return false
 	}
-	dir := cleanPathString(dirPath)
+	dir := pathloc.Canonical(dirPath)
 	if dir == "" {
 		return false
 	}
@@ -788,7 +787,7 @@ func (s *State) HasSelectionInSubtree(dirPath string) bool {
 
 // IsStrictPathDescendant reports whether child is a strict descendant of parent (different paths, child under parent).
 func IsStrictPathDescendant(parent, child string) bool {
-	return isStrictPathDescendant(cleanPathString(parent), cleanPathString(child))
+	return isStrictPathDescendant(pathloc.Canonical(parent), pathloc.Canonical(child))
 }
 
 func isStrictPathDescendant(parent, child string) bool {
@@ -828,14 +827,14 @@ func PruneNestedPaths(paths []string) []string {
 		return nil
 	}
 	if len(paths) == 1 {
-		if p := cleanPathString(paths[0]); p != "" {
+		if p := pathloc.Canonical(paths[0]); p != "" {
 			return []string{p}
 		}
 		return nil
 	}
 	sorted := make([]string, 0, len(paths))
 	for _, p := range paths {
-		if p = cleanPathString(p); p != "" {
+		if p = pathloc.Canonical(p); p != "" {
 			sorted = append(sorted, p)
 		}
 	}
@@ -929,7 +928,7 @@ func (s *State) NavigateToPathWithHook(loc pathloc.Path, selectedName string, vi
 		return err
 	}
 	if !s.ListingPending && s.HistoryIndex == 0 && len(s.History) > 0 {
-		s.History[0] = cleanPathString(s.Path.String())
+		s.History[0] = pathloc.Canonical(s.Path.String())
 	}
 	return nil
 }
@@ -957,7 +956,7 @@ func (s *State) historyNavigate(viewportRows int, step int) (bool, string, error
 			break
 		}
 		idx += step
-		target := cleanPathString(s.History[idx])
+		target := pathloc.Canonical(s.History[idx])
 		if target == "" {
 			continue
 		}
@@ -974,7 +973,7 @@ func (s *State) historyNavigate(viewportRows int, step int) (bool, string, error
 			return false, "", err
 		}
 		if !s.ListingPending && s.HistoryIndex >= 0 && s.HistoryIndex < len(s.History) {
-			s.History[s.HistoryIndex] = cleanPathString(s.Path.String())
+			s.History[s.HistoryIndex] = pathloc.Canonical(s.Path.String())
 		}
 		return true, historySkipWarning(skipped), nil
 	}
@@ -993,11 +992,11 @@ func historySkipWarning(skipped []string) string {
 }
 
 func (s *State) recordVisit(target string) uint64 {
-	target = cleanPathString(target)
+	target = pathloc.Canonical(target)
 	if target == "" {
 		return 0
 	}
-	cur := cleanPathString(s.Path.String())
+	cur := pathloc.Canonical(s.Path.String())
 	if target == cur {
 		return 0
 	}
@@ -1023,7 +1022,7 @@ func (s *State) recordVisit(target string) uint64 {
 }
 
 func (s *State) rememberCursorForPath(dir string) {
-	dir = cleanPathString(dir)
+	dir = pathloc.Canonical(dir)
 	if dir == "" {
 		return
 	}
@@ -1045,7 +1044,7 @@ func (s *State) rememberCursorForPath(dir string) {
 }
 
 func (s *State) recalledCursorFor(dir string) (selectedName string, indexFallback int, recalled bool) {
-	dir = cleanPathString(dir)
+	dir = pathloc.Canonical(dir)
 	if dir == "" {
 		return "", noIndexCursorFallback, false
 	}
@@ -1061,11 +1060,6 @@ func (s State) RecalledCursorFor(dir string) (entryName string, index int, ok bo
 	return s.recalledCursorFor(dir)
 }
 
-// CleanPathString canonicalizes a path string for history and recall map keys (pathloc form).
-func CleanPathString(p string) string {
-	return cleanPathString(p)
-}
-
 // MergeNavigationHistories combines passive-first then active navigation histories,
 // deduplicating by cleaned path and skipping empty paths.
 func MergeNavigationHistories(passive, active []string) []string {
@@ -1075,7 +1069,7 @@ func MergeNavigationHistories(passive, active []string) []string {
 		if p == "" || p == "." {
 			return
 		}
-		cp := cleanPathString(p)
+		cp := pathloc.Canonical(p)
 		if cp == "" {
 			return
 		}
@@ -1097,7 +1091,7 @@ func MergeNavigationHistories(passive, active []string) []string {
 // BestRecalledCursor returns the best saved highlight for dir across panels. A non-empty
 // entry name wins over index-only snapshots (e.g. cursor left on ".." when exiting once).
 func BestRecalledCursor(dir string, states ...*State) (entryName string, index int, ok bool) {
-	dir = cleanPathString(dir)
+	dir = pathloc.Canonical(dir)
 	if dir == "" {
 		return "", noIndexCursorFallback, false
 	}
@@ -1166,7 +1160,7 @@ func (s *State) pruneHistoryCursors() {
 	}
 	keep := make(map[string]struct{}, len(s.History))
 	for _, p := range s.History {
-		if cp := cleanPathString(p); cp != "" {
+		if cp := pathloc.Canonical(p); cp != "" {
 			keep[cp] = struct{}{}
 		}
 	}
@@ -1178,13 +1172,13 @@ func (s *State) pruneHistoryCursors() {
 }
 
 func removePathFromSlice(slice []string, target string) []string {
-	want := cleanPathString(target)
+	want := pathloc.Canonical(target)
 	if want == "" {
 		return slice
 	}
 	out := slice[:0]
 	for _, p := range slice {
-		if cleanPathString(p) != want {
+		if pathloc.Canonical(p) != want {
 			out = append(out, p)
 		}
 	}
@@ -1616,7 +1610,7 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 	// a deleted row) — never by name, which could land on a same-named row in another branch.
 	recalledTreeCursor := ""
 	if s.ListLayout == ListLayoutTree && !sameDirReload && centerRecalled {
-		recalledTreeCursor = s.HistoryCursorByPath[cleanPathString(listingLoc.String())].CursorPath
+		recalledTreeCursor = s.HistoryCursorByPath[pathloc.Canonical(listingLoc.String())].CursorPath
 	}
 	treeReselect := priorTreeCursorID != "" || recalledTreeCursor != ""
 	if sameDirReload {
@@ -1705,7 +1699,7 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 		var keep map[string]bool
 		if sameDirReload {
 			keep = s.TreeExpanded
-		} else if snap, ok := s.HistoryCursorByPath[cleanPathString(listingLoc.String())]; ok {
+		} else if snap, ok := s.HistoryCursorByPath[pathloc.Canonical(listingLoc.String())]; ok {
 			keep = maps.Clone(snap.TreeExpanded)
 			s.treeExpandAllDepth = snap.TreeExpandAllDepth
 			s.treeExpandAllAuto = false
@@ -1773,7 +1767,7 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 		s.applyHighlightScroll(viewportRows, centerOnHighlight)
 	}
 	if len(s.History) == 0 {
-		cp := cleanPathString(listingLoc.String())
+		cp := pathloc.Canonical(listingLoc.String())
 		if cp != "" {
 			s.History = []string{cp}
 			s.HistoryIndex = 0
@@ -1832,7 +1826,7 @@ func (s *State) prepareGitColumn(listingLoc pathloc.Path, entries []localfs.Entr
 	paths := make([]gitstatus.ListingPaths, len(entries))
 	for i, e := range entries {
 		paths[i] = gitstatus.ListingPaths{
-			AbsPath: filepath.Clean(e.Path),
+			AbsPath: pathloc.Clean(e.Path),
 			IsDir:   e.Type == localfs.EntryDirectory,
 		}
 	}
@@ -1867,7 +1861,7 @@ func (s *State) RescheduleGitStatusIfNeeded() {
 	paths := make([]gitstatus.ListingPaths, len(s.Entries))
 	for i, e := range s.Entries {
 		paths[i] = gitstatus.ListingPaths{
-			AbsPath: filepath.Clean(e.Path),
+			AbsPath: pathloc.Clean(e.Path),
 			IsDir:   e.Type == localfs.EntryDirectory,
 		}
 	}
@@ -1880,20 +1874,9 @@ func (s *State) RescheduleGitStatusIfNeeded() {
 	}
 }
 
-func cleanPathString(p string) string {
-	if p == "" {
-		return ""
-	}
-	loc, err := pathloc.Parse(p)
-	if err != nil {
-		return ""
-	}
-	return loc.String()
-}
-
 func (s *State) notifyChdir(oldPath, newPath pathloc.Path) {
-	oldC := cleanPathString(oldPath.String())
-	newC := cleanPathString(newPath.String())
+	oldC := pathloc.Canonical(oldPath.String())
+	newC := pathloc.Canonical(newPath.String())
 	if oldC == newC {
 		return
 	}
@@ -2082,7 +2065,7 @@ func (s *State) selectPathOrArmTreeCursor(absPath string) bool {
 		return true
 	}
 	if s.ListLayout == ListLayoutTree && absPath != "" {
-		s.treeCursorID = cleanPathString(absPath)
+		s.treeCursorID = pathloc.Canonical(absPath)
 		s.treeCursorFallback = nil
 	}
 	return false
@@ -2092,26 +2075,19 @@ func (s *State) selectVisibleEntryByPath(absPath string) bool {
 	if absPath == "" {
 		return false
 	}
-	wantLoc, wantErr := pathloc.Parse(absPath)
-	wantClean := filepath.Clean(absPath)
-	// filepath.Clean would equate the "//" row boundary of a flat tag view ("Trip//sub", inside
-	// the row Trip) with "Trip/sub" (a row of its own), so index paths are compared whole.
-	_, _, indexed := pathloc.CutIndexPrefix(absPath)
+	want := pathloc.Canonical(absPath)
+	if want == "" {
+		return false
+	}
 	for i := 0; i < s.VisibleEntryCount(); i++ {
 		entry, _, ok := s.VisibleEntry(i)
 		if !ok {
 			continue
 		}
-		// Cheap string compare first; pathloc.Parse only for rows it does not settle.
-		if indexed && wantErr == nil && entry.Path == wantLoc.String() || !indexed && filepath.Clean(entry.Path) == wantClean {
+		// Cheap string compare first; Canonical only for rows it does not settle.
+		if entry.Path == want || pathloc.Canonical(entry.Path) == want {
 			s.Cursor = i
 			return true
-		}
-		if wantErr == nil {
-			if entLoc, err := pathloc.Parse(entry.Path); err == nil && entLoc.Equal(wantLoc) {
-				s.Cursor = i
-				return true
-			}
 		}
 	}
 	return false

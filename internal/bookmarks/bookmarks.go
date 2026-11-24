@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"unicode"
+
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 const (
@@ -129,11 +131,11 @@ func mergeByPath(primary, extra []Mark) []Mark {
 	}
 	seen := make(map[string]struct{}, len(primary))
 	for _, m := range primary {
-		seen[filepath.Clean(m.Path)] = struct{}{}
+		seen[pathloc.Clean(m.Path)] = struct{}{}
 	}
 	out := append([]Mark(nil), primary...)
 	for _, m := range extra {
-		cp := filepath.Clean(m.Path)
+		cp := pathloc.Clean(m.Path)
 		if _, ok := seen[cp]; ok {
 			continue
 		}
@@ -250,7 +252,7 @@ func Remove(path string, m Mark) error {
 
 func marksEqual(a, b Mark) bool {
 	return strings.TrimSpace(a.Name) == strings.TrimSpace(b.Name) &&
-		filepath.Clean(a.Path) == filepath.Clean(b.Path)
+		pathloc.Clean(a.Path) == pathloc.Clean(b.Path)
 }
 
 func atomicWriteFile(dest string, data []byte, perm os.FileMode) error {

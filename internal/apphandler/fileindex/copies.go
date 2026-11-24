@@ -35,9 +35,9 @@ func (h *Handler) Copies() {
 		h.host.SetTransientMessage(copiesTitle+" works on files", ui.MessageUrgencyWarn)
 		return
 	}
-	host, err := hostPath(entry.Path)
-	if err != nil {
-		h.host.SetErrorMessage(copiesTitle, err)
+	host, ok := pathloc.HostOf(entry.Path)
+	if !ok {
+		h.host.SetErrorMessage(copiesTitle, errNoHostPath)
 		return
 	}
 	res := CopiesPayload{PanelID: h.model.FocusedPanelID(), Path: entry.Path, Name: entry.Name, IndexPanel: p.Path.Scheme() == pathloc.SchemeFileIndex}
@@ -55,9 +55,9 @@ func (h *Handler) CopiesOutside() {
 	if !h.localOrIndex() || h.refuseTagList() {
 		return
 	}
-	dir, err := hostPath(h.host.FocusedPanel().PathString())
-	if err != nil {
-		h.host.SetErrorMessage(copiesOutsideTitle, err)
+	dir, ok := pathloc.HostOf(h.host.FocusedPanel().PathString())
+	if !ok {
+		h.host.SetErrorMessage(copiesOutsideTitle, errNoHostPath)
 		return
 	}
 	if dir == "/" { // the index root: everything is inside it
@@ -73,9 +73,9 @@ func (h *Handler) FindDuplicates() {
 	if !h.localOrIndex() || h.refuseTagList() {
 		return
 	}
-	dir, err := hostPath(h.host.FocusedPanel().PathString())
-	if err != nil {
-		h.host.SetErrorMessage(findDuplicatesTitle, err)
+	dir, ok := pathloc.HostOf(h.host.FocusedPanel().PathString())
+	if !ok {
+		h.host.SetErrorMessage(findDuplicatesTitle, errNoHostPath)
 		return
 	}
 	h.host.OpenDedupIndexed(dir)

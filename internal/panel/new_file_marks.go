@@ -19,7 +19,7 @@ func (s *State) AddNewFileMarks(dir pathloc.Path, names []string) {
 	if len(names) == 0 {
 		return
 	}
-	key := cleanPathString(dir.String())
+	key := pathloc.Canonical(dir.String())
 	if key == "" {
 		return
 	}
@@ -110,9 +110,9 @@ func (s *State) ClearNewFileMarks() {
 // keeps marks for expanded subdirectories).
 func keyUnderDir(key, dir string) bool {
 	kp, err1 := pathloc.Parse(key)
-	dp, err2 := pathloc.Parse(cleanPathString(dir))
+	dp, err2 := pathloc.Parse(pathloc.Canonical(dir))
 	if err1 != nil || err2 != nil {
-		return key == cleanPathString(dir)
+		return key == pathloc.Canonical(dir)
 	}
 	return kp.HasPrefix(dp)
 }
@@ -120,7 +120,7 @@ func keyUnderDir(key, dir string) bool {
 // markDirKey returns the mark-map key for entry's containing directory: the entry's parent in tree
 // layout (rows can live in expanded subdirectories), else the listing directory.
 func (s *State) markDirKey(entry localfs.Entry) string {
-	return cleanPathString(s.EntryDir(entry).String())
+	return pathloc.Canonical(s.EntryDir(entry).String())
 }
 
 // NewFileMarkTier reports which new-file suffix tier entry has in the current listing.

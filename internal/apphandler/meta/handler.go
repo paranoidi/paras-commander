@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"iter"
 	"maps"
-	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -20,6 +19,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
@@ -206,7 +206,7 @@ func (h *Handler) startAsyncLoad(panelID int, activeNames []string) {
 	loadGen := h.loadGen[panelID]
 	h.loadPending[panelID] = true
 	names := append([]string(nil), activeNames...)
-	cur := filepath.Clean(h.host.PanelByID(panelID).PathString())
+	cur := pathloc.Clean(h.host.PanelByID(panelID).PathString())
 	go func() {
 		res := h.fetchMetaFile(cur)
 		if h.screen == nil {
@@ -487,7 +487,7 @@ func (h *Handler) activate(panelID int, activeNames []string) {
 		}
 	}
 	h.activeEntries[panelID] = names
-	h.navPath[panelID] = filepath.Clean(h.host.PanelByID(panelID).PathString())
+	h.navPath[panelID] = pathloc.Clean(h.host.PanelByID(panelID).PathString())
 	h.model.MetaResults[panelID] = cols
 	h.startAsyncLoad(panelID, names)
 }
@@ -519,7 +519,7 @@ func (h *Handler) HandlePanelDirChanged(panelID int) {
 	if len(h.activeEntries[panelID]) == 0 {
 		return
 	}
-	cur := filepath.Clean(h.host.PanelByID(panelID).PathString())
+	cur := pathloc.Clean(h.host.PanelByID(panelID).PathString())
 	if h.navPath[panelID] == cur {
 		return
 	}
@@ -565,7 +565,7 @@ func (h *Handler) HandleLoad(d LoadPayload) {
 	if panel == nil {
 		return
 	}
-	if d.Path != "" && filepath.Clean(d.Path) != filepath.Clean(panel.PathString()) {
+	if d.Path != "" && pathloc.Clean(d.Path) != pathloc.Clean(panel.PathString()) {
 		return
 	}
 	if !slices.Equal(d.ActiveNames, h.activeEntries[d.PanelID]) {

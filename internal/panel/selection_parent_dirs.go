@@ -51,10 +51,10 @@ func (s *State) SelectedParentDirs() []string {
 // directly.
 func (s *State) ParentDirsExcludingSelf(paths []string) []string {
 	dirs := ParentDirsOf(paths)
-	cur := cleanPathString(s.Path.String())
+	cur := pathloc.Canonical(s.Path.String())
 	out := make([]string, 0, len(dirs))
 	for _, d := range dirs {
-		if cleanPathString(d) == cur {
+		if pathloc.Canonical(d) == cur {
 			continue
 		}
 		out = append(out, d)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"maps"
-	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -230,7 +229,7 @@ func (a *App) indexDriftScheduler(panelID int) panel.IndexDriftScheduler {
 			}
 			if host, err := fileindex.IndexPath(req.Dir.String()); err == nil {
 				// A failed or cancelled pass keeps what it reported; the end below settles the rest.
-				_ = a.fileIndex.DirDrift(ctx, filepath.Clean(host), req.Subdirs, req.MaxDepth, func(name, status string) {
+				_ = a.fileIndex.DirDrift(ctx, pathloc.Clean(host), req.Subdirs, req.MaxDepth, func(name, status string) {
 					post(indexDriftPayload{dirs: map[string]string{name: status}})
 				})
 			}

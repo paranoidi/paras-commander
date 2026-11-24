@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 func (s *State) rebuildListingByPath() {
@@ -103,14 +104,14 @@ func (s *State) clearSelectionStrictDescendantsIndexed(parent string) []string {
 	if len(s.SelectedPaths) == 0 {
 		return nil
 	}
-	parent = cleanPathString(parent)
+	parent = pathloc.Canonical(parent)
 	if parent == "" {
 		return nil
 	}
 	prefix := filepath.ToSlash(parent) + "/"
 	var removed []string
 	for p := range s.SelectedPaths {
-		clean := cleanPathString(p)
+		clean := pathloc.Canonical(p)
 		if clean == "" {
 			continue
 		}

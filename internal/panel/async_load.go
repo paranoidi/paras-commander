@@ -59,7 +59,7 @@ func (s *State) TreePrefetchIDs(loc pathloc.Path) []string {
 	var keep map[string]bool
 	if loc.Equal(s.Path) {
 		keep = s.TreeExpanded
-	} else if snap, ok := s.HistoryCursorByPath[cleanPathString(loc.String())]; ok {
+	} else if snap, ok := s.HistoryCursorByPath[pathloc.Canonical(loc.String())]; ok {
 		keep = snap.TreeExpanded
 	}
 	return treePrefetchIDsFor(loc, keep)
@@ -220,7 +220,7 @@ func (s *State) RevertHistoryVisit(target string, token uint64) {
 }
 
 func (s *State) revertHistoryVisit(target string, token uint64) {
-	target = cleanPathString(target)
+	target = pathloc.Canonical(target)
 	if token == 0 || target == "" {
 		return
 	}

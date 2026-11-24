@@ -7,6 +7,7 @@ import (
 	comparectrl "github.com/paranoidi/paras-commander/internal/apphandler/compare"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -187,7 +188,7 @@ func (a *App) setCompareCategories(f comparepkg.Filter) {
 // panel directory when the row has no entry there.
 func (a *App) compareOpenInExternalBrowser() {
 	if path, _, ok := a.compareCtrl.SelectedColumnTarget(); ok {
-		a.openDirInExternalBrowser(filepath.Dir(path))
+		a.openDirInExternalBrowser(pathloc.Dir(path))
 		return
 	}
 	a.openPanelPathInExternalBrowser(a.model.CompareView.FocusedPanelID())

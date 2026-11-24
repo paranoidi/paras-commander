@@ -13,6 +13,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/fschange"
 	"github.com/paranoidi/paras-commander/internal/fswalk"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 type scanJob struct {
@@ -209,7 +210,7 @@ func (e *Engine) workerLoop() {
 
 			gate := job.listingVolGate
 			if gate.FromRoot && len(job.childAbs) == 1 {
-				gate.RefDev, gate.Valid = pathStatDevice(filepath.Clean(job.childAbs[0]))
+				gate.RefDev, gate.Valid = pathStatDevice(pathloc.Clean(job.childAbs[0]))
 			}
 			combined := ComposeListingVolumeIgnore(job.ignore, gate)
 			if e.runPlannerHook != nil {
@@ -253,7 +254,7 @@ func (e *Engine) signalSubtreeIndexed(sess uint64, rootAbs string, sourcePanel i
 	case e.events <- Event{
 		Kind:        EventSubtreeIndexed,
 		Generation:  sess,
-		RootAbs:     CleanKey(rootAbs),
+		RootAbs:     pathloc.Clean(rootAbs),
 		SourcePanel: sourcePanel,
 	}:
 	default:
@@ -281,21 +282,21 @@ func (e *Engine) DiskScanBusy() bool {
 
 // pathIsOrUnder reports whether child is root or a strict descendant of root (path segments).
 func pathIsOrUnder(child, root string) bool {
-	return isOrUnderClean(CleanKey(child), CleanKey(root))
+	return isOrUnderClean(pathloc.Clean(child), pathloc.Clean(root))
 }
 
-// isOrUnderClean is pathIsOrUnder for two paths that are already CleanKey'd, without the
+// isOrUnderClean is pathIsOrUnder for two paths that are already pathloc.Clean'd, without the
 // per-call cleaning and concatenation (the size column calls it for every root on every repaint).
 func isOrUnderClean(c, r string) bool {
 	return c == r || (len(c) > len(r) && c[len(r)] == filepath.Separator && strings.HasPrefix(c, r))
 }
 
-// cleanKeys returns a CleanKey'd copy of paths, so queued jobs hold the keys the walk caches
+// cleanKeys returns a pathloc.Clean'd copy of paths, so queued jobs hold the keys the walk caches
 // under and pendingSince matches them without cleaning.
 func cleanKeys(paths []string) []string {
 	out := make([]string, len(paths))
 	for i, raw := range paths {
-		out[i] = CleanKey(raw)
+		out[i] = pathloc.Clean(raw)
 	}
 	return out
 }
@@ -340,7 +341,7 @@ func (e *Engine) pendingSince(childAbs string, panelID int) (time.Time, bool) {
 	if e == nil {
 		return time.Time{}, false
 	}
-	c := CleanKey(childAbs)
+	c := pathloc.Clean(childAbs)
 
 	e.mu.RLock()
 	for r, pan := range e.activeWalkRoots {
@@ -386,7 +387,7 @@ func (e *Engine) finishCurJobRoot(abs string) {
 	if e == nil {
 		return
 	}
-	p := CleanKey(abs)
+	p := pathloc.Clean(abs)
 	e.jobMu.Lock()
 	if e.curJobRoots != nil {
 		delete(e.curJobRoots, p)
@@ -404,7 +405,7 @@ func (e *Engine) CacheVersion() uint64 {
 func (e *Engine) Size(absPath string) (int64, bool) {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	n, ok := e.cache[CleanKey(absPath)]
+	n, ok := e.cache[pathloc.Clean(absPath)]
 	return n, ok
 }
 
@@ -419,7 +420,7 @@ func (e *Engine) SetSize(absPath string, files int, bytes int64) {
 	if e == nil {
 		return
 	}
-	p := CleanKey(absPath)
+	p := pathloc.Clean(absPath)
 	e.mu.Lock()
 	e.cache[p] = bytes
 	e.fileCounts[p] = int64(files)
@@ -435,7 +436,7 @@ func (e *Engine) FileCount(absPath string) (int64, bool) {
 	}
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	n, ok := e.fileCounts[CleanKey(absPath)]
+	n, ok := e.fileCounts[pathloc.Clean(absPath)]
 	return n, ok
 }
 
@@ -443,7 +444,7 @@ func (e *Engine) FileCount(absPath string) (int64, bool) {
 // covering many paths (e.g. a render loop over a large selection) should prefer IsKnownExcluded
 // plus a background pass that calls MarkExcluded, rather than calling this per path inline.
 func (e *Engine) DiskScanExcluded(absPath string, descendIntoMountPoints bool, listingDev uint64, listingDevValid bool, goduIgnore func(string) bool) bool {
-	if e == nil || e.sized(CleanKey(absPath)) {
+	if e == nil || e.sized(pathloc.Clean(absPath)) {
 		return false
 	}
 	var gi ShouldIgnoreFolder
@@ -460,7 +461,7 @@ func (e *Engine) MarkExcluded(absPath string) {
 		return
 	}
 	e.mu.Lock()
-	e.excluded[CleanKey(absPath)] = true
+	e.excluded[pathloc.Clean(absPath)] = true
 	e.mu.Unlock()
 }
 
@@ -472,12 +473,12 @@ func (e *Engine) IsKnownExcluded(absPath string) bool {
 	}
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	return e.excluded[CleanKey(absPath)]
+	return e.excluded[pathloc.Clean(absPath)]
 }
 
 // nestedInOther reports whether a strict ancestor of p is a key of m.
 func nestedInOther[V any](p string, m map[string]V) bool {
-	parent := filepath.Dir(p)
+	parent := pathloc.Dir(p)
 	if parent == p {
 		return false
 	}
@@ -502,7 +503,7 @@ func (e *Engine) addAncestorDeltasLocked(d ancestorDeltas, sizeKey, at string, s
 	}
 	files := e.fileCounts[sizeKey]
 	for a := at; ; {
-		parent := filepath.Dir(a)
+		parent := pathloc.Dir(a)
 		if parent == a || e.excluded[parent] {
 			return
 		}
@@ -531,7 +532,7 @@ func nearestAncestor[V any](k string, m map[string]V) (string, bool) {
 		if _, ok := m[p]; ok {
 			return p, true
 		}
-		parent := filepath.Dir(p)
+		parent := pathloc.Dir(p)
 		if parent == p {
 			return "", false
 		}
@@ -562,7 +563,7 @@ func (e *Engine) InvalidateRoots(paths []string) {
 	}
 	e.mu.Lock()
 	for _, raw := range paths {
-		k := CleanKey(raw)
+		k := pathloc.Clean(raw)
 		delete(e.cache, k)
 		delete(e.fileCounts, k)
 		delete(e.excluded, k)
@@ -620,7 +621,7 @@ func (e *Engine) Abort() {
 
 // StartScanFromListing walks each path in childAbs sequentially in two passes (unknown subtree keys first, then refreshes known keys).
 //
-// Caller supplies absolute filepath.Clean child paths consistent with filesystem listing Paths.
+// Caller supplies absolute pathloc.Clean child paths consistent with filesystem listing Paths.
 // sourcePanel is the panel that initiated the scan (same values as ui.PrimaryPanel / ui.SecondaryPanel).
 func (e *Engine) StartScanFromListing(childAbs []string, shouldIgnore ShouldIgnoreFolder, sourcePanel int, volGate ListingVolumeGate) {
 	e.enqueue(scanJob{childAbs: childAbs, ignore: shouldIgnore, sourcePanel: sourcePanel, listingVolGate: volGate})
@@ -630,7 +631,7 @@ func (e *Engine) StartScanFromListing(childAbs []string, shouldIgnore ShouldIgno
 // missing from childAbs (e.g. dotfiles hidden in the panel) are walked too, so once every child
 // is walked the origin's own total is cached and shows on its row in the parent listing.
 func (e *Engine) StartScanFromDirectory(origin string, childAbs []string, shouldIgnore ShouldIgnoreFolder, sourcePanel int, volGate ListingVolumeGate) {
-	e.enqueue(scanJob{childAbs: childAbs, ignore: shouldIgnore, sourcePanel: sourcePanel, listingVolGate: volGate, origin: CleanKey(origin)})
+	e.enqueue(scanJob{childAbs: childAbs, ignore: shouldIgnore, sourcePanel: sourcePanel, listingVolGate: volGate, origin: pathloc.Clean(origin)})
 }
 
 func (e *Engine) enqueue(job scanJob) {
@@ -738,7 +739,7 @@ func (e *Engine) runPlanner(ctx context.Context, sess uint64, childAbs []string,
 
 	e.mu.RLock()
 	for _, raw := range childAbs {
-		p := CleanKey(raw)
+		p := pathloc.Clean(raw)
 		if _, cached := e.cache[p]; cached {
 			if _, fc := e.fileCounts[p]; fc {
 				passKnown = append(passKnown, stage{path: p})
@@ -763,7 +764,7 @@ func (e *Engine) runPlanner(ctx context.Context, sess uint64, childAbs []string,
 				return
 			}
 
-			jobPath := CleanKey(job.path)
+			jobPath := pathloc.Clean(job.path)
 
 			e.mu.Lock()
 			e.activeWalkRoots[jobPath] = sourcePanel
@@ -850,11 +851,11 @@ func withUnlistedChildren(origin string, childAbs []string) (all []string, compl
 	}
 	listed := make(map[string]struct{}, len(childAbs))
 	for _, raw := range childAbs {
-		listed[CleanKey(raw)] = struct{}{}
+		listed[pathloc.Clean(raw)] = struct{}{}
 	}
 	all = childAbs
 	for _, entry := range entries {
-		p := filepath.Join(origin, entry.Name())
+		p := filepath.Join(origin, entry.Name()) //nolint:forbidigo // an entry of origin read from disk by os.ReadDir
 		if _, ok := listed[p]; !ok {
 			all = append(all, p)
 		}
@@ -867,7 +868,7 @@ func (e *Engine) cacheOriginTotal(origin string, walked []string) {
 	var bytes, files int64
 	e.mu.Lock()
 	for _, p := range walked {
-		if filepath.Dir(p) != origin {
+		if pathloc.Dir(p) != origin {
 			continue
 		}
 		bytes += e.cache[p]
@@ -958,7 +959,7 @@ func (e *Engine) classifyListingExclusions(childAbs []string, shouldIgnore Shoul
 		return
 	}
 	for _, raw := range childAbs {
-		p := CleanKey(raw)
+		p := pathloc.Clean(raw)
 		if !e.sized(p) && shouldIgnore(p) {
 			e.MarkExcluded(p)
 		}

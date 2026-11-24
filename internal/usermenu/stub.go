@@ -3,10 +3,10 @@ package usermenu
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/configdoc"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // MenuStubTOML is written when no menu.toml exists yet. All entries are commented
@@ -188,13 +188,13 @@ func WriteMenuStub(path string) (created bool, err error) {
 	if strings.TrimSpace(path) == "" {
 		return false, fmt.Errorf("menu stub path is required")
 	}
-	path = filepath.Clean(path)
+	path = pathloc.Clean(path)
 	if _, statErr := os.Stat(path); statErr == nil {
 		return false, nil
 	} else if !os.IsNotExist(statErr) {
 		return false, fmt.Errorf("stat menu stub %q: %w", path, statErr)
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(pathloc.Dir(path), 0o755); err != nil {
 		return false, fmt.Errorf("create menu stub dir: %w", err)
 	}
 	if err := os.WriteFile(path, []byte(MenuStubTOML), 0o644); err != nil {

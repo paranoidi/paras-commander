@@ -1,8 +1,6 @@
 package panellist
 
 import (
-	"path/filepath"
-
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
@@ -17,5 +15,5 @@ func EntryOpenInOtherPanel(entry localfs.Entry, otherPanelPath string) bool {
 	if wantErr == nil && entryErr == nil {
 		return entryLoc.Equal(want)
 	}
-	return filepath.Clean(entry.Path) == filepath.Clean(otherPanelPath)
+	return pathloc.Clean(entry.Path) == pathloc.Clean(otherPanelPath)
 }

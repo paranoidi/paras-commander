@@ -415,3 +415,20 @@ func TestCopyMenuGitSelectionAcrossFolders(t *testing.T) {
 		t.Fatal("g row should be disabled when no target is in a work tree")
 	}
 }
+
+// TestSingleCopyTargetKeepsIndexLocation: the directory of a fileindex path (plain or tag view) is
+// a fileindex path, not the path/filepath mangling "fileindex:/meadow".
+func TestSingleCopyTargetKeepsIndexLocation(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct{ path, dir string }{
+		{"/meadow/orchard.txt", "/meadow"},
+		{"fileindex:///meadow/orchard.txt", "fileindex:///meadow"},
+		{"fileindex(clover):///meadow/orchard.txt", "fileindex(clover):///meadow"},
+		{"fileindex@(clover):///meadow//orchard/lantern.txt", "fileindex@(clover):///meadow//orchard"},
+	} {
+		paths, entries, dir := singleCopyTarget(tc.path)
+		if len(paths) != 1 || paths[0] != tc.path || len(entries) != 1 || entries[0].Name != filepath.Base(tc.path) || dir != tc.dir {
+			t.Errorf("singleCopyTarget(%q) = %v, %v, %q; want dir %q", tc.path, paths, entries, dir, tc.dir)
+		}
+	}
+}

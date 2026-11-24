@@ -76,7 +76,7 @@ func (s *State) SnapshotChild() (ListingSnapshot, bool) {
 // remembered cursor from sources' navigation history first (BestRecalledCursor), then a
 // fallback to a selected path under dir, checked against sources in order. Pure and IO-free.
 func PreviewCursorRecall(dir string, sources ...*State) (name string, idx int) {
-	canonical := cleanPathString(dir)
+	canonical := pathloc.Canonical(dir)
 	name, idx, _ = BestRecalledCursor(canonical, sources...)
 	if name != "" || idx != noIndexCursorFallback {
 		return name, idx
@@ -96,13 +96,13 @@ func selectionBasenameUnderDirectory(st *State, dir string) (string, bool) {
 	if st == nil || len(st.SelectedPaths) == 0 {
 		return "", false
 	}
-	dir = cleanPathString(dir)
+	dir = pathloc.Canonical(dir)
 	if dir == "" {
 		return "", false
 	}
 	dirLoc, _ := pathloc.Parse(dir)
 	for p := range st.SelectedPaths {
-		cp := cleanPathString(p)
+		cp := pathloc.Canonical(p)
 		if cp == "" || cp == dir {
 			continue
 		}
@@ -123,7 +123,7 @@ func (s *State) ListingAtPath(dir string) bool {
 	if s == nil || s.ListingPending {
 		return false
 	}
-	return cleanPathString(s.Path.String()) == cleanPathString(dir) && s.VisibleEntryCount() > 0
+	return pathloc.Canonical(s.Path.String()) == pathloc.Canonical(dir) && s.VisibleEntryCount() > 0
 }
 
 // CloneListingFrom copies listing rows, cursor, scroll, the disk-total sort latch those rows were

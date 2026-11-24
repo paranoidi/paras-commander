@@ -1,12 +1,12 @@
 package app
 
 import (
-	"path/filepath"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/fsvol"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -28,7 +28,7 @@ func (a *App) pathVolumeContendsWithActiveJob(path string) bool {
 	if !a.jobState.HasUnfinishedWork() {
 		return false
 	}
-	path = filepath.Clean(path)
+	path = pathloc.Clean(path)
 	if path == "" || path == "." {
 		return false
 	}
@@ -71,7 +71,7 @@ func (a *App) requestVolumeSpaceRefreshAsync(panelID int) {
 	if p == nil {
 		return
 	}
-	path := filepath.Clean(p.PathString())
+	path := pathloc.Clean(p.PathString())
 	if path == "" || path == "." {
 		return
 	}
@@ -113,7 +113,7 @@ func (a *App) applyVolumeSpaceRefresh(d volumeSpaceRefreshPayload) bool {
 	if p == nil {
 		return false
 	}
-	if filepath.Clean(p.PathString()) != filepath.Clean(d.Path) {
+	if pathloc.Clean(p.PathString()) != pathloc.Clean(d.Path) {
 		return false
 	}
 	if p.VolumeSpaceOK == d.OK && p.VolumeAvailBytes == d.Avail && p.VolumeTotalBytes == d.Total {

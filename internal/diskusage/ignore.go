@@ -5,13 +5,15 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // LoadGoduIgnoreBasenames reads ~/.goduignore (newline-separated basename rules, like upstream godu)
 // and returns a ShouldIgnoreFolder that matches on filepath.Base(absPath).
 func LoadGoduIgnoreBasenames(goduIgnorePath string) (ShouldIgnoreFolder, error) {
 	ignored := map[string]struct{}{}
-	if filepath.Clean(strings.TrimSpace(goduIgnorePath)) == "" || goduIgnorePath == "" {
+	if pathloc.Clean(strings.TrimSpace(goduIgnorePath)) == "" || goduIgnorePath == "" {
 		return func(string) bool { return false }, nil
 	}
 

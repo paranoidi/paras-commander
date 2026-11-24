@@ -2,9 +2,10 @@ package find
 
 import (
 	"context"
-	"github.com/paranoidi/paras-commander/internal/panel"
-	"path/filepath"
 	"time"
+
+	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -241,7 +242,7 @@ func countGroupMatchesSnapshot(ctx context.Context, snap groupCountSnapshot) (fi
 		if !snap.scope.Targets(ent.IsDir) {
 			continue
 		}
-		path := filepath.Clean(ent.AbsPath(snap.rootPath))
+		path := pathloc.Clean(ent.AbsPath(snap.rootPath))
 		if path == "" {
 			continue
 		}

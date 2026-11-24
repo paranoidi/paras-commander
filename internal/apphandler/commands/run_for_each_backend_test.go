@@ -17,7 +17,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/pools"
-	"github.com/paranoidi/paras-commander/internal/textutil"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/workpool"
 )
@@ -54,7 +53,7 @@ func TestRunForEachUnifiedBatchRunsEachEntryInItsGivenWorkDir(t *testing.T) {
 
 	for i, ent := range entries {
 		got := strings.TrimSpace(h.model.CommandsList[i].Stdout)
-		want := textutil.AbsPathClean(ent.Path)
+		want := pathloc.Canonical(ent.Path)
 		if got != want {
 			t.Fatalf("entry %d: cwd = %q, want %q (err=%q)", i, got, want, h.model.CommandsList[i].ErrorMsg)
 		}

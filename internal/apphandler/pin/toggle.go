@@ -2,7 +2,6 @@ package pin
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -12,13 +11,7 @@ import (
 // pinned, or removes it if it is (toggle semantics — an accidental double-pin can't create
 // duplicates). Returns true when the item was added, false when removed.
 func (h *Handler) Toggle(path string, isDir bool) bool {
-	// A URI (fileindex://, sftp://) is cleaned by its scheme's rules: filepath.Clean would collapse
-	// the // after the scheme.
-	if loc, err := pathloc.Parse(path); err == nil && loc.Scheme() != pathloc.SchemeFile {
-		path = loc.String()
-	} else {
-		path = filepath.Clean(path)
-	}
+	path = pathloc.Clean(path)
 	for i, it := range h.model.PinnedItems {
 		if it.Path == path {
 			h.model.PinnedItems = append(h.model.PinnedItems[:i], h.model.PinnedItems[i+1:]...)
@@ -57,7 +50,7 @@ func (h *Handler) ToggleCompareSelection() {
 		h.host.SetTransientMessage("No entry to pin", ui.MessageUrgencyInfo)
 		return
 	}
-	h.TogglePath(filepath.Base(path), path, false)
+	h.TogglePath(pathloc.Base(path), path, false)
 }
 
 // ToggleDedupSelection pins/unpins the Dedup view's focused-pane selection (file or dir row).
@@ -67,5 +60,5 @@ func (h *Handler) ToggleDedupSelection() {
 		h.host.SetTransientMessage("No entry to pin", ui.MessageUrgencyInfo)
 		return
 	}
-	h.TogglePath(filepath.Base(path), path, isDir)
+	h.TogglePath(pathloc.Base(path), path, isDir)
 }

@@ -27,7 +27,7 @@ func (s *State) RenameEntry(oldPath, newName string, viewportRows int) bool {
 	oldClean, newPath := oldLoc.String(), newLoc.String()
 	found := false
 	for i := range s.Entries {
-		if !isCleanPath(s.Entries[i].Path, oldClean) {
+		if pathloc.Clean(s.Entries[i].Path) != oldClean {
 			continue
 		}
 		s.Entries[i].Name = newName
@@ -89,7 +89,7 @@ func (s *State) InsertEntries(entries []localfs.Entry, viewportRows int) bool {
 	}
 	existing := make(map[string]bool, len(s.Entries)+len(entries))
 	for _, e := range s.Entries {
-		existing[filepath.Clean(e.Path)] = true
+		existing[pathloc.Clean(e.Path)] = true
 	}
 	var inserted []string
 	for _, entry := range entries {
@@ -100,7 +100,7 @@ func (s *State) InsertEntries(entries []localfs.Entry, viewportRows int) bool {
 		if err != nil || !loc.Parent().Equal(s.Path) {
 			continue
 		}
-		clean := filepath.Clean(entry.Path)
+		clean := pathloc.Clean(entry.Path)
 		if existing[clean] {
 			continue
 		}
@@ -141,14 +141,9 @@ func (s *State) viewportRowsOr(viewportRows int) int {
 	return 0
 }
 
-// isCleanPath reports whether path is clean, a cleanPathString result, as written or once cleaned.
-func isCleanPath(path, clean string) bool {
-	return path == clean || !pathloc.HasURIPrefix(path) && filepath.Clean(path) == clean
-}
-
 func renameTreeNode(nodes []treeflat.Node[TreeEntry], oldPath, newName, newPath string) bool {
 	for i := range nodes {
-		if isCleanPath(nodes[i].ID, oldPath) || isCleanPath(nodes[i].Value.Entry.Path, oldPath) {
+		if pathloc.Clean(nodes[i].ID) == oldPath || pathloc.Clean(nodes[i].Value.Entry.Path) == oldPath {
 			nodes[i].ID = newPath
 			nodes[i].Value.Entry.Name = newName
 			nodes[i].Value.Entry.Path = newPath

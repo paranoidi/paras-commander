@@ -14,9 +14,9 @@ import (
 // elsewhere use a path from the deepest directory shared with the panel path
 // (e.g. "Some Series/Season 01" when the panel has left that tree).
 func DeleteListEntryName(panelPath, homeDir, entryPath, entryName string) string {
-	panelPath = filepath.Clean(panelPath)
-	entryPath = filepath.Clean(entryPath)
-	if filepath.Dir(entryPath) == panelPath {
+	panelPath = pathloc.Clean(panelPath)
+	entryPath = pathloc.Clean(entryPath)
+	if pathloc.Dir(entryPath) == panelPath {
 		return entryName
 	}
 	rel, ancBase, ok := deleteListPathFromCommonAncestor(panelPath, entryPath)
@@ -72,7 +72,7 @@ func deleteListRowText(label, entryPath string) string {
 }
 
 func deleteListLabelIsContextual(label, entryPath string) bool {
-	entryPath = filepath.Clean(entryPath)
+	entryPath = pathloc.Clean(entryPath)
 	if entryPath == "" {
 		return strings.ContainsRune(label, '/')
 	}
@@ -119,7 +119,7 @@ func pathRelativeUnderAncestor(anc pathloc.Path, entryPath string) (string, bool
 		if err != nil {
 			return "", false
 		}
-		rel, err := filepath.Rel(base, filepath.Clean(entryPath))
+		rel, err := pathloc.Rel(base, pathloc.Clean(entryPath))
 		if err != nil || strings.HasPrefix(rel, "..") {
 			return "", false
 		}

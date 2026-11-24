@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // crashLogPath returns $XDG_CACHE_HOME/pc/crash.log (via os.UserCacheDir), mirroring the
@@ -14,7 +16,7 @@ func crashLogPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(base, "pc", "crash.log"), nil
+	return filepath.Join(base, "pc", "crash.log"), nil //nolint:forbidigo // a file in the user cache directory
 }
 
 // reportCrash appends a recovered panic and its stack trace to the crash log and returns an
@@ -25,7 +27,7 @@ func reportCrash(r any, stack []byte) error {
 	if err != nil {
 		return fmt.Errorf("pc crashed: %v (could not resolve crash log path: %w)", r, err)
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(pathloc.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("pc crashed: %v (could not create crash log dir: %w)", r, err)
 	}
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)

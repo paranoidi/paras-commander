@@ -2,11 +2,11 @@ package dialog
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/bookmarks"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
@@ -21,8 +21,8 @@ func (h *Handler) TryBookmarkDialogShortcut(ev *tcell.EventKey) bool {
 	if h.keysGlobal != nil {
 		if id, ok := h.keysGlobal.Lookup(ev); ok && id == keymap.ActionPanelPinToggle {
 			if item, ok := h.pathPickerSelectedItem(); ok {
-				path := filepath.Clean(item.Path)
-				h.host.PinTogglePath(filepath.Base(path), path, true)
+				path := pathloc.Clean(item.Path)
+				h.host.PinTogglePath(pathloc.Base(path), path, true)
 			}
 			return true
 		}
@@ -53,7 +53,7 @@ func (h *Handler) openSelectedBookmarkInPanel(panelID int) bool {
 	if !ok {
 		return false
 	}
-	path := filepath.Clean(item.Path)
+	path := pathloc.Clean(item.Path)
 	if err := h.host.NavigatePanelToPath(panelID, path, ""); err != nil {
 		h.host.SetErrorMessage("Bookmark", err)
 		return true

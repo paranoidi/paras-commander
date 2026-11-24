@@ -1,7 +1,6 @@
 package app
 
 import (
-	"path/filepath"
 	"slices"
 	"time"
 
@@ -90,7 +89,7 @@ func localDirHost(loc pathloc.Path) (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	return filepath.Clean(host), true
+	return pathloc.Clean(host), true
 }
 
 // panelWatchDirs lists the host directories to watch for a panel: its root first, then its

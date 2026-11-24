@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // StashEmpty reports whether this panel has no stashed selection.
@@ -95,7 +96,7 @@ func filterExistingSelectionPaths(paths []string) []string {
 	}
 	out := make([]string, 0, len(paths))
 	for _, p := range paths {
-		p = cleanPathString(p)
+		p = pathloc.Canonical(p)
 		if p == "" {
 			continue
 		}

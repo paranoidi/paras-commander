@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/treeflat"
 )
 
@@ -162,7 +163,7 @@ func (s *UniqueViewState) markedUnderDirs() map[string]int {
 		if !on {
 			continue
 		}
-		for dir := filepath.Dir(p); dir != stop && dir != "/" && dir != "."; dir = filepath.Dir(dir) {
+		for dir := pathloc.Dir(p); dir != stop && dir != "/" && dir != "."; dir = pathloc.Dir(dir) {
 			out[dir]++
 		}
 	}

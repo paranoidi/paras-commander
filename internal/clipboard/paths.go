@@ -55,7 +55,7 @@ func pathURL(raw string) string {
 	}
 	p, err := pathloc.Parse(raw)
 	if err != nil {
-		return filepath.Clean(raw)
+		return pathloc.Clean(raw)
 	}
 	return p.String()
 }
@@ -67,7 +67,7 @@ func dirURL(raw string) string {
 	}
 	p, err := pathloc.Parse(raw)
 	if err != nil {
-		parent := filepath.Dir(filepath.Clean(raw))
+		parent := pathloc.Dir(pathloc.Clean(raw))
 		if parent == "" || parent == "." {
 			return ""
 		}

@@ -2,11 +2,11 @@ package find
 
 import (
 	"os"
-	"path/filepath"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/fswalk"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/scan"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
@@ -52,7 +52,7 @@ func (h *Handler) drainScanEvents() []scan.Event {
 func (h *Handler) findStartOpts(st *dialog.FindDialogState) scan.StartOpts {
 	return scan.StartOpts{
 		Gen:                  h.scanGen,
-		DisplayRoot:          filepath.Clean(st.RootPath),
+		DisplayRoot:          pathloc.Clean(st.RootPath),
 		Roots:                h.findScopeRoots(st),
 		IncludeHidden:        st.IncludeHidden,
 		Gitignore:            h.host.GitignoreCache(),
@@ -73,7 +73,7 @@ func (h *Handler) bindFindDialogPathMeta(st *dialog.FindDialogState) {
 }
 
 func lookupFindPathMeta(st *dialog.FindDialogState, absPath string) (isDir bool, size int64, ok bool) {
-	absPath = filepath.Clean(absPath)
+	absPath = pathloc.Clean(absPath)
 	idx, found := st.PathIndexLookup(absPath)
 	if !found {
 		return false, 0, false

@@ -40,15 +40,15 @@ func planSiblingTarget(sourcePath, panelPath, newName string, rules siblingTarge
 		return pathloc.Path{}, pathloc.Path{}, &Error{Op: rules.op, Text: rules.sameNameText}
 	}
 
-	parent := srcLoc.Parent()
-	if parent.IsZero() {
+	if srcLoc.Parent().IsZero() {
 		panel, perr := pathloc.Parse(panelPath)
 		if perr != nil {
 			return pathloc.Path{}, pathloc.Path{}, &Error{Op: rules.op, Text: "invalid panel path", Err: perr}
 		}
-		parent = panel
+		destLoc, err = panel.Join(newName)
+	} else {
+		destLoc, err = srcLoc.Sibling(newName)
 	}
-	destLoc, err = parent.Join(newName)
 	if err != nil {
 		return pathloc.Path{}, pathloc.Path{}, &Error{Op: rules.op, Text: err.Error(), Err: err}
 	}

@@ -107,7 +107,7 @@ func Suggest(panelPath, home, raw string, cursor int, showHidden, dirsOnly bool)
 		c.IsDir = ent.IsDir()
 		if !c.IsDir && ent.Type()&fs.ModeSymlink != 0 {
 			// ponytail: only symlinks need a stat to tell whether they point at a directory.
-			if info, err := os.Stat(filepath.Join(resolvedDir, name)); err == nil {
+			if info, err := os.Stat(filepath.Join(resolvedDir, name)); err == nil { //nolint:forbidigo // an entry of resolvedDir read from disk by os.ReadDir
 				c.IsDir = info.IsDir()
 			}
 		}

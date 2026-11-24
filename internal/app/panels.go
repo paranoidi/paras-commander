@@ -605,7 +605,7 @@ func (a *App) syncFollowTargetPath(driver *panel.State) (string, bool) {
 		if !ok {
 			return "", false
 		}
-		p = panel.CleanPathString(p)
+		p = pathloc.Canonical(p)
 		if p == "" {
 			return "", false
 		}
@@ -613,7 +613,7 @@ func (a *App) syncFollowTargetPath(driver *panel.State) (string, bool) {
 		if err != nil {
 			return "", false
 		}
-		target := panel.CleanPathString(dirLoc.String())
+		target := pathloc.Canonical(dirLoc.String())
 		if target == "" {
 			return "", false
 		}
@@ -623,7 +623,7 @@ func (a *App) syncFollowTargetPath(driver *panel.State) (string, bool) {
 	if !ok || entry.Type != localfs.EntryDirectory {
 		return "", false
 	}
-	return panel.CleanPathString(entry.Path), true
+	return pathloc.Canonical(entry.Path), true
 }
 
 // syncFollowFromActive mirrors the active panel's highlighted directory into the inactive panel
@@ -650,13 +650,13 @@ func (a *App) syncFollowFromActive() {
 	}
 	followerID := a.otherBrowserPanelID()
 	follower := a.panelByID(followerID)
-	if panel.CleanPathString(follower.PathString()) == targetPath {
+	if pathloc.Canonical(follower.PathString()) == targetPath {
 		return
 	}
 	// A load to targetPath already in flight is left alone: re-issuing it every reconcile pass
 	// would bump the async-load generation and drop each result before it lands, so a slow
 	// follower listing could never complete while any other event kept the loop busy.
-	if follower.ListingPending && panel.CleanPathString(follower.ListingPendingPath) == targetPath {
+	if follower.ListingPending && pathloc.Canonical(follower.ListingPendingPath) == targetPath {
 		return
 	}
 	if a.pathVolumeContendsWithActiveJob(targetPath) {

@@ -57,9 +57,9 @@ func (h *Handler) ReportDifferences() {
 	} else if h.refuseTagList() {
 		return
 	}
-	root, err := hostPath(target)
-	if err != nil {
-		h.host.SetErrorMessage(differencesTitle, err)
+	root, ok := pathloc.HostOf(target)
+	if !ok {
+		h.host.SetErrorMessage(differencesTitle, errNoHostPath)
 		return
 	}
 	panelID, indexPanel, started := h.model.FocusedPanelID(), p.Path.Scheme() == pathloc.SchemeFileIndex, time.Now()

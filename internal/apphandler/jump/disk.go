@@ -143,7 +143,7 @@ func (h *Handler) applyMatch(m scan.MatchOutput) {
 			rel = m.DisplayRelLines[i]
 		}
 		results[i] = dialog.JumpResult{
-			Path:  filepath.Join(st.Root, filepath.FromSlash(rel)),
+			Path:  filepath.Join(st.Root, filepath.FromSlash(rel)), //nolint:forbidigo // the jump root is a host path (ResolveHostPath) and rel comes from a disk walk
 			Rel:   rel,
 			Match: m.MatchRanges[idx],
 		}

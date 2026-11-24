@@ -2,25 +2,14 @@ package diskusage
 
 import (
 	"context"
-	"path/filepath"
-	"strings"
 )
 
 // SubtreeSizer totals a path under a sizer prefix (a file's own size and 1, or a directory's
 // bytes and files) without walking the disk; an error leaves the path uncached.
 type SubtreeSizer func(ctx context.Context, path string) (bytes, files int64, err error)
 
-// CleanKey cleans a cache key: a host path with filepath.Clean, a URI (scheme://path) keeping
-// its scheme prefix whole (filepath.Clean would collapse the "//").
-func CleanKey(p string) string {
-	if i := strings.Index(p, "://"); i > 0 && !strings.ContainsRune(p[:i], '/') {
-		return p[:i+3] + filepath.Clean(p[i+3:])
-	}
-	return filepath.Clean(p)
-}
-
 // SetSubtreeSizer makes the paths match accepts (e.g. fileindex:// ones) take their totals from
-// sizer instead of a disk walk. match sees cleaned keys (CleanKey). Call it before the first scan.
+// sizer instead of a disk walk. match sees cleaned keys (pathloc.Clean). Call it before the first scan.
 func (e *Engine) SetSubtreeSizer(match func(path string) bool, sizer SubtreeSizer) {
 	e.sizerMatch, e.sizer = match, sizer
 }

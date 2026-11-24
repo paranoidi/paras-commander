@@ -92,12 +92,12 @@ func (a *App) shellArgv() ([]string, error) {
 // the panel may display a path through a symlink.
 func (a *App) syncActivePanelToDir(shellWd string) {
 	active := a.activeBrowserPanel()
-	panelPath := panel.CleanPathString(active.PathString())
-	if panelPath == panel.CleanPathString(shellWd) {
+	panelPath := pathloc.Canonical(active.PathString())
+	if panelPath == pathloc.Canonical(shellWd) {
 		return
 	}
 	if resolved, err := filepath.EvalSymlinks(panelPath); err == nil &&
-		panel.CleanPathString(resolved) == panel.CleanPathString(shellWd) {
+		pathloc.Canonical(resolved) == pathloc.Canonical(shellWd) {
 		return
 	}
 	if fi, statErr := os.Stat(shellWd); statErr != nil || !fi.IsDir() {
@@ -271,7 +271,7 @@ func shellInsertPathList(p *panel.State) []string {
 	paths := panelTargetPaths(p)
 	out := paths[:0]
 	for _, s := range paths {
-		if host, ok := hostPathOf(s); ok {
+		if host, ok := pathloc.HostOf(s); ok {
 			out = append(out, host)
 		}
 	}
@@ -305,11 +305,11 @@ func (a *App) localActivePanelDir() string {
 // that surfaces as [subshell.ErrBusy].
 func (a *App) subshellChdirIfNeeded(dir string) error {
 	if cwd, err := a.subshell.Cwd(); err == nil {
-		if panel.CleanPathString(cwd) == panel.CleanPathString(dir) {
+		if pathloc.Canonical(cwd) == pathloc.Canonical(dir) {
 			return nil
 		}
 		if resolved, rerr := filepath.EvalSymlinks(dir); rerr == nil &&
-			panel.CleanPathString(cwd) == panel.CleanPathString(resolved) {
+			pathloc.Canonical(cwd) == pathloc.Canonical(resolved) {
 			return nil
 		}
 	}

@@ -36,7 +36,7 @@ func (h *Handler) OpenMassRenameDialog(p *panel.State) {
 	for _, e := range src.Entries {
 		ap := e.Path
 		if !filepath.IsAbs(ap) {
-			ap = filepath.Join(p.PathString(), ap)
+			ap = pathloc.Join(p.PathString(), ap)
 		}
 		sources = append(sources, massRenameSource(ap, e.Type))
 	}
@@ -55,7 +55,7 @@ func (h *Handler) OpenMassRenameDialogForPath(path string) {
 }
 
 func massRenameSource(path string, t localfs.EntryType) dialog.MassRenameSource {
-	path = filepath.Clean(path)
+	path = pathloc.Clean(path)
 	return dialog.MassRenameSource{Path: path, Name: filepath.Base(path), IsDir: t == localfs.EntryDirectory}
 }
 

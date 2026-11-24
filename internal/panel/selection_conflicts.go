@@ -22,7 +22,7 @@ func walkAncestors(path string, visit func(ancestor string) bool) bool {
 		if parent.Equal(loc) || parent.IsZero() {
 			return false
 		}
-		if visit(cleanPathString(parent.String())) {
+		if visit(pathloc.Canonical(parent.String())) {
 			return true
 		}
 		loc = parent
@@ -34,7 +34,7 @@ func clearSelectionDirAncestors(selected map[string]bool, path string, isDir fun
 	if len(selected) == 0 {
 		return false
 	}
-	path = cleanPathString(path)
+	path = pathloc.Canonical(path)
 	if path == "" {
 		return false
 	}
@@ -57,14 +57,14 @@ func clearSelectionStrictDescendants(selected map[string]bool, parent string) bo
 	if len(selected) == 0 {
 		return false
 	}
-	parent = cleanPathString(parent)
+	parent = pathloc.Canonical(parent)
 	if parent == "" {
 		return false
 	}
 	prefix := filepath.ToSlash(parent) + "/"
 	var removed bool
 	for p := range selected {
-		clean := cleanPathString(p)
+		clean := pathloc.Canonical(p)
 		if clean == "" {
 			continue
 		}
@@ -84,7 +84,7 @@ func ClearSelectionConflicts(selected map[string]bool, path string, addedIsDir b
 	if len(selected) == 0 {
 		return false
 	}
-	added := cleanPathString(path)
+	added := pathloc.Canonical(path)
 	if added == "" {
 		return false
 	}
@@ -138,7 +138,7 @@ func BulkApplySelectionAdds(selected map[string]bool, paths []string, isDir func
 	}
 	if allNewFiles && !selectionMapHasDirs(selected, isDir) {
 		for _, path := range paths {
-			path = cleanPathString(path)
+			path = pathloc.Canonical(path)
 			if path == "" {
 				continue
 			}
@@ -170,7 +170,7 @@ func applySelectionAddsBulk(selected map[string]bool, paths []string, isDir func
 	cleaned := make([]string, 0, len(paths))
 	newDirSet := make(map[string]bool)
 	for _, path := range paths {
-		path = cleanPathString(path)
+		path = pathloc.Canonical(path)
 		if path == "" {
 			continue
 		}
@@ -225,7 +225,7 @@ func BulkApplySelectionAddsWalkOrder(selected map[string]bool, paths []string, i
 	}
 	var removed bool
 	for _, path := range paths {
-		path = cleanPathString(path)
+		path = pathloc.Canonical(path)
 		if path == "" {
 			continue
 		}
@@ -248,7 +248,7 @@ func ApplySelectionAdds(selected map[string]bool, paths []string, isDir func(str
 	}
 	var removed bool
 	for _, path := range paths {
-		path = cleanPathString(path)
+		path = pathloc.Canonical(path)
 		if path == "" {
 			continue
 		}
@@ -312,7 +312,7 @@ func pathsByDepthDescending(paths []string) []string {
 }
 
 func pathDepth(path string) int {
-	path = cleanPathString(path)
+	path = pathloc.Canonical(path)
 	if path == "" {
 		return 0
 	}
@@ -324,7 +324,7 @@ func pathDepth(path string) int {
 }
 
 func (s *State) selectedPathIsDirectory(path string) bool {
-	path = cleanPathString(path)
+	path = pathloc.Canonical(path)
 	if path == "" {
 		return false
 	}
@@ -350,7 +350,7 @@ func (s *State) resolveSelectionConflicts(path string, addedIsDir bool) bool {
 	if !addedIsDir && !s.selectionHasDirs {
 		return false
 	}
-	added := cleanPathString(path)
+	added := pathloc.Canonical(path)
 	if added == "" {
 		return false
 	}

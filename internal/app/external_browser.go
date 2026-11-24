@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -60,10 +61,7 @@ type openFilesResultPayload struct {
 func (a *App) openFilesExternally(paths []string) {
 	hosts := make([]string, len(paths))
 	for i, p := range paths {
-		if host, ok := hostPathOf(p); ok {
-			p = host
-		}
-		hosts[i] = filepath.Clean(p)
+		hosts[i] = pathloc.DiskPath(p)
 	}
 	screen := a.screen
 	go func() {
@@ -103,10 +101,7 @@ func (a *App) openPanelPathInExternalBrowser(panelID int) {
 // openDirInExternalBrowser is the single entry point for "open this directory in the GUI file manager".
 // A fileindex:// dir opens its real directory on disk.
 func (a *App) openDirInExternalBrowser(dir string) {
-	if host, ok := hostPathOf(dir); ok {
-		dir = host
-	}
-	p := filepath.Clean(dir)
+	p := pathloc.DiskPath(dir)
 	if p == "" || p == "." {
 		a.setErrorMessage("External browser", fmt.Errorf("no panel path"))
 		return
@@ -135,10 +130,7 @@ func (a *App) openFileExternally(path string) {
 	if !a.config.Panels.OpenFilesExternally {
 		return
 	}
-	if host, ok := hostPathOf(path); ok {
-		path = host
-	}
-	p := filepath.Clean(path)
+	p := pathloc.DiskPath(path)
 	if p == "" || p == "." {
 		a.setErrorMessage("External open", fmt.Errorf("no path"))
 		return

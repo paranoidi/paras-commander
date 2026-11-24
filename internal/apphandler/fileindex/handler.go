@@ -253,15 +253,8 @@ func (h *Handler) localOrIndex() bool {
 	return true
 }
 
-// hostPath is the disk path a panel path names: itself on a local panel, the indexed host path
-// on a fileindex:// panel. No I/O (symlinks are resolved by the task that uses it).
-func hostPath(raw string) (string, error) {
-	loc, err := pathloc.Parse(raw)
-	if err != nil {
-		return "", err
-	}
-	return pathloc.ResolveHostPath(loc)
-}
+// errNoHostPath is the refusal for a panel path with no real path on disk (SFTP).
+var errNoHostPath = errors.New("fileindex covers local paths only")
 
 func (h *Handler) queueTask(title string, task *jobs.Task, paths []string) {
 	h.addTask(task, paths)
@@ -302,9 +295,9 @@ func (h *Handler) queueScan(title string, task func([]string) *jobs.Task) {
 	}
 	var paths []string
 	for _, t := range targets {
-		p, err := hostPath(t)
-		if err != nil {
-			h.host.SetErrorMessage(messageTitle, err)
+		p, ok := pathloc.HostOf(t)
+		if !ok {
+			h.host.SetErrorMessage(messageTitle, errNoHostPath)
 			return
 		}
 		paths = append(paths, p)
@@ -320,9 +313,9 @@ func (h *Handler) ScanAfterCommand(dir pathloc.Path) {
 	if host.RefuseTagList(h.host, dir) { // the list's "/" is no directory to scan (an index panel is refused before the command runs)
 		return
 	}
-	p, err := hostPath(dir.String())
-	if err != nil {
-		h.host.SetErrorMessage(messageTitle, err)
+	p, ok := pathloc.HostOf(dir.String())
+	if !ok {
+		h.host.SetErrorMessage(messageTitle, errNoHostPath)
 		return
 	}
 	h.WithIndex(func() {
@@ -338,9 +331,9 @@ func (h *Handler) Prune() {
 	if !h.localOrIndex() || h.refuseTagList() {
 		return
 	}
-	dir, err := hostPath(h.host.FocusedPanel().PathString())
-	if err != nil {
-		h.host.SetErrorMessage(messageTitle, err)
+	dir, ok := pathloc.HostOf(h.host.FocusedPanel().PathString())
+	if !ok {
+		h.host.SetErrorMessage(messageTitle, errNoHostPath)
 		return
 	}
 	h.queueTask("fileindex prune", h.index.PruneTask(dir), []string{dir})
@@ -414,7 +407,7 @@ func (h *Handler) browseFromTagView() {
 	sel := ""
 	if e, ok := p.CurrentEntry(); ok && e.Name != ".." {
 		_, entryHost, _ := pathloc.CutIndexPrefix(e.Path)
-		dir, sel = filepath.Dir(entryHost), filepath.Base(entryHost)
+		dir, sel = pathloc.Dir(entryHost), filepath.Base(entryHost)
 	}
 	loc, err := pathloc.FileIndex(dir)
 	if err == nil {
@@ -450,13 +443,13 @@ func (h *Handler) reveal(withIndex bool) {
 	} else if h.refuseTagList() { // an empty list: its "/" is not a place to go
 		return
 	}
-	host, err := hostPath(target)
-	if err != nil {
-		h.host.SetErrorMessage(messageTitle, err)
+	host, ok := pathloc.HostOf(target)
+	if !ok {
+		h.host.SetErrorMessage(messageTitle, errNoHostPath)
 		return
 	}
 	go func() {
-		dir, sel := filepath.Dir(host), filepath.Base(host)
+		dir, sel := pathloc.Dir(host), filepath.Base(host)
 		if host == "/" {
 			dir, sel = host, ""
 		}

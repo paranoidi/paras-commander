@@ -4,11 +4,26 @@ version: "2"
 linters:
   default: standard
   enable:
+    - forbidigo
     - gocyclo
   settings:
+    forbidigo:
+      forbid:
+        # Panels, dialogs and handlers hold locations as strings that may be sftp:// or fileindex
+        # URIs; path/filepath collapses the "//" of a URI and breaks it.
+        - pattern: ^filepath\.(Clean|Dir|Join|Rel|Abs)$
+          msg: a location string may be a URI; use pathloc.Clean, Dir, Join, Rel, Canonical, HostOf or DiskPath (same as path/filepath on a host path). A string that is a disk path by construction needs //nolint:forbidigo // <why>
     gocyclo:
       # Above current max complexity in the tree; tighten over time.
       min-complexity: 70
+  exclusions:
+    rules:
+      # forbidigo guards the packages that hold locations; the backends below them work on disk
+      # paths. Tests are not checked.
+      - path-except: ^internal/(app|apphandler|panel|panellist|ui|usermenu|pathpick|clipboard|diskusage|jobbridge)/
+        linters: [forbidigo]
+      - path: _test\.go
+        linters: [forbidigo]
 
 run:
   timeout: 5m

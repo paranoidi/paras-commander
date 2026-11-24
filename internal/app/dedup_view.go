@@ -1,8 +1,6 @@
 package app
 
 import (
-	"path/filepath"
-
 	"github.com/gdamore/tcell/v2"
 	dedupctrl "github.com/paranoidi/paras-commander/internal/apphandler/dedup"
 	"github.com/paranoidi/paras-commander/internal/config"
@@ -333,7 +331,7 @@ func (a *App) dedupOpenInExternalBrowser() {
 		return
 	}
 	if !isDir {
-		path = filepath.Dir(path)
+		path = pathloc.Dir(path)
 	}
 	a.openDirInExternalBrowser(path)
 }

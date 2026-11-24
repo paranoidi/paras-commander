@@ -483,7 +483,7 @@ func (h *Handler) HandlePanelDirChanged(panelID int) {
 	if !h.host.Config().Preview.QuickViewDisableOnInactiveNav {
 		return
 	}
-	cur := filepath.Clean(h.host.PanelByID(panelID).PathString())
+	cur := pathloc.Clean(h.host.PanelByID(panelID).PathString())
 	prev := h.quickViewDirNavPath[panelID]
 	h.quickViewDirNavPath[panelID] = cur
 	if prev == "" || prev == cur {
@@ -682,7 +682,7 @@ func (h *Handler) ClearQuickViewDirOverlay() {
 // restore computed up front via panel.PreviewCursorRecall so the async load lands on the right
 // entry instead of jumping after the fact. Nothing here touches the filesystem on the UI goroutine.
 func (h *Handler) populateQuickViewDirOverlay(ov *panel.State, driver, follower *panel.State, dir string, panelID int) error {
-	canonical := panel.CleanPathString(dir)
+	canonical := pathloc.Canonical(dir)
 	if canonical == "" {
 		return errors.New("empty directory path")
 	}
@@ -737,7 +737,7 @@ func (h *Handler) quickViewFollowDirectory() {
 	h.CloseFilePreview()
 	followerID := h.host.OtherBrowserPanelID()
 	follower := h.host.PanelByID(followerID)
-	targetPath = panel.CleanPathString(targetPath)
+	targetPath = pathloc.Canonical(targetPath)
 	if targetPath == "" {
 		return
 	}
@@ -810,7 +810,7 @@ func (h *Handler) ApplyQuickViewSlow(p QuickViewSlowPayload) bool {
 func (h *Handler) activeDirRuleTarget() (string, bool) {
 	dirPath, ok := h.host.SyncFollowTargetPath(h.host.FocusedPanel())
 	dirPath = pathloc.DiskPath(dirPath)
-	if !ok || !previewrun.MatchAnyCommandRule(h.host.Config().Preview, dirPath, localfs.EntryDirectory, filepath.Dir(dirPath)) {
+	if !ok || !previewrun.MatchAnyCommandRule(h.host.Config().Preview, dirPath, localfs.EntryDirectory, pathloc.Dir(dirPath)) {
 		return "", false
 	}
 	return dirPath, true
@@ -1325,13 +1325,13 @@ func gitCellForPath(by map[string]gitstatus.Cell, path string) *gitstatus.Cell {
 // than blocking on git — CLI startup primes GitByPath itself before opening a preview; see
 // App.primeGitStatusForCLIPreview).
 func (h *Handler) gitStatusForPath(path string) *gitstatus.Cell {
-	path = filepath.Clean(path)
+	path = pathloc.Clean(path)
 	if p := h.host.FocusedPanel(); p != nil {
 		if cell := gitCellForPath(p.GitByPath, path); cell != nil {
 			return cell
 		}
 	}
-	listDir := filepath.Dir(path)
+	listDir := pathloc.Dir(path)
 	if listDir == "" || listDir == "." {
 		return nil
 	}

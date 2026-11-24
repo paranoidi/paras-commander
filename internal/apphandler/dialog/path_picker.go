@@ -126,7 +126,7 @@ func (h *Handler) activatePathPickerSelection() {
 	if entIdx < 0 || entIdx >= len(st.Items) {
 		return
 	}
-	path := st.Items[entIdx].Path // builders store clean host paths; filepath.Clean would mangle sftp://
+	path := st.Items[entIdx].Path // builders store pathloc-cleaned locations
 
 	switch st.Purpose {
 	case dialog.PathPickerPurposeNavigate:
@@ -170,7 +170,7 @@ func (h *Handler) activatePathPickerSelection() {
 			extra()
 		}
 	case dialog.PathPickerPurposeNavigateFile:
-		if host.ShowInPanel(h.host, h.model.FocusedPanelID(), filepath.Dir(path), filepath.Base(path), st.IndexPanel, "Show file") {
+		if host.ShowInPanel(h.host, h.model.FocusedPanelID(), pathloc.Dir(path), filepath.Base(path), st.IndexPanel, "Show file") {
 			h.host.CloseJobsView() // a picker reopened from the jobs view lands in the browser
 			h.ClosePathPicker()
 		}
@@ -188,7 +188,7 @@ func (h *Handler) OpenFilePicker(title string, items []dialog.PathPickerItem, in
 	}
 	h.pathPickerMissingGen++
 	for i := range items {
-		items[i].Path = filepath.Clean(items[i].Path)
+		items[i].Path = pathloc.Clean(items[i].Path)
 	}
 	h.model.PathPicker = dialog.PathPickerState{
 		Open: true, Title: title, Purpose: dialog.PathPickerPurposeNavigateFile, IndexPanel: indexPanel, Items: items,
@@ -281,7 +281,7 @@ func (h *Handler) PathPickerItemsBookmarks() ([]dialog.PathPickerItem, error) {
 	seen := make(map[string]struct{}, len(marks))
 	items := make([]dialog.PathPickerItem, 0, len(marks))
 	for i := range marks {
-		cp := filepath.Clean(marks[i].Path)
+		cp := pathloc.Clean(marks[i].Path)
 		if _, ok := seen[cp]; ok {
 			continue
 		}
@@ -305,7 +305,7 @@ func (h *Handler) PathPickerItemsPinned() ([]dialog.PathPickerItem, error) {
 		if !p.IsDir {
 			continue
 		}
-		cp := panel.CleanPathString(p.Path) // not filepath.Clean: it collapses the // of sftp://
+		cp := pathloc.Canonical(p.Path)
 		if _, ok := seen[cp]; cp == "" || ok {
 			continue
 		}
@@ -688,7 +688,7 @@ func (h *Handler) updateDestinationTargetPanels(panelPath, typed string, warning
 		h.model.DestinationTargetSecondary = false
 		return
 	}
-	abs := filepath.Clean(pathpick.ResolveQuery(panelPath, h.model.UserHomeDir, typed))
-	h.model.DestinationTargetPrimary = filepath.Clean(h.model.Primary.PathString()) == abs
-	h.model.DestinationTargetSecondary = filepath.Clean(h.model.Secondary.PathString()) == abs
+	abs := pathloc.Clean(pathpick.ResolveQuery(panelPath, h.model.UserHomeDir, typed))
+	h.model.DestinationTargetPrimary = pathloc.Clean(h.model.Primary.PathString()) == abs
+	h.model.DestinationTargetSecondary = pathloc.Clean(h.model.Secondary.PathString()) == abs
 }

@@ -388,6 +388,18 @@ func (h *Handler) openChownDialog(p *panel.State) {
 	}
 }
 
+// linkDefaultPath is the default path of a new link called name: in the destination panel's real
+// directory (a fileindex:// panel's host path), or in src's when the destination has none (SFTP,
+// the list of a flat tag view).
+func (h *Handler) linkDefaultPath(src *panel.State, name string) string {
+	dst := h.host.DestinationPanel().Path
+	dir, ok := dst.HostPath()
+	if !ok || dst.IsTagList() {
+		dir = src.PathString()
+	}
+	return pathloc.Join(dir, name)
+}
+
 func (h *Handler) openSymlinkDialog(p *panel.State) {
 	if !p.Path.IsLocal() {
 		h.host.SetTransientMessage(pathloc.Unavailable("Symlink", p.Path), ui.MessageUrgencyWarn)
@@ -399,7 +411,7 @@ func (h *Handler) openSymlinkDialog(p *panel.State) {
 		return
 	}
 	targetPath := entry.Path
-	defaultLink := filepath.Join(h.host.DestinationPanel().PathString(), entry.Name)
+	defaultLink := h.linkDefaultPath(p, entry.Name)
 	fields := []dialog.FileDialogField{
 		{Label: "Target", Value: targetPath, Cursor: len([]rune(targetPath)), PathPicker: true},
 		{Label: "Link path", Value: defaultLink, Cursor: len([]rune(defaultLink)), PathPicker: true},
@@ -423,7 +435,7 @@ func (h *Handler) openHardlinkDialog(p *panel.State) {
 		return
 	}
 	sourcePath := entry.Path
-	defaultDest := filepath.Join(h.host.DestinationPanel().PathString(), entry.Name)
+	defaultDest := h.linkDefaultPath(p, entry.Name)
 	fields := []dialog.FileDialogField{
 		{Label: "Source", Value: sourcePath, Cursor: len([]rune(sourcePath)), PathPicker: true},
 		{Label: "New path", Value: defaultDest, Cursor: len([]rune(defaultDest)), PathPicker: true},
@@ -592,8 +604,7 @@ func (h *Handler) applyRenameSuccess(st renameApply) {
 	}
 	if st.focusAfter {
 		h.RefreshBothPanelsWithFocus(st.panelID, func() {
-			newPath := filepath.Join(filepath.Dir(st.entry.Path), st.plan.NewName)
-			h.host.PanelByID(st.panelID).SelectVisibleEntryPathCentered(newPath, h.host.PanelViewportRows(st.panelID))
+			h.host.PanelByID(st.panelID).SelectVisibleEntryPathCentered(st.plan.NewPath, h.host.PanelViewportRows(st.panelID))
 		})
 	} else {
 		h.RefreshBothPanels()

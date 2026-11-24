@@ -49,10 +49,7 @@ func (h *Handler) StripFile() (string, bool) {
 	if !ok || row.Group {
 		return "", false
 	}
-	if loc, err := pathloc.Parse(row.Path); err == nil {
-		return diskPath(loc), true
-	}
-	return row.Path, true
+	return pathloc.DiskPath(row.Path), true
 }
 
 // FoldStripRows applies a bulk tree action to the strip: panel.tree-collapse-all /

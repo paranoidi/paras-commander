@@ -7,6 +7,7 @@ import (
 	"unicode"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 )
@@ -37,9 +38,9 @@ func detectOutputPaths(lines []string, workDir string) []dialog.OutputPathMatch 
 		}
 		abs := cand
 		if !filepath.IsAbs(abs) {
-			abs = filepath.Join(workDir, abs)
+			abs = filepath.Join(workDir, abs) //nolint:forbidigo // a path printed by a command, resolved against its working directory on disk
 		}
-		abs = filepath.Clean(abs)
+		abs = pathloc.Clean(abs)
 		if fi, seen := cache[abs]; seen {
 			return abs, fi
 		}

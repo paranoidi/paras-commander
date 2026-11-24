@@ -226,7 +226,7 @@ func (h *Handler) ForgetPaths(paths []string) {
 	rels := func(root pathloc.Path) []string {
 		var out []string
 		for _, p := range paths {
-			if rel, err := filepath.Rel(root.String(), p); err == nil && rel != ".." && !strings.HasPrefix(rel, "../") {
+			if rel, err := pathloc.Rel(root.String(), p); err == nil && rel != ".." && !strings.HasPrefix(rel, "../") {
 				out = append(out, filepath.ToSlash(rel))
 			}
 		}

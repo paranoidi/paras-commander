@@ -596,7 +596,7 @@ func (h *Handler) emptyDirsAfterDelete(paths []string) []string {
 		if err != nil {
 			continue
 		}
-		rel, err := filepath.Rel(h.model.UniqueView.Root, path)
+		rel, err := pathloc.Rel(h.model.UniqueView.Root, path)
 		if err != nil || rel == ".." || strings.HasPrefix(rel, "../") { // a selected directory off Root
 			rel = path
 		}

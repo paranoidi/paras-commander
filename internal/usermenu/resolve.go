@@ -8,10 +8,11 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/filetrust"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 func expandHome(p, home string) string {
-	p = filepath.Clean(strings.TrimSpace(p))
+	p = pathloc.Clean(strings.TrimSpace(p))
 	if home == "" {
 		return p
 	}
@@ -19,7 +20,7 @@ func expandHome(p, home string) string {
 		return home
 	}
 	if strings.HasPrefix(p, "~/") {
-		return filepath.Join(home, p[2:])
+		return filepath.Join(home, p[2:]) //nolint:forbidigo // the home directory is a disk path
 	}
 	return p
 }
@@ -32,20 +33,20 @@ func ResolveUserMenuGlobalPath(cfg config.Config, homeDir, configDir string) str
 	if strings.TrimSpace(configDir) == "" {
 		return ""
 	}
-	return filepath.Join(configDir, config.DefaultUserMenuFileName)
+	return filepath.Join(configDir, config.DefaultUserMenuFileName) //nolint:forbidigo // the config directory is a disk path
 }
 
 // ResolveMenuTOML finds the first readable trusted menu.toml: cwd candidates then global.
 // Returns empty path when none found (caller may bootstrap a global menu.toml stub).
 // Warnings describe skipped untrusted or missing hops (informational).
 func ResolveMenuTOML(cfg config.Config, homeDir, configDir, panelPath string) (path string, warnings []string) {
-	panelPath = filepath.Clean(panelPath)
+	panelPath = pathloc.Clean(panelPath)
 	for _, base := range cfg.UserMenu.LocalNames {
 		base = strings.TrimSpace(base)
 		if base == "" {
 			continue
 		}
-		cand := filepath.Join(panelPath, base)
+		cand := pathloc.Join(panelPath, base)
 		if _, err := os.Stat(cand); err != nil {
 			continue
 		}

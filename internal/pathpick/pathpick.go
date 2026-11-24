@@ -42,9 +42,9 @@ func ExpandTilde(home, q string) string {
 		return home
 	case strings.HasPrefix(q, "~/"):
 		if home == "" {
-			return filepath.Clean(q)
+			return pathloc.Clean(q)
 		}
-		return filepath.Join(home, q[len("~/"):])
+		return filepath.Join(home, q[len("~/"):]) //nolint:forbidigo // the home directory is a disk path
 	default:
 		return q
 	}
@@ -55,9 +55,9 @@ func ResolveQuery(panelPath, home, raw string) string {
 	q := ExpandTilde(home, raw)
 	q = strings.TrimSpace(q)
 	if filepath.IsAbs(q) {
-		return filepath.Clean(q)
+		return pathloc.Clean(q)
 	}
-	return filepath.Clean(filepath.Join(panelPath, q))
+	return pathloc.Join(panelPath, q)
 }
 
 // ResolveDestination resolves a typed Copy/Move/Flatten/Extract destination exactly as the dialogs

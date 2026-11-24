@@ -1,8 +1,6 @@
 package panel
 
 import (
-	"path/filepath"
-
 	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -183,7 +181,7 @@ func (s *State) scheduleTreeChildGitStatus(dirID string, entries []localfs.Entry
 	paths := make([]gitstatus.ListingPaths, len(entries))
 	for i, e := range entries {
 		paths[i] = gitstatus.ListingPaths{
-			AbsPath: filepath.Clean(e.Path),
+			AbsPath: pathloc.Clean(e.Path),
 			IsDir:   e.Type == localfs.EntryDirectory,
 		}
 	}

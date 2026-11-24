@@ -38,9 +38,9 @@ func (h *Handler) openFindDialog(panelID int) {
 		return
 	}
 	p := h.host.PanelByID(panelID)
-	root, err := hostPath(p.PathString())
-	if err != nil {
-		h.host.SetErrorMessage("Find in index", err)
+	root, ok := pathloc.HostOf(p.PathString())
+	if !ok {
+		h.host.SetErrorMessage("Find in index", errNoHostPath)
 		return
 	}
 	if st := &h.model.IndexFindDialog; st.Parked {
@@ -69,7 +69,7 @@ func (h *Handler) OpenFreshFind(panelID int) {
 func (h *Handler) openFreshFind(panelID int, p *panel.State, root string) {
 	var selRoots []string
 	for _, uri := range panel.PruneNestedPaths(p.SelectedDirectoryPaths()) {
-		if hp, err := hostPath(uri); err == nil {
+		if hp, ok := pathloc.HostOf(uri); ok {
 			selRoots = append(selRoots, hp)
 		}
 	}
@@ -380,7 +380,7 @@ func (h *Handler) navigateTo(panelID int) (string, bool) {
 	}
 	dir, name := r.Path, ""
 	if !r.IsDir {
-		dir, name = filepath.Dir(r.Path), filepath.Base(r.Path)
+		dir, name = pathloc.Dir(r.Path), filepath.Base(r.Path)
 	}
 	if !apphost.ShowInPanel(h.host, panelID, dir, name, h.model.IndexFindDialog.FromIndexPanel, "Find in index") {
 		return "", false

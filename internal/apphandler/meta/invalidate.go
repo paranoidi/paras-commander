@@ -2,7 +2,6 @@ package meta
 
 import (
 	"context"
-	"path/filepath"
 
 	"github.com/paranoidi/paras-commander/internal/fschange"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
@@ -56,12 +55,12 @@ func (r fsReports) lookup(rowPath string) (rep fsReport, ok bool) {
 		host = indexHost
 	}
 	rep, ok = r[host]
-	for dir := filepath.Dir(host); ; dir = filepath.Dir(dir) {
+	for dir := pathloc.Dir(host); ; dir = pathloc.Dir(dir) {
 		if up, found := r[dir]; found && up.dir && (!ok || up.seq > rep.seq) {
 			rep, ok = up, true
 			rep.gone = true
 		}
-		if dir == filepath.Dir(dir) {
+		if dir == pathloc.Dir(dir) {
 			return rep, ok
 		}
 	}

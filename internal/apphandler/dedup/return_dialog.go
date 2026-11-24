@@ -67,14 +67,14 @@ func scanScope(dirs []string) (pathloc.Path, []string) {
 	dirs = panel.PruneNestedPaths(hosts)
 	root := dirs[0]
 	for _, d := range dirs[1:] {
-		for root != filepath.Dir(root) && !strings.HasPrefix(d, root+string(filepath.Separator)) {
-			root = filepath.Dir(root)
+		for root != pathloc.Dir(root) && !strings.HasPrefix(d, root+string(filepath.Separator)) {
+			root = pathloc.Dir(root)
 		}
 	}
 	var only []string
 	if len(dirs) > 1 {
 		for _, d := range dirs {
-			if rel, err := filepath.Rel(root, d); err == nil {
+			if rel, err := pathloc.Rel(root, d); err == nil {
 				only = append(only, filepath.ToSlash(rel))
 			}
 		}

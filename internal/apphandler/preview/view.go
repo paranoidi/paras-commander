@@ -508,7 +508,7 @@ func (h *Handler) OpenFullscreenFilePreviewAt(path string, isDir bool) error {
 		return fmt.Errorf("terminal too small")
 	}
 	union := ui.MergeTwinPanelRects(lay.Primary, lay.Secondary, h.host.EffectivePaneSplitOrientation())
-	panelPath := filepath.Dir(path)
+	panelPath := pathloc.Dir(path)
 	if active := h.host.FocusedPanel(); active != nil && active.PathString() != "" {
 		panelPath = previewWorkDir(active)
 	}

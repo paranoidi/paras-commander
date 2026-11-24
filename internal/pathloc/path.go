@@ -541,12 +541,7 @@ func Unavailable(feature string, loc Path) string {
 	return fmt.Sprintf("%s is not available on %s panels", feature, loc.Scheme().Label())
 }
 
-// SplitDirBase splits a raw path (host path or URI) into its parent directory and final element,
-// keeping the scheme: filepath.Dir would collapse "fileindex:///a/b" to "fileindex:/a".
+// SplitDirBase is Dir and Base of a raw path (host path or URI).
 func SplitDirBase(raw string) (dir, name string) {
-	p, err := Parse(raw)
-	if err != nil {
-		return filepath.Dir(raw), filepath.Base(raw)
-	}
-	return p.Parent().String(), p.Base()
+	return Dir(raw), Base(raw)
 }

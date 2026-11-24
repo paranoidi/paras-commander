@@ -1,13 +1,13 @@
 package ui
 
 import (
-	"path/filepath"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panellist"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/selstrip"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -263,7 +263,7 @@ func selectionStripDisplayPath(absPath, curDir, userHomeDir string, width int) s
 		return ""
 	}
 	tilde := primitive.PathWithHomeTilde(absPath, userHomeDir)
-	label, err := filepath.Rel(curDir, absPath)
+	label, err := pathloc.Rel(curDir, absPath)
 	if err != nil {
 		label = tilde
 	} else {

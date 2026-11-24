@@ -9,6 +9,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/bookmarks"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
@@ -206,7 +207,7 @@ func (h *Handler) OpenAddBookmarkDialog() {
 // DefaultBookmarkName returns a sensible suggested mark name for path.
 // Uses the basename, falling back to "root" for "/" or empty results.
 func DefaultBookmarkName(path string) string {
-	base := filepath.Base(filepath.Clean(path))
+	base := pathloc.Base(path)
 	switch base {
 	case "", ".", string(filepath.Separator):
 		return "root"

@@ -33,7 +33,8 @@ func (a *App) resolveExecutableOpenPath(p *panel.State) (string, bool) {
 		if !ok {
 			return "", false
 		}
-		path, mode = classifyEditPath(cleanHostPath(selPath))
+		host, _ := pathloc.HostOf(selPath)
+		path, mode = classifyEditPath(host)
 	} else {
 		entry, ok := p.CurrentEntry()
 		if !ok {
@@ -42,7 +43,7 @@ func (a *App) resolveExecutableOpenPath(p *panel.State) (string, bool) {
 		if entry.Type == localfs.EntryDirectory {
 			return "", false
 		}
-		path = cleanHostPath(entry.Path)
+		path, _ = pathloc.HostOf(entry.Path)
 		runnable, err := localfs.PathLooksRunnable(path)
 		if err != nil || !runnable {
 			return "", false
@@ -65,9 +66,9 @@ func (a *App) resolveExecutableOpenPath(p *panel.State) (string, bool) {
 }
 
 func formatExecuteCommandLine(panelDir, path string) string {
-	panelDir = filepath.Clean(panelDir)
-	path = filepath.Clean(path)
-	rel, err := filepath.Rel(panelDir, path)
+	panelDir = pathloc.Clean(panelDir)
+	path = pathloc.Clean(path)
+	rel, err := pathloc.Rel(panelDir, path)
 	if err != nil {
 		return path
 	}
@@ -109,7 +110,7 @@ func (a *App) runExecutableFromPanel(path string) {
 		a.setTransientMessage(pathloc.Unavailable("Run", p.Path), ui.MessageUrgencyWarn)
 		return
 	}
-	path = filepath.Clean(path)
+	path = pathloc.Clean(path)
 	if path == "" || path == "." {
 		a.setErrorMessage("Run", os.ErrInvalid)
 		return
@@ -120,7 +121,7 @@ func (a *App) runExecutableFromPanel(path string) {
 		return
 	}
 
-	workDir := filepath.Dir(path)
+	workDir := pathloc.Dir(path)
 	cmdLine := formatExecuteCommandLine(workDir, path)
 	argv := []string{path}
 	background := resolveExecuteBackground(a.config.Panels.ExecuteRules, a.config.Panels.ShellPatterns, filepath.Base(path), fi.Mode())

@@ -3,8 +3,7 @@
 package diskusage
 
 import (
-	"path/filepath"
-
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"golang.org/x/sys/unix"
 )
 
@@ -16,10 +15,10 @@ func pathStatDevice(abs string) (uint64, bool) {
 	return uint64(st.Dev), true
 }
 
-// PathDevice returns st_dev for abs after filepath.Clean. ok is false when Stat fails or on unsupported platforms.
+// PathDevice returns st_dev for abs after pathloc.Clean. ok is false when Stat fails or on unsupported platforms.
 func PathDevice(abs string) (dev uint64, ok bool) {
 	if abs == "" {
 		return 0, false
 	}
-	return pathStatDevice(filepath.Clean(abs))
+	return pathStatDevice(pathloc.Clean(abs))
 }

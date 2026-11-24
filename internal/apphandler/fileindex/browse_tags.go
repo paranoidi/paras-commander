@@ -172,7 +172,7 @@ func (h *Handler) ToggleTagViewMode() {
 		}
 	case wasList: // the row in its real directory
 		if hasEntry {
-			host, sel = filepath.Dir(entryHost), filepath.Base(entryHost)
+			host, sel = pathloc.Dir(entryHost), filepath.Base(entryHost)
 		}
 	default: // inside a row: the same directory
 		_, host, _ = pathloc.CutIndexPrefix(p.Path.String())

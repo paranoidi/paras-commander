@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/paranoidi/paras-commander/internal/editor"
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -24,7 +23,7 @@ var externalEditorRunner = func(ctx context.Context, path string, elevate bool) 
 	if elevated {
 		fmt.Fprintf(os.Stderr, "pc: %s is not writable, editing via sudoedit\n", path)
 	}
-	dir := filepath.Dir(path)
+	dir := pathloc.Dir(path)
 	return editor.RunInteractive(ctx, argv, env, dir)
 }
 
@@ -64,7 +63,7 @@ func (a *App) withTerminalReleased(fn func() error) error {
 }
 
 func (a *App) openFileInExternalEditor(path string) error {
-	path = filepath.Clean(path)
+	path = pathloc.Clean(path)
 	if path == "" || path == "." {
 		return fmt.Errorf("no file path")
 	}
@@ -105,7 +104,7 @@ func (a *App) editFullscreenPreviewFile() {
 		a.setTransientMessage("Edit: no file", ui.MessageUrgencyWarn)
 		return
 	}
-	path := filepath.Clean(st.Path)
+	path := pathloc.Clean(st.Path)
 	if err := a.openFileInExternalEditor(path); err != nil {
 		a.setErrorMessage("Edit", err)
 		return
@@ -159,7 +158,8 @@ func (a *App) editTargetFilePath(p *panel.State) (path string, mode editTargetMo
 		if !ok {
 			return "", editTargetNone
 		}
-		return classifyEditPath(cleanHostPath(selPath))
+		host, _ := pathloc.HostOf(selPath)
+		return classifyEditPath(host)
 	}
 	entry, ok := p.CurrentEntry()
 	if !ok {
@@ -168,16 +168,8 @@ func (a *App) editTargetFilePath(p *panel.State) (path string, mode editTargetMo
 	if entry.Type == localfs.EntryDirectory {
 		return "", editTargetDir
 	}
-	return classifyEditPath(cleanHostPath(entry.Path))
-}
-
-// cleanHostPath is the cleaned real local path of a panel entry path, "" when it has none.
-func cleanHostPath(raw string) string {
-	host, ok := hostPathOf(raw)
-	if !ok {
-		return ""
-	}
-	return filepath.Clean(host)
+	host, _ := pathloc.HostOf(entry.Path)
+	return classifyEditPath(host)
 }
 
 func classifyEditPath(path string) (string, editTargetMode) {

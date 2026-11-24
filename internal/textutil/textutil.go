@@ -1,9 +1,8 @@
 // Package textutil holds small pure string/path helpers shared across internal/app and
-// internal/apphandler/* packages (status banners, log lines, absolute-path normalization).
+// internal/apphandler/* packages (status banners, log lines).
 package textutil
 
 import (
-	"path/filepath"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/primitive"
@@ -12,16 +11,6 @@ import (
 // BannerMaxRunes is the default max length (in runes) for a status banner line before
 // TruncateBannerRunes ellipsizes it.
 const BannerMaxRunes = 72
-
-// AbsPathClean returns the cleaned absolute form of p, falling back to a cleaned relative
-// path if the absolute form cannot be resolved.
-func AbsPathClean(p string) string {
-	abs, err := filepath.Abs(p)
-	if err != nil {
-		return filepath.Clean(p)
-	}
-	return filepath.Clean(abs)
-}
 
 // TruncateBannerRunes trims s and, if longer than maxRunes, truncates it with a trailing Ellipsis.
 func TruncateBannerRunes(s string, maxRunes int) string {

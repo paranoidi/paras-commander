@@ -814,7 +814,7 @@ func TestEnterDirectoryAndParentPreservesExitedDirectory(t *testing.T) {
 		t.Fatalf("selected entry = %q ok=%v, want sub", entry.Name, ok)
 	}
 	subPath := filepath.Join(root, "sub")
-	if len(state.History) < 2 || cleanPathString(state.History[0]) != cleanPathString(root) || cleanPathString(state.History[1]) != cleanPathString(subPath) {
+	if len(state.History) < 2 || pathloc.Canonical(state.History[0]) != pathloc.Canonical(root) || pathloc.Canonical(state.History[1]) != pathloc.Canonical(subPath) {
 		t.Fatalf("History = %v, want [%q %q] (MRU first)", state.History, root, subPath)
 	}
 	if state.HistoryIndex != 0 {
@@ -1350,7 +1350,7 @@ func TestEnterSiblingRetainsPriorDescendantInHistory(t *testing.T) {
 	if err := state.Parent(5); err != nil {
 		t.Fatalf("Parent() error = %v", err)
 	}
-	subPath := cleanPathString(sub)
+	subPath := pathloc.Canonical(sub)
 
 	for i := 0; i < state.VisibleEntryCount(); i++ {
 		entry, _, ok := state.VisibleEntry(i)
@@ -1367,7 +1367,7 @@ func TestEnterSiblingRetainsPriorDescendantInHistory(t *testing.T) {
 	}
 	foundSub := false
 	for _, p := range state.History {
-		if cleanPathString(p) == subPath {
+		if pathloc.Canonical(p) == subPath {
 			foundSub = true
 			break
 		}
@@ -1404,9 +1404,9 @@ func TestParentThenSiblingRetainsPriorProjectDir(t *testing.T) {
 	if _, err := state.Enter(5); err != nil {
 		t.Fatalf("Enter(mc) error = %v", err)
 	}
-	wantParas := cleanPathString(paras)
+	wantParas := pathloc.Canonical(paras)
 	for _, p := range state.History {
-		if cleanPathString(p) == wantParas {
+		if pathloc.Canonical(p) == wantParas {
 			return
 		}
 	}
@@ -3042,9 +3042,9 @@ func TestNavigateFromRootPreservesPriorDirs(t *testing.T) {
 	if err := state.NavigateTo("/var", "", 10); err != nil {
 		t.Fatalf("NavigateTo(/var): %v", err)
 	}
-	want := cleanPathString(start)
+	want := pathloc.Canonical(start)
 	for _, p := range state.History {
-		if cleanPathString(p) == want {
+		if pathloc.Canonical(p) == want {
 			return
 		}
 	}

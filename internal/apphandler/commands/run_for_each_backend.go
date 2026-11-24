@@ -13,6 +13,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/subshell"
 	"github.com/paranoidi/paras-commander/internal/textutil"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -72,7 +73,7 @@ func runForEachWorkDirs(spec RunForEachBatchSpec, active *panel.State) []string 
 	for i, ent := range spec.Entries {
 		switch {
 		case spec.PerEntryWorkDir:
-			dirs[i] = textutil.AbsPathClean(ent.Path)
+			dirs[i] = pathloc.Canonical(ent.Path)
 		case spec.PanelWorkDir:
 			dirs[i] = active.Path.String()
 		default:
@@ -189,7 +190,7 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 		}
 
 		idx := start + i
-		abs := textutil.AbsPathClean(ent.Path)
+		abs := pathloc.Canonical(ent.Path)
 
 		built, buildErr := spec.BuildItem(ent, spec.macroCtx)
 		// Macro values get their own row lines, so line 1 keeps only the template.

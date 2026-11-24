@@ -15,9 +15,11 @@ import (
 // A panel showing the index previews the files its rows name, whichever form its path has.
 func TestPreviewReadsTheFileOfAnIndexRow(t *testing.T) {
 	for name, view := range map[string]func(dir string) (path, sel string){
-		"plain index":   func(dir string) (string, string) { return "fileindex://" + dir, "harbor.txt" },
-		"structure":     func(dir string) (string, string) { return "fileindex(beach)://" + dir, "harbor.txt" },
-		"flat tag list": func(dir string) (string, string) { return "fileindex@(beach):///", "fileindex@(beach)://" + dir + "/harbor.txt" },
+		"plain index": func(dir string) (string, string) { return "fileindex://" + dir, "harbor.txt" },
+		"structure":   func(dir string) (string, string) { return "fileindex(beach)://" + dir, "harbor.txt" },
+		"flat tag list": func(dir string) (string, string) {
+			return "fileindex@(beach):///", "fileindex@(beach)://" + dir + "/harbor.txt"
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			a, screen, dir := tagViewDiskApp(t)

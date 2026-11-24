@@ -229,7 +229,7 @@ type Model struct {
 	JobsTransferRateLimitBPS int64
 	// FolderColor looks up the Nemo-compatible colour of a local directory path (in-memory, nil = none).
 	FolderColor func(path string) (tcell.Color, bool)
-	// UserHomeDir is filepath.Clean(os.UserHomeDir()); empty skips ~ substitution in panel titles.
+	// UserHomeDir is pathloc.Clean(os.UserHomeDir()); empty skips ~ substitution in panel titles.
 	UserHomeDir string
 	// PanelTitleHover is the mouse pointer on a browser panel's title row (set by App on motion).
 	PanelTitleHover PanelTitleHover

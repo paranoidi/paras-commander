@@ -138,6 +138,17 @@ Same persistent PTY shell as `app.drop-to-shell`, drawn above the footer (`geom.
 - Unsupported items close the menu and show a concise "not implemented" message (e.g. `menu.file.*` chattr stub).
 - Leader menu (`app.leader-menu`) and strips: `menus.md`. Preview and quick-view behavior behind `file.view`/`file.quick-view`: `preview.md`.
 
+## Location strings
+
+Panels, dialogs and handlers hold locations as strings that are host paths or scheme URIs (`sftp://`, any `fileindex` form). `path/filepath` collapses the `//` of a URI (`fileindex:///a` becomes `fileindex:/a`) and the flat tag view's `//` row boundary, so it is never applied to such a string. `internal/pathloc/raw.go` has the operations, each `path/filepath` on a host path (behind a prefix check that allocates nothing) and correct for every URI form; none does I/O:
+
+- `Clean(raw)`, `Dir(raw)`, `Join(raw, elem...)`, `Rel(base, target)`: the `path/filepath` operations (`Join` skips empty and `.` elements and `..` goes up, as in `filepath`). `Dir` is `Path.Parent` for a URI (a flat row's `Dir` is its host directory, not the list). `Rel` needs two locations of the same scheme and prefix.
+- `Canonical(raw)`: the absolute canonical form `Parse` gives, `""` for a blank or unparseable string. It is the key of history, recalled cursors, selections and tree cursor ids.
+- `HostOf(raw)`: the real local path (a host path itself, a fileindex path's host path), false for SFTP. `DiskPath(raw)` is the same with `Clean(raw)` as the fallback, for opening or viewing.
+- `Base(raw)`: `filepath.Base` of a host path, the final element of a URI's host path (`/` for a root, where `filepath.Base` would give `fileindex:`). `SplitDirBase` is `Dir` and `Base`. `filepath.Base` of a non-root canonical location is also right, and no linter rule covers it.
+
+`forbidigo` (`.golangci.yml`) rejects `filepath.Clean`, `Dir`, `Join`, `Rel` and `Abs` in non-test code of `internal/app`, `apphandler`, `panel`, `panellist`, `ui`, `usermenu`, `pathpick`, `clipboard`, `diskusage` and `jobbridge`. A string that is a disk path by construction (a config or temp file, an entry read by `os.ReadDir`, a command-line argument) takes `//nolint:forbidigo // <why it is a disk path>`. The backends below (`ops`, `localfs`, `fsbackend`, `fileindex`, ...) work on disk paths and are not checked.
+
 ## Path fitting
 
 `primitive.FitPathForWidth` (`internal/primitive/path_fit.go`) keeps the basename and shortens earlier segments first (full name -> first rune + `...` -> single rune), then middle-ellipsis. `primitive.PathWithHomeTilde` (`path_home.go`) swaps the home prefix for `~/`; composed with `FitPathForWidth` for jobs Details rows, blocker panels and Selected strip paths. `primitive.StripCommonPathPrefix` removes shared leading segments for compare row columns. Jobs Details order: Sources, Destination, Current, then Progress/ETA or Took/throughput; Operations rows stay relative to the destination.
