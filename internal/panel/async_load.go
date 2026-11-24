@@ -78,8 +78,8 @@ func treePrefetchIDsFor(loc pathloc.Path, keep map[string]bool) []string {
 			continue
 		}
 		ok := true
-		for par := p.Parent(); !par.Equal(loc); par = par.Parent() {
-			if !keep[par.String()] || par.Equal(par.Parent()) {
+		for par := p.Up(); !par.Equal(loc); par = par.Up() {
+			if !keep[par.String()] || par.Equal(par.Up()) {
 				ok = false
 				break
 			}
@@ -112,12 +112,12 @@ func dropUnfetchedTreeFolders(loc pathloc.Path, keep map[string]bool, prefetch m
 		if err != nil {
 			continue
 		}
-		for q := p; q.HasPrefix(loc) && !q.Equal(loc); q = q.Parent() {
+		for q := p; q.HasPrefix(loc) && !q.Equal(loc); q = q.Up() {
 			if missed[q.String()] {
 				delete(keep, id)
 				break
 			}
-			if q.Equal(q.Parent()) {
+			if q.Equal(q.Up()) {
 				break
 			}
 		}
@@ -168,7 +168,7 @@ func (s *State) TreeRefreshPlan(viewportRows, offscreenPerTick int) []TreeRefres
 	}
 	parentID := func(path string) string {
 		if loc, err := pathloc.Parse(path); err == nil {
-			return loc.Parent().String()
+			return loc.Up().String()
 		}
 		return ""
 	}

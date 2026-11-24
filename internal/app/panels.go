@@ -451,12 +451,12 @@ func (a *App) selectedStripOpenTarget() (dir pathloc.Path, name string, ok bool)
 	if p.SelectedStripRows()[p.Strip.Cursor].Group {
 		return loc, "", true
 	}
-	dir = loc.Parent()
+	dir = loc.Up()
 	if dir.Equal(loc) || dir.IsZero() {
 		a.setTransientMessage("Cannot open parent of root", ui.MessageUrgencyWarn)
 		return pathloc.Path{}, "", false
 	}
-	return dir, loc.Base(), true
+	return dir, panel.SelectName(dir, loc.String(), loc.Base()), true
 }
 
 // navigatePanelToDirectory loads dirPath into panelID's listing and navigation history.
@@ -493,12 +493,12 @@ func (a *App) navigatePanelToAncestor(panelID, depth int) error {
 	p := a.panelByID(panelID)
 	child, loc := p.Path, p.Path
 	for range depth {
-		child, loc = loc, loc.Parent()
+		child, loc = loc, loc.Up()
 	}
 	if loc.IsZero() || loc.Equal(child) {
 		return nil
 	}
-	return p.NavigateToPath(loc, child.Base(), a.panelViewportRows(panelID))
+	return p.NavigateToPath(loc, panel.SelectName(loc, child.String(), child.Base()), a.panelViewportRows(panelID))
 }
 
 // disableSyncFollowIfEnabled turns off latched panel sync; returns whether it was on.
@@ -940,11 +940,11 @@ func (a *App) tryDispatchNavigation(actionID string) (handled, quit bool) {
 		a.openPathInInactivePanel(activePanel.Path, "", "Open current path in other panel failed")
 	case keymap.ActionPanelOpenParentInOther:
 		cur := activePanel.Path
-		parent := cur.Parent()
+		parent := cur.Up()
 		if a.model.ViewMode != ui.ViewBrowser || cur.IsZero() || parent.IsZero() || parent.Equal(cur) {
 			break
 		}
-		a.openPathInInactivePanel(parent, cur.Base(), "Open parent in other panel failed")
+		a.openPathInInactivePanel(parent, panel.SelectName(parent, cur.String(), cur.Base()), "Open parent in other panel failed")
 	case keymap.ActionNavParent:
 		if err := activePanel.Parent(viewportRows); err != nil {
 			a.setErrorMessage("Parent failed", err)

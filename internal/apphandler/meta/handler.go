@@ -298,7 +298,7 @@ func (h *Handler) ReconcileForPanel(panelID int) {
 		return
 	}
 	h.pruneGone(panelID, p)
-	groups := []dirEntries{{dir: p.PathString(), entries: p.Entries}}
+	groups := listingGroups(p, false)
 	// LoadedTreeChildren allocates, so the tree is walked only when children were attached or the
 	// tree children were attached since the last walk (a run's walk is stamped by runForPanel).
 	if h.treeWalked[panelID] != p.TreeChildrenGen {
@@ -331,8 +331,34 @@ func (h *Handler) ReconcileForPanel(panelID int) {
 // panelGroups snapshots every listing the panel shows: its own and each loaded tree node's. The
 // result is safe to hand to a background goroutine.
 func panelGroups(p *panel.State) []dirEntries {
-	root := dirEntries{dir: p.PathString(), entries: append([]localfs.Entry(nil), p.Entries...)}
-	return append([]dirEntries{root}, treeDirEntries(p)...)
+	return append(listingGroups(p, true), treeDirEntries(p)...)
+}
+
+// listingGroups is the panel's own listing as groups of entries by the directory they are in: one
+// group, the panel path, except in the list of a flat tag view, where rows come from many
+// directories (panel.State.EntryDir) and providers need each row's own. clone copies the entries
+// of the single group (a flat list's groups are always new slices).
+func listingGroups(p *panel.State, clone bool) []dirEntries {
+	if !p.Path.IsTagList() {
+		entries := p.Entries
+		if clone {
+			entries = slices.Clone(entries)
+		}
+		return []dirEntries{{dir: p.PathString(), entries: entries}}
+	}
+	byDir := make(map[string][]localfs.Entry)
+	for _, e := range p.Entries {
+		dir := p.EntryDir(e).String()
+		byDir[dir] = append(byDir[dir], e)
+	}
+	out := make([]dirEntries, 0, max(len(byDir), 1))
+	for _, dir := range slices.Sorted(maps.Keys(byDir)) {
+		out = append(out, dirEntries{dir: dir, entries: byDir[dir]})
+	}
+	if len(out) == 0 { // runForPanel sizes its result maps from the first group
+		out = append(out, dirEntries{dir: p.PathString()})
+	}
+	return out
 }
 
 // treeDirEntries returns one group per loaded tree node (dir is the node ID, the child listing's

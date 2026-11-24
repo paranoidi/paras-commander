@@ -55,7 +55,7 @@ func FetchListing(ctx context.Context, snap ListingRefreshSnapshot) ([]fsbackend
 		if err == nil || !snap.ClimbToExistingAncestor {
 			return entries, listingLoc, gitignoreActive, dotfilesHiddenActive, err
 		}
-		parent := loc.Parent()
+		parent := loc.Up()
 		if parent.Equal(loc) {
 			return entries, listingLoc, gitignoreActive, dotfilesHiddenActive, err
 		}
@@ -113,17 +113,17 @@ func fetchListingAt(ctx context.Context, snap ListingRefreshSnapshot, loc pathlo
 	return entries, listingLoc, gitMatcher != nil, dotfilesHiddenActive, nil
 }
 
-// firstMissingChildName is the first path component of from that is a direct child of ancestor
-// (the vanished directory sitting immediately under the existing ancestor).
+// firstMissingChildName is the SelectName of the first path component of from that is a direct
+// child of ancestor (the vanished directory sitting immediately under the existing ancestor).
 func firstMissingChildName(ancestor, from pathloc.Path) string {
 	current := from
 	for {
-		parent := current.Parent()
+		parent := current.Up()
 		if parent.Equal(ancestor) {
-			return current.Base()
+			return SelectName(ancestor, current.String(), current.Base())
 		}
 		if parent.Equal(current) || parent.IsZero() {
-			return from.Base()
+			return SelectName(ancestor, from.String(), from.Base())
 		}
 		current = parent
 	}

@@ -122,13 +122,13 @@ type carouselSnapshotPayload struct {
 }
 
 // scheduleCarouselParentSnapshot dispatches an async fetch of panelID's carousel parent-column
-// preview (the parent of the panel's current directory) off the UI thread.
+// preview (the directory above the panel's current one, pathloc.Path.Up) off the UI thread.
 func (a *App) scheduleCarouselParentSnapshot(panelID int, viewportRows int) {
 	pan := a.panelByID(panelID)
 	if pan == nil || pan.Path.IsZero() {
 		return
 	}
-	parent := pan.Path.Parent()
+	parent := pan.Path.Up()
 	if parent.Equal(pan.Path) {
 		return
 	}
@@ -136,7 +136,7 @@ func (a *App) scheduleCarouselParentSnapshot(panelID int, viewportRows int) {
 	if !ok {
 		return
 	}
-	a.scheduleCarouselSnapshot(panelID, false, parent, target, pan.Path.Base(), panel.NoIndexCursorFallback, false, viewportRows)
+	a.scheduleCarouselSnapshot(panelID, false, parent, target, panel.SelectName(parent, pan.Path.String(), pan.Path.Base()), panel.NoIndexCursorFallback, false, viewportRows)
 }
 
 // scheduleCarouselChildSnapshot dispatches an async fetch of panelID's carousel child-column

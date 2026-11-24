@@ -48,7 +48,7 @@ func (s *State) SnapshotParent() (ListingSnapshot, bool) {
 	if s.Path.IsZero() {
 		return ListingSnapshot{}, false
 	}
-	if s.Path.Parent().Equal(s.Path) {
+	if s.Path.Up().Equal(s.Path) {
 		return ListingSnapshot{}, false
 	}
 	return s.CarouselSideCache.Parent, s.CarouselSideCache.ParentOK
@@ -100,6 +100,7 @@ func selectionBasenameUnderDirectory(st *State, dir string) (string, bool) {
 	if dir == "" {
 		return "", false
 	}
+	dirLoc, _ := pathloc.Parse(dir)
 	for p := range st.SelectedPaths {
 		cp := cleanPathString(p)
 		if cp == "" || cp == dir {
@@ -112,7 +113,7 @@ func selectionBasenameUnderDirectory(st *State, dir string) (string, bool) {
 		if err != nil {
 			continue
 		}
-		return loc.Base(), true
+		return SelectName(dirLoc, loc.String(), loc.Base()), true
 	}
 	return "", false
 }

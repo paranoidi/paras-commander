@@ -448,10 +448,7 @@ func (s *State) refresh(viewportRows int, opts asyncLoadOpts) error {
 	if s.ListingPending && s.ListingPendingPath != "" && s.ListingPendingPath != s.Path.String() {
 		return nil
 	}
-	selectedName := ""
-	if e, ok := s.CurrentEntry(); ok {
-		selectedName = e.Name
-	}
+	selectedName := s.cursorSelectName()
 	s.climbToExistingAncestor = true
 	s.ancestorClimbOrigin = s.Path
 	err := s.load(s.Path, selectedName, viewportRows, s.Cursor, opts)
@@ -472,11 +469,7 @@ func (s *State) ApplyPeriodicRefresh(listingLoc pathloc.Path, backendEntries []f
 		return false, nil
 	}
 	priorCursor := s.Cursor
-	entry, ok := s.CurrentEntry()
-	selectedName := ""
-	if ok {
-		selectedName = entry.Name
-	}
+	selectedName := s.cursorSelectName()
 	if _, err := s.ApplyListingPrefetched(listingLoc, backendEntries, selectedName, viewportRows, priorCursor, false, probes, prefetch, false); err != nil {
 		return false, err
 	}
@@ -491,11 +484,7 @@ func (s *State) SetShowHidden(shown bool, viewportRows int) error {
 		return nil
 	}
 	priorCursor := s.Cursor
-	entry, ok := s.CurrentEntry()
-	selectedName := ""
-	if ok {
-		selectedName = entry.Name
-	}
+	selectedName := s.cursorSelectName()
 	s.ShowHidden = shown
 	return s.load(s.Path, selectedName, viewportRows, priorCursor, asyncLoadOpts{})
 }
@@ -543,9 +532,10 @@ func (s State) CurrentEntry() (localfs.Entry, bool) {
 }
 
 // EntryDir is the directory containing entry as listed: its parent in tree layout (rows can live
-// in expanded subdirectories), else s.Path.
+// in expanded subdirectories) and in the list of a flat tag view (rows come from many
+// directories), else s.Path.
 func (s *State) EntryDir(entry localfs.Entry) pathloc.Path {
-	if s.ListLayout == ListLayoutTree && entry.Path != "" && entry.Name != ".." {
+	if (s.ListLayout == ListLayoutTree || s.Path.IsTagList()) && entry.Path != "" && entry.Name != ".." {
 		if p, err := pathloc.Parse(entry.Path); err == nil {
 			return p.Parent()
 		}
@@ -878,18 +868,37 @@ func (s *State) Enter(viewportRows int) (bool, error) {
 	return true, nil
 }
 
-// Parent opens the parent directory and selects the directory just exited.
-// At a root (no parent) it is a no-op, leaving the listing and cursor untouched.
+// Parent opens the directory above (pathloc.Path.Up) and selects the entry just exited.
+// At a root (nothing above) it is a no-op, leaving the listing and cursor untouched.
 func (s *State) Parent(viewportRows int) error {
 	if s.Path.IsZero() {
 		return nil
 	}
 	current := s.Path
-	parent := current.Parent()
+	parent := current.Up()
 	if parent.IsZero() || parent.Equal(current) {
 		return nil
 	}
-	return s.NavigateToPath(parent, current.Base(), viewportRows)
+	return s.NavigateToPath(parent, SelectName(parent, current.String(), current.Base()), viewportRows)
+}
+
+// cursorSelectName is SelectName of the cursor row, "" when there is none.
+func (s *State) cursorSelectName() string {
+	entry, ok := s.CurrentEntry()
+	if !ok {
+		return ""
+	}
+	return SelectName(s.Path, entry.Path, entry.Name)
+}
+
+// SelectName is the name SelectVisibleEntry takes to put the cursor on the row of the listing at
+// dir that has the given full path and base name: the base name, or in the list of a flat tag
+// view, where rows of equal names live in different directories, the full path.
+func SelectName(dir pathloc.Path, rowPath, base string) string {
+	if dir.IsTagList() {
+		return rowPath
+	}
+	return base
 }
 
 // NavigateTo loads path after recording it in navigation history (MRU timeline).
@@ -1021,7 +1030,7 @@ func (s *State) rememberCursorForPath(dir string) {
 	name := ""
 	path := ""
 	if entry, ok := s.CurrentEntry(); ok {
-		name = entry.Name
+		name = s.cursorSelectName()
 		path = entry.Path
 	}
 	if s.HistoryCursorByPath == nil {
@@ -1291,15 +1300,16 @@ func clampScrollKeepingCursorVisible(preferredScroll, cursor, viewportRows, entr
 func (s *State) survivingNameFromCursor(fresh []localfs.Entry) string {
 	names := make(map[string]struct{}, len(fresh))
 	for i := range fresh {
-		names[fresh[i].Name] = struct{}{}
+		names[SelectName(s.Path, fresh[i].Path, fresh[i].Name)] = struct{}{}
 	}
 	for i := s.Cursor; i < s.VisibleEntryCount(); i++ {
 		entry, _, ok := s.VisibleEntry(i)
 		if !ok {
 			continue
 		}
-		if _, ok := names[entry.Name]; ok {
-			return entry.Name
+		name := SelectName(s.Path, entry.Path, entry.Name)
+		if _, ok := names[name]; ok {
+			return name
 		}
 	}
 	return ""
@@ -1628,7 +1638,8 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 	// diffs normally.
 	hadPriorListing := s.listingApplied || len(s.Entries) > 0
 	diffListing := sameDirReload && hadPriorListing && s.entriesShowHidden == s.ShowHidden
-	if diffListing {
+	// Rows of a flat tag view come from many directories, so a name diff would mark by the wrong one.
+	if diffListing && !listingLoc.IsTagList() {
 		newlyAppeared = newlyAppearedNames(s.Entries, localEntries)
 	}
 	s.entriesShowHidden = s.ShowHidden
@@ -2000,11 +2011,15 @@ func (s *State) UnselectUnder(dir string) {
 	s.RemoveSelections(under)
 }
 
-// SelectVisibleEntry moves the cursor onto the row named name in this panel's directory. In tree
+// SelectVisibleEntry moves the cursor onto the row named name in this panel's directory. A name
+// that is a fileindex path (SelectName in a flat tag view) selects that row by path. In tree
 // mode the name is resolved to its full path under Path and matched exactly, so a same-named row
 // in another branch can never be selected; nested rows are selected by path
 // (selectVisibleEntryByPath).
 func (s *State) SelectVisibleEntry(name string) bool {
+	if _, _, ok := pathloc.CutIndexPrefix(name); ok { // a listing name never holds a "/"
+		return s.selectVisibleEntryByPath(name)
+	}
 	if s.ListLayout == ListLayoutTree {
 		target, err := s.Path.Join(name)
 		if err != nil {
@@ -2067,7 +2082,7 @@ func (s *State) selectPathOrArmTreeCursor(absPath string) bool {
 		return true
 	}
 	if s.ListLayout == ListLayoutTree && absPath != "" {
-		s.treeCursorID = filepath.Clean(absPath)
+		s.treeCursorID = cleanPathString(absPath)
 		s.treeCursorFallback = nil
 	}
 	return false
@@ -2079,13 +2094,16 @@ func (s *State) selectVisibleEntryByPath(absPath string) bool {
 	}
 	wantLoc, wantErr := pathloc.Parse(absPath)
 	wantClean := filepath.Clean(absPath)
+	// filepath.Clean would equate the "//" row boundary of a flat tag view ("Trip//sub", inside
+	// the row Trip) with "Trip/sub" (a row of its own), so index paths are compared whole.
+	_, _, indexed := pathloc.CutIndexPrefix(absPath)
 	for i := 0; i < s.VisibleEntryCount(); i++ {
 		entry, _, ok := s.VisibleEntry(i)
 		if !ok {
 			continue
 		}
 		// Cheap string compare first; pathloc.Parse only for rows it does not settle.
-		if filepath.Clean(entry.Path) == wantClean {
+		if indexed && wantErr == nil && entry.Path == wantLoc.String() || !indexed && filepath.Clean(entry.Path) == wantClean {
 			s.Cursor = i
 			return true
 		}
@@ -2311,7 +2329,7 @@ func (s *State) RefreshDiskUsageOrdering(viewportRows int) {
 	entry, ok := s.CurrentEntry()
 	selectedPath := ""
 	if ok {
-		selectedPath = filepath.Clean(entry.Path)
+		selectedPath = entry.Path
 	}
 	liveVR := s.effectiveFileListViewportRows(viewportRows)
 	wasCentered := s.cursorAppearsCentered(liveVR)

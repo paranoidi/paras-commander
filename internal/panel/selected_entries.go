@@ -95,7 +95,13 @@ func (s *State) commandTagTest() func(p string) bool {
 			return inScope(root, p)
 		}
 		loc, err := pathloc.Parse(p)
-		if err != nil || indexRoot == "" {
+		if err != nil {
+			return false
+		}
+		if s.Path.IsTagList() { // rows of a flat tag view come from many host directories
+			return loc.Up().Equal(s.Path) || tree && loc.HasPrefix(s.Path)
+		}
+		if indexRoot == "" {
 			return false
 		}
 		host, ok := loc.HostPath()

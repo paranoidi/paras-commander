@@ -9,16 +9,16 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
-// walkAncestors calls visit with each strict ancestor of path (as a cleaned string), nearest
-// first, stopping as soon as visit returns true or the root is reached; its own return value
-// is that early-stop result.
+// walkAncestors calls visit with each strict ancestor of path (as a cleaned string, by
+// pathloc.Path.Up), nearest first, stopping as soon as visit returns true or the root is reached;
+// its own return value is that early-stop result.
 func walkAncestors(path string, visit func(ancestor string) bool) bool {
 	loc, err := pathloc.Parse(path)
 	if err != nil {
 		return false
 	}
 	for {
-		parent := loc.Parent()
+		parent := loc.Up()
 		if parent.Equal(loc) || parent.IsZero() {
 			return false
 		}

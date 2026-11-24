@@ -295,14 +295,15 @@ func selectionsOutsideDir(selected map[string]bool, dir string) bool {
 	return false
 }
 
-// selectionParentDir is the immediate parent of path using pathloc so sftp:// URIs
-// resolve correctly. False when the path cannot be parsed or is already the root.
+// selectionParentDir is the directory above path (pathloc.Path.Up: the list for a row of a flat tag
+// view) using pathloc so sftp:// URIs resolve correctly. False when the path cannot be parsed or
+// is already the root.
 func selectionParentDir(path string) (string, bool) {
 	loc, err := pathloc.Parse(path)
 	if err != nil {
 		return "", false
 	}
-	parent := loc.Parent()
+	parent := loc.Up()
 	if parent.Equal(loc) || parent.IsZero() {
 		return "", false
 	}
@@ -345,11 +346,11 @@ func (s *State) StripNavTarget(raw string) (dir pathloc.Path, selectName string,
 	if isDir {
 		return loc, "", nil
 	}
-	parent := loc.Parent()
+	parent := loc.Up()
 	if parent.Equal(loc) || parent.IsZero() {
 		return pathloc.Path{}, "", errors.New("cannot open parent of root")
 	}
-	return parent, loc.Base(), nil
+	return parent, SelectName(parent, loc.String(), loc.Base()), nil
 }
 
 func (s *State) buildPrunedSelectionRoots() []string {

@@ -175,7 +175,7 @@ func (a *App) carouselParentPaintPending(panelID int) bool {
 	if pan == nil || !pan.CarouselMode || pan.Path.IsZero() {
 		return false
 	}
-	if pan.Path.Parent().Equal(pan.Path) {
+	if pan.Path.Up().Equal(pan.Path) {
 		return false // at the filesystem root there is no parent column to wait for
 	}
 	return !pan.CarouselParentCacheValid()

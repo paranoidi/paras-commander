@@ -56,10 +56,9 @@ func panelSnapshot(ps *panel.State) *cmdmacro.PanelSnapshot {
 	if ent, ok := ps.CurrentEntry(); ok {
 		snap.HasCurrent = true
 		snap.CurrentName = ent.Path
-		// Tree rows can sit in expanded subdirectories: %d is the directory holding the caret row.
-		if ps.ListLayout == panel.ListLayoutTree && ent.Name != ".." {
-			snap.Dir = filepath.Clean(filepath.Dir(ent.Path))
-		}
+		// Tree rows can sit in expanded subdirectories, and rows of a flat tag view in many: %d is
+		// the directory holding the caret row.
+		snap.Dir = filepath.Clean(ps.EntryDir(ent).String())
 	}
 	snap.TaggedInDir = ps.CommandTags()
 	return snap

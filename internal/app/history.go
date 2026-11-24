@@ -256,12 +256,21 @@ func (a *App) openHistorySelectionInPanel(panelID int) {
 	if entIdx < 0 || entIdx >= len(st.Paths) {
 		return
 	}
-	path := filepath.Clean(st.Paths[entIdx])
+	path := historyEntryPath(st.Paths[entIdx])
 	if err := a.navigatePanelToDirectory(panelID, path, ""); err != nil {
 		a.setErrorMessage("History", err)
 		return
 	}
 	a.setTransientMessage("Opened: "+path, ui.MessageUrgencyInfo)
+}
+
+// historyEntryPath is a history path as navigation takes it: the pathloc form, not filepath.Clean,
+// which would collapse the "//" of a fileindex or sftp URI.
+func historyEntryPath(raw string) string {
+	if p := panel.CleanPathString(raw); p != "" {
+		return p
+	}
+	return filepath.Clean(raw)
 }
 
 func (a *App) syncHistoryDialogRanks() {
@@ -291,7 +300,7 @@ func (a *App) activateHistorySelection() {
 	if entIdx < 0 || entIdx >= len(st.Paths) {
 		return
 	}
-	path := filepath.Clean(st.Paths[entIdx])
+	path := historyEntryPath(st.Paths[entIdx])
 	if err := a.navigatePanelToDirectory(st.PanelID, path, ""); err != nil {
 		a.setErrorMessage("History", err)
 		return
@@ -312,7 +321,7 @@ func (a *App) pinHistorySelection() {
 	if entIdx < 0 || entIdx >= len(st.Paths) {
 		return
 	}
-	path := filepath.Clean(st.Paths[entIdx])
+	path := historyEntryPath(st.Paths[entIdx])
 	a.pinCtrl.TogglePath(filepath.Base(path), path, true)
 }
 

@@ -1,8 +1,6 @@
 package panel
 
 import (
-	"path/filepath"
-
 	"github.com/paranoidi/paras-commander/internal/localfs"
 )
 
@@ -48,7 +46,7 @@ func (s *State) CarouselChildPreviewTarget() (string, bool) {
 	if !ok || entry.Type != localfs.EntryDirectory {
 		return "", false
 	}
-	path := filepath.Clean(entry.Path)
+	path := cleanPathString(entry.Path) // not filepath.Clean: it would collapse the "//" of a URI
 	if path == "" || path == "." {
 		return "", false
 	}
@@ -64,7 +62,7 @@ func (s *State) CarouselChildCacheValid() bool {
 // CarouselChildCacheValidFor reports whether the cached child listing was fetched for target. It
 // takes the target rather than re-deriving it so a caller that already resolved it — the async
 // dispatch reconcile, which runs on every event — does not pay for CarouselChildPreviewTarget
-// (a CurrentEntry lookup plus filepath.Clean) twice.
+// (a CurrentEntry lookup plus path canonicalisation) twice.
 func (s *State) CarouselChildCacheValidFor(target string) bool {
 	return s.CarouselSideCache.ChildOK && s.CarouselSideCache.ChildCursorDir == target
 }

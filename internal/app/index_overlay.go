@@ -121,7 +121,7 @@ func (a *App) handleIndexScanWake() {
 	}
 	for _, id := range []int{ui.PrimaryPanel, ui.SecondaryPanel} {
 		p := a.panelByID(id)
-		if !p.ShowsIndex() {
+		if !p.ShowsIndex() || showsTagListing(p) {
 			continue
 		}
 		ids, matched := matchChangedDirs(p.Path, watchTreeIDs(p), dirs)
@@ -137,10 +137,20 @@ func (a *App) handleIndexScanWake() {
 	}
 }
 
+// showsTagListing reports whether the panel lists by a tag query: a structure view, or the list of
+// a flat one (inside a flat row it lists the plain index). Any index change can alter such a
+// listing, so it reloads on a task's end (OnChange) but not on every scan commit (OnScanCommit,
+// handleIndexScanWake: a running scan commits constantly).
+func showsTagListing(p *panel.State) bool {
+	q, ok := p.Path.TagQuery()
+	return ok && (!q.Flat || p.Path.IsTagList())
+}
+
 // indexChangeAffects reports whether a change to dirs shows in the panel: at or above its directory,
-// or at one of its expanded tree directories. nil dirs means anything may have changed.
+// or at one of its expanded tree directories. nil dirs means anything may have changed, and any
+// change may have changed a tag listing.
 func (a *App) indexChangeAffects(p *panel.State, dirs []string) bool {
-	if dirs == nil {
+	if dirs == nil || showsTagListing(p) {
 		return true
 	}
 	shown := a.fileIndex.ShownDir(p.Path)
@@ -156,9 +166,10 @@ func (a *App) indexChangeAffects(p *panel.State, dirs []string) bool {
 // indexChangeReachesSubtrees reports whether a change to dirs can have changed the panel's
 // subdirectory trees without their rows showing it: anything (nil dirs), or a directory under the
 // panel's own. A change only in the panel's directory (a file deleted there) leaves the drift
-// results of its subdirectories standing (panel.State.carryIndexDrift).
+// results of its subdirectories standing (panel.State.carryIndexDrift). A tag listing is changed by
+// a change anywhere.
 func (a *App) indexChangeReachesSubtrees(p *panel.State, dirs []string) bool {
-	if dirs == nil {
+	if dirs == nil || showsTagListing(p) {
 		return true
 	}
 	shown := a.fileIndex.ShownDir(p.Path)
