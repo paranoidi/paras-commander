@@ -12,14 +12,18 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/mattn/go-runewidth"
 	"github.com/paranoidi/fileindex/db"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
@@ -684,4 +688,49 @@ func BenchmarkTagViewHundredThousand(b *testing.B) {
 			}
 		}
 	})
+}
+
+func TestDirectoryColumn(t *testing.T) {
+	x := testIndex(t, initIndex(t))
+	x.home = "/home/willow"
+	d, _ := x.DB()
+	addFile(t, d, "/home/willow/orchard/notes.txt", "one")
+	addFile(t, d, "/home/willow/cedar/notes.txt", "two")
+	addFile(t, d, "/srv/harbor/lantern/thistle/juniper/saffron/notes.txt", "three")
+	for _, p := range []string{"/home/willow/orchard/notes.txt", "/home/willow/cedar/notes.txt", "/srv/harbor/lantern/thistle/juniper/saffron/notes.txt"} {
+		tag(t, x, p, "beach")
+	}
+	b := NewBackend(x)
+	rows, err := b.List(context.Background(), viewAt(t, query(t, true, "all", "beach"), "/"))
+	if err != nil || len(rows) != 3 {
+		t.Fatalf("rows = %+v, %v", rows, err)
+	}
+	// The meta handler calls the provider once per directory of the list, with that group's rows.
+	got := map[string]string{}
+	for _, r := range rows {
+		dir := r.Loc.Parent()
+		v, err := x.Provider(DirectoryColumn).Values(context.Background(), dir.String(), []localfs.Entry{
+			{Name: r.Name, Path: r.Loc.String()},
+			{Name: "..", Path: dir.String()},
+		})
+		if err != nil || len(v) != 1 {
+			t.Fatalf("values = %v, %v, want the row only (no parent row)", v, err)
+		}
+		got[r.Loc.String()] = v[r.Loc.String()]
+	}
+	if got["fileindex@(beach):///home/willow/cedar/notes.txt"] != "~/cedar" || got["fileindex@(beach):///home/willow/orchard/notes.txt"] != "~/orchard" {
+		t.Fatalf("directories = %v, want the two equal names told apart, with ~ for home", got)
+	}
+	long := got["fileindex@(beach):///srv/harbor/lantern/thistle/juniper/saffron/notes.txt"]
+	if runewidth.StringWidth(long) > panel.MetaCellMaxWidth || !strings.HasSuffix(long, "saffron") {
+		t.Fatalf("long directory = %q, want at most %d cells with its last name whole", long, panel.MetaCellMaxWidth)
+	}
+}
+
+func TestDirectoryColumnLocalPanel(t *testing.T) {
+	x, root := scanned(t)
+	v, err := x.Provider(DirectoryColumn).Values(context.Background(), root, []localfs.Entry{{Name: "harbor.txt", Path: filepath.Join(root, "harbor.txt")}})
+	if err != nil || v[filepath.Join(root, "harbor.txt")] == "" {
+		t.Fatalf("values = %v, %v, want the directory on a local panel", v, err)
+	}
 }

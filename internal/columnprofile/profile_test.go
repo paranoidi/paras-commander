@@ -17,6 +17,7 @@ func TestBuiltinsMatchColumnSets(t *testing.T) {
 		{config.ColumnProfilePermissions, panel.ColumnsPermissions},
 		{config.ColumnProfileBrief, panel.ColumnsBrief},
 		{config.ColumnProfileIndex, panel.ColumnsBrief},
+		{config.ColumnProfileTagList, panel.ColumnsBrief},
 	} {
 		p, ok := Find(nil, want.name)
 		if !ok || !p.Builtin {
@@ -48,6 +49,9 @@ func TestCycleOrderSkipsIndexAndFollowsFile(t *testing.T) {
 	}
 	if got := Next(saved, config.ColumnProfileIndex).Name; got != config.ColumnProfileModified {
 		t.Fatalf("after a skipped profile = %q", got)
+	}
+	if got := Next(saved, config.ColumnProfileTagList).Name; got != config.ColumnProfileModified || !IsBuiltinName(config.ColumnProfileTagList) {
+		t.Fatalf("after tag-list = %q", got)
 	}
 }
 

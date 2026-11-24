@@ -18,6 +18,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/metacmds"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 )
 
 // Fileindex column provider names (meta entry names, as [fileindex].default_columns lists them).
@@ -29,6 +30,7 @@ const (
 	LastSeenColumn  = "fileindex.last-seen"
 	TreeFilesColumn = "fileindex.tree-files"
 	HashColumn      = "fileindex.hash"
+	DirectoryColumn = config.FileIndexDirectoryColumn
 )
 
 // Index status values shown by the status column and the browse-with overlay (localfs.IndexStatus*).
@@ -61,6 +63,9 @@ func (x *Index) Providers() []*metacmds.Provider {
 		alerts      panel.MetaAlerts
 	}{
 		{name: StatusColumn, title: "Status", values: x.statusValues},
+		// Before Tags: a narrow panel drops the last columns first, and in a flat tag view the
+		// directory tells rows apart while the query already names the tags.
+		{name: DirectoryColumn, title: "Directory", values: x.directoryValues},
 		{name: TagsColumn, title: "Tags", values: tagValues},
 		{name: CopiesColumn, title: "Copies", values: byName(copiesQuery, copiesCell), alerts: copiesAlerts()},
 		{name: FirstSeenColumn, title: "First seen", values: byName(timestampQuery("created_at"), formatTimestamp)},
@@ -74,6 +79,21 @@ func (x *Index) Providers() []*metacmds.Provider {
 		out[i].Alerts = c.alerts
 	}
 	return out
+}
+
+// directoryValues shows the listing's own directory on every row: with ~ for home and, to fit the
+// meta column width, the earlier names abbreviated so the last ones stay (primitive.FitPathForWidth).
+// It needs no query, so it is also the one column that works for rows of a flat tag view, whose
+// groups are the row's directory. The parent row has none.
+func (x *Index) directoryValues(_ context.Context, _ *db.DB, host string, entries []localfs.Entry, _ bool) (map[string]string, error) {
+	dir := primitive.FitPathForWidth(primitive.PathWithHomeTilde(host, x.home), panel.MetaCellMaxWidth)
+	out := make(map[string]string, len(entries))
+	for _, e := range entries {
+		if e.Name != ".." {
+			out[e.Name] = dir
+		}
+	}
+	return out, nil
 }
 
 // copiesAlerts are the copies column's alert rules.

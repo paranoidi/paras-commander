@@ -495,8 +495,10 @@ func (h *Handler) activate(panelID int, activeNames []string) {
 // HandlePanelDirChanged re-runs active meta commands when the panel navigates to a new directory.
 // The meta file is resolved and loaded off the UI goroutine to avoid blocking on disk I/O.
 // A panel with no active columns entering an index view (fileindex:// or Browse with fileindex)
-// applies [fileindex].default_profile, and leaving the index views restores the panel's columns
-// unless the user changed them meanwhile. Moving between the two views is not an edge.
+// applies [fileindex].default_profile (the tag-list profile in a flat tag view), and leaving the
+// index views restores the panel's columns unless the user changed them meanwhile. Moving between
+// the two index views is not an edge, but moving between a flat tag view and another index view
+// switches the applied profile while the panel still follows the default.
 func (h *Handler) HandlePanelDirChanged(panelID int) {
 	p := h.host.PanelByID(panelID)
 	if p == nil {
@@ -506,7 +508,8 @@ func (h *Handler) HandlePanelDirChanged(panelID int) {
 	entered := inIndex && !h.inIndexView[panelID]
 	left := !inIndex && h.inIndexView[panelID]
 	h.inIndexView[panelID] = inIndex
-	if entered && len(h.activeEntries[panelID]) == 0 && h.applyIndexProfile(panelID, p) {
+	switched := inIndex && h.autoColumns[panelID] != nil && p.ColumnProfile != h.indexProfileName(p)
+	if (entered && len(h.activeEntries[panelID]) == 0 || switched) && h.applyIndexProfile(panelID, p) {
 		return
 	}
 	if left && h.autoColumns[panelID] != nil {

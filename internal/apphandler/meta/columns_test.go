@@ -11,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
@@ -119,6 +120,123 @@ func TestIndexProfile_emptyNameDisables(t *testing.T) {
 	if p.Columns != panel.ColumnsModified || len(h.activeEntries[0]) != 0 {
 		t.Fatalf("columns %v meta %v, want untouched", p.Columns.Names(), h.activeEntries[0])
 	}
+}
+
+// goTo moves the panel to path and runs the dir-change hook, as a navigation does.
+func goTo(t *testing.T, h *Handler, p *panel.State, raw string) {
+	t.Helper()
+	loc, err := pathloc.Parse(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.Path = loc
+	h.HandlePanelDirChanged(0)
+}
+
+func wantProfile(t *testing.T, h *Handler, p *panel.State, profile string, meta ...string) {
+	t.Helper()
+	if p.ColumnProfile != profile || (len(meta) > 0 || len(h.activeEntries[0]) > 0) && !slices.Equal(h.activeEntries[0], meta) {
+		t.Fatalf("profile %q meta %v, want %q %v", p.ColumnProfile, h.activeEntries[0], profile, meta)
+	}
+}
+
+const (
+	flatList = "fileindex@(beach):///"
+	flatRow  = "fileindex@(beach):///orchard/willow"
+	flatIn   = "fileindex@(beach):///orchard/willow//cedar"
+	plainDir = "fileindex:///orchard"
+)
+
+var tagListMeta = []string{config.FileIndexTagsColumn, config.FileIndexDirectoryColumn}
+
+func TestTagListProfile_localToFlatAndBack(t *testing.T) {
+	h, fh := columnsHandler(t)
+	p := fh.panels[0]
+	p.Columns, p.ColumnProfile = panel.ColumnsModified, config.ColumnProfileModified
+	goTo(t, h, p, flatList)
+	wantProfile(t, h, p, config.ColumnProfileTagList, tagListMeta...)
+	goTo(t, h, p, t.TempDir())
+	wantProfile(t, h, p, config.ColumnProfileModified)
+	if p.Columns != panel.ColumnsModified {
+		t.Fatalf("columns %v, want the earlier ones back", p.Columns.Names())
+	}
+}
+
+func TestTagListProfile_plainIndexAndFlatSwitchBothWays(t *testing.T) {
+	h, fh := columnsHandler(t)
+	p := fh.panels[0]
+	p.Columns, p.ColumnProfile = panel.ColumnsModified, config.ColumnProfileModified
+	goTo(t, h, p, plainDir)
+	wantProfile(t, h, p, config.ColumnProfileIndex, config.FileIndexTagsColumn)
+	goTo(t, h, p, flatList)
+	wantProfile(t, h, p, config.ColumnProfileTagList, tagListMeta...)
+	goTo(t, h, p, plainDir)
+	wantProfile(t, h, p, config.ColumnProfileIndex, config.FileIndexTagsColumn)
+	// The columns from before the first index view survive the switches.
+	goTo(t, h, p, flatList)
+	goTo(t, h, p, t.TempDir())
+	wantProfile(t, h, p, config.ColumnProfileModified)
+	if p.Columns != panel.ColumnsModified {
+		t.Fatalf("columns %v, want the earlier ones back", p.Columns.Names())
+	}
+}
+
+func TestTagListProfile_insideARowKeepsTheColumns(t *testing.T) {
+	h, fh := columnsHandler(t)
+	p := fh.panels[0]
+	goTo(t, h, p, flatList)
+	gen := h.runGen[0]
+	for _, raw := range []string{flatRow, flatIn, flatList} {
+		goTo(t, h, p, raw)
+		wantProfile(t, h, p, config.ColumnProfileTagList, tagListMeta...)
+	}
+	if h.runGen[0] < gen {
+		t.Fatal("run generation went backwards")
+	}
+	// A structure view is no flat view: it gets the index profile.
+	goTo(t, h, p, "fileindex(beach):///orchard")
+	wantProfile(t, h, p, config.ColumnProfileIndex, config.FileIndexTagsColumn)
+}
+
+func TestTagListProfile_userChangeStays(t *testing.T) {
+	h, fh := columnsHandler(t)
+	p := fh.panels[0]
+	goTo(t, h, p, flatList)
+	h.ApplyProfile(0, columnprofile.Profile{Name: "orchard", Columns: []string{"group"}, Meta: []string{"meadow"}})
+	for _, raw := range []string{plainDir, flatRow, t.TempDir()} {
+		goTo(t, h, p, raw)
+		wantProfile(t, h, p, "orchard", "meadow")
+	}
+}
+
+func TestTagListProfile_emptyDefaultAppliesNone(t *testing.T) {
+	h, fh := columnsHandler(t)
+	h.config.FileIndex.DefaultProfile = ""
+	p := fh.panels[0]
+	p.Columns, p.ColumnProfile = panel.ColumnsModified, config.ColumnProfileModified
+	goTo(t, h, p, flatList)
+	goTo(t, h, p, flatRow)
+	if p.ColumnProfile != config.ColumnProfileModified || p.Columns != panel.ColumnsModified || len(h.activeEntries[0]) != 0 {
+		t.Fatalf("profile %q columns %v meta %v, want untouched", p.ColumnProfile, p.Columns.Names(), h.activeEntries[0])
+	}
+}
+
+func TestTagListProfile_tabRestoreKeepsFollowing(t *testing.T) {
+	h, fh := columnsHandler(t)
+	p := fh.panels[0]
+	p.Columns, p.ColumnProfile = panel.ColumnsModified, config.ColumnProfileModified
+	goTo(t, h, p, flatList)
+	tab := h.TabColumns(0)
+	h.ApplyProfile(0, columnprofile.Profile{Name: config.ColumnProfileBrief, Columns: []string{"size"}})
+	h.RestoreTabColumns(0, tab)
+	p.ColumnProfile, p.Columns = config.ColumnProfileTagList, panel.ColumnsBrief // panel.State travels with the tab
+	if !slices.Equal(h.activeEntries[0], tagListMeta) {
+		t.Fatalf("meta = %v after the tab came back", h.activeEntries[0])
+	}
+	goTo(t, h, p, plainDir)
+	wantProfile(t, h, p, config.ColumnProfileIndex, config.FileIndexTagsColumn)
+	goTo(t, h, p, t.TempDir())
+	wantProfile(t, h, p, config.ColumnProfileModified)
 }
 
 // A profile column from a local meta.toml must come back after a directory without it.

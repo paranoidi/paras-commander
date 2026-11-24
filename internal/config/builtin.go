@@ -331,6 +331,7 @@ const (
 	ColumnProfilePermissions = "permissions"
 	ColumnProfileBrief       = "brief"
 	ColumnProfileIndex       = "index"
+	ColumnProfileTagList     = "tag-list"
 
 	// DefaultColumnProfile is the default [panels].default_column_profile.
 	DefaultColumnProfile = ColumnProfileBrief
@@ -520,6 +521,8 @@ const (
 	FileIndexScanCommitIntervalMaxMS = 60000
 	// FileIndexTagsColumn is the meta entry name of the fileindex tags column provider.
 	FileIndexTagsColumn = "fileindex.tags"
+	// FileIndexDirectoryColumn is the meta entry name of the fileindex directory column provider.
+	FileIndexDirectoryColumn = "fileindex.directory"
 	// FileIndexColumnOrder is the meta order of the first fileindex column; the others follow
 	// one step each, all after meta.toml columns (default order 0).
 	FileIndexColumnOrder = 1000

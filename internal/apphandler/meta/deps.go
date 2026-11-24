@@ -58,9 +58,9 @@ type Handler struct {
 	// inIndexView is whether the panel was in an index view (fileindex:// or Browse with
 	// fileindex) at the last dir-change check, so default columns switch on only when it enters one.
 	inIndexView [2]bool
-	// autoColumns is non-nil while the panel's columns are [fileindex].default_profile, applied
-	// on entering an index view (cleared when the user changes columns). It holds what leaving
-	// the index views restores.
+	// autoColumns is non-nil while the panel's columns are an index view's profile
+	// ([fileindex].default_profile, tag-list in a flat tag view), applied on entering an index
+	// view (cleared when the user changes columns). It holds what leaving the index views restores.
 	autoColumns [2]*columnSnapshot
 	// sortCheck holds the meta names active before the last column change while its load is
 	// pending, so HandleLoad can apply sort_on_activation to the newly active ones.

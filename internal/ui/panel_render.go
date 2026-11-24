@@ -26,7 +26,7 @@ import (
 const (
 	// panelListMetaMax is the maximum display width (terminal cells) for the rendered Meta column
 	// (single-cell legacy or tab/newline multi-field layout; see layoutMetaCells).
-	panelListMetaMax = 20
+	panelListMetaMax = panel.MetaCellMaxWidth
 	// panelListMetaMinCells is the minimum width of the Meta column ("Meta" header).
 	panelListMetaMinCells = 4
 )

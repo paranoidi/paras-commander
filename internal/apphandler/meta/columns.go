@@ -6,12 +6,13 @@ import (
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/columnprofile"
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-// columnSnapshot is what a panel showed before [fileindex].default_profile applied.
+// columnSnapshot is what a panel showed before an index view's profile applied.
 type columnSnapshot struct {
 	profile string
 	columns panel.ColumnSet
@@ -138,10 +139,20 @@ func (h *Handler) ActivateStartupMeta(names []string) {
 	}
 }
 
-// applyIndexProfile applies [fileindex].default_profile on entering an index view, remembering
-// what to restore; false when there is none to apply.
-func (h *Handler) applyIndexProfile(panelID int, p *panel.State) bool {
+// indexProfileName is the profile an index view of p applies: [fileindex].default_profile, or in
+// a flat tag view the tag-list profile; "" when the default is none (a flat view applies none either).
+func (h *Handler) indexProfileName(p *panel.State) string {
 	name := h.config.FileIndex.DefaultProfile
+	if q, ok := p.Path.TagQuery(); ok && q.Flat && name != "" {
+		return config.ColumnProfileTagList
+	}
+	return name
+}
+
+// applyIndexProfile applies the index view's profile (indexProfileName), remembering what to
+// restore (what an earlier application remembered, when switching); false when there is none to apply.
+func (h *Handler) applyIndexProfile(panelID int, p *panel.State) bool {
+	name := h.indexProfileName(p)
 	if name == "" {
 		return false
 	}
@@ -150,7 +161,10 @@ func (h *Handler) applyIndexProfile(panelID int, p *panel.State) bool {
 		h.host.SetTransientMessage(fmt.Sprintf("Unknown column profile %q", name), ui.MessageUrgencyWarn)
 		return false
 	}
-	snapshot := &columnSnapshot{profile: p.ColumnProfile, columns: p.Columns}
+	snapshot := h.autoColumns[panelID]
+	if snapshot == nil {
+		snapshot = &columnSnapshot{profile: p.ColumnProfile, columns: p.Columns}
+	}
 	h.ApplyProfile(panelID, profile)
 	h.autoColumns[panelID] = snapshot
 	return true

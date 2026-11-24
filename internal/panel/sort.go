@@ -292,6 +292,10 @@ func (s SortState) MetaAscending(numeric bool) bool {
 // among real values.
 const MetaNoValue = "-"
 
+// MetaCellMaxWidth is the widest a meta column gets, in terminal cells; wider cells are clipped
+// at the end. A provider whose value reads best with its end visible (a directory) fits it itself.
+const MetaCellMaxWidth = 20
+
 // MetaValuesNumeric reports whether a meta column is numeric: at least one value is set and
 // every set value (non-blank, not the pending placeholder or MetaNoValue) parses as a float.
 func MetaValuesNumeric(values map[string]string, pending string) bool {

@@ -225,9 +225,14 @@ func TestColumnsDialogGoldenRender(t *testing.T) {
 	cases = append(cases, simpleGolden{"80x24_file_section_only", 80, 24, func(s tcell.Screen, l Layout) {
 		DrawColumnsDialog(s, l, noMeta, asciiDialogStyles())
 	}})
+	items := append(columnprofile.Builtins(), columnprofile.Profile{Name: "orchard", Description: "owner and group"})
+	ranked := make([]int, len(items))
+	for i := range ranked {
+		ranked[i] = i
+	}
 	picker := ColumnsDialogState{Open: true, Phase: ColumnsPhaseLoadPicker, DefaultProfile: "brief", SearchIcon: "/", Picker: ColumnsProfilePicker{
-		Items:  append(columnprofile.Builtins(), columnprofile.Profile{Name: "orchard", Description: "owner and group"}),
-		Ranked: []int{0, 1, 2, 3, 4}, MatchRanges: make([][]search.Range, 5), Selected: 1,
+		Items:  items,
+		Ranked: ranked, MatchRanges: make([][]search.Range, len(items)), Selected: 1,
 	}}
 	cases = append(cases, simpleGolden{"80x24_load_picker", 80, 24, func(s tcell.Screen, l Layout) {
 		DrawColumnsDialog(s, l, picker, asciiDialogStyles())

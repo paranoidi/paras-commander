@@ -36,13 +36,14 @@ func (p Profile) Set() (panel.ColumnSet, []string) { return panel.ParseColumnNam
 
 // Builtins returns the built-in profiles in cycle order. The index profile is what
 // [fileindex].default_profile names by default; it is left out of the cycle because it only
-// differs from brief where the index exists.
+// differs from brief where the index exists. The tag-list profile replaces it in flat tag views.
 func Builtins() []Profile {
 	return []Profile{
 		{Name: config.ColumnProfileModified, Description: "size and modified time", Columns: panel.ColumnsModified.Names(), Builtin: true},
 		{Name: config.ColumnProfilePermissions, Description: "size and permissions", Columns: panel.ColumnsPermissions.Names(), Builtin: true},
 		{Name: config.ColumnProfileBrief, Description: "size only", Columns: panel.ColumnsBrief.Names(), Builtin: true},
 		{Name: config.ColumnProfileIndex, Description: "size and fileindex tags", Columns: panel.ColumnsBrief.Names(), Meta: []string{config.FileIndexTagsColumn}, Builtin: true, SkipCycle: true},
+		{Name: config.ColumnProfileTagList, Description: "size, tags and directory", Columns: panel.ColumnsBrief.Names(), Meta: []string{config.FileIndexTagsColumn, config.FileIndexDirectoryColumn}, Builtin: true, SkipCycle: true},
 	}
 }
 
