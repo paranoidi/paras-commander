@@ -28,20 +28,23 @@ func IndexTagBrowseDialogView(st *IndexTagBrowseDialogState, layout Layout, styl
 	} else {
 		items = append(items, st.Item())
 	}
-	radio := func(id dlg.ID, label string, mnemonic rune, on bool) dlg.Item {
-		return dlg.Item{ID: id, Kind: dlg.KindRadio, Label: label, Mnemonic: mnemonic, On: on, Gap: indexTagBrowseRadioGap}
+	const all, flat = "All tags", "Flat list"
+	// The left radios share a width, so the right ones line up.
+	left := dlg.MarkerWidth(styles) + max(len(all), len(flat))
+	radio := func(id dlg.ID, label string, mnemonic rune, on bool, width int) dlg.Item {
+		return dlg.Item{ID: id, Kind: dlg.KindRadio, Label: label, Mnemonic: mnemonic, On: on, Width: width, Gap: indexTagBrowseRadioGap}
 	}
 	items = append(items,
 		dlg.Item{Kind: dlg.KindSeparator},
 		dlg.Item{Kind: dlg.KindLabel, Label: "Match:"},
 		dlg.Item{Kind: dlg.KindRow, Cells: []dlg.Item{
-			radio(IndexTagBrowseAll, "All tags", 'A', !st.Any),
-			radio(IndexTagBrowseAny, "Any tag", 'N', st.Any),
+			radio(IndexTagBrowseAll, all, 'A', !st.Any, left),
+			radio(IndexTagBrowseAny, "Any tag", 'N', st.Any, 0),
 		}},
 		dlg.Item{Kind: dlg.KindLabel, Label: "View:"},
 		dlg.Item{Kind: dlg.KindRow, Cells: []dlg.Item{
-			radio(IndexTagBrowseFlat, "Flat list", 'F', !st.Structure),
-			radio(IndexTagBrowseStructure, "Directory structure", 'S', st.Structure),
+			radio(IndexTagBrowseFlat, flat, 'F', !st.Structure, left),
+			radio(IndexTagBrowseStructure, "Directory structure", 'S', st.Structure, 0),
 		}},
 	)
 	spec := dlg.Spec{

@@ -72,3 +72,18 @@ func TestIndexTagBrowseRendersAtSmallSizes(t *testing.T) {
 		}
 	}
 }
+
+func TestIndexTagBrowseRadioColumnsLineUp(t *testing.T) {
+	st := NewIndexTagBrowseDialog([]string{"amber"}, nil, false, false)
+	p, ok := dlg.Place(80, 24, IndexTagBrowseDialogView(&st, Layout{Width: 80, Height: 24}, theme.Default()))
+	if !ok {
+		t.Fatal("dialog does not fit")
+	}
+	x := map[dlg.ID]int{}
+	for _, it := range p.Items {
+		x[it.ID] = it.Rect.X
+	}
+	if x[IndexTagBrowseAny] == 0 || x[IndexTagBrowseAny] != x[IndexTagBrowseStructure] {
+		t.Errorf("right radios at x %d and %d", x[IndexTagBrowseAny], x[IndexTagBrowseStructure])
+	}
+}
