@@ -279,6 +279,8 @@ const (
 	ActionFileIndexTags              = "fileindex.tags"
 	ActionFileIndexBrowse            = "fileindex.browse"
 	ActionFileIndexBrowseWith        = "fileindex.browse-with"
+	ActionFileIndexBrowseTags        = "fileindex.browse-tags"
+	ActionFileIndexTagViewMode       = "fileindex.tag-view-mode"
 	ActionFileIndexFind              = "fileindex.find"
 	ActionFileIndexReveal            = "fileindex.reveal"
 	ActionFileIndexCopies            = "fileindex.other-copies"
@@ -666,6 +668,8 @@ var KnownActions = map[string]struct{}{
 	ActionFileIndexTags:              {},
 	ActionFileIndexBrowse:            {},
 	ActionFileIndexBrowseWith:        {},
+	ActionFileIndexBrowseTags:        {},
+	ActionFileIndexTagViewMode:       {},
 	ActionFileIndexFind:              {},
 	ActionFileIndexReveal:            {},
 	ActionFileIndexCopies:            {},

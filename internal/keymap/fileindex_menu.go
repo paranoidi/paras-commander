@@ -10,7 +10,7 @@ import (
 var fileIndexMenuGroups = leaderMenuViewSpec{
 	order: []string{"Browse", "Tagging", "Tools", "Actions", "Duplicates"},
 	actions: map[string][]string{
-		"Browse":     {ActionFileIndexBrowseWith, ActionFileIndexBrowse, ActionFileIndexReveal},
+		"Browse":     {ActionFileIndexBrowseWith, ActionFileIndexBrowse, ActionFileIndexReveal, ActionFileIndexBrowseTags, ActionFileIndexTagViewMode},
 		"Tagging":    {ActionFileIndexTags},
 		"Tools":      {ActionFileIndexFind, ActionFileIndexReportDifferences},
 		"Actions":    {ActionFileIndexScan, ActionFileIndexScanFast, ActionFileIndexPrune},

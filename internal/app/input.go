@@ -48,6 +48,7 @@ const (
 	InputModeIndexFindDialog
 	InputModeJumpDialog
 	InputModeIndexTagsDialog
+	InputModeIndexTagBrowseDialog
 	InputModeColumnsDialog
 	InputModeLeaderMenu
 	InputModeHelpView
@@ -101,6 +102,8 @@ func (a *App) inputMode() InputMode {
 		return InputModeJumpDialog
 	case a.model.IndexTagsDialog.Open:
 		return InputModeIndexTagsDialog
+	case a.model.IndexTagBrowseDialog.Open:
+		return InputModeIndexTagBrowseDialog
 	case a.model.ColumnsDialog.Open:
 		return InputModeColumnsDialog
 	case a.model.HelpView.KeyPrompt:
@@ -825,6 +828,10 @@ var inputModeKeyHandlers = map[InputMode]func(*App, *tcell.EventKey) bool{
 	},
 	InputModeIndexTagsDialog: func(a *App, ev *tcell.EventKey) bool {
 		a.fileindexCtrl.HandleTagKey(ev)
+		return false
+	},
+	InputModeIndexTagBrowseDialog: func(a *App, ev *tcell.EventKey) bool {
+		a.fileindexCtrl.HandleBrowseTagsKey(ev)
 		return false
 	},
 	InputModePinDialog: func(a *App, ev *tcell.EventKey) bool {

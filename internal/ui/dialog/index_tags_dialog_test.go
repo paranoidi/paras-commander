@@ -120,6 +120,19 @@ func renderIndexTags(t *testing.T, st IndexTagsDialogState, w, h int) string {
 	return tcelltest.DumpRect(screen, 0, 0, w, h)
 }
 
+func renderIndexTagBrowse(t *testing.T, st IndexTagBrowseDialogState, w, h int) string {
+	t.Helper()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(w, h)
+	DrawIndexTagBrowseDialog(screen, Layout{Width: w, Height: h}, st, theme.Default())
+	screen.Show()
+	return tcelltest.DumpRect(screen, 0, 0, w, h)
+}
+
 func TestIndexTagsJumpTextOnTopBorder(t *testing.T) {
 	styles := theme.Default()
 	_, surface, _ := styles.DialogSurface.Decompose()

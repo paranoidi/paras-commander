@@ -11,7 +11,7 @@ import (
 // toggleFileIndexMenu opens the fileindex menu strip (fileindex.menu), or closes it when open:
 // the fileindex.* actions under letters that match their default chords ([fileindex_menu]).
 // fileindex.reveal is dimmed on a plain panel, where it has nothing to leave (fileindex.browse
-// toggles, so it stays enabled), and the scan labels name what fileindex.scan and
+// toggles, so it stays enabled), fileindex.tag-view-mode outside a tag view, and the scan labels name what fileindex.scan and
 // fileindex.scan-fast will scan.
 func (a *App) toggleFileIndexMenu() {
 	if a.leaderMenuOpen(ui.LeaderMenuFileIndex) {
@@ -24,6 +24,7 @@ func (a *App) toggleFileIndexMenu() {
 	items, actions := a.buildLeaderMenuItems(a.keys.FileIndexMenuEntries())
 	p := a.focusedPanel()
 	inIndex := p.WithIndex || p.Path.Scheme() == pathloc.SchemeFileIndex
+	_, inTagView := p.Path.TagQuery()
 	row := 0
 	for i := range items {
 		if items[i].GroupTitle != "" {
@@ -32,6 +33,8 @@ func (a *App) toggleFileIndexMenu() {
 		switch actions[row] {
 		case keymap.ActionFileIndexReveal:
 			items[i].Disabled = !inIndex
+		case keymap.ActionFileIndexTagViewMode:
+			items[i].Disabled = !inTagView
 		case keymap.ActionFileIndexScan:
 			items[i].Label = "Scan directory"
 			if len(a.focusedPanel().SelectedPaths) > 0 {

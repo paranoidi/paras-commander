@@ -119,6 +119,13 @@ func TestDialogLabelsAreFollowedByContentRow(t *testing.T) {
 			labels: []string{"New tags (comma or space separated):"},
 		},
 		{
+			name: "fileindex browse by tags",
+			draw: func(screen tcell.Screen) {
+				DrawIndexTagBrowseDialog(screen, layout, NewIndexTagBrowseDialog([]string{"clover", "thistle"}, []string{"clover"}, false, true), styles)
+			},
+			labels: []string{"Match:", "View:"},
+		},
+		{
 			name: "rename tool preview",
 			draw: func(screen tcell.Screen) {
 				DrawFileDialog(screen, layout, FileDialogState{

@@ -18,6 +18,10 @@ import (
 // host path is the row and the rest joined. Clean host paths never hold "//", so going up from a
 // row can lead back to the list (Up) while Parent stays true to the host path.
 
+// TagListRefusal is what an action that would work on the directory of a flat tag view's list says
+// instead: the list names no real directory.
+const TagListRefusal = "This is a list of tagged entries: select something first"
+
 const (
 	indexScheme  = "fileindex"
 	flatBoundary = "//"

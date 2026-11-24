@@ -108,6 +108,9 @@ type Handler struct {
 	pendingInit func()
 	// initRunning is set while a confirmed create or upgrade runs (menu-bar spinner).
 	initRunning bool
+	// browseAny and browseStructure are the Match and View Browse by tags used last (session only;
+	// All and Flat until it is used).
+	browseAny, browseStructure bool
 }
 
 // New constructs the handler and routes the index's one-time open failure to HandleReady.
@@ -134,6 +137,8 @@ type NavigatePayload struct {
 	Err     error
 	// WithIndex turns the browse-with-fileindex overlay on for the panel before it navigates.
 	WithIndex bool
+	// Warn is shown instead of navigating (Dir is then empty).
+	Warn string
 }
 
 // Dispatch runs a fileindex.* action; it reports false for any other action id.
@@ -161,6 +166,10 @@ func (h *Handler) Dispatch(actionID string) bool {
 		h.WithIndex(h.BrowseWith)
 	case keymap.ActionFileIndexBrowse:
 		h.WithIndex(h.Browse)
+	case keymap.ActionFileIndexBrowseTags:
+		h.WithIndex(h.OpenBrowseTags)
+	case keymap.ActionFileIndexTagViewMode:
+		h.ToggleTagViewMode()
 	case keymap.ActionFileIndexReveal:
 		h.Reveal()
 	case keymap.ActionFileIndexCopies:
@@ -189,6 +198,8 @@ func (h *Handler) HandleWake(data any) bool {
 		h.HandleTagsLoaded(p)
 	case TagsPayload:
 		h.HandleTags(p)
+	case BrowseTagsLoadedPayload:
+		h.HandleBrowseTagsLoaded(p)
 	case NavigatePayload:
 		h.HandleNavigate(p)
 	case FindPayload:
@@ -213,12 +224,23 @@ func (h *Handler) post(payload any) {
 
 const messageTitle = "fileindex"
 
-// targets returns the active panel's selection, else its cursor entry, else its directory.
+// targets returns the active panel's selection, else its cursor entry, else its directory; nil
+// when that would be the list of a flat tag view (see refuseTagList).
 func (h *Handler) targets() []string {
 	if src := h.host.FocusedPanelSources(); len(src) > 0 {
 		return src
 	}
+	if h.refuseTagList() {
+		return nil
+	}
 	return []string{h.host.FocusedPanel().PathString()}
+}
+
+// refuseTagList says so and reports true when the active panel shows the list of a flat tag view,
+// whose directory ("/") is no real target: the guard of every action that falls back to the panel
+// directory.
+func (h *Handler) refuseTagList() bool {
+	return host.RefuseTagList(h.host, h.host.FocusedPanel().Path)
 }
 
 // localOrIndex reports whether the active panel's scheme has index paths (local or fileindex://);
@@ -269,9 +291,14 @@ func (h *Handler) queueScan(title string, task func([]string) *jobs.Task) {
 		return
 	}
 	// Explicit selections only; never the cursor entry.
-	targets := []string{h.host.FocusedPanel().PathString()}
+	var targets []string
 	if len(h.host.FocusedPanel().SelectedPaths) > 0 {
 		targets = h.targets()
+	} else if !h.refuseTagList() {
+		targets = []string{h.host.FocusedPanel().PathString()}
+	}
+	if len(targets) == 0 {
+		return
 	}
 	var paths []string
 	for _, t := range targets {
@@ -290,6 +317,9 @@ func (h *Handler) queueScan(title string, task func([]string) *jobs.Task) {
 // shows no toast and omits the job's started and completed ones: the command's own notification is
 // the one to keep on screen, and the job list shows the scan. A failed scan still reports.
 func (h *Handler) ScanAfterCommand(dir pathloc.Path) {
+	if host.RefuseTagList(h.host, dir) { // the list's "/" is no directory to scan (an index panel is refused before the command runs)
+		return
+	}
 	p, err := hostPath(dir.String())
 	if err != nil {
 		h.host.SetErrorMessage(messageTitle, err)
@@ -305,7 +335,7 @@ func (h *Handler) ScanAfterCommand(dir pathloc.Path) {
 
 // Prune queues a prune of the active panel's directory.
 func (h *Handler) Prune() {
-	if !h.localOrIndex() {
+	if !h.localOrIndex() || h.refuseTagList() {
 		return
 	}
 	dir, err := hostPath(h.host.FocusedPanel().PathString())
@@ -343,9 +373,14 @@ func (h *Handler) setBrowseWith(on bool) {
 }
 
 // Browse shows the active panel's directory in fileindex://, keeping the cursor entry; on a
-// fileindex:// panel it goes back to the real location.
+// fileindex:// panel it goes back to the real location, and from a tag view to the plain index
+// (browseFromTagView).
 func (h *Handler) Browse() {
 	p := h.host.FocusedPanel()
+	if _, ok := p.Path.TagQuery(); ok {
+		h.browseFromTagView()
+		return
+	}
 	if p.Path.Scheme() == pathloc.SchemeFileIndex {
 		h.Reveal() // toggle back to the real location
 		return
@@ -370,6 +405,26 @@ func (h *Handler) Browse() {
 	}()
 }
 
+// browseFromTagView shows the plain index at the cursor entry's directory with the entry selected,
+// or at the panel's own host directory with no entry. The entry comes from the index, so nothing
+// needs checking off the UI thread.
+func (h *Handler) browseFromTagView() {
+	p := h.host.FocusedPanel()
+	_, dir, _ := pathloc.CutIndexPrefix(p.Path.String())
+	sel := ""
+	if e, ok := p.CurrentEntry(); ok && e.Name != ".." {
+		_, entryHost, _ := pathloc.CutIndexPrefix(e.Path)
+		dir, sel = filepath.Dir(entryHost), filepath.Base(entryHost)
+	}
+	loc, err := pathloc.FileIndex(dir)
+	if err == nil {
+		err = h.host.NavigatePanelToPath(h.model.FocusedPanelID(), loc.String(), sel)
+	}
+	if err != nil {
+		h.host.SetErrorMessage(messageTitle, err)
+	}
+}
+
 // Reveal shows the cursor entry of a fileindex:// panel at its real location (its parent
 // directory on disk, the entry highlighted), or the panel's own directory with no entry. With
 // browse with fileindex on, the panel already is the real directory, so it turns the overlay off.
@@ -392,6 +447,8 @@ func (h *Handler) reveal(withIndex bool) {
 	target := p.PathString()
 	if e, ok := p.CurrentEntry(); ok {
 		target = e.Path
+	} else if h.refuseTagList() { // an empty list: its "/" is not a place to go
+		return
 	}
 	host, err := hostPath(target)
 	if err != nil {
@@ -411,10 +468,14 @@ func (h *Handler) reveal(withIndex bool) {
 	}()
 }
 
-// HandleNavigate applies a Browse or Reveal once its target was checked.
+// HandleNavigate applies a Browse, Reveal or Browse by tags once its target was checked.
 func (h *Handler) HandleNavigate(p NavigatePayload) {
 	if p.Err != nil {
 		h.host.SetErrorMessage(messageTitle, p.Err)
+		return
+	}
+	if p.Warn != "" {
+		h.host.SetTransientMessage(p.Warn, ui.MessageUrgencyWarn)
 		return
 	}
 	if p.WithIndex {

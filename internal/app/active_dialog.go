@@ -112,6 +112,9 @@ func (a *App) activeDialog(event *tcell.EventKey) (activeDialog, bool) {
 	case InputModeIndexTagsDialog:
 		return found(fits(a.fileindexCtrl.TagDialogSpec), &m.IndexTagsDialog.Focus, noQuit(a.fileindexCtrl.ApplyTagEvent),
 			dialogButtons{OK: a.fileindexCtrl.TagDialogOK, Cancel: a.fileindexCtrl.CloseTagDialog, Esc: a.fileindexCtrl.TagDialogEsc})
+	case InputModeIndexTagBrowseDialog:
+		return found(fits(a.fileindexCtrl.BrowseTagsSpec), &m.IndexTagBrowseDialog.Focus, noQuit(a.fileindexCtrl.ApplyBrowseTagsEvent),
+			dialogButtons{OK: a.fileindexCtrl.BrowseTagsOK, Cancel: a.fileindexCtrl.CloseBrowseTags, Esc: a.fileindexCtrl.BrowseTagsEsc})
 	case InputModeColumnsDialog:
 		return found(fits(a.metaCtrl.DialogSpec), &m.ColumnsDialog.Focus, noQuit(a.metaCtrl.ApplyDialogEvent),
 			dialogButtons{OK: a.metaCtrl.DialogOK, Cancel: a.metaCtrl.DialogCancel})

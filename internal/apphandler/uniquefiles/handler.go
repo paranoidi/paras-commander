@@ -116,8 +116,11 @@ func (h *Handler) Open() {
 	if ui.IsAuxiliaryView(h.model.ViewMode) {
 		return
 	}
-	root, scope, err := h.scope(h.host.PanelByID(h.model.FocusedPanelID()))
+	p := h.host.PanelByID(h.model.FocusedPanelID())
+	root, scope, err := h.scope(p)
 	switch {
+	case err == nil && slices.Equal(scope, []string{root}) && host.RefuseTagList(h.host, p.Path): // no selected directories
+		return
 	case errors.Is(err, errMixedSelection):
 		h.host.SetTransientMessage(mixedSelectionMessage, ui.MessageUrgencyCritical)
 		return

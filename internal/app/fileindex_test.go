@@ -33,6 +33,8 @@ var fileIndexActions = []string{
 	keymap.ActionFileIndexBrowseWith,
 	keymap.ActionFileIndexBrowse,
 	keymap.ActionFileIndexReveal,
+	keymap.ActionFileIndexBrowseTags,
+	keymap.ActionFileIndexTagViewMode,
 	keymap.ActionFileIndexTags,
 	keymap.ActionFileIndexFind,
 	keymap.ActionFileIndexReportDifferences,
@@ -654,8 +656,8 @@ func TestFileIndexHostPathFeatures(t *testing.T) {
 	}
 }
 
-// The fileindex menu dims Browse filesystem on a plain panel; Browse index toggles, so it never
-// dims.
+// The fileindex menu dims Browse filesystem on a plain panel and Flat or structure outside a tag
+// view; Browse index toggles, so it never dims.
 func TestFileIndexMenuDimsReveal(t *testing.T) {
 	a := newHelpEntriesApp(t)
 	dimmed := func() map[string]bool {
@@ -670,11 +672,13 @@ func TestFileIndexMenuDimsReveal(t *testing.T) {
 	for _, tc := range []struct {
 		dir       string
 		withIndex bool
-		want      string
+		want      []string
 	}{
-		{"/srv/orchard", false, "Browse filesystem"},
-		{"/srv/orchard", true, ""},
-		{"fileindex:///srv/orchard", false, ""},
+		{"/srv/orchard", false, []string{"Browse filesystem", "Flat or structure"}},
+		{"/srv/orchard", true, []string{"Flat or structure"}},
+		{"fileindex:///srv/orchard", false, []string{"Flat or structure"}},
+		{"fileindex(clover):///srv/orchard", false, nil},
+		{"fileindex@(clover):///", false, nil},
 	} {
 		p, err := pathloc.Parse(tc.dir)
 		if err != nil {
@@ -683,8 +687,14 @@ func TestFileIndexMenuDimsReveal(t *testing.T) {
 		a.focusedPanel().Path = p
 		a.focusedPanel().WithIndex = tc.withIndex
 		a.toggleFileIndexMenu()
-		if got := dimmed(); (tc.want == "" && len(got) != 0) || (tc.want != "" && (len(got) != 1 || !got[tc.want])) {
+		got := dimmed()
+		if len(got) != len(tc.want) {
 			t.Errorf("%s: dimmed = %v, want only %q", tc.dir, got, tc.want)
+		}
+		for _, label := range tc.want {
+			if !got[label] {
+				t.Errorf("%s: dimmed = %v, want only %q", tc.dir, got, tc.want)
+			}
 		}
 		a.closeLeaderMenu()
 	}

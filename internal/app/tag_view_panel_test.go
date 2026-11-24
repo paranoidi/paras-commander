@@ -94,7 +94,7 @@ func tvSelect(t *testing.T, a *App, path string) {
 // tvQuiet lets the event loop run for a while, long enough for a reload to land.
 func tvQuiet(t *testing.T, a *App, screen tcell.SimulationScreen) {
 	t.Helper()
-	end := time.Now().Add(300*time.Millisecond)
+	end := time.Now().Add(300 * time.Millisecond)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return time.Now().After(end) })
 }
 

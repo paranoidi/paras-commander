@@ -52,7 +52,7 @@ func (h *Handler) Copies() {
 // CopiesOutside opens the duplicates view over the files in the active panel's directory that
 // also exist elsewhere in the index.
 func (h *Handler) CopiesOutside() {
-	if !h.localOrIndex() {
+	if !h.localOrIndex() || h.refuseTagList() {
 		return
 	}
 	dir, err := hostPath(h.host.FocusedPanel().PathString())
@@ -70,7 +70,7 @@ func (h *Handler) CopiesOutside() {
 // FindDuplicates opens the duplicates view over the indexed files in the active panel's
 // directory, also from a local panel (never reading the disk).
 func (h *Handler) FindDuplicates() {
-	if !h.localOrIndex() {
+	if !h.localOrIndex() || h.refuseTagList() {
 		return
 	}
 	dir, err := hostPath(h.host.FocusedPanel().PathString())

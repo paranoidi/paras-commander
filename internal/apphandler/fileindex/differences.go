@@ -54,6 +54,8 @@ func (h *Handler) ReportDifferences() {
 	target := p.PathString()
 	if e, ok := p.CurrentEntry(); ok && e.IsDir() && e.Name != ".." {
 		target = e.Path
+	} else if h.refuseTagList() {
+		return
 	}
 	root, err := hostPath(target)
 	if err != nil {

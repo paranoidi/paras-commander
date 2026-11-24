@@ -54,6 +54,17 @@ func ShowInPanel(h PanelShowHost, panelID int, dir, name string, indexPanel bool
 	return true
 }
 
+// RefuseTagList says so and reports true when p is the list of a flat tag view. That list names no
+// real directory, so an action that would fall back to the panel directory (scan, prune, find
+// duplicates, find unique files) must not run on it; one with a selection of its own may.
+func RefuseTagList(h StatusHost, p pathloc.Path) bool {
+	if !p.IsTagList() {
+		return false
+	}
+	h.SetTransientMessage(pathloc.TagListRefusal, ui.MessageUrgencyWarn)
+	return true
+}
+
 // ReportOpenedInPanel says name was opened in panelID.
 func ReportOpenedInPanel(h StatusHost, name string, panelID int) {
 	which := "primary"

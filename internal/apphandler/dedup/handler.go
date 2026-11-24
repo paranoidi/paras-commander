@@ -163,9 +163,12 @@ func (h *Handler) Open() {
 }
 
 // openCurrent scans the active panel's directory, or offers the kept results when
-// they are for exactly that directory.
+// they are for exactly that directory. The list of a flat tag view has no directory to scan.
 func (h *Handler) openCurrent() {
 	path := h.activePanelPath()
+	if host.RefuseTagList(h.host, path) {
+		return
+	}
 	// Outside-mode results answer a different question, even at the index root.
 	if h.outsideOf != "" || !h.HasResults() || !path.Equal(h.model.DedupSnapshot.Root) {
 		h.openPlain(path, nil)
