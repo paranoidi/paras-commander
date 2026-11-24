@@ -216,9 +216,16 @@ func (h *Handler) HandleWake(data any) bool {
 	return true
 }
 
+// post hands payload to the event loop. tcell's queue holds few events and PostEvent drops when it
+// is full (a toast sweep fills it), but every payload is a result nothing sends again: it then waits
+// on a goroutine of its own, until it fits or the screen closes.
 func (h *Handler) post(payload any) {
-	if h.screen != nil {
-		_ = h.screen.PostEvent(tcell.NewEventInterrupt(payload))
+	if h.screen == nil {
+		return
+	}
+	ev := tcell.NewEventInterrupt(payload)
+	if h.screen.PostEvent(ev) != nil {
+		go h.screen.PostEventWait(ev) //nolint:staticcheck // SA1019: guaranteed delivery required, see above
 	}
 }
 
