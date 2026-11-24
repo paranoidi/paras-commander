@@ -324,6 +324,8 @@ type App struct {
 	// lastFullRenderToast is the Model.Message last committed by a full render. Partial
 	// painters consult it so a shorter replacement cannot leave fragments of the previous banner.
 	lastFullRenderToast string
+	// lastFullRenderTargets is the destinationTargets last committed by a full render.
+	lastFullRenderTargets [3]bool
 
 	// dirWatcher is nil when [panels].watch_directories is off (panel_dir_watch.go).
 	dirWatcher *dirwatch.Watcher

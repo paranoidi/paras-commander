@@ -24,13 +24,20 @@ func (a *App) recordFullRenderToast() {
 	a.lastFullRenderToast = strings.TrimSpace(a.model.Message)
 }
 
+// destinationTargets is the destination highlight of the panel frames (Model.DestinationTarget*),
+// which lie outside every dialog overlay.
+func (a *App) destinationTargets() [3]bool {
+	return [3]bool{a.model.DestinationTargetPrimary, a.model.DestinationTargetSecondary, a.model.DestinationTargetWarning}
+}
+
 // paintOverlay is the one partial repaint of a dialog overlay over the unchanged screen: paint
 // draws the dialog and returns the area it painted. It declines (false: the caller does a full
-// render) when a toast needs the full render, the terminal is too small, or the area differs
-// from the one on screen (a frame that shrank or moved, a dropdown that closed), so what the
-// old area covered is repainted rather than left as a ghost.
+// render) when a toast needs the full render, the destination highlight of the panel frames
+// changed since the last one, the terminal is too small, or the area differs from the one on
+// screen (a frame that shrank or moved, a dropdown that closed), so what the old area covered
+// is repainted rather than left as a ghost.
 func (a *App) paintOverlay(kind ui.OverlayKind, paint func(layout ui.Layout) dialog.PaintedArea) bool {
-	if a.toastNeedsFullRender() {
+	if a.toastNeedsFullRender() || a.destinationTargets() != a.lastFullRenderTargets {
 		return false
 	}
 	w, h := a.screen.Size()
@@ -391,6 +398,7 @@ func (a *App) render() {
 // Terminal images are locked before Show and emitted after; a changed placement forces Show.
 func (a *App) emitScreenAfterFullRender() {
 	a.recordFullRenderToast()
+	a.lastFullRenderTargets = a.destinationTargets()
 	plan := previewpanel.TakeFrameImage()
 	if a.imageOverlaySuppressed() {
 		plan = nil
