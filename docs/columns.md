@@ -22,7 +22,7 @@ The file columns come first and are always shown:
 
 **Meta** lists the [meta columns](meta-columns.md) from the `meta.toml` that applies to the panel's directory. It is hidden when there are none.
 
-**File Index** lists the [fileindex columns](fileindex.md#columns). It is hidden unless the index database exists and opens.
+**Fileindex** lists the [fileindex columns](fileindex.md#columns). It is hidden unless the index database exists and opens.
 
 The checkboxes sit in three aligned columns, or fewer on a narrow terminal. A meta column's description shows on the line below them while the checkbox has focus.
 

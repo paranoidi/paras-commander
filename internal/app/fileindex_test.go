@@ -52,8 +52,8 @@ func TestFileIndexActionsInHelpAndMenus(t *testing.T) {
 	var inHelp []string
 	for _, e := range a.buildHelpEntries() {
 		if strings.HasPrefix(e.ActionID, "fileindex.") {
-			if e.Section != "File Index" || e.Keys == "" {
-				t.Errorf("help entry %+v, want section File Index with keys", e)
+			if e.Section != "Fileindex" || e.Keys == "" {
+				t.Errorf("help entry %+v, want section Fileindex with keys", e)
 			}
 			inHelp = append(inHelp, e.ActionID)
 		}

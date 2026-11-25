@@ -71,8 +71,8 @@ func TestColumnsDialogView_sectionsHideWhenEmpty(t *testing.T) {
 	}{
 		{"file only", nil, nil},
 		{"meta", []dialog.MetaEntry{{Name: "walnut"}}, []string{"Meta:"}},
-		{"index", []dialog.MetaEntry{{Name: "fileindex.tags", Label: "Tags", Section: "File Index"}}, []string{"File Index:"}},
-		{"both", []dialog.MetaEntry{{Name: "walnut"}, {Name: "fileindex.tags", Label: "Tags", Section: "File Index"}}, []string{"Meta:", "File Index:"}},
+		{"index", []dialog.MetaEntry{{Name: "fileindex.tags", Label: "Tags", Section: "Fileindex"}}, []string{"Fileindex:"}},
+		{"both", []dialog.MetaEntry{{Name: "walnut"}, {Name: "fileindex.tags", Label: "Tags", Section: "Fileindex"}}, []string{"Meta:", "Fileindex:"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -155,7 +155,7 @@ func gridState() dialog.ColumnsDialogState {
 		{Name: "juniper"},
 	}}
 	for _, n := range []string{"Status", "Tags", "Copies", "First seen", "Last seen"} {
-		st.Entries = append(st.Entries, dialog.MetaEntry{Name: n, Label: n, Section: "File Index"})
+		st.Entries = append(st.Entries, dialog.MetaEntry{Name: n, Label: n, Section: "Fileindex"})
 	}
 	st.Checked = make([]bool, len(st.Entries))
 	return st
@@ -175,7 +175,7 @@ func TestColumnsDialogView_threeColumnsAlignAcrossSections(t *testing.T) {
 		dialog.ColumnsFileID(8): col2,
 		dialog.MetaEntryID(0):   col0, // Meta: wordcount, juniper side by side
 		dialog.MetaEntryID(1):   col1,
-		dialog.MetaEntryID(2):   col0, // File Index: Status, Tags / First seen, Last seen / Copies is alone
+		dialog.MetaEntryID(2):   col0, // Fileindex: Status, Tags / First seen, Last seen / Copies is alone
 		dialog.MetaEntryID(4):   col1,
 		dialog.MetaEntryID(6):   col2,
 	} {

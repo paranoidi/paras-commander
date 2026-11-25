@@ -84,7 +84,7 @@ directories. The text in the field stays the same and the error color
 clears. **Tab** moves to the next field as usual, and **Esc** closes the
 dropdown, both without creating anything. While the row is open, the first
 Enter creates the directory and a second Enter confirms the dialog. This works
-for local paths only, not for SFTP or the file index. If the directory
+for local paths only, not for SFTP or the fileindex. If the directory
 cannot be created (for example, because of missing permissions), an error
 message explains why and the field is left as it was.
 

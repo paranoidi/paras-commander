@@ -210,7 +210,7 @@ func TestColumnsDialogGoldenRender(t *testing.T) {
 	add(80, 7, 3, "mixed", "item2") // too short: height clamps to 5
 	sectioned := metaGoldenState(2, "mixed", "item2")
 	for i, label := range []string{"Status", "Tags", "Copies", "First seen", "Last seen"} {
-		sectioned.Entries = append(sectioned.Entries, MetaEntry{Name: label, Label: label, Section: "File Index"})
+		sectioned.Entries = append(sectioned.Entries, MetaEntry{Name: label, Label: label, Section: "Fileindex"})
 		sectioned.Checked = append(sectioned.Checked, i < 2)
 	}
 	cases = append(cases, simpleGolden{"80x24_n7_section_focus-item2", 80, 24, func(s tcell.Screen, l Layout) {

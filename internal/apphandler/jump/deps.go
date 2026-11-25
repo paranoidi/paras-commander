@@ -1,6 +1,6 @@
 // Package jump owns the Jump to directory dialog: a fuzzy name search over the directories below
 // a panel directory whose Enter changes the panel to the highlighted one. Local panels walk the
-// disk on the dialog's own scan coordinator; fileindex:// panels query the file index.
+// disk on the dialog's own scan coordinator; fileindex:// panels query the fileindex.
 package jump
 
 import (

@@ -1,5 +1,5 @@
 // Package fschange carries reports of local filesystem changes from the operations that make them
-// to the subscribers that keep derived state (the disk-usage cache, meta columns, the file index)
+// to the subscribers that keep derived state (the disk-usage cache, meta columns, the fileindex)
 // in step. It travels on a
 // context, like ops.WithElevator, so a call path without a sink reports nothing.
 package fschange

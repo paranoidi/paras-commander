@@ -234,7 +234,7 @@ in `[jobs]` to make it permanent.
 
 # Job results
 
-Some background tasks leave a result to look at, such as the file index
+Some background tasks leave a result to look at, such as the fileindex
 [differences report](fileindex.md#report-differences). The Details panel shows
 it as `Results:` (for example "3 differences"), and the footer offers
 **Results** while such a job is selected. **Jobs -> Show results** opens the result again, even after you closed it or when

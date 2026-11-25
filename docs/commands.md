@@ -50,7 +50,7 @@ Runs one command once per selected item (or the highlighted item when nothing is
 - **Worker pool**: when `pools.toml` defines pools, radios let the batch share a limited number of parallel slots; see [Worker pools](#worker-pools).
 - **History** (`F3`): fuzzy picker over the command lines you ran earlier in this session.
 
-The dialog does not open, and nothing runs, on a panel that is not local (SFTP, the file index) or when the highlighted or a tagged row is only in the index (see [Local panels only](#local-panels-only)). The selection is cleared when the batch starts. A failed batch shows a summary toast and opens the Commands view.
+The dialog does not open, and nothing runs, on a panel that is not local (SFTP, the fileindex) or when the highlighted or a tagged row is only in the index (see [Local panels only](#local-panels-only)). The selection is cleared when the batch starts. A failed batch shows a summary toast and opens the Commands view.
 
 ## Commands view
 
@@ -88,9 +88,9 @@ cwd = "panel"
 
 ### Local panels only
 
-User menu entries and Run for each run on local panels only, and a command never receives a path that is only in the file index. A command is refused with a warning, before anything runs and with the selection left as it is, when:
+User menu entries and Run for each run on local panels only, and a command never receives a path that is only in the fileindex. A command is refused with a warning, before anything runs and with the selection left as it is, when:
 
-- the active panel is an SFTP or file index (`fileindex://`) panel, whatever the command ("User commands run on local panels only");
+- the active panel is an SFTP or fileindex (`fileindex://`) panel, whatever the command ("User commands run on local panels only");
 - it uses `%f` and the highlighted row is only in the index (a [ghost row](fileindex.md#browsing-with-fileindex): "Only in the index: name");
 - it uses `%t` and one of the tagged rows `%t` expands to (the tags in the panel directory, and in expanded folders in a tree layout) is a ghost row; the highlighted row is not part of `%t`;
 - it uses `%d`, or runs in the highlighted row's directory (the default `cwd`), and that row is a ghost row in a tree layout, whose directory is an index path;
@@ -114,16 +114,16 @@ So a ghost row highlighted in a flat listing does not stop `touch x`, which runs
 | `pool = "name"` | Waits for a slot in a [worker pool](#worker-pools) |
 | `keep_open = true` | Keeps the menu open after launching (needs `background`, `detach` or `interactive`) |
 | `cwd = "panel"` | Runs in the panel directory instead of the highlighted row's directory (`"cursor"`, the default); see [Working directory](#working-directory) |
-| `fileindex_scan = "%d"` | Scans that directory into the [file index](fileindex.md) once the command has run (`"%d"` or `"%D"`, not with `detach`); see [Updating the file index](#updating-the-file-index) |
+| `fileindex_scan = "%d"` | Scans that directory into the [fileindex](fileindex.md) once the command has run (`"%d"` or `"%D"`, not with `detach`); see [Updating the fileindex](#updating-the-fileindex) |
 | `nice = 19`, `ionice = "idle"` | Runs the command at lower CPU / disk priority (`nice` 1 to 19, `ionice` `"idle"`, `"best-effort"` or `"best-effort:0"` to `"best-effort:7"`); see [Lower priority](#lower-priority-nice-ionice) |
 
 Other fields: `title` (required), `command` (required unless the table is a submenu), `key` (single activation letter, otherwise derived from the title), `default = true`, `toast` (message after success), `shell = true` (force `sh -c`), `when` (visibility), `shell_patterns`, `dialog_width` and `dialog_height` (`"80%"` or a number). `interactive` cannot be combined with `detach`, `background`, `dialog` or `run_for_each`.
 
 `when` takes the same predicate language as [Predicates](predicates.md): a bare pattern such as `"*.png"` matches the highlighted file name, and a list means "any of".
 
-### Updating the file index
+### Updating the fileindex
 
-A command that changes files leaves the [file index](fileindex.md) out of date until the next scan. Set `fileindex_scan` to `"%d"` or `"%D"` to queue a scan of that directory once the command has run:
+A command that changes files leaves the [fileindex](fileindex.md) out of date until the next scan. Set `fileindex_scan` to `"%d"` or `"%D"` to queue a scan of that directory once the command has run:
 
 ```toml
 [convert]

@@ -8,7 +8,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-// queryIndex runs the current query against the file index on a goroutine (JumpIndex); an
+// queryIndex runs the current query against the fileindex on a goroutine (JumpIndex); an
 // empty query clears the list.
 func (h *Handler) queryIndex() {
 	st := &h.model.JumpDialog

@@ -30,7 +30,7 @@ of running; it needs a newer pc.
 
 ## Actions
 
-`<` opens the **File Index menu** at the bottom of the screen;
+`<` opens the **Fileindex menu** at the bottom of the screen;
 the `:` leader menu lists it under Tools with the same `<`. The menu groups
 its actions into Browse, Tagging, Tools, Actions and Duplicates groups, with
 Tools below Tagging in the same column. Each action's
@@ -202,7 +202,7 @@ In an index view:
 
 ## Browsing by tags
 
-`M-G` (File Index menu `T`) shows only the entries that carry the tags you
+`M-G` (Fileindex menu `T`) shows only the entries that carry the tags you
 pick, from any panel, as a **tag view** in the active panel. It opens the
 **Browse by tags** dialog:
 
@@ -484,7 +484,7 @@ works as a check that the backup holds what you copied.
 
 ## Columns
 
-The index adds columns to the [Columns dialog](columns.md), in its **File Index** section, listed only
+The index adds columns to the [Columns dialog](columns.md), in its **Fileindex** section, listed only
 while the index database exists and opens. They work on local panels and in
 index views, and sort and filter like any meta column:
 
@@ -581,7 +581,7 @@ return are kept until `fileindex tag-gc`.
 ## Scan and prune
 
 A user menu command can queue a scan by itself once it has run: see
-[Updating the file index](commands.md#updating-the-file-index).
+[Updating the fileindex](commands.md#updating-the-fileindex).
 
 Queuing a scan clears the panel's selection.
 

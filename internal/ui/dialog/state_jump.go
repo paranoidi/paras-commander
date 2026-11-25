@@ -14,7 +14,7 @@ type JumpSource int
 const (
 	// JumpDisk walks the disk under the panel directory (local panels).
 	JumpDisk JumpSource = iota
-	// JumpIndex queries the file index (fileindex:// panels).
+	// JumpIndex queries the fileindex (fileindex:// panels).
 	JumpIndex
 )
 
