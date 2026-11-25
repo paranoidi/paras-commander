@@ -4,6 +4,7 @@ import (
 	"slices"
 	"sort"
 	"strconv"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -87,13 +88,26 @@ func (m *Model) TabPath(panelID, slot int) pathloc.Path {
 	return m.Primary.Path
 }
 
-// tabLabel is the label of slot (1-based) of panelID's bar: the directory name, "/" at a root.
-func (m *Model) tabLabel(panelID, slot int) string {
+// tabLabel is the label of slot (1-based) of panelID's bar: the directory name, "/" at a root. A
+// tag view shows the database icon (with Nerd Font icons) and its tags ("beach | holiday"), and
+// in structure mode the last path element after them ("beach & holiday /summer").
+func (m *Model) tabLabel(styles theme.Theme, panelID, slot int) string {
 	loc := m.TabPath(panelID, slot)
 	if loc.IsZero() {
 		return ""
 	}
-	return loc.Base()
+	q, ok := loc.TagQuery()
+	if !ok {
+		return loc.Base()
+	}
+	label := q.Text()
+	if icon := styles.IconFileIndex(); icon != "" { // "" without Nerd Font icons
+		label = icon + " " + label
+	}
+	if !q.Flat {
+		label += " /" + strings.TrimPrefix(loc.Base(), "/") // Base is "/" at the root
+	}
+	return label
 }
 
 // tabSpans is the one layout of a tab bar width cells wide, shared by the painter and the click
@@ -226,7 +240,7 @@ func (m *Model) panelTabBar(layout Layout, styles theme.Theme, panelID int) (Rec
 	if rect.Width <= 0 || rect.Height <= 0 || bar.Count() < 2 {
 		return rect, nil
 	}
-	return rect, tabSpans(rect.Width, bar, m.TabLabels, tabCapsOf(styles), func(slot int) string { return m.tabLabel(panelID, slot) })
+	return rect, tabSpans(rect.Width, bar, m.TabLabels, tabCapsOf(styles), func(slot int) string { return m.tabLabel(styles, panelID, slot) })
 }
 
 // tabKeysInsertPath reports that the open dialog has a path field the tab keys fill with a tab

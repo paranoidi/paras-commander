@@ -3,7 +3,6 @@ package fileindex
 import (
 	"context"
 	"path/filepath"
-	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -120,7 +119,7 @@ func (h *Handler) BrowseTagsOK() {
 		case err != nil:
 			p.Err = err
 		case matches == 0:
-			p.Warn = "No entries tagged " + tagsText(q)
+			p.Warn = "No entries tagged " + q.Text()
 		default:
 			if q.Flat {
 				start = "/"
@@ -131,15 +130,6 @@ func (h *Handler) BrowseTagsOK() {
 		}
 		h.post(p)
 	}()
-}
-
-// tagsText names the tags of q the way the query reads: "beach & holiday", "beach | holiday".
-func tagsText(q pathloc.TagQuery) string {
-	sep := " & "
-	if q.Any {
-		sep = " | "
-	}
-	return strings.Join(q.Tags, sep)
 }
 
 // ToggleTagViewMode switches the active panel's tag view between a flat list and the directory

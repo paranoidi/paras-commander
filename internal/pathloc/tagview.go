@@ -37,6 +37,15 @@ type TagQuery struct {
 	Tags []string
 }
 
+// Text names the tags of q the way the query reads: "beach & holiday", "beach | holiday".
+func (q TagQuery) Text() string {
+	sep := " & "
+	if q.Any {
+		sep = " | "
+	}
+	return strings.Join(q.Tags, sep)
+}
+
 // TagView returns the tag view of q at host, an absolute host path ("/" for the top). In a flat
 // view host may carry the "//" row boundary. It builds the path the way Parse does.
 func TagView(q TagQuery, host string) (Path, error) {

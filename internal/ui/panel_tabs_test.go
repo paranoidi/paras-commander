@@ -228,7 +228,7 @@ func TestPanelTabAtMatchesDrawnSpans(t *testing.T) {
 			t.Fatal("primary has tabs but no row")
 		}
 		spans := tabSpans(layout.PrimaryTabs.Width, model.Tabs[PrimaryPanel], model.TabLabels, tabCapsOf(styles),
-			func(slot int) string { return model.tabLabel(PrimaryPanel, slot) })
+			func(slot int) string { return model.tabLabel(styles, PrimaryPanel, slot) })
 		if len(spans) != 2 {
 			t.Fatalf("spans = %+v", spans)
 		}
@@ -402,7 +402,7 @@ func TestRenderTabCutMarkFollowsCaps(t *testing.T) {
 	styles := capTheme(slantStart, slantEnd)
 	Render(screen, model, styles)
 	spans := tabSpans(layout.PrimaryTabs.Width, model.Tabs[PrimaryPanel], true, slantCaps,
-		func(slot int) string { return model.tabLabel(PrimaryPanel, slot) })
+		func(slot int) string { return model.tabLabel(styles, PrimaryPanel, slot) })
 	if spans[0].Cut < 0 {
 		t.Fatalf("test needs a cut label: %+v", spans)
 	}
@@ -501,5 +501,44 @@ func TestRenderWideCapsKeepWidthsInStep(t *testing.T) {
 	id, slot, ok := PanelTabAt(layout, &model, styles, layout.PrimaryTabs.X+1, layout.PrimaryTabs.Y)
 	if !ok || id != PrimaryPanel || slot != 1 {
 		t.Fatalf("the second cell of a wide cap hit (%d,%d,%v)", id, slot, ok)
+	}
+}
+
+func TestTabLabelOfTagView(t *testing.T) {
+	const icon = "\U000F01BC"
+	withIcon := capTheme(slantStart, slantEnd)
+	withIcon.Icons[theme.IconKeyFileIndex] = icon
+	plain := theme.Default()
+	plain.UseNerdfontIcons = false
+	tests := []struct {
+		name, path string
+		styles     theme.Theme
+		want       string
+	}{
+		{"flat list", "fileindex@(beach|holiday):///", withIcon, icon + " beach | holiday"},
+		{"flat inside a row", "fileindex@(beach|holiday):///srv/orchard//ember", withIcon, icon + " beach | holiday"},
+		{"structure", "fileindex(beach&holiday):///srv/photos/summer", withIcon, icon + " beach & holiday /summer"},
+		{"structure root", "fileindex(beach&holiday):///", withIcon, icon + " beach & holiday /"},
+		{"escaped tag", "fileindex(a%26b):///srv/lantern", withIcon, icon + " a&b /lantern"},
+		{"no icons flat", "fileindex@(beach|holiday):///", plain, "beach | holiday"},
+		{"no icons structure", "fileindex(beach&holiday):///srv/photos/summer", plain, "beach & holiday /summer"},
+		{"plain index", "fileindex:///srv/orchard", withIcon, "orchard"},
+		{"local", "/srv/orchard", withIcon, "orchard"},
+	}
+	for _, tc := range tests {
+		for _, active := range []bool{true, false} {
+			model, _ := tabsModel(80)
+			loc := pathloc.MustParse(tc.path)
+			slot := 2
+			if active {
+				model.Primary.Path = loc
+				slot = 1
+			} else {
+				model.Tabs[PrimaryPanel].Paths[1] = loc
+			}
+			if got := model.tabLabel(tc.styles, PrimaryPanel, slot); got != tc.want {
+				t.Errorf("%s (active=%v): label = %q, want %q", tc.name, active, got, tc.want)
+			}
+		}
 	}
 }

@@ -382,8 +382,8 @@ const (
 
 	// TabSlots is the number of tab slots of each file panel (slots 1..TabSlots).
 	TabSlots = 9
-	// DefaultTabLabels: when true, a panel's tab bar shows each tab's directory name after its slot
-	// number. TabLabelMinCells is the narrowest a label may be cut to; below it the bar shows
+	// DefaultTabLabels: when true, a panel's tab bar shows each tab's directory name (a tag view's tags) after
+	// its slot number. TabLabelMinCells is the narrowest a label may be cut to; below it the bar shows
 	// slot numbers only.
 	DefaultTabLabels = true
 	TabLabelMinCells = 4

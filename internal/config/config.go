@@ -470,8 +470,8 @@ type UIConfig struct {
 	// NarrowPanelsNameOnly: when true, narrow panels hide trailing listing columns and show only names
 	// (sort and the panel's columns are unchanged; see NarrowPanelRowTextWidthThreshold in builtin.go).
 	NarrowPanelsNameOnly bool `toml:"narrow_panels_name_only"`
-	// TabLabels: when true, a panel's tab bar shows each tab's directory name beside its slot
-	// number; otherwise only the numbers.
+	// TabLabels: when true, a panel's tab bar shows each tab's directory name (a tag view's tags) beside
+	// its slot number; otherwise only the numbers.
 	TabLabels bool `toml:"tab_labels"`
 	// OtherPanelMatchMarks: when true, each panel marks rows whose name also exists in the other
 	// panel's directory (cyan for the active cursor's name).
