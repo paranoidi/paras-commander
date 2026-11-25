@@ -89,8 +89,8 @@ func (m *Model) TabPath(panelID, slot int) pathloc.Path {
 }
 
 // tabLabel is the label of slot (1-based) of panelID's bar: the directory name, "/" at a root. A
-// tag view shows the database icon (with Nerd Font icons) and its tags ("beach | holiday"), and
-// in structure mode the last path element after them ("beach & holiday /summer").
+// tag view shows the database icon (with Nerd Font icons) and its tags ("beach|holiday"), and
+// in structure mode the last path element after them ("beach&holiday /summer").
 func (m *Model) tabLabel(styles theme.Theme, panelID, slot int) string {
 	loc := m.TabPath(panelID, slot)
 	if loc.IsZero() {
@@ -100,7 +100,7 @@ func (m *Model) tabLabel(styles theme.Theme, panelID, slot int) string {
 	if !ok {
 		return loc.Base()
 	}
-	label := q.Text()
+	label := q.Text("")
 	if icon := styles.IconFileIndex(); icon != "" { // "" without Nerd Font icons
 		label = icon + " " + label
 	}

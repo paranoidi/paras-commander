@@ -119,7 +119,7 @@ func (h *Handler) BrowseTagsOK() {
 		case err != nil:
 			p.Err = err
 		case matches == 0:
-			p.Warn = "No entries tagged " + q.Text()
+			p.Warn = "No entries tagged " + q.Text(" ")
 		default:
 			if q.Flat {
 				start = "/"

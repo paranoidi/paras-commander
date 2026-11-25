@@ -37,13 +37,14 @@ type TagQuery struct {
 	Tags []string
 }
 
-// Text names the tags of q the way the query reads: "beach & holiday", "beach | holiday".
-func (q TagQuery) Text() string {
-	sep := " & "
+// Text names the tags of q the way the query reads, with pad on both sides of each separator:
+// "beach&holiday", "beach | holiday".
+func (q TagQuery) Text(pad string) string {
+	sep := "&"
 	if q.Any {
-		sep = " | "
+		sep = "|"
 	}
-	return strings.Join(q.Tags, sep)
+	return strings.Join(q.Tags, pad+sep+pad)
 }
 
 // TagView returns the tag view of q at host, an absolute host path ("/" for the top). In a flat

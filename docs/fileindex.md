@@ -247,7 +247,7 @@ goes to the real directory, as in any index view), and `M-R` shows the entry at
 its real location. Titles show the query: with Nerd Font icons the database icon,
 then `(beach&holiday)` for a structure view or `@(beach|holiday)` for a flat
 one, then the directory. A [panel tab](tabs.md) shows the icon and the tags
-instead (`beach | holiday`, or `beach & holiday /summer` in a structure view).
+instead (`beach|holiday`, or `beach&holiday /summer` in a structure view).
 
 In a tag view:
 

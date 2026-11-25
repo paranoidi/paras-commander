@@ -515,13 +515,13 @@ func TestTabLabelOfTagView(t *testing.T) {
 		styles     theme.Theme
 		want       string
 	}{
-		{"flat list", "fileindex@(beach|holiday):///", withIcon, icon + " beach | holiday"},
-		{"flat inside a row", "fileindex@(beach|holiday):///srv/orchard//ember", withIcon, icon + " beach | holiday"},
-		{"structure", "fileindex(beach&holiday):///srv/photos/summer", withIcon, icon + " beach & holiday /summer"},
-		{"structure root", "fileindex(beach&holiday):///", withIcon, icon + " beach & holiday /"},
+		{"flat list", "fileindex@(beach|holiday):///", withIcon, icon + " beach|holiday"},
+		{"flat inside a row", "fileindex@(beach|holiday):///srv/orchard//ember", withIcon, icon + " beach|holiday"},
+		{"structure", "fileindex(beach&holiday):///srv/photos/summer", withIcon, icon + " beach&holiday /summer"},
+		{"structure root", "fileindex(beach&holiday):///", withIcon, icon + " beach&holiday /"},
 		{"escaped tag", "fileindex(a%26b):///srv/lantern", withIcon, icon + " a&b /lantern"},
-		{"no icons flat", "fileindex@(beach|holiday):///", plain, "beach | holiday"},
-		{"no icons structure", "fileindex(beach&holiday):///srv/photos/summer", plain, "beach & holiday /summer"},
+		{"no icons flat", "fileindex@(beach|holiday):///", plain, "beach|holiday"},
+		{"no icons structure", "fileindex(beach&holiday):///srv/photos/summer", plain, "beach&holiday /summer"},
 		{"plain index", "fileindex:///srv/orchard", withIcon, "orchard"},
 		{"local", "/srv/orchard", withIcon, "orchard"},
 	}
