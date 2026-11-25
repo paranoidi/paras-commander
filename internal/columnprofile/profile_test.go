@@ -15,6 +15,8 @@ func TestBuiltinsMatchColumnSets(t *testing.T) {
 	}{
 		{config.ColumnProfileModified, panel.ColumnsModified},
 		{config.ColumnProfilePermissions, panel.ColumnsPermissions},
+		{config.ColumnProfileOwnership, panel.ColumnsBrief.With(panel.ColumnOwner).With(panel.ColumnGroup)},
+		{config.ColumnProfilePermissionsOwnership, panel.ColumnSet(0).With(panel.ColumnPermissions).With(panel.ColumnOwner).With(panel.ColumnGroup)},
 		{config.ColumnProfileBrief, panel.ColumnsBrief},
 		{config.ColumnProfileIndex, panel.ColumnsBrief},
 		{config.ColumnProfileTagList, panel.ColumnsBrief},
@@ -31,7 +33,7 @@ func TestBuiltinsMatchColumnSets(t *testing.T) {
 
 func TestCycleOrderSkipsIndexAndFollowsFile(t *testing.T) {
 	saved := []Profile{{Name: "orchard"}, {Name: "harbor"}}
-	want := []string{config.ColumnProfileModified, config.ColumnProfilePermissions, config.ColumnProfileBrief, "orchard", "harbor"}
+	want := []string{config.ColumnProfileModified, config.ColumnProfilePermissions, config.ColumnProfileOwnership, config.ColumnProfilePermissionsOwnership, config.ColumnProfileBrief, "orchard", "harbor"}
 	cycle := Cycle(saved)
 	if len(cycle) != len(want) {
 		t.Fatalf("cycle = %+v", cycle)

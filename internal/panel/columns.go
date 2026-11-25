@@ -68,9 +68,11 @@ type ColumnSet uint16
 
 // Column sets of the built-in profiles.
 const (
-	ColumnsBrief       = ColumnSet(1 << ColumnSize)
-	ColumnsModified    = ColumnSet(1<<ColumnSize | 1<<ColumnModified)
-	ColumnsPermissions = ColumnSet(1<<ColumnSize | 1<<ColumnPermissions)
+	ColumnsBrief                = ColumnSet(1 << ColumnSize)
+	ColumnsModified             = ColumnSet(1<<ColumnSize | 1<<ColumnModified)
+	ColumnsPermissions          = ColumnSet(1<<ColumnSize | 1<<ColumnPermissions)
+	ColumnsOwnership            = ColumnSet(1<<ColumnSize | 1<<ColumnOwner | 1<<ColumnGroup)
+	ColumnsPermissionsOwnership = ColumnSet(1<<ColumnPermissions | 1<<ColumnOwner | 1<<ColumnGroup)
 )
 
 // Has reports whether the set shows id.

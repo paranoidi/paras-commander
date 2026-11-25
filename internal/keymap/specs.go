@@ -1204,7 +1204,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Title:       "Cycle column profile",
 			Section:     "View",
 			DefaultKeys: []string{"M-t"},
-			Keywords:    []string{"columns", "profile", "listing", "modified", "permissions", "brief"},
+			Keywords:    []string{"columns", "profile", "listing", "modified", "permissions", "owner", "group", "brief"},
 		},
 		{
 			ID:          ActionPanelToggleCarousel,

@@ -29,7 +29,7 @@ func TestCycleProfile_walksBuiltinsThenSavedAndWraps(t *testing.T) {
 	h.profiles = []columnprofile.Profile{{Name: "orchard", Columns: []string{"owner"}}}
 	p := fh.panels[0]
 	p.ColumnProfile = config.ColumnProfileModified
-	for _, want := range []string{config.ColumnProfilePermissions, config.ColumnProfileBrief, "orchard", config.ColumnProfileModified} {
+	for _, want := range []string{config.ColumnProfilePermissions, config.ColumnProfileOwnership, config.ColumnProfilePermissionsOwnership, config.ColumnProfileBrief, "orchard", config.ColumnProfileModified} {
 		h.CycleProfile(0)
 		if p.ColumnProfile != want {
 			t.Fatalf("profile = %q, want %q", p.ColumnProfile, want)

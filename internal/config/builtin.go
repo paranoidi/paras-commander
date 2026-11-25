@@ -331,11 +331,13 @@ const (
 	DefaultFocusOtherPanelAfterTransfer = true
 
 	// Built-in column profile names (columnprofile.Builtins).
-	ColumnProfileModified    = "modified"
-	ColumnProfilePermissions = "permissions"
-	ColumnProfileBrief       = "brief"
-	ColumnProfileIndex       = "index"
-	ColumnProfileTagList     = "tag-list"
+	ColumnProfileModified             = "modified"
+	ColumnProfilePermissions          = "permissions"
+	ColumnProfileOwnership            = "ownership"
+	ColumnProfilePermissionsOwnership = "permissions-ownership"
+	ColumnProfileBrief                = "brief"
+	ColumnProfileIndex                = "index"
+	ColumnProfileTagList              = "tag-list"
 
 	// DefaultColumnProfile is the default [panels].default_column_profile.
 	DefaultColumnProfile = ColumnProfileBrief

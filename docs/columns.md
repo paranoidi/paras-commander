@@ -50,11 +50,13 @@ A profile is a saved set of ticked columns, both file and meta.
 |---|---|
 | `modified` | Size, Modified |
 | `permissions` | Size, Permissions |
+| `ownership` | Size, Owner, Group |
+| `permissions-ownership` | Permissions, Owner, Group |
 | `brief` | Size |
 | `index` | Size, the fileindex Tags column |
 | `tag-list` | Size, the fileindex Tags and Directory columns |
 
-These five are built in. They always exist and can't be overwritten or deleted.
+These seven are built in. They always exist and can't be overwritten or deleted.
 
 In the Columns dialog:
 
@@ -68,7 +70,7 @@ The keys can be rebound under `[dialog.columns]` in `keybindings.toml`.
 
 ## Cycling
 
-`M-t` moves the active panel to the next profile and shows its name in a message: `modified`, `permissions`, `brief`, then your saved profiles in file order, and back to the start. `index` and `tag-list` are left out of the cycle. After you choose columns that match no profile, `M-t` starts again from the first profile.
+`M-t` moves the active panel to the next profile and shows its name in a message: `modified`, `permissions`, `ownership`, `permissions-ownership`, `brief`, then your saved profiles in file order, and back to the start. `index` and `tag-list` are left out of the cycle. After you choose columns that match no profile, `M-t` starts again from the first profile.
 
 A profile replaces both file and meta columns, so cycling to a profile with no meta columns switches meta columns off.
 

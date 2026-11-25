@@ -3,12 +3,12 @@
      ├────────────────────────────────────────────────────────────────────┤     
      │ modified — size and modified time (built-in)                       │     
      │ permissions — size and permissions (built-in)                      │     
+     │ ownership — size, owner, group (built-in)                          │     
+     │ permissions-ownership — permissions, owner, group (built-in)       │     
      │ brief — size only (built-in) (default)                             │     
      │ index — size and fileindex tags (built-in)                         │     
      │ tag-list — size, tags and directory (built-in)                     │     
      │ orchard — owner and group                                          │     
-     │                                                                    │     
-     │                                                                    │     
      │                                                                    │     
      │                                                                    │     
      │                                                                    │     

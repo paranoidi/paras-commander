@@ -41,6 +41,8 @@ func Builtins() []Profile {
 	return []Profile{
 		{Name: config.ColumnProfileModified, Description: "size and modified time", Columns: panel.ColumnsModified.Names(), Builtin: true},
 		{Name: config.ColumnProfilePermissions, Description: "size and permissions", Columns: panel.ColumnsPermissions.Names(), Builtin: true},
+		{Name: config.ColumnProfileOwnership, Description: "size, owner, group", Columns: panel.ColumnsOwnership.Names(), Builtin: true},
+		{Name: config.ColumnProfilePermissionsOwnership, Description: "permissions, owner, group", Columns: panel.ColumnsPermissionsOwnership.Names(), Builtin: true},
 		{Name: config.ColumnProfileBrief, Description: "size only", Columns: panel.ColumnsBrief.Names(), Builtin: true},
 		{Name: config.ColumnProfileIndex, Description: "size and fileindex tags", Columns: panel.ColumnsBrief.Names(), Meta: []string{config.FileIndexTagsColumn}, Builtin: true, SkipCycle: true},
 		{Name: config.ColumnProfileTagList, Description: "size, tags and directory", Columns: panel.ColumnsBrief.Names(), Meta: []string{config.FileIndexTagsColumn, config.FileIndexDirectoryColumn}, Builtin: true, SkipCycle: true},
