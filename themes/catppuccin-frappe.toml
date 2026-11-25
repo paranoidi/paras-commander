@@ -135,7 +135,7 @@ section = { fg = "fg", bold = true }
 key     = { fg = "fg", bold = true }
 
 [tooltip]
-info = { fg = "accent_alt" }  # rosewater info icon  # tuned
+info = { fg = "ink" }       # foreground of the info icon ([icons.dialog] info) on the box
 
 [dialog.massrename]
 before.removed = { fg = "fg", bold = true }
