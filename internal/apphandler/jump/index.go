@@ -1,9 +1,11 @@
 package jump
 
 import (
+	"context"
 	"strings"
 
 	fi "github.com/paranoidi/paras-commander/internal/fileindex"
+	"github.com/paranoidi/paras-commander/internal/findcrit"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
@@ -20,10 +22,10 @@ func (h *Handler) queryIndex() {
 	}
 	st.Searching = true
 	gen, root, limit := h.rankGen, st.Root, h.config.UI.Find.MaxResults
-	q := fi.FindQuery{Text: st.Query, OnlyDirs: true, MaxDepth: st.MaxDepth, IncludeHidden: st.IncludeHidden}
+	q := fi.FindQuery{Text: st.Query, Mode: findcrit.IndexPattern, OnlyDirs: true, MaxDepth: st.MaxDepth, IncludeHidden: st.IncludeHidden}
 	index := h.index
 	go func() {
-		found, truncated, err := index.Find(root, q, limit)
+		found, truncated, err := index.Find(context.Background(), root, q, limit)
 		res := make([]dialog.JumpResult, len(found))
 		for i, f := range found {
 			res[i] = dialog.JumpResult{Path: f.Path, Rel: pathloc.RelOrSelf(root, f.Path)}

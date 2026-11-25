@@ -300,8 +300,8 @@ form with no directory, `fileindex@(beach)://`, is accepted for the list.
 ## Finding in the index
 
 Find (`C-f`) on an index view opens **Find in index**, which searches
-the index under the panel directory instead of walking the disk (files that
-have gone from disk are found too). [Jump to directory](navigation.md#jump-to-directory)
+the index instead of walking the disk (files that have gone from disk are
+found too). It searches the whole index by default, wherever the panel is. [Jump to directory](navigation.md#jump-to-directory)
 (`M-c`) on an index view searches the indexed directories the same way. `M-F` opens it from an ordinary local panel
 too, so you can search the index without leaving the real directory: Enter
 then shows the result in the real location (falling back to the index view when
@@ -309,8 +309,26 @@ the directory is gone from disk). The query runs as you type; results are capped
 `[ui.find].max_results` and the title shows `N+` when more matched. A finished query
 without results turns the query red.
 
-Two query modes (radios; `M-m` switches between them):
+Three query modes (the **Match** radios in the Advanced section, which the
+**Advanced** checkbox or `M-a` shows; `M-m` cycles through them, and a mode
+other than Terms is named after the search icon):
 
+- **Terms** (the default) matches file and directory names, ignoring case.
+  Terms are separated by spaces and all must match, in any order:
+
+  | Query | Finds names |
+  |---|---|
+  | `beach 2019` | containing both |
+  | `beach \| lake` | containing either (binds tighter than the space: `a \| b c` is (a or b) and c) |
+  | `!2019` | not containing it |
+  | `^img`, `.jpg$` | starting, ending with it |
+  | `*.jpg`, `report-??` | matching as a whole: `*` is any run, `?` one character |
+  | `"summer beach"`, `summer\ beach` | containing that text, spaces and all |
+
+  Quoted text and text after a backslash is plain: `"*.jpg"` looks for those
+  characters. A leading `'` is ignored. There are no syntax errors: an
+  unclosed quote runs to the end and a stray `!`, `^`, `$` or `\|` is ignored.
+  A query of only `!` terms lists every name without them.
 - **Pattern** matches file and directory names, ignoring case. Plain text finds
   names containing it (`holiday`). With `*` (any run) or `?` (one character)
   the whole name must match the pattern (`*.jpg`, `report-??.pdf`).
@@ -322,13 +340,22 @@ Two query modes (radios; `M-m` switches between them):
   Quote text with punctuation (`"report.pdf"`). A syntax error is shown in the
   dialog.
 
-Focusing either radio shows its syntax in a tooltip.
+Focusing a mode radio shows its syntax in a tooltip.
+
+The **Search in** radios in the Advanced section choose where to look:
+**Whole index** (the default; results show their full path), **Current
+directory** (the panel directory and below; paths are relative to it) and
+**Selected directories** (shown when directories are selected in the panel).
+Collapsed, the Advanced section is summarized above the results when a setting
+differs from the default, and it keeps its settings until you quit. `M-r`
+returns the mode and scope to their defaults.
 
 Other options: **Only directories** / **Only files**, **Include hidden**
-(names with a dot-prefixed path component are left out by default), the depth
-box (1-9 levels below the panel directory, empty or 0 for unlimited), and
-**Search only from selected directories** when directories are selected in the
-panel.
+(names with a dot-prefixed path component below the searched directory are left
+out by default; for the whole index that is any dot-directory on the path) and
+the depth box (1-9 levels below the panel directory, empty or 0 for unlimited).
+A depth counts from the panel directory, so setting one switches Whole index to
+Current directory, and choosing Whole index clears the depth.
 
 Keys work as in Find: mark results and press OK to add them to the panel
 selection;
@@ -341,8 +368,9 @@ directory brings it back. Opening it anywhere else asks whether to restore the
 parked search or start a new one there. OK without marks shows the result under the cursor in the panel: a
 directory itself, a file in its directory with the file highlighted. The
 marked summary counts files by their indexed size; directories add no size.
-Find's advanced criteria are not available: the index keeps no times, owners
-or modes to filter on.
+The index keeps size and modification time but no owners or modes, and Find's
+time, size and file-type criteria are not offered here: the Advanced section
+holds only the match mode and the scope.
 
 ## Other copies
 

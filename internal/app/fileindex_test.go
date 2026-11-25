@@ -17,6 +17,7 @@ import (
 	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
 	"github.com/paranoidi/paras-commander/internal/config"
 	fi "github.com/paranoidi/paras-commander/internal/fileindex"
+	"github.com/paranoidi/paras-commander/internal/findcrit"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -774,7 +775,7 @@ func TestFindDialogOnFileIndexPanelOpensIndexFind(t *testing.T) {
 		t.Fatalf("state = %+v", st)
 	}
 	typeIndexFindQuery(t, a, screen, "HARBOR", 1)
-	if r := a.model.IndexFindDialog.Results[0]; r.Path != filepath.Join(dir, "harbor.txt") || r.Rel != "harbor.txt" {
+	if r := a.model.IndexFindDialog.Results[0]; r.Path != filepath.Join(dir, "harbor.txt") || r.Rel != r.Path { // the whole index shows full paths
 		t.Fatalf("result = %+v", r)
 	}
 	a.handleKey(tcell.NewEventKey(tcell.KeyEscape, 0, tcell.ModNone))
@@ -904,7 +905,7 @@ func TestIndexFindGroupSelectAndParentDirs(t *testing.T) {
 	}
 }
 
-func TestIndexFindSearchOnlySelectionsAndHiddenDepth(t *testing.T) {
+func TestIndexFindSelectedDirectoriesScopeAndDepth(t *testing.T) {
 	a, screen, dir, _ := fileIndexApp(t)
 	sub := filepath.Join(dir, "orchard")
 	if err := os.Mkdir(sub, 0o755); err != nil {
@@ -927,19 +928,114 @@ func TestIndexFindSearchOnlySelectionsAndHiddenDepth(t *testing.T) {
 	a.dispatch(keymap.ActionPanelFindDialog)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.IndexFindDialog.Open })
 	st := &a.model.IndexFindDialog
-	if !st.ShowSearchSelectionsOption || !slices.Equal(st.SelectionDirRoots, []string{sub}) {
-		t.Fatalf("selection scope = %v %v", st.ShowSearchSelectionsOption, st.SelectionDirRoots)
+	if !st.ShowSelectedScope || !slices.Equal(st.SelectionDirRoots, []string{sub}) {
+		t.Fatalf("selection scope = %v %v", st.ShowSelectedScope, st.SelectionDirRoots)
 	}
-	a.fileindexCtrl.ApplyFindEvent(dlgEvent(dialog.IndexFindSelections))
+	if st.Advanced.Scope != dialog.IndexScopeWhole {
+		t.Fatalf("default scope = %v, want the whole index", st.Advanced.Scope)
+	}
+	a.fileindexCtrl.ApplyFindEvent(dlgEvent(dialog.IndexFindAdvScopeID(dialog.IndexScopeSelected)))
 	typeIndexFindQuery(t, a, screen, ".txt", 1) // only orchard/thistle.txt, not the panel directory's files
-	if !st.SearchOnlySelections || st.Results[0].Rel != "orchard/thistle.txt" {
-		t.Fatalf("scoped = %v results = %+v", st.SearchOnlySelections, st.Results)
+	if st.Advanced.Scope != dialog.IndexScopeSelected || st.Results[0].Rel != "orchard/thistle.txt" {
+		t.Fatalf("scoped = %v results = %+v", st.Advanced.Scope, st.Results)
 	}
-	// depth 1 keeps direct children; the radios and the hidden checkbox rerun the query
+	// depth 1 keeps direct children of the panel directory: the selected scope stays
 	st.Focus = dialog.IndexFindDepth
 	a.handleKey(tcell.NewEventKey(tcell.KeyRune, '1', tcell.ModNone))
-	if st.MaxDepth != 1 || st.Focus != dialog.IndexFindQuery {
-		t.Fatalf("depth = %d focus = %q", st.MaxDepth, st.Focus)
+	if st.MaxDepth != 1 || st.Focus != dialog.IndexFindQuery || st.Advanced.Scope != dialog.IndexScopeSelected {
+		t.Fatalf("depth = %d focus = %q scope = %v", st.MaxDepth, st.Focus, st.Advanced.Scope)
+	}
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return !st.Searching && len(st.Results) == 0 })
+}
+
+// TestIndexFindWholeIndexDefaultAndDepth checks the default scope reaches files outside the panel
+// directory (shown by full path), that a depth moves the search to the current directory and that
+// choosing Whole index again clears the depth.
+func TestIndexFindWholeIndexDefaultAndDepth(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	other, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, err := a.fileIndex.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := strings.Repeat("d", 32)
+	if _, err := d.CommitScanBatch([]db.ScannedFile{{Dir: other, Name: "thistle.txt", Size: 1, Mtime: time.Now(), MD5: sum, SHA256: sum + sum}}); err != nil {
+		t.Fatal(err)
+	}
+	openIndexFind(t, a, screen, dir)
+	st := &a.model.IndexFindDialog
+	typeIndexFindQuery(t, a, screen, ".txt", 3)
+	if want := filepath.Join(other, "thistle.txt"); !slices.ContainsFunc(st.Results, func(r dialog.IndexFindResult) bool { return r.Path == want && r.Rel == want }) {
+		t.Fatalf("results = %+v, want the file outside the panel directory by its full path", st.Results)
+	}
+	st.Focus = dialog.IndexFindDepth
+	a.handleKey(tcell.NewEventKey(tcell.KeyRune, '1', tcell.ModNone))
+	if st.Advanced.Scope != dialog.IndexScopeCurrent || st.MaxDepth != 1 {
+		t.Fatalf("scope = %v depth = %d after setting a depth, want the current directory and 1", st.Advanced.Scope, st.MaxDepth)
+	}
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return !st.Searching && len(st.Results) == 2 })
+	if st.Results[0].Rel != "harbor.txt" {
+		t.Fatalf("current directory results = %+v", st.Results)
+	}
+	a.fileindexCtrl.ApplyFindEvent(dlgEvent(dialog.IndexFindAdvScopeID(dialog.IndexScopeWhole)))
+	if st.Advanced.Scope != dialog.IndexScopeWhole || st.MaxDepth != 0 || st.DepthInput != "" {
+		t.Fatalf("scope = %v depth = %d %q after Whole index, want the depth cleared", st.Advanced.Scope, st.MaxDepth, st.DepthInput)
+	}
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return !st.Searching && len(st.Results) == 3 })
+}
+
+// TestIndexFindAdvancedKeys covers the Advanced actions: toggle moves focus into and out of the
+// section, cycle steps Terms / Pattern / Boolean, reset restores the defaults, and the section
+// survives closing and reopening the dialog.
+func TestIndexFindAdvancedKeys(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	openIndexFind(t, a, screen, dir)
+	st := &a.model.IndexFindDialog
+	alt := map[string]rune{keymap.ActionFindToggleAdvanced: 'a', keymap.ActionFindCycleMatchMode: 'm', keymap.ActionFindResetAdvanced: 'r'}
+	run := func(action string) { a.handleKey(tcell.NewEventKey(tcell.KeyRune, alt[action], tcell.ModAlt)) }
+	if st.AdvancedMnemonic != 'A' {
+		t.Fatalf("Advanced mnemonic = %q, want A", st.AdvancedMnemonic)
+	}
+	run(keymap.ActionFindToggleAdvanced)
+	if !st.Advanced.Expanded || st.Focus != dialog.IndexFindAdvModeID(findcrit.IndexTerms) || !st.AdvancedFocused() {
+		t.Fatalf("after toggle: %+v focus %q", st.Advanced, st.Focus)
+	}
+	run(keymap.ActionFindCycleMatchMode)
+	run(keymap.ActionFindCycleMatchMode)
+	if st.Advanced.Mode != findcrit.IndexBoolean {
+		t.Fatalf("mode after two cycles = %v", st.Advanced.Mode)
+	}
+	run(keymap.ActionFindCycleMatchMode)
+	if st.Advanced.Mode != findcrit.IndexTerms {
+		t.Fatalf("mode after three cycles = %v", st.Advanced.Mode)
+	}
+	// Enter on a focused radio selects it, as in Find.
+	st.Focus = dialog.IndexFindAdvModeID(findcrit.IndexPattern)
+	a.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if st.Advanced.Mode != findcrit.IndexPattern || !st.Advanced.Expanded {
+		t.Fatalf("Enter on the Pattern radio: mode = %v, expanded = %v", st.Advanced.Mode, st.Advanced.Expanded)
+	}
+	a.fileindexCtrl.ApplyFindEvent(dlgEvent(dialog.IndexFindAdvModeID(findcrit.IndexBoolean)))
+	st.OnlyDirs = false
+	a.fileindexCtrl.ApplyFindEvent(dlgEvent(dialog.IndexFindAdvScopeID(dialog.IndexScopeCurrent)))
+	a.fileindexCtrl.CloseFindDialog()
+	a.dispatch(keymap.ActionPanelFindDialog)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.IndexFindDialog.Open })
+	if st := a.model.IndexFindDialog; !st.Advanced.Expanded || st.Advanced.Mode != findcrit.IndexBoolean || st.Advanced.Scope != dialog.IndexScopeCurrent {
+		t.Fatalf("reopened with %+v, want the saved section", st.Advanced)
+	}
+	st = &a.model.IndexFindDialog
+	run(keymap.ActionFindResetAdvanced)
+	if st.Advanced.Mode != findcrit.IndexTerms || st.Advanced.Scope != dialog.IndexScopeWhole || !st.Advanced.Expanded {
+		t.Fatalf("after reset: %+v", st.Advanced)
+	}
+	st.Focus = dialog.IndexFindAdvModeID(findcrit.IndexTerms)
+	run(keymap.ActionFindToggleAdvanced)
+	if st.Advanced.Expanded || st.Focus != dialog.IndexFindQuery {
+		t.Fatalf("after collapsing: expanded=%v focus=%q", st.Advanced.Expanded, st.Focus)
 	}
 }
 

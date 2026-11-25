@@ -109,7 +109,7 @@ Fuzzy directory-name search under a panel's directory whose Enter changes that p
 _Avoid_: jump mode, find jump
 
 **Match mode**:
-How Find reads its query: fuzzy (ranked), glob (shell pattern) or regex. Find in index has its own Pattern / Boolean modes.
+How Find reads its query: fuzzy (ranked), glob (shell pattern) or regex. Find in index has its own `findcrit.IndexMode`: Terms (fzf-style terms on basenames, the default), Pattern (one glob) and Boolean (FTS5 words, files only).
 
 **Advanced criteria**:
 Find's metadata filters (age, size, kind, owner, file-type groups, exclude patterns) in the dialog's collapsible Advanced section; every set criterion must hold.

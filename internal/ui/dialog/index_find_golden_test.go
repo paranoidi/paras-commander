@@ -5,13 +5,14 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/findcrit"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // Render goldens for the find-in-index dialog: default focus with results and marks, Boolean mode
-// (Only directories greyed), the truncated count, an error and the
-// empty list.
+// (Only directories greyed), the truncated count, an error, the empty list, and the advanced
+// section (match mode and scope) expanded, collapsed to its summary and with tooltips.
 
 func indexFindGoldenState(n int) IndexFindDialogState {
 	st := IndexFindDialogState{Open: true, Root: "/home/meadow", Query: "lantern", QueryCursor: 7, Focus: IndexFindQuery}
@@ -37,7 +38,7 @@ func TestIndexFindGoldenRender(t *testing.T) {
 	marked.Marked = map[string]bool{st.Results[1].Path: true, st.Results[3].Path: true}
 	add("marked_cursor2", 100, 30, marked)
 	boolean := st
-	boolean.Boolean, boolean.OnlyFiles = true, true
+	boolean.Advanced.Mode, boolean.OnlyFiles = findcrit.IndexBoolean, true
 	add("boolean", 100, 30, boolean)
 	trunc := indexFindGoldenState(30)
 	trunc.Truncated = true
@@ -46,11 +47,11 @@ func TestIndexFindGoldenRender(t *testing.T) {
 	searching.Searching = true
 	add("searching", 100, 30, searching)
 	bad := indexFindGoldenState(0)
-	bad.Boolean, bad.Err = true, "fts5: syntax error near \"\""
+	bad.Advanced.Mode, bad.Err = findcrit.IndexBoolean, "fts5: syntax error near \"\""
 	add("error", 100, 30, bad)
 	add("empty", 100, 30, indexFindGoldenState(0))
 	opts := st
-	opts.ShowSearchSelectionsOption, opts.SearchOnlySelections, opts.IncludeHidden = true, true, true
+	opts.ShowSelectedScope, opts.Advanced.Scope, opts.IncludeHidden = true, IndexScopeSelected, true
 	opts.MaxDepth, opts.DepthInput = 3, "3"
 	opts.Marked = map[string]bool{st.Results[1].Path: true, st.Results[2].Path: true}
 	opts.MarkedSizes = map[string]int64{st.Results[1].Path: 1500, st.Results[2].Path: 2048}
@@ -58,11 +59,31 @@ func TestIndexFindGoldenRender(t *testing.T) {
 	depth := st
 	depth.Focus = IndexFindDepth
 	add("focus-depth", 100, 30, depth)
-	pattern := st
-	pattern.Focus = IndexFindPattern
+	collapsed := st
+	collapsed.Advanced.Mode, collapsed.Advanced.Scope = findcrit.IndexPattern, IndexScopeCurrent
+	add("summary", 100, 30, collapsed)
+	selected := st
+	selected.ShowSelectedScope, selected.Advanced.Scope = true, IndexScopeSelected
+	add("summary_selected", 100, 30, selected)
+	expanded := st
+	expanded.Advanced.Expanded = true
+	add("advanced", 100, 30, expanded)
+	add("advanced", 60, 24, expanded)
+	terms := expanded
+	terms.Focus = IndexFindAdvModeID(findcrit.IndexTerms)
+	add("tooltip-terms", 100, 30, terms)
+	pattern := expanded
+	pattern.Advanced.Mode, pattern.Focus = findcrit.IndexPattern, IndexFindAdvModeID(findcrit.IndexPattern)
 	add("focus-pattern", 100, 30, pattern)
+	scopes := expanded
+	scopes.ShowSelectedScope, scopes.Advanced.Scope = true, IndexScopeCurrent
+	add("advanced_scopes", 100, 30, scopes)
+	add("advanced_scopes", 60, 24, scopes)
+	scopeCurrent := scopes
+	scopeCurrent.Focus = IndexFindAdvScopeID(IndexScopeCurrent)
+	add("tooltip-scope", 100, 30, scopeCurrent)
 	boolFocus := boolean
-	boolFocus.Focus = IndexFindBoolean
+	boolFocus.Advanced.Expanded, boolFocus.Focus = true, IndexFindAdvModeID(findcrit.IndexBoolean)
 	add("focus-boolean", 100, 30, boolFocus)
 	add("focus-boolean", 60, 24, boolFocus)
 	ok := st

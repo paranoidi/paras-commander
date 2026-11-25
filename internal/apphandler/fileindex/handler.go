@@ -98,8 +98,12 @@ type Handler struct {
 	index                           *fi.Index
 	config                          config.Config
 	keys, keysFind, keysDialogInput *keymap.Map
-	// findTimer is the debounce of the find-in-index dialog's pending query (UI goroutine only).
-	findTimer *time.Timer
+	// findTimer is the debounce of the find-in-index dialog's pending query and findCancel stops
+	// the query in flight (UI goroutine only).
+	findTimer  *time.Timer
+	findCancel context.CancelFunc
+	// savedAdvanced is the find-in-index dialog's advanced section, kept for the session.
+	savedAdvanced dialog.IndexFindAdvanced
 	// findHiddenForView is set while the find-in-index dialog is hidden behind the fullscreen
 	// viewer it opened (find.view): IndexFindDialog.Open is false, a query in flight still lands,
 	// and ReopenFindAfterPreviewClose shows the dialog again as it was.

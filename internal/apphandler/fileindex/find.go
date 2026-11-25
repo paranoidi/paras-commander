@@ -1,6 +1,7 @@
 package fileindex
 
 import (
+	"context"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -74,31 +76,48 @@ func (h *Handler) openFreshFind(panelID int, p *panel.State, root string) {
 		}
 	}
 	h.CloseFindDialog()
+	adv := h.savedAdvanced
+	if adv.Scope == dialog.IndexScopeSelected && len(selRoots) == 0 {
+		adv.Scope = dialog.IndexScopeWhole
+	}
 	h.model.IndexFindDialog = dialog.IndexFindDialogState{
-		ShowSearchSelectionsOption: len(selRoots) > 0, SelectionDirRoots: selRoots,
-		Gen:  h.model.IndexFindDialog.Gen, // keeps counting up, so a result of an earlier dialog is stale
-		Open: true, PanelID: panelID, FromIndexPanel: p.Path.Scheme() == pathloc.SchemeFileIndex, Root: root, Focus: dialog.IndexFindQuery,
+		ShowSelectedScope: len(selRoots) > 0, SelectionDirRoots: selRoots,
+		Advanced:         adv,
+		AdvancedMnemonic: dialog.FindAdvancedMnemonic(h.keysFind.BindingsForAction(keymap.ActionFindToggleAdvanced)),
+		Gen:              h.model.IndexFindDialog.Gen, // keeps counting up, so a result of an earlier dialog is stale
+		Open:             true, PanelID: panelID, FromIndexPanel: p.Path.Scheme() == pathloc.SchemeFileIndex, Root: root, Focus: dialog.IndexFindQuery,
 	}
 }
 
-// CloseFindDialog closes the dialog and drops any query still in flight.
+// CloseFindDialog closes the dialog, keeps its advanced section for the next one and drops any
+// query still in flight.
 func (h *Handler) CloseFindDialog() {
-	h.findHiddenForView = false
-	if h.findTimer != nil {
-		h.findTimer.Stop()
-		h.findTimer = nil
+	if st := &h.model.IndexFindDialog; st.Open || st.Parked || h.findHiddenForView {
+		h.savedAdvanced = st.Advanced
 	}
+	h.findHiddenForView = false
+	h.stopFind()
 	gen := h.model.IndexFindDialog.Gen + 1
 	h.model.IndexFindDialog = dialog.IndexFindDialogState{Gen: gen} // a late result never matches
 }
 
-// scheduleFind runs the dialog's query after delay on a goroutine; an empty query clears the list.
-func (h *Handler) scheduleFind(delay time.Duration) {
-	st := &h.model.IndexFindDialog
+// stopFind drops the pending query's timer and cancels the one in flight.
+func (h *Handler) stopFind() {
 	if h.findTimer != nil {
 		h.findTimer.Stop()
 		h.findTimer = nil
 	}
+	if h.findCancel != nil {
+		h.findCancel()
+		h.findCancel = nil
+	}
+}
+
+// scheduleFind runs the dialog's query after delay on a goroutine, cancelling the previous query;
+// an empty query clears the list.
+func (h *Handler) scheduleFind(delay time.Duration) {
+	st := &h.model.IndexFindDialog
+	h.stopFind()
 	st.Gen++
 	st.Err = ""
 	if strings.TrimSpace(st.Query) == "" {
@@ -109,17 +128,31 @@ func (h *Handler) scheduleFind(delay time.Duration) {
 	st.Searching = true
 	gen, root, limit := st.Gen, st.Root, h.config.UI.Find.MaxResults
 	q := fi.FindQuery{
-		Text: st.Query, Boolean: st.Boolean, OnlyDirs: st.OnlyDirs, OnlyFiles: st.OnlyFiles,
+		Text: st.Query, Mode: st.Advanced.Mode, OnlyDirs: st.OnlyDirs, OnlyFiles: st.OnlyFiles,
 		MaxDepth: st.MaxDepth, IncludeHidden: st.IncludeHidden,
 	}
-	if st.SearchOnlySelections {
+	whole := st.Advanced.Scope == dialog.IndexScopeWhole
+	if whole {
+		root = "/"
+	}
+	if st.Advanced.Scope == dialog.IndexScopeSelected {
 		q.Roots = slices.Clone(st.SelectionDirRoots)
 	}
+	home := h.model.UserHomeDir
+	ctx, cancel := context.WithCancel(context.Background())
+	h.findCancel = cancel
 	h.findTimer = time.AfterFunc(delay, func() {
-		found, truncated, err := h.index.Find(root, q, limit)
+		found, truncated, err := h.index.Find(ctx, root, q, limit)
+		if ctx.Err() != nil {
+			return // a newer query or the closed dialog took over
+		}
 		res := make([]dialog.IndexFindResult, len(found))
 		for i, f := range found {
-			res[i] = dialog.IndexFindResult{Path: f.Path, Rel: pathloc.RelOrSelf(root, f.Path), IsDir: f.IsDir, Size: f.Size}
+			rel := primitive.PathWithHomeTilde(f.Path, home)
+			if !whole {
+				rel = pathloc.RelOrSelf(root, f.Path)
+			}
+			res[i] = dialog.IndexFindResult{Path: f.Path, Rel: rel, IsDir: f.IsDir, Size: f.Size}
 		}
 		h.post(FindPayload{Gen: gen, Results: res, Truncated: truncated, Err: err})
 	})
@@ -152,7 +185,7 @@ func (h *Handler) viewContext() dialog.IndexFindViewContext {
 }
 
 func (h *Handler) listRows() int {
-	return max(dialog.IndexFindListRows(h.viewContext().Layout), 1)
+	return max(dialog.IndexFindListRows(h.model.IndexFindDialog, h.viewContext().Layout), 1)
 }
 
 func (h *Handler) queryWidth() int {
@@ -217,15 +250,11 @@ func (h *Handler) HandleFindKey(ev *tcell.EventKey) {
 	}
 }
 
-// runFindAction runs a [dialog.find] action this dialog supports; the other find.* actions are
-// swallowed, anything else is not handled (false). The advanced criteria need file metadata the
-// index does not keep, so their toggle and reset are swallowed; the match mode cycle steps
-// Pattern / Boolean.
+// runFindAction runs a [dialog.find] action this dialog supports (false: not handled). The
+// advanced section is the match mode and the scope: toggle shows it, cycle steps the match mode,
+// reset returns both to their defaults.
 func (h *Handler) runFindAction(id string) bool {
 	st := &h.model.IndexFindDialog
-	if id == keymap.ActionFindToggleAdvanced || id == keymap.ActionFindResetAdvanced {
-		return true
-	}
 	switch id {
 	case keymap.ActionPanelSelectToggle:
 		h.toggleMark()
@@ -249,12 +278,13 @@ func (h *Handler) runFindAction(id string) bool {
 		h.host.OpenGroupSelectDialog(findctrl.GroupSelectModeUnselect)
 	case keymap.ActionFindSelectParentDirs:
 		h.selectParentDirs()
+	case keymap.ActionFindToggleAdvanced:
+		h.toggleAdvanced()
 	case keymap.ActionFindCycleMatchMode:
-		if st.Boolean {
-			st.Apply(dialog.IndexFindPattern)
-		} else {
-			st.Apply(dialog.IndexFindBoolean)
-		}
+		st.Apply(dialog.IndexFindAdvModeID(st.Advanced.Mode.Next()))
+		h.scheduleFind(0)
+	case keymap.ActionFindResetAdvanced:
+		st.ResetAdvanced()
 		h.scheduleFind(0)
 	default:
 		return false
@@ -273,6 +303,8 @@ func (h *Handler) ApplyFindEvent(ev dlg.Event) {
 	case ev.ID == dialog.IndexFindList && ev.Kind == dlg.EventListMove:
 		st.Selected, st.ListScroll = ev.Index, ev.Offset
 	case ev.ID == "":
+	case ev.ID == dialog.IndexFindAdvancedToggle:
+		h.toggleAdvanced()
 	case ev.ID == dialog.IndexFindDepth:
 		h.commitDepth()
 		st.Focus = dialog.IndexFindQuery
@@ -451,7 +483,22 @@ func (h *Handler) pinCursor() {
 	h.host.PinTogglePath(filepath.Base(r.Path), loc.String(), r.IsDir)
 }
 
+// toggleAdvanced shows or hides the advanced section. Showing it moves focus to the selected
+// match mode; hiding it moves focus that was inside the section back to the query.
+func (h *Handler) toggleAdvanced() {
+	st := &h.model.IndexFindDialog
+	st.Advanced.Expanded = !st.Advanced.Expanded
+	if st.Advanced.Expanded {
+		st.Focus = dialog.IndexFindAdvModeID(st.Advanced.Mode)
+	} else if st.AdvancedFocused() {
+		st.Focus = dialog.IndexFindQuery
+	}
+	dialog.EnsureIndexFindListScroll(st, h.listRows())
+}
+
 // commitDepth applies the depth edit buffer (one digit 1-9, "" = unlimited) and re-runs the query.
+// A depth counts from the panel directory, so it moves the whole-index scope to the current
+// directory.
 func (h *Handler) commitDepth() {
 	st := &h.model.IndexFindDialog
 	next := 0
@@ -462,6 +509,9 @@ func (h *Handler) commitDepth() {
 		return
 	}
 	st.MaxDepth = next
+	if next > 0 && st.Advanced.Scope == dialog.IndexScopeWhole {
+		st.Advanced.Scope = dialog.IndexScopeCurrent
+	}
 	h.scheduleFind(0)
 }
 
