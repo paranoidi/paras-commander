@@ -21,8 +21,8 @@ var fileIndexMenuGroups = leaderMenuViewSpec{
 
 // DefaultFileIndexMenuKeys returns built-in default fileindex-menu letters per action. Each is
 // its action's default chord letter in lowercase (every fileindex chord is Alt+Shift+letter),
-// except fileindex.scan-fast, fileindex.find-duplicates and fileindex.browse-tags (uppercase of the
-// letters of fileindex.scan, fileindex.find and fileindex.tags).
+// except fileindex.scan-fast and fileindex.find-duplicates (uppercase of the letters of
+// fileindex.scan and fileindex.find).
 func DefaultFileIndexMenuKeys() map[string]string {
 	out := make(map[string]string)
 	for _, spec := range DefaultActionSpecs() {

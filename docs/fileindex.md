@@ -37,8 +37,7 @@ Tools below Tagging in the same column. Each action's
 letter in the menu is the letter of its own shortcut, in lowercase: every
 fileindex shortcut is `Alt+Shift` plus that letter. The Duplicates group starts
 with [Find duplicates](find-duplicates.md) under `F`, the
-uppercase of Find in index's letter, and Browse by tags is `T`, the uppercase of
-Tags' letter. All actions are also in Help (`F1`) under
+uppercase of Find in index's letter. All actions are also in Help (`F1`) under
 fileindex. The keys below are the defaults; rebind the shortcuts under
 `[main]` and the menu letters under `[fileindex_menu]` in `keybindings.toml`.
 
@@ -48,7 +47,7 @@ fileindex. The keys below are the defaults; rebind the shortcuts under
 | `M-I` | `i` | Toggle [browsing with fileindex](#browsing-with-fileindex): the real directory plus the index's state per entry |
 | `M-B` | `b` | Toggle: show the current directory in the index, or from the index go to the real location; from a [tag view](#browsing-by-tags) it opens the plain index at the entry |
 | `M-R` | `r` | Back to the plain filesystem: from the index or a tag view, go to the entry's real location; with browsing with fileindex on, turn it off |
-| `M-G` | `T` | [Browse by tags](#browsing-by-tags): pick tags and show the entries that carry them, as a flat list or in their directory structure |
+| `M-G` | `g` | [Browse by tags](#browsing-by-tags): pick tags and show the entries that carry them, as a flat list or in their directory structure |
 | `M-L` | `l` | Switch a [tag view](#browsing-by-tags) between the flat list and the directory structure (dimmed outside a tag view) |
 | `M-W` | `F` | [Find duplicates within index](find-duplicates.md): duplicates from the index for the current directory, also from a normal panel: it never reads the disk, so it only sees indexed files (selected directories on a normal panel are ignored) |
 | `M-O` | `o` | [Other copies](#other-copies) of the file under the cursor, from the index |

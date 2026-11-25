@@ -1717,7 +1717,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys:      []string{"M-G"},
 			PreferredKey:     "M-G",
 			Keywords:         []string{"fileindex", "index", "tag", "browse", "view", "flat", "structure", "label"},
-			FileIndexMenuKey: "T", // uppercase of fileindex.tags' letter
+			FileIndexMenuKey: "g",
 		},
 		{
 			ID:               ActionFileIndexTagViewMode,
