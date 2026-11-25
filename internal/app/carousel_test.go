@@ -451,9 +451,9 @@ func TestCarouselSnapshotSurvivesSaturatedEventQueue(t *testing.T) {
 		t.Fatal("parent cache should be invalid while the fetch is held")
 	}
 
-	app.screen = dropPostEventScreen{SimulationScreen: screen}
 	saturateSimulationEventQueue(t, screen)
 	close(block)
+	awaitOverflowed(t, screen)
 
 	drainInterruptEventsUntil(t, app, screen, 3*time.Second, func() bool { return left.CarouselParentCacheValid() })
 	if !left.CarouselParentCacheValid() {

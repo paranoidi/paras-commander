@@ -160,29 +160,38 @@ func TestAsyncLoadSchedulerAppliesFastResult(t *testing.T) {
 	}
 }
 
-// dropPostEventScreen simulates a saturated tcell queue: PostEvent always fails with
-// ErrEventQFull (the production drop path), while PostEventWait still delivers onto the
-// wrapped simulation screen.
-type dropPostEventScreen struct {
-	tcell.SimulationScreen
-}
-
-func (s dropPostEventScreen) PostEvent(tcell.Event) error {
-	return tcell.ErrEventQFull
-}
-
-// saturateSimulationEventQueue fills tcell's 10-slot interrupt queue so a later PostEvent is
-// dropped (ErrEventQFull). Callers must drain leftover startup posts first.
+// saturateSimulationEventQueue fills the 10-slot queue of the simulation screen under a
+// newScreen screen, so a later PostEvent of the app lands in the lossless overflow. Callers must
+// drain leftover startup posts first.
 func saturateSimulationEventQueue(t *testing.T, screen tcell.SimulationScreen) {
 	t.Helper()
+	raw := screen.(losslessSim).SimulationScreen
 	for i := 0; i < 10; i++ {
-		if err := screen.PostEvent(tcell.NewEventInterrupt(struct{ n int }{n: i})); err != nil {
+		if err := raw.PostEvent(tcell.NewEventInterrupt(struct{ n int }{n: i})); err != nil {
 			t.Fatalf("saturating PostEvent(%d): %v", i, err)
 		}
 	}
-	if err := screen.PostEvent(tcell.NewEventInterrupt(struct{}{})); err != tcell.ErrEventQFull {
+	if err := raw.PostEvent(tcell.NewEventInterrupt(struct{}{})); err != tcell.ErrEventQFull {
 		t.Fatalf("queue should be full, PostEvent = %v, want ErrEventQFull", err)
 	}
+}
+
+// awaitOverflowed waits until a post has had to wait in the lossless overflow because the raw
+// queue is full (see saturateSimulationEventQueue), so the drain that follows polls it out of there.
+func awaitOverflowed(t *testing.T, screen tcell.SimulationScreen) {
+	t.Helper()
+	l := screen.(losslessSim).l
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		l.mu.Lock()
+		n := len(l.overflow)
+		l.mu.Unlock()
+		if n > 0 {
+			return
+		}
+		time.Sleep(time.Millisecond)
+	}
+	t.Fatal("the result was never posted")
 }
 
 func drainScreenInterrupts(app *App, screen tcell.SimulationScreen) {
@@ -195,7 +204,7 @@ func drainScreenInterrupts(app *App, screen tcell.SimulationScreen) {
 }
 
 // TestPanelAsyncLoadSurvivesSaturatedEventQueue is the characterizing test for dropped listing
-// completions: tcell's 10-slot queue is filled, then the fetch finishes. The result must still
+// completions: the simulation screen's 10-slot queue is filled, then the fetch finishes. The result must still
 // apply exactly once (ListingPending clears, path lands, OnDirectoryChange fires once).
 func TestPanelAsyncLoadSurvivesSaturatedEventQueue(t *testing.T) {
 	screen := newScreen(t, 80, 24)
@@ -233,9 +242,9 @@ func TestPanelAsyncLoadSurvivesSaturatedEventQueue(t *testing.T) {
 		t.Fatal("ListingPending should be true while the fetch is held")
 	}
 
-	app.screen = dropPostEventScreen{SimulationScreen: screen}
 	saturateSimulationEventQueue(t, screen)
 	close(block)
+	awaitOverflowed(t, screen)
 
 	drainInterruptEventsUntil(t, app, screen, 3*time.Second, func() bool { return !pan.ListingPending })
 	if pan.ListingPending {

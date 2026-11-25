@@ -8,7 +8,7 @@
 - Polling cannot go away: SFTP and `fileindex://` have no notification source, a network mount does not report changes made by other machines, inotify's queue can overflow, and the watch limit can run out.
 - The refresh path already has the hard parts: start-to-start back-off, an in-flight flag, epoch checks against newer in-memory mutations, diff-before-apply, and the gate that makes background I/O yield to a job on the same volume. A second listing path would have to repeat all of them.
 - `inotify_add_watch` resolves a path and can block on a stalled network mount; `Set` is called from the UI thread, which must not do I/O.
-- tcell's event channel holds 10 events and `PostEvent` drops silently when it is full, so a wake must not be posted with a plain `PostEvent`.
+- tcell's event channel holds a fixed number of events and its `PostEvent` drops silently when it is full; the app's `losslessScreen` keeps such a post in an overflow, so a wake posted with `PostEvent` is not lost.
 
 ## Decision
 

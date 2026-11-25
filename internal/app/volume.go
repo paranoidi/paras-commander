@@ -19,6 +19,11 @@ type volumeSpaceRefreshPayload struct {
 	OK      bool
 }
 
+type volumeSpaceKey struct{ panelID int }
+
+// SupersedeKey lets a newer statfs result of the panel replace this one in the screen's overflow.
+func (p volumeSpaceRefreshPayload) SupersedeKey() any { return volumeSpaceKey{p.PanelID} }
+
 // pathVolumeContendsWithActiveJob reports whether path sits on the same volume as an
 // unfinished job source or destination (typical NAS during copy). Job volume devices
 // are cached on the job at enqueue (jobs.Job.VolumeDevs), so this stats only the query

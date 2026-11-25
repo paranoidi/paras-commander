@@ -33,7 +33,7 @@ type frameCell struct {
 // style, and this repo never uses tcell.ColorNone.
 //
 // Only the UI goroutine paints, so there is no mutex. Other goroutines only call PostEvent, which
-// the embedded screen serves directly.
+// the embedded losslessScreen serves under its own mutex.
 //
 // ponytail: reads and direct writes (Get, GetContent, Put, ...) flush mid-frame instead of being
 // served from the buffer. Get+Put is only used by the panel title hover (panel_render.go) and the

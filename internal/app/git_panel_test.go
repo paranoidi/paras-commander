@@ -78,9 +78,9 @@ func TestGitStatusLoadSurvivesSaturatedEventQueue(t *testing.T) {
 		t.Fatal("GitPending should stay true while the fetch is held")
 	}
 
-	app.screen = dropPostEventScreen{SimulationScreen: screen}
 	saturateSimulationEventQueue(t, screen)
 	close(block)
+	awaitOverflowed(t, screen)
 
 	drainInterruptEventsUntil(t, app, screen, 3*time.Second, func() bool { return !pan.GitPending })
 	if pan.GitPending {

@@ -125,7 +125,8 @@ func TestBrowseByTagsNeedsATagAndWarnsWhenNothingMatches(t *testing.T) {
 // A result that arrives while the event queue is full is delivered, not dropped.
 func TestBrowseByTagsOpensThoughTheEventQueueIsFull(t *testing.T) {
 	a, screen := tagViewApp(t)
-	for screen.PostEvent(tcell.NewEventInterrupt(nil)) == nil {
+	raw := screen.(losslessSim).SimulationScreen
+	for raw.PostEvent(tcell.NewEventInterrupt(nil)) == nil {
 	}
 	a.dispatch(keymap.ActionFileIndexBrowseTags)
 	time.Sleep(100 * time.Millisecond) // the names load and post into the full queue

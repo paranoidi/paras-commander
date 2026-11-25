@@ -35,12 +35,11 @@ type treeChildResultsReadyPayload struct{}
 
 // treeChildResultQueue coalesces async tree-child-load completions from potentially thousands of
 // concurrent fetch goroutines (a very wide directory level under ExpandAllTreeFully) into at most
-// one pending tcell event at a time. tcell's own event channel is a fixed 10-slot buffer shared
-// with real terminal input (see tScreen.evch); key presses are posted to it with the non-blocking
-// PostEvent and are silently dropped when the channel is full (tScreen.PostEvent's ErrEventQFull
-// path). Posting one interrupt per directory fetch kept that channel saturated for the whole
-// cascade, dropping/delaying the user's actual keystrokes — this queue means only one goroutine
-// ever has a post in flight; every other completion just appends and returns.
+// one pending tcell event at a time. tcell's own event channel is a fixed 256-slot buffer shared
+// with real terminal input (see tScreen.evch); the input loop blocks while it is full. Posting one
+// interrupt per directory fetch kept that channel saturated for the whole cascade, delaying the
+// user's actual keystrokes — this queue means only one goroutine ever has a post in flight; every
+// other completion just appends and returns.
 type treeChildResultQueue struct {
 	mu      sync.Mutex
 	pending []treeChildLoadPayload
@@ -112,10 +111,8 @@ func (a *App) treeChildLoader(panelID int) (schedule panel.TreeChildLoadSchedule
 			// Only the goroutine that actually flips the queue from drained to pending posts the
 			// wake event — every other concurrent completion just appends and returns, so a wide
 			// directory level never posts more than one pending interrupt at a time (see
-			// treeChildResultQueue). PostEventWait is deprecated as "unsafe" (it can block
-			// indefinitely if the main loop stalls) but blocking here is safe: at most one goroutine
-			// is ever inside this call, and guaranteed delivery is required so the queue's posted
-			// flag can't get stuck true with nothing to drain it.
+			// treeChildResultQueue). The screen never drops a posted event, so the queue's posted
+			// flag cannot get stuck true with nothing to drain it.
 			if a.treeChildResults.push(treeChildLoadPayload{
 				panelID: panelID,
 				dirID:   req.DirID,
@@ -123,7 +120,7 @@ func (a *App) treeChildLoader(panelID int) (schedule panel.TreeChildLoadSchedule
 				err:     err,
 				ctx:     fetchCtx,
 			}) {
-				a.screen.PostEventWait(tcell.NewEventInterrupt(treeChildResultsReadyPayload{})) //nolint:staticcheck // SA1019: guaranteed delivery required, see comment above
+				_ = a.screen.PostEvent(tcell.NewEventInterrupt(treeChildResultsReadyPayload{}))
 			}
 		})
 		return true

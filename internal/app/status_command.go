@@ -85,6 +85,11 @@ type statusCommandResultPayload struct {
 	Text  string
 }
 
+type statusCmdKey struct{ gen, index int }
+
+// SupersedeKey lets a newer result of the same runner replace this one in the screen's overflow.
+func (p statusCommandResultPayload) SupersedeKey() any { return statusCmdKey{p.Gen, p.Index} }
+
 // runStatusCommandTicker fires r immediately, then on every interval, until stop closes.
 // Overlapping runs are skipped (see requestStatusCommandRun's CAS guard) rather than queued.
 func (a *App) runStatusCommandTicker(r *statusCmdRunner, gen, index int, stop <-chan struct{}) {

@@ -18,8 +18,8 @@ import (
 )
 
 // coalescingQueue holds async completions so a burst of goroutines posts at most one tcell
-// interrupt (see treeChildResultQueue). tcell's event channel is a fixed 10-slot buffer;
-// PostEvent is silently dropped when it is full.
+// interrupt (see treeChildResultQueue). Several payloads of a burst would only fill the event queue
+// (256 slots, shared with key input) for nothing.
 type coalescingQueue[T any] struct {
 	mu      sync.Mutex
 	pending []T
@@ -64,11 +64,9 @@ func asyncWakes(a *App) *asyncWakeQueues {
 }
 
 func postGuaranteedWake(screen tcell.Screen, payload any) {
-	// PostEventWait is deprecated as "unsafe" (it can block indefinitely if the main loop stalls)
-	// but blocking here is safe: at most one goroutine is ever inside this call per queue, and
-	// guaranteed delivery is required so the queue's posted flag cannot get stuck true with
+	// The screen never drops a posted event, so the queue's posted flag cannot get stuck true with
 	// nothing to drain it. See treeChildResultQueue.
-	screen.PostEventWait(tcell.NewEventInterrupt(payload)) //nolint:staticcheck // SA1019: guaranteed delivery required, see comment above
+	_ = screen.PostEvent(tcell.NewEventInterrupt(payload))
 }
 
 // fetchListingForAsyncLoad is panel.FetchListing behind a package-level seam so tests can

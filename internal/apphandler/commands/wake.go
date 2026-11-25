@@ -42,6 +42,18 @@ type WakePayload struct {
 	applied chan struct{}
 }
 
+type liveSnapshotKey struct{ runID string }
+
+// SupersedeKey makes a live snapshot replace an earlier one of the same run in the screen's
+// overflow (a snapshot holds the run's whole output so far). StreamLive is the only poster of a
+// payload with OutputDialogLive, and it sets nothing else.
+func (p WakePayload) SupersedeKey() any {
+	if p.OutputDialogLive == nil {
+		return nil
+	}
+	return liveSnapshotKey{p.OutputDialogLive.RunID}
+}
+
 // OutputDialogLive is a snapshot of a run's partial output for the open running dialog.
 type OutputDialogLive struct {
 	RunID          string

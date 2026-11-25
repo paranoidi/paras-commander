@@ -192,8 +192,22 @@ func settleStartupPanelListings(t *testing.T, app *App) {
 	}
 }
 
+// losslessSim is a SimulationScreen whose event queue behaves like production's: the embedded
+// simulation screen is raw (a 10-slot queue that drops when full), and posting and polling go
+// through a losslessScreen built around it.
+type losslessSim struct {
+	tcell.SimulationScreen
+	l *losslessScreen
+}
+
+func (s losslessSim) PostEvent(ev tcell.Event) error { return s.l.PostEvent(ev) }
+func (s losslessSim) PostEventWait(ev tcell.Event)   { s.l.PostEventWait(ev) }
+func (s losslessSim) PollEvent() tcell.Event         { return s.l.PollEvent() }
+func (s losslessSim) HasPendingEvent() bool          { return s.l.HasPendingEvent() }
+
 func newScreen(t *testing.T, w, h int) tcell.SimulationScreen {
-	return uitest.Screen(t, w, h)
+	sim := uitest.Screen(t, w, h)
+	return losslessSim{SimulationScreen: sim, l: newLosslessScreen(sim)}
 }
 
 func newApp(t *testing.T, screen tcell.SimulationScreen, dir string) *App {
