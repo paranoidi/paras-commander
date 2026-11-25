@@ -55,6 +55,22 @@ func indexFindTitle(st *IndexFindDialogState, styles theme.Theme) string {
 	return title
 }
 
+// indexFindPatternTooltip and indexFindBooleanTooltip explain the two query modes and their syntax
+// (fileindex.Index.Find).
+const (
+	indexFindPatternTooltip = "Matches file and directory names, ignoring case.\n" +
+		"Plain text finds names containing it: holiday\n" +
+		"With * (any run) or ? (one character) the whole name must match: *.jpg"
+	indexFindBooleanTooltip = "Matches whole words in file names (no directories), ignoring case.\n" +
+		"beach 2019 - both words (also beach AND 2019)\n" +
+		"beach OR lake - either word\n" +
+		"beach NOT 2019 - the first without the second\n" +
+		"(beach OR lake) AND 2019 - parentheses group\n" +
+		"holi* - words starting with holi\n" +
+		"\"summer beach\" - words next to each other, in this order\n" +
+		"AND, OR and NOT are uppercase. Quote text with punctuation: \"report.pdf\""
+)
+
 // IndexFindDialogView is the find-in-index dialog's widget spec: the query, the Pattern / Boolean and
 // Only directories / Only files radios, the result list driven by the
 // query and OK / Cancel.
@@ -67,8 +83,8 @@ func IndexFindDialogView(st *IndexFindDialogState, ctx IndexFindViewContext) dlg
 		Tooltip: findDepthSyntax + "\nIt filters the indexed results; nothing is read from disk."}
 	col := []dlg.Item{{Kind: dlg.KindRow, Cells: []dlg.Item{query, depth}}}
 	col = append(col, dlg.Item{Kind: dlg.KindRow, Cells: []dlg.Item{
-		{ID: IndexFindPattern, Kind: dlg.KindRadio, Label: "Pattern", Mnemonic: 'P', On: !st.Boolean, Gap: gap},
-		{ID: IndexFindBoolean, Kind: dlg.KindRadio, Label: "Boolean", Mnemonic: 'B', On: st.Boolean},
+		{ID: IndexFindPattern, Kind: dlg.KindRadio, Label: "Pattern", Mnemonic: 'P', On: !st.Boolean, Gap: gap, Tooltip: indexFindPatternTooltip},
+		{ID: IndexFindBoolean, Kind: dlg.KindRadio, Label: "Boolean", Mnemonic: 'B', On: st.Boolean, Tooltip: indexFindBooleanTooltip},
 	}})
 	options := []dlg.Item{
 		{ID: IndexFindOnlyDirs, Kind: dlg.KindRadio, Label: "Only directories", Mnemonic: 'N', On: st.OnlyDirs, Disabled: st.Boolean, Gap: gap},

@@ -58,6 +58,13 @@ func TestIndexFindGoldenRender(t *testing.T) {
 	depth := st
 	depth.Focus = IndexFindDepth
 	add("focus-depth", 100, 30, depth)
+	pattern := st
+	pattern.Focus = IndexFindPattern
+	add("focus-pattern", 100, 30, pattern)
+	boolFocus := boolean
+	boolFocus.Focus = IndexFindBoolean
+	add("focus-boolean", 100, 30, boolFocus)
+	add("focus-boolean", 60, 24, boolFocus)
 	ok := st
 	ok.Focus = dlg.OK
 	add("focus-ok", 100, 30, ok)

@@ -314,10 +314,15 @@ Two query modes (radios; `M-m` switches between them):
 - **Pattern** matches file and directory names, ignoring case. Plain text finds
   names containing it (`holiday`). With `*` (any run) or `?` (one character)
   the whole name must match the pattern (`*.jpg`, `report-??.pdf`).
-- **Boolean** matches file names word by word (files only; Only directories is
-  off). Words are whole words or prefixes with `*` (`holi*`), `"quoted
-  phrases"`, and `AND`, `OR`, `NOT` combine them (`beach AND NOT 2019`). A
-  syntax error is shown in the dialog.
+- **Boolean** matches file names word by word, ignoring case and accents (files
+  only; Only directories is off). Words are whole words or prefixes with `*`
+  (`holi*`), or `"quoted phrases"`. Words side by side must all occur; `AND`,
+  `OR` and `NOT` (uppercase) combine them and parentheses group:
+  `(beach OR lake) NOT 2019`. `NOT` goes between two terms, without `AND`.
+  Quote text with punctuation (`"report.pdf"`). A syntax error is shown in the
+  dialog.
+
+Focusing either radio shows its syntax in a tooltip.
 
 Other options: **Only directories** / **Only files**, **Include hidden**
 (names with a dot-prefixed path component are left out by default), the depth
