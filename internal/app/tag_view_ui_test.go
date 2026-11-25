@@ -12,6 +12,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // tvTag tags index paths (host paths) with tags.
@@ -70,6 +71,16 @@ func TestBrowseByTagsOpensAFlatListAndAStructure(t *testing.T) {
 	tvGoTo(t, a, screen, "fileindex:///")
 	if st = tvOpenBrowseTags(t, a, screen); !st.Structure {
 		t.Fatal("the dialog should open with the View used last")
+	}
+}
+
+func TestBrowseByTagsUpFromOKFocusesFlatList(t *testing.T) {
+	a, screen := tagViewApp(t)
+	st := tvOpenBrowseTags(t, a, screen)
+	st.Focus = dlg.OK
+	tvKey(a, tcell.KeyUp)
+	if st.Focus != dialog.IndexTagBrowseFlat {
+		t.Fatalf("Up from OK focused %q, want %q", st.Focus, dialog.IndexTagBrowseFlat)
 	}
 }
 

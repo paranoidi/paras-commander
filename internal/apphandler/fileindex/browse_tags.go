@@ -54,11 +54,15 @@ func (h *Handler) BrowseTagsSpec() dlg.Spec {
 	return dialog.IndexTagBrowseDialogView(&h.model.IndexTagBrowseDialog, h.viewContext().Layout, h.host.Styles())
 }
 
-// HandleBrowseTagsKey handles one key while Browse by tags is open: the grid's jump keys, then the
-// widget engine.
+// HandleBrowseTagsKey handles one key while Browse by tags is open: the grid's jump keys, Up from OK
+// (to the Flat list radio), then the widget engine.
 func (h *Handler) HandleBrowseTagsKey(ev *tcell.EventKey) {
 	st := &h.model.IndexTagBrowseDialog
 	if st.Focus == dialog.IndexTagsGrid && tagJumpKey(&st.IndexTagGrid, ev) {
+		return
+	}
+	if st.Focus == dlg.OK && ev.Key() == tcell.KeyUp {
+		st.Focus = dialog.IndexTagBrowseFlat // the engine would go to Directory structure, drawn nearer
 		return
 	}
 	if e, ok := dlg.HandleKey(h.BrowseTagsSpec(), &st.Focus, ev); ok {
