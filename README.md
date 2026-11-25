@@ -18,14 +18,13 @@ A Linux terminal twin-panel file manager inspired by Midnight Commander and fzf,
 - Integrated find duplicates utility.
 - Supports selections across multiple paths.
 - Selections can be stashed and restored (1 slot).
-- Integrated mass rename.
-- Rename supports slugify and clean.
+- Integrated mass rename with save, load and history for repeated tasks.
 - Read bookmarks from ~/.fzf-marks and gnome gtk files. Writes bookmarks to ~/.fzf-marks.
 - Find files / paths recursively. Can handle at least 2 million files.
 - Pick file, meta and fileindex columns in one dialog, save them as profiles and cycle through them.
 - Meta column(s) can be used to provide data from external commands. Panels can sort by an active meta column (numeric-aware), up to 4 shown in the Sort dialog.
-- Execute command for selected files.
-- User menu for commands. Supports interactive, background and worker pools.
+- Extensive user menu for commands. Supports interactive, background and worker pools.
+- Execute typed command for selected files.
 - SFTP remote panel browsing. Parses ~/.ssh/config for quick access.
 - File chooser mode (`--chooser-file`) for editor integration (e.g. Helix).
 - Subshell, ability to send selected filenames into the subshell.

@@ -81,7 +81,7 @@ The race suite (`go test -race ./...`, `task race`) is slow and runs in CI on ev
 
 CRITICAL:
 
-- Do not remove ANY files which are not being tracked by git.
+- Do not remove ANY files which are not being tracked by git that you did not create as part of the task.
 
 # Feature documentation
 
